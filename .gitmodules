@@ -1,15 +1,15 @@
 [submodule "usb-sniffify"]
-	path = usb-sniffify
+	path = chaos/external/usb-sniffify
 	url = https://github.com/blegas78/usb-sniffify.git
 [submodule "zmqpp"]
-	path = zmqpp
+	path = chaos/external/zmqpp
 	url = https://github.com/zeromq/zmqpp.git
 [submodule "nico"]
-	path = nico
+	path = chaos/external/nico
 	url = https://github.com/mogillc/nico.git
 [submodule "raw-gadget-timeout"]
-	path = raw-gadget-timeout
+	path = chaos/external/raw-gadget-timeout
 	url = https://github.com/xairy/raw-gadget.git
 [submodule "python/flexx_gamepad"]
-	path = chaosface/flexx_gamepad
+	path = chaosface/external/flexx_gamepad
 	url = https://github.com/ash3rz/flexx_gamepad.git
