@@ -1,6 +1,14 @@
+/**
+ * @file chaosUhid.hpp
+ * @brief Definition of the class ChaosUhid
+ * @author blegas78
+ * @author polysyl
+ * @copyright GNU Public License 3.0
+ */
+
 /*----------------------------------------------------------------------------
 * This file is part of Twitch Controls Chaos (TCC).
-* Copyright 2021 blegas78
+* Copyright 2021 blegas78. Additional code copyright 2021 polysyl.
 *
 * TCC is free software: you can redistribute it and/or modify it under the
 * terms of the GNU General Public License as published by the Free Software

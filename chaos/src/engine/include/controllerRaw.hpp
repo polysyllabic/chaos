@@ -15,7 +15,7 @@
 * You should have received a copy of the GNU General Public License along
 * with TCC.  If not, see <https://www.gnu.org/licenses/>.
 *---------------------------------------------------------------------------*/
-#ifndef CONTROLLER_RAW__HPP
+#ifndef CONTROLLER_RAW_HPP
 #define CONTROLLER_RAW_HPP
 
 #include <map>
@@ -23,11 +23,12 @@
 #include <deque>
 #include <array>
 
+#include "raw-gadget.h"
+
 #include "controller.hpp"
-#include "device.h"	// Joystick, Mouse
-#include "raw-gadget.hpp"
-#include "controller-state.h"
-#include "chaosUhid.h"
+#include "device.hpp"	// Joystick, Mouse
+#include "controllerState.hpp"
+#include "chaosUhid.hpp"
 
 #define PWM_RANGE (11)
 

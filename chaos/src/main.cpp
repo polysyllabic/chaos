@@ -26,7 +26,8 @@
 #include <plog/Log.h>
 #include "plog/Initializers/RollingFileInitializer.h"
 
-#include "chaos.h"
+#include "chaos.hpp"
+#include "chaosEngine.hpp"
 #include "modifiers.h"
 
 using namespace Chaos;

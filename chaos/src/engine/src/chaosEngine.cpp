@@ -1,3 +1,11 @@
+/**
+ * @file chaosEngine.cpp
+ * @brief Implementation of class ChaosEngine
+ * @author blegas78
+ * @author polysyl
+ * @copyright GNU Public License 3.0
+ */
+
 /*----------------------------------------------------------------------------
 * This file is part of Twitch Controls Chaos (TCC).
 * Copyright 2021 blegas78
@@ -15,7 +23,7 @@
 * You should have received a copy of the GNU General Public License along
 * with TCC.  If not, see <https://www.gnu.org/licenses/>.
 *---------------------------------------------------------------------------*/
-#include "chaos.h"
+#include "chaosEngine.hpp"
 
 #include <iostream>
 #include <unistd.h>
@@ -25,7 +33,7 @@
 
 using namespace Chaos;
 
-Engine::Engine(Controller* dualshock)
+ChaosEngine::ChaosEngine(Controller* dualshock)
 : dualshock(dualshock), timePerModifier(30.0), pause(true)
 {
   dualshock->addInjector(this);
@@ -33,8 +41,8 @@ Engine::Engine(Controller* dualshock)
   chaosInterface.addObserver(this);
 }
 
-void Engine::newCommand(const std::string& command) {
-  std::cout << "Chaos::Engine::newCommand() received: " << command << std::endl;
+void ChaosEngine::newCommand(const std::string& command) {
+  std::cout << "Chaos::ChaosEngine::newCommand() received: " << command << std::endl;
 	
   Json::Value root;
   Json::CharReaderBuilder builder;
@@ -70,7 +78,7 @@ void Engine::newCommand(const std::string& command) {
 	
 }
 
-void Engine::doAction() {
+void ChaosEngine::doAction() {
   usleep(500);	// 200Hz
 	
   // Update timers/states of modifiers
@@ -109,7 +117,7 @@ void Engine::doAction() {
 }
 
 // Tweak the event based on modifiers
-bool Engine::sniffify(const DeviceEvent* input, DeviceEvent* output) {
+bool ChaosEngine::sniffify(const DeviceEvent* input, DeviceEvent* output) {
   *output = *input;
 	
   bool valid = true;
@@ -156,7 +164,7 @@ bool Engine::sniffify(const DeviceEvent* input, DeviceEvent* output) {
 // This function is called by modifiers to inject a fake event into the event pipeline.
 // Because the event can be modified by other mods, we find the location of the modifier
 // and feed the fake event through the rest of the modifiers, in order.
-void Engine::fakePipelinedEvent(DeviceEvent* fakeEvent, Modifier* modifierThatSentTheFakeEvent) {
+void ChaosEngine::fakePipelinedEvent(DeviceEvent* fakeEvent, Modifier* modifierThatSentTheFakeEvent) {
   bool valid = true;
 	
   if (!pause) {
@@ -176,14 +184,14 @@ void Engine::fakePipelinedEvent(DeviceEvent* fakeEvent, Modifier* modifierThatSe
   }
 }
 
-void Engine::setInterfaceReply(const std::string& reply) {
+void ChaosEngine::setInterfaceReply(const std::string& reply) {
   chaosInterface.sendMessage(reply);
 }
 
-void Engine::setTimePerModifier(double time) {
+void ChaosEngine::setTimePerModifier(double time) {
   timePerModifier = time;
 }
 
-bool Engine::isPaused() {
+bool ChaosEngine::isPaused() {
   return pause;
 }

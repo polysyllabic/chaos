@@ -1,6 +1,6 @@
 /**
  * @file chaosEngine.hpp
- * @brief Definition of the chaos engine class Engine
+ * @brief Definition of the class ChaosEngine
  * @author blegas78
  * @author polysyl
  * @copyright GNU Public License 3.0
@@ -32,10 +32,9 @@
 #include <string>
 #include <queue>
 
-#include "interface.h"	// for CommandListener
-#include "controller.h"
-
-#include "modifier.h"
+#include "interface.hpp"	// for CommandListener
+#include "controller.hpp"
+#include "modifier.hpp"
 
 namespace Chaos {
 

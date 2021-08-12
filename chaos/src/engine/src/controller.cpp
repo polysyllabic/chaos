@@ -47,8 +47,8 @@ void Controller::handleNewDeviceEvent(const DeviceEvent* event) {
   // We have an event!  Let's send it right away, but let's let chaos engine play around with the values
   DeviceEvent updatedEvent;
   bool validEvent = false;
-  if (dualShockInjector != NULL) {
-    validEvent = dualShockInjector->sniffify(event, &updatedEvent);
+  if (controllerInjector != NULL) {
+    validEvent = controllerInjector->sniffify(event, &updatedEvent);
   } else {
     validEvent = true;
     updatedEvent = *event;
@@ -71,6 +71,6 @@ void Controller::applyEvent(const DeviceEvent* event) {
 }
 
 void Controller::addInjector(ControllerInjector* injector) {
-  this->dualShockInjector = injector;
+  this->controllerInjector = injector;
 }
 

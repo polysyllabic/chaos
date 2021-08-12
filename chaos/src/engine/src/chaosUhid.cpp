@@ -1,3 +1,11 @@
+/**
+ * @file chaosUhid.cpp
+ * @brief Implementation of the class ChaosUhid
+ * @author blegas78
+ * @author polysyl
+ * @copyright GNU Public License 3.0
+ */
+
 /*----------------------------------------------------------------------
 * This file is part of Twitch Controls Chaos (TCC).
 * Copyright 2021 blegas78
@@ -15,7 +23,9 @@
 * You should have received a copy of the GNU General Public License
 * along with TCC.  If not, see <https://www.gnu.org/licenses/>.
 *---------------------------------------------------------------------*/
-#include "chaos-uhid.h"
+#include "chaosUhid.hpp"
+
+#include <plog/Log.h>
 
 using namespace Chaos;
 
@@ -309,15 +319,6 @@ static int create(int fd)
   return uhid_write(fd, &ev);
 }
 
-static void destroy(int fd)
-{
-  struct uhid_event ev;
-	
-  memset(&ev, 0, sizeof(ev));
-  ev.type = UHID_DESTROY;
-	
-  uhid_write(fd, &ev);
-}
 
 /* This parses raw output reports sent by the kernel to the device. A normal
  * uhid program shouldn't do this but instead just forward the raw report.
@@ -543,7 +544,12 @@ ChaosUhid::ChaosUhid(ControllerState* state) {
 }
 
 ChaosUhid::~ChaosUhid() {
-	destroy(fd);
+  struct uhid_event ev;
+	
+  memset(&ev, 0, sizeof(ev));
+  ev.type = UHID_DESTROY;
+	
+  uhid_write(fd, &ev);
 }
 
 void ChaosUhid::doAction() {

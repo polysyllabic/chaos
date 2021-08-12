@@ -25,8 +25,8 @@
 
 #include "device.h"	// Joystick, Mouse
 #include "raw-gadget.hpp"
-#include "controller-state.h"
-#include "chaos-uhid.h"
+#include "controllerState.h"
+#include "chaosUhid.h"
 
 #define PWM_RANGE (11)
 
@@ -82,7 +82,7 @@ protected:
   //std::map<int,short> controllerState;
   short controllerState[1024];
 	
-  ControllerInjector* dualShockInjector = NULL;
+  ControllerInjector* controllerInjector = NULL;
 	
 public:
   Controller();
@@ -92,27 +92,6 @@ public:
   void addInjector(ControllerInjector* injector);
 	
 };
-
-  class ControllerRaw : public Controller, public EndpointObserver, public Mogi::Thread {
-  private:
-    ControllerState* mControllerState;
-    std::deque<std::array<unsigned char,64>> bufferQueue;
-	
-    ChaosUhid* chaosHid;
-	
-    bool applyHardware(const DeviceEvent* event);
-	
-    // Main purpose of this Mogi::Thread is to handle DeviceEvent queue
-    void doAction();
-	
-    void notification(unsigned char* buffer, int length); // overloaded from EndpointObserver
-
-    //FILE* spooferFile = NULL;
-  public:
-    RawGadgetPassthrough mRawGadgetPassthrough;
-	
-    void initialize( );	
-  };
 
 };
 
