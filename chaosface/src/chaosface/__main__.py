@@ -1,31 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-#-----------------------------------------------------------------------------
-# This file is part of Twitch Controls Chaos (TCC).
-# Copyright 2021 blegas78
-#
-# TCC is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License as published by the Free Software
-# Foundation, either version 3 of the License, or (at your option) any later
-# version.
-#
-# TCC is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-# details.
-#
-# You should have received a copy of the GNU General Public License along
-# with TCC.  If not, see <https://www.gnu.org/licenses/>.
-#-----------------------------------------------------------------------------
-#import argparse
+
 import sys
-#import fcntl, os
 import errno
 import time
 
 import threading
 import asyncio
-#import queue
 import logging
 import random
 import json
@@ -35,9 +15,6 @@ import math
 
 import numpy as np
 import zmq
-
-#import utility
-#import irctwitch as irc
 
 import chatbot
 import chaosRelay
@@ -51,10 +28,6 @@ import chaosSettingsView
 import chaosConnectionView
 
 import chaoscommunicator
-#import sys
-#sys.path.append("flexx_gamepad/")
-#
-#from server import GamepadServer
 
 from flexx import flx, ui
 logging.basicConfig(level="INFO")
@@ -77,6 +50,7 @@ class ChaosModel():
 		now = datetime.now()
 		currentTime = now.strftime("%Y-%m-%d_%H:%M:%S")
 		self.votingLog = open("/home/pi/chaosLogs/votes-" + currentTime + ".log","a", buffering=1)
+		#self.modifierDataFile = open("/home/pi/chaosLogs/chaosModifierData.json","a", buffering=1)
 		
 		self.openDatabase("/home/pi/chaosLogs/chaosModifierData.json")
 		
@@ -122,19 +96,13 @@ class ChaosModel():
 
 		if "mods" in y:
 #			logging.info("Got new mods!")
-#			oldModLength = len(self.allMods)	# HACK
-#			if not oldModLength == len(y["mods"]):
-#				self.resetSoftMax()
 			self.newAllMods = y["mods"]
 			self.gotNewMods = True
-		
-#		if "voteTime" in y:
-#			logging.info("Got new voteTime: " + str(y["voteTime"]))
-#			self.timePerVote = y["voteTime"]
 			
 		if "pause" in y:
 			logging.info("Got a pause command of: " + str(y["pause"]))
 			self.pause = y["pause"]
+				
 		
 	def applyNewMod(self, mod):
 #		print("Winning mod: " + mod)
@@ -167,6 +135,7 @@ class ChaosModel():
 				return
 #		logging.info("verifySoftmaxIntegrity() Passed")
 		
+		
 	def getSoftmaxDivisor(self, data):
 		# determine the sum for the softmax divisor:
 		softMaxDivisor = 0
@@ -198,15 +167,9 @@ class ChaosModel():
 			# build a list of contributor for this selection:
 			votableTracker = {}
 			for mod in inactiveMods:
-#				try:
 				votableTracker[mod] = copy.deepcopy(self.modifierData[mod])
-#				except Exception as e:
-#					logging.info(e)
 							
 			# Calculate the softmax probablities (must be done each time):
-#			softMaxDivisor = self.getSoftmaxDivisor(votableTracker)
-#			for mod in votableTracker:
-#				votableTracker[mod]["p"] = votableTracker[mod]["contribution"]/softMaxDivisor
 			self.updateSoftmaxProbabilities(votableTracker)
 			#print("Votables:")
 			# make a decision:
@@ -229,6 +192,8 @@ class ChaosModel():
 				logging.info(" - %0.2f%% %s" % (0, mod))
 		# Reset votes since there is a new voting pool
 		self.votes = [0.0] * self.totalVoteOptions
+	
+	
 	
 	def selectWinningModifier(self):
 		if self.proportionalVoting:
@@ -289,8 +254,6 @@ class ChaosModel():
 	def _loop(self):
 		beginTime = time.time() #0.0
 		now = beginTime
-#		self.rate = 20.0
-#		dTime = 1.0/self.rate
 		dTime = 1.0/relay.ui_rate
 		priorTime = beginTime - dTime
 		
@@ -307,11 +270,10 @@ class ChaosModel():
 		
 		self.proportionalVoting = True
 		
-		# allMods will be set by thte C program
+		# allMods will be set by the C program
 		self.allMods = list(self.modifierData.keys())
 		self.verifySoftmaxIntegrity()
 		
-		#self.allMods = [ "No Run/Dodge", "Disable Crouch/Prone", "Drunk Control"]
 		self.currentMods = random.sample(self.allMods, k=self.totalVoteOptions)
 
 		self.pausedFlashingTimer = 0.0
@@ -320,7 +282,6 @@ class ChaosModel():
 		self.disconnectedFlashingTimer = 0.0
 		self.disconnectedFlashingToggle = True
 		while True:
-#			time.sleep(1.0/self.rate)
 			time.sleep(1.0/relay.ui_rate)
 			priorTime = now
 			now = time.time()
@@ -349,8 +310,6 @@ class ChaosModel():
 					logging.info(e)
 					
 			if not self.chatbot.isConnected():	# hack implementation of pausing
-#				beginTime += dTime
-#				dTime = 0
 				self.flashDisconnected()
 							
 			self.voteTime =  now - beginTime
@@ -358,7 +317,6 @@ class ChaosModel():
 			
 			if not self.timePerVote == (relay.timePerModifier/3.0 - 0.5):
 				self.timePerVote = relay.timePerModifier/3.0 - 0.5
-#				relay.saveConfig()
 				newVoteTime={}
 				newVoteTime["timePerModifier"] = relay.timePerModifier
 				self.chaosCommunicator.sendMessage(json.dumps(newVoteTime))
@@ -382,7 +340,6 @@ class ChaosModel():
 				beginTime = now
 				
 				# Send winning choice:
-				#newMod = self.currentMods[ self.votes.index(max(self.votes)) ]
 				newMod = self.selectWinningModifier()
 				self.applyNewMod( newMod )
 				if self.gotNewMods:
@@ -418,7 +375,10 @@ class ChaosModel():
 				self.getNewVotingPool()
 					
 				self.votedUsers = []
-			
+
+				self.announceMods()
+				self.announceVoting()
+				
 			self.timeToSend = self.voteTime/self.timePerVote
 
 			self.checkMessages()
@@ -427,6 +387,9 @@ class ChaosModel():
 	def updateUI(self):
 		try:
 			relay.set_mods( self.currentMods )
+		except Exception as e:
+			logging.info(e)
+		try:
 			relay.set_activeMods( self.activeMods )
 		except Exception as e:
 			logging.info(e)
@@ -436,6 +399,9 @@ class ChaosModel():
 			logging.info(e)
 		try:
 			relay.set_voteTime( self.timeToSend )
+		except Exception as e:
+			logging.info(e)
+		try:
 			relay.set_modTimes( self.activeModTimes )
 		except Exception as e:
 			logging.info(e)
@@ -445,16 +411,22 @@ class ChaosModel():
 			logging.info(e)
 		
 		
+	def announceMods(self):
+		message = "The currently active mods are " + ", ".join(filter(None, self.activeMods))
+		self.chatbot.sendReply( message )
+		
+	def announceVoting(self):
+		message = "You can currently vote for the following mods: "
+		for num, mod in enumerate(self.currentMods, start=1):
+			message += " {}: {}.".format(num, mod)
+		self.chatbot.sendReply( message )
 		
 			
 	def checkMessages(self):
 		#if q.qsize() > 0:
 		needToUpdateVotes = False
-#		while q.qsize() > 0:
 		while self.chatbot.messageQueue.qsize() > 0:
-			# q.empty(), q.get(), q.qsize()
-#			notice = q.get();
-			notice = self.chatbot.messageQueue.get();
+			notice = self.chatbot.messageQueue.get()
 			
 			if notice["user"] == "tmi":
 				self.tmiChatText += "tmi: " + notice["message"] + "\r\n"
@@ -472,20 +444,18 @@ class ChaosModel():
 			command = message.split(" ",1)
 			firstWord = command[0]
 			if firstWord == "!mods":
-				self.chatbot.sendReply( "!mods: There are currently " + str(len(self.allMods)) + " modifiers!  See them all with descriptions here: https://github.com/blegas78/chaos/tree/main/docs/TLOU2 @" + notice["user"] );
+				self.chatbot.sendReply( "!mods: There are currently " + str(len(self.allMods)) + " modifiers!  See them all with descriptions here: https://github.com/blegas78/chaos/tree/main/docs/TLOU2 @" + notice["user"] )
 				continue
 							
 			if firstWord == "!mod":
 				if len(command) == 1:
 					message = "Usage: !mod <mod name>"
-					self.chatbot.sendReply( message );
+					self.chatbot.sendReply( message )
 					continue
-#				argument = command[1]
 				argument = (''.join(c for c in command[1] if c.isalnum())).lower()
 				message = "!mod: Unrecognized mod :("
 				
 				for key in self.modifierData.keys():
-#					if key.lower() == argument.lower():
 					keyReduced = (''.join(c for c in key if c.isalnum())).lower()
 					if keyReduced == argument:
 						mod = self.modifierData[key]
@@ -497,9 +467,15 @@ class ChaosModel():
 				message += " @" + notice["user"]
 				self.chatbot.sendReply( message );
 				
+			if firstWord == "!activemods":
+				self.announceMods()
+				
+			if firstWord == "!nowvoting":
+				self.announceVoting()
 
 #  This is how Flexx API states that data passing should work
 relay = chaosRelay.ChaosRelay()
+relay.openConfig("/home/pi/chaosConfig.json")
 
 class ActiveMods(flx.PyWidget):
 	def init(self, relay):
@@ -523,9 +499,14 @@ class StreamerInterfaceLayout(ui.HVLayout):
 		self.apply_style('background:#000000;')
 
 class StreamerInterface(flx.PyWidget):
+
+#	CSS = """
+#    .flx-Widget {
+#	background: #0C0C0C;
+#    }
+#    """
 	def init(self, relay):
 		self.relay = relay
-		self.relay.textFormat = "color: white;font-weight: bold; text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black"
 		with StreamerInterfaceLayout() as self.s:
 			self.voteTimerView = chaosVoteTimerView.ChaosVoteTimerView(self)
 			self.chaosActiveView = chaosActiveView.ChaosActiveView(self)
@@ -623,8 +604,6 @@ class Interface(flx.PyWidget):
 			self.interface = StreamerInterface(self.relay, title='Interface')
 			self.settings = Settings(self.relay, title='Settings')
 			self.botSetup = BotSetup(self.relay, title='Bot Setup')
-#		self.t.apply_style("background: #222; color: #fff; text-align: center;")
-
 
 	def dispose(self):
 		super().dispose()
@@ -639,7 +618,6 @@ def startFlexx():
 	flx.App(VoteTimer, relay).serve()
 	flx.App(Votes, relay).serve()
 	flx.App(Interface, relay).serve()
-#	flx.App(GamepadServer).serve()
 	
 	flx.create_server(host='0.0.0.0', port=relay.uiPort, loop=asyncio.new_event_loop())
 	flx.start()
@@ -657,7 +635,7 @@ if __name__ == "__main__":
 	# Voting model:
 	chaosModel = ChaosModel(chatbot)
 	if (not chaosModel.process()):
-		chaosModel.print_help()
+			chaosModel.print_help()
 			
 	logging.info("Stopping threads...")
 	

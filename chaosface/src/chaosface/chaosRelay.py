@@ -1,20 +1,3 @@
-#-----------------------------------------------------------------------------
-# This file is part of Twitch Controls Chaos (TCC).
-# Copyright 2021 blegas78
-#
-# TCC is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License as published by the Free Software
-# Foundation, either version 3 of the License, or (at your option) any later
-# version.
-#
-# TCC is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-# details.
-#
-# You should have received a copy of the GNU General Public License along
-# with TCC.  If not, see <https://www.gnu.org/licenses/>.
-#-----------------------------------------------------------------------------
 
 from flexx import flx
 import json
@@ -28,13 +11,21 @@ def get_attribute(data, attribute, default_value):
 
 class ChaosRelay(flx.Component):
 
-#	def __init__(self):
-	chaosConfigFile="/home/pi/chaosConfig.json"
-	try:
-		with open(chaosConfigFile) as json_data_file:
-			chaosConfig = json.load(json_data_file)
-	except Exception as e:
-		chaosConfig = {}
+	def __init__(self):
+	#self.chaosConfigFile = configFile
+		self.chaosConfigFile = "chaosRelay.json"
+#		print("ChaosRelay(): configFile = :" + self.chaosConfigFile)
+		super().__init__()
+		
+	
+	#try:
+	#	print("ChaosRelay initializing with file:" + chaosConfigFile)
+	#	with open(chaosConfigFile) as json_data_file:
+	#		chaosConfig = json.load(json_data_file)
+	#except Exception as e:
+	chaosConfig = {}
+	
+		
 			
 	# Model-View bridge:
 	voteTime = flx.FloatProp(0.5, settable=True)
@@ -47,7 +38,7 @@ class ChaosRelay(flx.Component):
 	connected = flx.BoolProp(True, settable=True)
 	connectedBrightBackground = flx.BoolProp(True, settable=True)
 	resetSoftmax = flx.BoolProp(False, settable=True)
-	
+
 	tmiResponse = flx.StringProp("", settable=True)
 	
 #	allMods = flx.ListProp(["1", "2", "3", "4", "5", "6"], settable=True)
@@ -64,14 +55,8 @@ class ChaosRelay(flx.Component):
 	channel_name = flx.StringProp(get_attribute(chaosConfig, "channel_name", "blegas78"), settable=True)
 	chat_rate = flx.FloatProp(get_attribute(chaosConfig, "chat-rate", 0.67), settable=True)
 
-	text_color = flx.StringProp(get_attribute(chaosConfig, "text_color", "white"), settable=True)
-	text_bold = flx.BoolProp(get_attribute(chaosConfig, "text_bold", True), settable=True)
-	text_italic = flx.BoolProp(get_attribute(chaosConfig, "text_italic", False), settable=True)
-	text_outline = flx.BoolProp(get_attribute(chaosConfig, "text_outline", True), settable=True)
-	vote_time_color = flx.StringProp(get_attribute(chaosConfig, "vote_time_color", "#8be"), settable=True)
-	vote_count_color = flx.StringProp(get_attribute(chaosConfig, "vote_count_color", "#8be"), settable=True)
-	mod_time_color = flx.StringProp(get_attribute(chaosConfig, "mod_time_color", "#8be"), settable=True)
-	
+	announce_mods = flxBoolProp(get_attribute(chaosConfig, "announce_mods", False), settable=True)
+        
 	ui_rate = flx.FloatProp(get_attribute(chaosConfig, "ui_rate", 20.0), settable=True)
 	uiPort = flx.IntProp(get_attribute(chaosConfig, "uiPort", 80), settable=True)
 	
@@ -81,6 +66,35 @@ class ChaosRelay(flx.Component):
 #		self.chaosConfigFile="/home/pi/chaosConfig.json"
 #		with open(chaosConfigFile) as json_data_file:
 #			self.chaosConfig = json.load(json_data_file)
+
+	def openConfig(self, configFile):
+		try:
+			self.chaosConfigFile = configFile
+			print("ChaosRelay initializing with file:" + self.chaosConfigFile)
+			with open(self.chaosConfigFile) as json_data_file:
+				ChaosRelay.chaosConfig = json.load(json_data_file)
+		except Exception as e:
+			print("openConfig(): Error in opening file:" + self.chaosConfigFile)
+			ChaosRelay.chaosConfig = {}
+			
+		self.set_timePerModifier(get_attribute(self.chaosConfig, "modifier_time", 180.0))
+		self.set_softmaxFactor(get_attribute(self.chaosConfig, "softmax_factor", 33))
+		
+		self.set_ircHost(get_attribute(self.chaosConfig, "host", "irc.twitch.tv"))
+		self.set_ircPort(get_attribute(self.chaosConfig, "port", 6667))
+			
+		self.set_bot_name(get_attribute(self.chaosConfig, "bot_name", "see_bot"))
+		self.set_bot_oauth(get_attribute(self.chaosConfig, "bot_oauth", "oauth:abcdefghijklmnopqrstuvwxyz1234"))
+		print('self.chaosConfig["channel_name"] = ' + ChaosRelay.chaosConfig["channel_name"])
+		print('channel_name = ' + self.channel_name)
+		self.set_channel_name(get_attribute(ChaosRelay.chaosConfig, "channel_name", "blegas7"))
+		print('self.chaosConfig["channel_name"] = ' + ChaosRelay.chaosConfig["channel_name"])
+		print('channel_name = ' + self.channel_name)
+		
+		self.set_chat_rate(get_attribute(self.chaosConfig, "chat-rate", 0.67))
+			
+		self.set_ui_rate(get_attribute(self.chaosConfig, "ui_rate", 20.0))
+		self.set_uiPort(get_attribute(self.chaosConfig, "uiPort", 80))
 
 	def saveConfig(self):
 		with open(self.chaosConfigFile, 'w') as outfile:
@@ -179,41 +193,11 @@ class ChaosRelay(flx.Component):
 		for ev in events:
 			self.chaosConfig["channel_name"] = ev.new_value
 
-	@flx.reaction('text_color')
-	def on_text_color(self, *events):
-		for ev in events:
-			self.chaosConfig["text_color"] = ev.new_value
-	
-	@flx.reaction('text_bold')
-	def on_text_bold(self, *events):
-		for ev in events:
-			self.chaosConfig["text_bold"] = ev.new_value
-	
-	@flx.reaction('text_italic')
-	def on_text_italic(self, *events):
-		for ev in events:
-			self.chaosConfig["text_italic"] = ev.new_value
-	
-	@flx.reaction('text_outline')
-	def on_text_outline(self, *events):
-		for ev in events:
-			self.chaosConfig["text_outline"] = ev.new_value
-	
-	@flx.reaction('vote_time_color')
-	def on_vote_time_color(self, *events):
-		for ev in events:
-			self.chaosConfig["vote_time_color"] = ev.new_value
-	
-	@flx.reaction('vote_count_color')
-	def on_vote_count_color(self, *events):
-		for ev in events:
-			self.chaosConfig["vote_count_color"] = ev.new_value
-	
-	@flx.reaction('mod_time_color')
-	def on_mod_time_color(self, *events):
-		for ev in events:
-			self.chaosConfig["mod_time_color"] = ev.new_value
-	
+        @flx.reaction('announce_mods')
+        def on_announce_mods(self, *events):
+                for ev in events:
+                        self.chaosConfig["announce_mods"] = ev.new_value
+                        
 	@flx.reaction('ui_rate')
 	def on_ui_rate(self, *events):
 		for ev in events:
@@ -276,7 +260,7 @@ class ChaosRelay(flx.Component):
 	@flx.emitter
 	def updateTmiResponse(self, value):
 		return dict(value=value)
-	
+        
 # Create global relay object, shared by all connections
 #relay = Relay()
 #chatRelay = ChatRelay()
