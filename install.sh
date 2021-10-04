@@ -1,7 +1,7 @@
 #!/bin/bash
 
-cp chaos.service /etc/systemd/system/
-cp chaosface.service /etc/systemd/system/
+cp scripts/chaos.service /etc/systemd/system/
+cp scripts/chaosface.service /etc/systemd/system/
 
 systemctl daemon-reload
 systemctl enable chaos
