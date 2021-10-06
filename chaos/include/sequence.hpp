@@ -1,7 +1,7 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the COPYRIGHT
- * file at the top-level directory of this distribution.
+ * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
+ * the top-level directory of this distribution for details of the contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,36 +18,33 @@
  */
 #ifndef SEQUENCE_HPP
 #define SEQUENCE_HPP
-
 #include <vector>
 
 #include "controller.hpp"
-
-#define TIME_AFTER_JOYSTICK_DISABLE ((unsigned int)(1000000/3))	// in us
-#define TIME_PER_BUTTON_PRESS ((unsigned int)(50000*1.25))	// in us
-#define TIME_PER_BUTTON_RELEASE ((unsigned int)(50000*1.25))	// in us
-#define MENU_SELECT_DELAY ((unsigned int)(50)) // in ms
 
 namespace Chaos {
 
   class Sequence {
   private:
     std::vector<DeviceEvent> events;
-	
+    Controller* controller;
+    
+    unsigned int TIME_AFTER_JOYSTICK_DISABLE = (unsigned int) (1000000/3); // in µs
+    unsigned int TIME_PER_BUTTON_PRESS = (unsigned int) (50000*1.25);	// in µs
+    unsigned int TIME_PER_BUTTON_RELEASE = (unsigned int) (50000*1.25);	// in µs
+    unsigned int MENU_SELECT_DELAY = 50; // in ms
+    
   public:
-    Sequence();
+    Sequence(Controller* c);
     void disablejoysticks();	// Needed for proper menuing, probably
-    void addButtonPress( ButtonID id );
-    void addButtonHold( ButtonID id );
-    void addButtonRelease( ButtonID id );
+    void addButtonPress( Button id );
+    void addButtonHold( Button id );
+    void addButtonRelease( Button id );
     void addTimeDelay( unsigned int timeInMilliseconds );
-    void addAxisPress( AxisID id, short value );
-    void addAxisHold( AxisID id, short value );
-    void send(Controller* dualshock);
-	
+    void addAxisPress( Axis id, short value );
+    void addAxisHold( Axis id, short value );
+    void send();
     void clear();
-    // For building a sequence:
-    //void changeMenuOption();
   };
 
 };

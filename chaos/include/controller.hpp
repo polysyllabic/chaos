@@ -1,41 +1,32 @@
-/**
- * @file controller.hpp
+/*
+ * Twitch Controls Chaos (TCC)
+ * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
+ * in top-level directory of this distribution for a list of the contributers.
  *
- * @brief Definition of the Controller class
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * @author blegas78
- * @author polysyl
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-/*----------------------------------------------------------------------------
-* This file is part of Twitch Controls Chaos (TCC).
-* Copyright 2021 blegas78. Additional code copyright 2021 polysyl.
-*
-* TCC is free software: you can redistribute it and/or modify it under the
-* terms of the GNU General Public License as published by the Free Software
-* Foundation, either version 3 of the License, or (at your option) any later
-* version.
-*
-* TCC is distributed in the hope that it will be useful, but WITHOUT ANY
-* WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-* FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-* details.
-*
-* You should have received a copy of the GNU General Public License along
-* with TCC.  If not, see <https://www.gnu.org/licenses/>.
-*---------------------------------------------------------------------------*/
 #ifndef CONTROLLER_HPP
 #define CONTROLLER_HPP
 
-//#include <map>
-#include <cstdio>
 #include <deque>
 #include <array>
 
-#include "device.hpp"	// Joystick, Mouse
+//#include "device.hpp"	// Joystick, Mouse
 #include "raw-gadget.hpp"
 #include "controllerState.hpp"
 #include "chaosUhid.hpp"
+#include "deviceTypes.hpp"
 
 namespace Chaos {
 
@@ -71,8 +62,10 @@ namespace Chaos {
     void applyEvent(const DeviceEvent* event);
     void addInjector(ControllerInjector* injector);
 
-    const short int JOYSTICK_MIN = -128;
-    const short int JOYSTICK_MAX = 128;
+    virtual uint8_t getButton(Button b) = 0;
+    virtual uint8_t getAxis(Axis a) = 0;
+    virtual int getJoystickMin() = 0;
+    virtual int getJoystickMax() = 0;
   };
 
 };

@@ -1,7 +1,7 @@
 /*
  * Twitch Controls Chaos (TCC)
  * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * at the top-level directory of this distribution for contributor details.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,15 +16,32 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef CONFIG_HPP
-#define CONFIG_HPP
+#ifndef COMMAND_HPP
+#define COMMAND_HPP
+#include <string>
 
-#define CHAOS_VERSION_MAJOR 2
-#define CHAOS_VERSION_MINOR 0
-#define CHAOS_VERSION "2.0.0-alpha.1"
+namespace Chaos {
 
-/* #undef RASPBERRY_PI */
-#define USE_DUALSHOCK
-/* #undef USE_DUALSENSE */
+  /**
+   * Implementation of Command class for TCC
+   *
+   * The Command class maps an individual game command onto a particular
+   * button/joystick signal. By maintaining a map, we can define
+   * modifiers according to affect a command rather than a button press.
+   */
+  class Commands {
+    
+  protected:
+    /**
+     * Default constructor
+     */
+    Commands();
+
+  private:
+    
+    
+  };
+};
+
 
 #endif

@@ -1,7 +1,7 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the COPYRIGHT
- * file at the top-level directory of this distribution.
+ * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
+ * in top-level directory of this distribution for a list of the contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
 #include "raw-gadget.hpp"
 
 #include "controller.hpp"
-#include "device.hpp"	// Joystick, Mouse
+//#include "device.hpp"	// Joystick, Mouse
 #include "controllerState.hpp"
 #include "chaosUhid.hpp"
 
@@ -50,7 +50,12 @@ namespace Chaos {
   public:
     RawGadgetPassthrough mRawGadgetPassthrough;
 	
-    void initialize( );	
+    void initialize();
+    
+    uint8_t getButton(Button b);
+    uint8_t getAxis(Axis a);
+    int getJoystickMin();
+    int getJoystickMax();
   };
 
 };

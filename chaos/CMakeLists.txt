@@ -129,21 +129,21 @@ add_executable(chaos include/config.hpp
 		     src/controllerRaw.cpp
 		     include/controllerState.hpp
 		     src/controllerState.cpp
-		     src/controllerStateDualsense.cpp
-		     src/controllerStateDualshock.cpp
-		     include/ps4-generated.h
-		     include/ps5-generated.h
-		     include/device.hpp
-		     src/device.cpp
+		     include/dualsense.hpp
+		     src/dualsense.cpp
+		     include/dualshock.hpp
+		     src/dualshock.cpp
+#		     include/device.hpp
+#		     src/device.cpp
 		     include/deviceTypes.hpp
-		     src/joystick.cpp
+#		     src/joystick.cpp
 		     include/modifier.hpp
 		     src/modifier.cpp
 		     include/delayModifier.hpp
 		     src/delayModifier.cpp
 		     include/menuModifier.hpp
 		     src/menuModifier.cpp
-		     src/mouse.cpp
+#		     src/mouse.cpp
 		     include/sequence.hpp
 		     src/sequence.cpp
 		     src/main.cpp)
@@ -152,4 +152,4 @@ target_compile_features(chaos PRIVATE cxx_std_17)
 
 target_include_directories (chaos PUBLIC include )
 
-target_link_libraries(chaos PUBLIC zmqpp sniffify)
+target_link_libraries(chaos PUBLIC zmqpp zmq sniffify)

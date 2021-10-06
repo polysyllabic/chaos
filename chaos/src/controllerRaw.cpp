@@ -1,7 +1,7 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the COPYRIGHT
- * file at the top-level directory of this distribution.
+ * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
+ * the top-level directory of this distribution for details of the contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
  */
 #include <map>
 #include <array>
+#include <iostream>
+#include <iomanip>
 #include <unistd.h>
 #include <plog/Log.h>
 
@@ -67,7 +69,7 @@ void ControllerRaw::notification(unsigned char* buffer, int length) {
   mControllerState->applyHackedState(buffer, controllerState);
 }
 
-void ControllerRaw::initialize( ) {
+void ControllerRaw::initialize() {
 
   this->setEndpoint(0x84);	// Works for both dualshock4 and dualsense
   mRawGadgetPassthrough.addObserver(this);
@@ -89,4 +91,36 @@ void ControllerRaw::initialize( ) {
 	       << " product=0x" << std::setfill('0') << std::setw(4) << std::hex << mRawGadgetPassthrough.getProduct() << std::endl;
     exit(EXIT_FAILURE);
   }
+}
+
+uint8_t ControllerRaw::getButton(Button b) {
+  if (mControllerState == NULL) {
+    PLOG_FATAL << "Attempted to call ControllerRaw::getButton() without initializing controller state.\n";
+    exit(EXIT_FAILURE);
+  }
+  return mControllerState->getButton(b);
+}
+
+uint8_t ControllerRaw::getAxis(Axis a) {
+  if (mControllerState == NULL) {
+    PLOG_FATAL << "Attempted to call ControllerRaw::getAxis() without initializing controller state.\n";
+    exit(EXIT_FAILURE);
+  }
+  return mControllerState->getAxis(a);
+}
+
+int ControllerRaw::getJoystickMin() {
+  if (mControllerState == NULL) {
+    PLOG_FATAL << "Attempted to call ControllerRaw::getAxis() without initializing controller state.\n";
+    exit(EXIT_FAILURE);
+  }
+  return mControllerState->getJoystickMin();
+}
+
+int ControllerRaw::getJoystickMax() {
+  if (mControllerState == NULL) {
+    PLOG_FATAL << "Attempted to call ControllerRaw::getAxis() without initializing controller state.\n";
+    exit(EXIT_FAILURE);
+  }
+  return mControllerState->getJoystickMax();
 }

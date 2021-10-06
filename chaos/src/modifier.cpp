@@ -1,7 +1,7 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the COPYRIGHT
- * file at the top-level directory of this distribution.
+ * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
+ * the top-level directory of this distribution for details of the contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -114,15 +114,15 @@ void Modifier::setParentModifier(Modifier* parent) {
 /**
  * Test current state of a button and return its pressed state as boolean.
  */
-bool Modifier::buttonPressed(ButtonID button) {
-  return controller->getState(button, TYPE_BUTTON);
+bool Modifier::buttonPressed(Button button) {
+  return controller->getState(controller->getButton(button), TYPE_BUTTON);
 }
 
 /**
  * Force the button off. This disables the button press unconditionally.
  */
-void Modifier::buttonOff(DeviceEvent* event, ButtonID button) {
-  if (event->id == button && event->type == TYPE_BUTTON) {
+void Modifier::buttonOff(DeviceEvent* event, Button button) {
+  if (event->id == controller->getButton(button) && event->type == TYPE_BUTTON) {
     event->value = 0;
   }
 }
@@ -130,8 +130,8 @@ void Modifier::buttonOff(DeviceEvent* event, ButtonID button) {
 /**
  * Force the button off if another button is also pressed at the same time.
  */
-void Modifier::buttonOff(DeviceEvent* event, ButtonID button, ButtonID alsoPressed) {
-  if (event->id == button && event->type == TYPE_BUTTON && buttonPressed(alsoPressed)) {
+void Modifier::buttonOff(DeviceEvent* event, Button button, Button alsoPressed) {
+  if (event->id == controller->getButton(button) && event->type == TYPE_BUTTON && buttonPressed(alsoPressed)) {
     event->value = 0;
   }
 }
@@ -139,8 +139,8 @@ void Modifier::buttonOff(DeviceEvent* event, ButtonID button, ButtonID alsoPress
 /**
  * Force the button on. This disables the button press unconditionally.
  */
-void Modifier::buttonOn(DeviceEvent* event, ButtonID button) {
-  if (event->id == button && event->type == TYPE_BUTTON) {
+void Modifier::buttonOn(DeviceEvent* event, Button button) {
+  if (event->id == controller->getButton(button) && event->type == TYPE_BUTTON) {
     event->value = 1;
   }
 }
@@ -148,8 +148,8 @@ void Modifier::buttonOn(DeviceEvent* event, ButtonID button) {
 /**
  * Force an axis to zero.
  */
-void Modifier::axisOff(DeviceEvent* event, AxisID axis) {
-  if (event->id == axis && event->type == TYPE_AXIS) {
+void Modifier::axisOff(DeviceEvent* event, Axis axis) {
+  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
     event->value = 0;
   }
 }
@@ -157,26 +157,26 @@ void Modifier::axisOff(DeviceEvent* event, AxisID axis) {
 /**
  * Force an axis to the minimum value.
  */
-void Modifier::axisMin(DeviceEvent* event, AxisID axis) {
-  if (event->id == axis && event->type == TYPE_AXIS) {
-    event->value = controller->JOYSTICK_MIN;
+void Modifier::axisMin(DeviceEvent* event, Axis axis) {
+  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
+    event->value = controller->getJoystickMin();
   }
 }
 
 /**
  * Force an axis to the maximum value.
  */
-void Modifier::axisMax(DeviceEvent* event, AxisID axis) {
-  if (event->id == axis && event->type == TYPE_AXIS) {
-    event->value = controller->JOYSTICK_MAX;
+void Modifier::axisMax(DeviceEvent* event, Axis axis) {
+  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
+    event->value = controller->getJoystickMax();
   }
 }
 
 /**
  * Invert the axis value (swap positive and negative values).
  */
-void Modifier::axisInvert(DeviceEvent* event, AxisID axis) {
-  if ((event->id == axis) && event->type == TYPE_AXIS) {
+void Modifier::axisInvert(DeviceEvent* event, Axis axis) {
+  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
     event->value = -((int) event->value + 1);
   }
 }
@@ -184,8 +184,8 @@ void Modifier::axisInvert(DeviceEvent* event, AxisID axis) {
 /**
  * Only allow positive axis values.
  */
-void Modifier::axisPositive(DeviceEvent* event, AxisID axis) {
-  if ((event->id == axis) && event->type == TYPE_AXIS) {
+void Modifier::axisPositive(DeviceEvent* event, Axis axis) {
+  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
     event->value = event->value >= 0 ? event->value  : 0;
   }
 }
@@ -193,8 +193,8 @@ void Modifier::axisPositive(DeviceEvent* event, AxisID axis) {
 /**
  * Only allow negative axis values.
  */
-void Modifier::axisNegative(DeviceEvent* event, AxisID axis) {
-  if ((event->id == axis) && event->type == TYPE_AXIS) {
+void Modifier::axisNegative(DeviceEvent* event, Axis axis) {
+  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
     event->value = event->value <= 0 ? event->value  : 0;
   }
 }
@@ -202,8 +202,8 @@ void Modifier::axisNegative(DeviceEvent* event, AxisID axis) {
 /**
  * Make all negative values positive.
  */
-void Modifier::axisAbsolute(DeviceEvent* event, AxisID axis) {
-  if ((event->id == axis) && event->type == TYPE_AXIS) {
+void Modifier::axisAbsolute(DeviceEvent* event, Axis axis) {
+  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
     event->value = abs(event->value);
   }
 }
@@ -211,8 +211,8 @@ void Modifier::axisAbsolute(DeviceEvent* event, AxisID axis) {
 /**
  * Make all positive values negative.
  */
-void Modifier::axisNegAbsolute(DeviceEvent* event, AxisID axis) {
-  if ((event->id == axis) && event->type == TYPE_AXIS) {
+void Modifier::axisNegAbsolute(DeviceEvent* event, Axis axis) {
+  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
     event->value = -abs(event->value);
   }
 }
@@ -223,8 +223,8 @@ void Modifier::axisNegAbsolute(DeviceEvent* event, AxisID axis) {
  * the list from further modifying this event. If true is returned, further
  * processing can occur.
  */
-bool Modifier::axisDropEvent(DeviceEvent* event, AxisID axis) {
-  if (event->id == axis && event->type == TYPE_AXIS)
+bool Modifier::axisDropEvent(DeviceEvent* event, Axis axis) {
+  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS)
     return false;
   return true;
 }

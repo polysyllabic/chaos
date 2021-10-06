@@ -18,13 +18,13 @@
  */
 #ifndef MODIFIER_HPP
 #define MODIFIER_HPP
-
 #include <string>
 #include <functional>
 #include <map>
 #include <mogi/math/systems.h>
 
 #include "controller.hpp"
+#include "deviceTypes.hpp"
 
 namespace Chaos {
 
@@ -82,24 +82,24 @@ namespace Chaos {
     void setParentModifier(Modifier* parent);
 
     // Directly read the current controller state
-    bool buttonPressed(ButtonID button);
+    bool buttonPressed(Button button);
 
     // Alter event comming from the controller
-    void buttonOff(DeviceEvent* event, ButtonID button);
-    void buttonOff(DeviceEvent* event, ButtonID button, ButtonID alsoPressed);
-    void buttonOn(DeviceEvent* event, ButtonID button);
+    void buttonOff(DeviceEvent* event, Button button);
+    void buttonOff(DeviceEvent* event, Button button, Button alsoPressed);
+    void buttonOn(DeviceEvent* event, Button button);
   
-    void axisOff(DeviceEvent* event, AxisID axis);
-    void axisMin(DeviceEvent* event, AxisID axis);
-    void axisMax(DeviceEvent* event, AxisID axis);
-    void axisInvert(DeviceEvent* event, AxisID axis);
-    void axisPositive(DeviceEvent* event, AxisID axis);
-    void axisNegative(DeviceEvent* event, AxisID axis);
-    void axisAbsolute(DeviceEvent* event, AxisID axis);
-    void axisNegAbsolute(DeviceEvent* event, AxisID axis);
+    void axisOff(DeviceEvent* event, Axis axis);
+    void axisMin(DeviceEvent* event, Axis axis);
+    void axisMax(DeviceEvent* event, Axis axis);
+    void axisInvert(DeviceEvent* event, Axis axis);
+    void axisPositive(DeviceEvent* event, Axis axis);
+    void axisNegative(DeviceEvent* event, Axis axis);
+    void axisAbsolute(DeviceEvent* event, Axis axis);
+    void axisNegAbsolute(DeviceEvent* event, Axis axis);
   
     // Prevent further mods from tweaking this event
-    bool axisDropEvent(DeviceEvent* event, AxisID axis);
+    bool axisDropEvent(DeviceEvent* event, Axis axis);
 };
 
 };

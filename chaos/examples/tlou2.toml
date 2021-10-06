@@ -1,37 +1,35 @@
 #-----------------------------------------------------------------------------
-# This file is part of Twitch Controls Chaos (TCC).
-# Copyright 2021 blegas78, with contrubutions from polysyl.
+# Twitch Controls Chaos (TCC)
+# Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
+# at the top-level directory of this distribution for contributor details.
 #
-# TCC is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License as published by the Free Software
-# Foundation, either version 3 of the License, or (at your option) any later
-# version.
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
-# TCC is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-# details.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with
-# TCC. If not, see <https://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
-# This toml file is an attempt to define all the game-specific elements in
-# a single configuration file. Ideally, we should be able to support different
-# games merely by producing a different configuration file, without needing
-# to recompile the engine.
 #
-##############################################################################
+# This is a game-specific configuration file for the TCC engine.
+#
 # Root-level definitions
 #
 # chaos_toml: A version string. Used now to verify that we're reading the
-# right file. May be used in the future to check compatibility if we alter
-# the format.
+# right file. Note that this is the version of the TOML format, not the chaos
+# engine's version number.
 chaos_toml = "1.0"
 
 # game: User-friendly name of the game this configuration file defines.
 game = "The Last of Us Part II"
 
-##############################################################################
+#-----------------------------------------------------------------------------
 # Command Mapping
 #
 # This section defines the commands that this game supports, or at least the
@@ -40,96 +38,80 @@ game = "The Last of Us Part II"
 # There are three parts to each command definition: 
 # name -- The label used to refer to the action in the modifiers
 # context -- A particular game state that must be true for the specific
-# controller event to have the assigned meanings. The "default" context is
-# the basic context when no more
-# specific context applies. The mapping defines the specific controller
-# event to which the game assigned this command by default.
+# controller event to have the assigned meanings. An individual command can
+# be set to a state by declaring state = TRUE. If non context is defined,
+# the command applies in the default situation (independent of other button
+# presses, etc.
+# Note that 
 [[command]]
 name = "grab/interact"
-context = "default"
 mapping = "BUTTON_TRIANGLE"
 
 [[command]]
 name = "crouch/prone"
-context = "default"
 mapping = "BUTTON_CIRCLE"
 
 [[command]]
 name = "jump/climb"
-context = "default"
 mapping = "BUTTON_X"
 
 [[command]]
 name = "melee"
-context = "default"
 mapping = "BUTTON_SQUARE"
 
 [[command]]
 name = "dodge/sprint"
-context = "default"
 mapping = "BUTTON_L1"
 
 [[command]]
 name = "aiming"
-context = "default"
 mapping = "BUTTON_L2"
+state = TRUE
 
 [[command]]
 name = "swap/listen"
-context = "default"
 mapping = "BUTTON_R1"
 
 [[commands]]
 name = "reload/toss"
-context = "default"
 mapping = "BUTTON_R2"
 
 [[commands]]
 name = "look"
-context = "default"
 mapping = "BUTTON_L3"
 
 [[commands]]
 name = "flashlight"
-context = "default"
 mapping = "BUTTON_R3"
 
 [[commands]]
 name = "backpack"
-context = "default"
 mapping = "BUTTON_TOUCHPAD"
 
 [[commands]]
 name = "move sideways"
-context = "default"
 mapping = "AXIS_LX"
 
 [[commands]]
 name = "move forwards/backwards"
-context = "default"
 mapping = "AXIS_LY"
 
 [[commands]]
 name = "horizontal camera"
-context = "default"
 mapping = "AXIS_RX"
 
 [[commands]]
 name = "vertical camera"
-context = "default"
 mapping = "AXIS_RY"
 
 [[commands]]
 name = "select weapon"
-context = "default"
 mapping = "AXIS_DX"
 
 [[commands]]
 name = "select consumable"
-context = "default"
 mapping = "AXIS_DY"
 
-# These commands only apply in the context of aiming (hold L2)
 [[command]]
 name = "scope"
 context = "aiming"
