@@ -45,1528 +45,543 @@ game = "The Last of Us Part II"
 # Note that 
 [[command]]
 name = "grab/interact"
-mapping = "BUTTON_TRIANGLE"
+binding = "TRIANGLE"
 
 [[command]]
 name = "crouch/prone"
-mapping = "BUTTON_CIRCLE"
+binding = "CIRCLE"
 
 [[command]]
 name = "jump/climb"
-mapping = "BUTTON_X"
+binding = "X"
 
 [[command]]
 name = "melee"
-mapping = "BUTTON_SQUARE"
+binding = "SQUARE"
 
 [[command]]
 name = "dodge/sprint"
-mapping = "BUTTON_L1"
+binding = "L1"
 
 [[command]]
 name = "aiming"
-mapping = "BUTTON_L2"
-state = TRUE
+binding = "L2"
 
 [[command]]
 name = "swap/listen"
-mapping = "BUTTON_R1"
+binding = "R1"
 
-[[commands]]
+[[command]]
 name = "reload/toss"
-mapping = "BUTTON_R2"
+binding = "R2"
 
-[[commands]]
+[[command]]
 name = "look"
-mapping = "BUTTON_L3"
+binding = "L3"
 
-[[commands]]
+[[command]]
 name = "flashlight"
-mapping = "BUTTON_R3"
+binding = "R3"
 
-[[commands]]
+[[command]]
 name = "backpack"
-mapping = "BUTTON_TOUCHPAD"
+binding = "TOUCHPAD"
 
-[[commands]]
+[[command]]
 name = "move sideways"
-mapping = "AXIS_LX"
+binding = "LX"
 
-[[commands]]
-name = "move forwards/backwards"
-mapping = "AXIS_LY"
+[[command]]
+name = "move forward/back"
+binding = "LY"
 
-[[commands]]
+[[command]]
 name = "horizontal camera"
-mapping = "AXIS_RX"
+binding = "RX"
 
-[[commands]]
+[[command]]
 name = "vertical camera"
-mapping = "AXIS_RY"
+binding = "RY"
 
-[[commands]]
+[[command]]
 name = "select weapon"
-mapping = "AXIS_DX"
+binding = "DX"
 
-[[commands]]
+[[command]]
 name = "select consumable"
-mapping = "AXIS_DY"
+binding = "DY"
 
 [[command]]
 name = "scope"
-context = "aiming"
-mapping = "BUTTON_X"
+condition = "aiming"
+binding = "X"
 
 # attach silencer / toggle fire mode / swap ammo
 [[command]]
 name = "weapon feature"
-context = "aiming"
-mapping = "BUTTON_TRIANGLE"
+condition = "aiming"
+binding = "TRIANGLE"
 
 [[command]]
 name = "shoulder swap"
-context = "aiming"
-mapping = "BUTTON_SQUARE"
+condition = "aiming"
+binding = "SQUARE"
 
 [[command]]
 name = "shoot/throw"
-context = "aiming"
-mapping = "BUTTON_R2"
+condition = "aiming"
+binding = "R2"
 
 [[command]]
 name = "hold breath"
-context = "aiming"
-mapping = "BUTTON_L3"
+condition = "aiming"
+binding = "L3"
 
-################################################################################
 # Gameplay Modifiers
-###############################################################################
 [[modifier]]
 name = "No Melee"
 description = "Disable melee attacks and stealth kills"
 type = "disable"
-tweak.command = "melee" # BUTTON_SQUARE
+appliesTo = [ "melee" ]
 
 [[modifier]]
 name = "Melee Only"
 description = "No shooting and no throwables"
-type = "disable" # need something special to minimize the axis
-tweak.command = "reload/toss" # BUTTON_R2, AXIS_R2
+type = "disable"
+appliesTo = [ "reload/toss" ]
 
 [[modifier]]
 name = "Pacifist%"
-description = "No shooting, throwing, nor melee. Good luck NPC friends!"
-children = [ "No Melee", "Melee Only" ]
+description = "No shooting, throwing, or melee. Good luck, NPC friends!"
+type = "disable"
+appliesTo = [ "melee", "reload/toss" ]
 
 [[modifier]]
 name = "No Climbing/Jumping"
 description = "No climbing or jumping"
 type = "disable"
-tweak.command = "climb/jump" # BUTTON_X
+appliesTo = [ "jump/climb" ]
 
 [[modifier]]
-name = "No Grab" # Renamed from "No Triangle"
-description = "Swiper no swiping! No looting, stealth grabbing, opening doors. Say goodbye to the everything button"
+name = "No Grab"
+description = "Swiper no swiping! No looting, stealth grabbing, opening doors. Say goodbye to the everything button."
 type = "disable"
-tweak.command = "grab/interact" # BUTTON_TRIANGLE
+appliesTo = [ "grab/interact" ]
 
 [[modifier]]
 name = "No Crouch/Prone"
-description = "Circle is disabled"
-begin.events = [ [0, 0, "TYPE_BUTTON", "BUTTON_CIRCLE"] ]
+description = "Crouching/going prone is disabled"
 type = "disable"
-tweak.command = "crouch/prone" # BUTTON_CIRCLE
+appliesTo = [ "crouch/prone" ]
+disableOnStart = true
+
+m[[modifier]]
+name = "No Run/Dodge"
+description = "L1 is disabled"
+type = "disable"
+appliesTo = [ "dodge/sprint" ]
 
 [[modifier]]
 name = "No Aiming"
 description = "At least reloading is still possible, along with throwables and melee"
 type = "disable"
-tweak.command = "aiming" # BUTTON_L2
+appliesTo = [ "aiming" ]
 
 [[modifier]]
 name = "No Horizontal Aim"
-description = "The right joystick right/left is disabled"
+description = "The horizontal camera is disabled"
 type = "disable"
-tweak.command = "horizontal camera" # AXIS_RX
-
-[[modifier]]
-name = "Inverted"
-description = "Inverts the vertical axis for aiming"
-type = "invert"
-tweak.command = "vertical camera" # AXIS_RY
-
-[[modifier]]
-name = "Moonwalk"
-description = "Be like Michael Jackson! Trying to walk forward will actually make you go backward"
-type = "invert"
-tweak.commad = "move forwards/backwards" # AXIS_LY
-
-[[modifier]]
-name = "Sideways Moonwalk"
-description = "Go left to go right and go right to go left"
-type = "invert"
-tweak.command = "move sideways" # AXIS_LX
+appliesTo = [ "horizontal camera" ]
 
 [[modifier]]
 name = "No Scoping"
 description = "No scopes! Aiming is still allowed"
-
-[modifier.tweak]
-actions = [ ["scope", "disable"] ] # BUTTON_X while BUTTON_L2
+type = "disable"
+appliesTo = [ "scope" ]
 
 [[modifier]]
 name = "No Shoulder Swap"
 description = "While aiming, Square is disabled"
-
-[modifier.tweak]
-actions = [ ["shoulder swap", "disable"] ] # BUTTON_SQUARE while BUTTON_L2
+type = "disable"
+appliesTo = [ "shoulder swap" ]
 
 [[modifier]]
 name = "No Reloading"
 description = "If guns were last selected, R2 is disabled without L2"
-type = "conditional_action"
-conditions = ["gun_selected", "not_aiming"]
-actions = [ [ "reload/toss", "disable"] ] # BUTTON_R2 while not BUTTON_L2
-
-
-[[modifier]]
-name = "Keep Proning"
-description = "Proning at inconvenient times"
-#  double pressTime;
-
-[modifier.begin]
-events = [ [0, 1, "TYPE_BUTTON", "BUTTON_CIRCLE"] ]
-
-[modifier.update]
-pressTime = [
-  delay = 2.0,
-  actions = [ ["crouch/prone", "inverse"] ] # BUTTON_CIRCLE
-  ]
-
-[modifier.finish]
-events = [ [0, 0, "TYPE_BUTTON", "BUTTON_CIRCLE"] ]
+type = "disable"
+appliesTo = [ "reload/toss" ]
+unless = [ "aiming" ]
+gameState = [ "gun selected" ]
 
 [[modifier]]
-name = "Factions Pro"
-description = "Keeping things toxic with teabagging"
-
-[modifier.begin]
-events = [ [0, 1, "TYPE_BUTTON", "BUTTON_CIRCLE"] ]
-
-[modifier.update]
-pressTime = [
-  delay = 0.1,
-  actions = [ ["BUTTON_CIRCLE", "inverse"] ]
-  ]
-    if ( pressTime > 0.1  && dualshock->getState(BUTTON_CIRCLE, TYPE_BUTTON) ) {
-      DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_CIRCLE};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    } else if( pressTime > 0.6 && !dualshock->getState(BUTTON_CIRCLE, TYPE_BUTTON) ) {
-      DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_CIRCLE};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    }
-  }
-  void finish() {
-    DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_CIRCLE};
-    dualshock->applyEvent(&event);
-  }
-
-# Rename/tuning from HeHathYought
-# toggleCount;
-[[modifier]]
-name = "Anthony Caliber"
-description = "Flashlight flickering"
-
-[modifier.begin]
-    DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_R3};
-    dualshock->applyEvent(&event);
-    pressTime = 0;
-    toggleCount = 0;
-  }
-  void update() {
-    pressTime += timer.dTime();
-    if (toggleCount < 8) {
-      if ( pressTime > 0.2/3.0  && dualshock->getState(BUTTON_R3, TYPE_BUTTON) ) {
-	DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_R3};
-	dualshock->applyEvent(&event);
-	pressTime = 0;
-	toggleCount++;
-      } else if( pressTime > 0.26875/3.0 && !dualshock->getState(BUTTON_R3, TYPE_BUTTON) ) {
-	DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_R3};
-	dualshock->applyEvent(&event);
-	pressTime = 0;
-      }
-    } else if (pressTime > 4.0) {
-      toggleCount = 0;
-      pressTime = 0;
-    }
-  }
-  void finish() {
-    DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_R3};
-    dualshock->applyEvent(&event);
-  }
-[modifier.tweak]
-    return true;
-  }
-};
-
-[[modifier]]
-name = "Keep Jumping"
-description = "Repeated presses of X"
-  double pressTime;
-  void begin() {
-    DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_X};
-    dualshock->applyEvent(&event);
-    pressTime = 0;
-  }
-  void update() {
-    pressTime += timer.dTime();
-    if ( pressTime > 0.1  && dualshock->getState(BUTTON_X, TYPE_BUTTON) ) {
-      DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_X};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    } else if( pressTime > 2.0 && !dualshock->getState(BUTTON_X, TYPE_BUTTON) ) {
-      DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_X};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    }
-  }
-  void finish() {
-    DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_X};
-    dualshock->applyEvent(&event);
-  }
-[modifier.tweak]
-    return true;
-  }
-};
-
-[[modifier]]
-name = "Rachy Flail"
-description = "The only way to melee is to follow the master techniques of RachyMonster"
-  double pressTime;
-  void begin() {
-    DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_SQUARE};
-    dualshock->applyEvent(&event);
-    pressTime = 0;
-  }
-  void update() {
-    pressTime += timer.dTime();
-    if ( pressTime > 0.1  && dualshock->getState(BUTTON_SQUARE, TYPE_BUTTON) ) {
-      DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_SQUARE};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    } else if( pressTime > 1.1 && !dualshock->getState(BUTTON_SQUARE, TYPE_BUTTON) ) {
-      DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_SQUARE};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    }
-  }
-  void finish() {
-    DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_SQUARE};
-    dualshock->applyEvent(&event);
-  }
-[modifier.tweak]
-    return true;
-  }
-};
-
-[[modifier]]
-name = "Keep Dodging"
-description = "Repeated presses of Circle"
-  double pressTime;
-  void begin() {
-    DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_L1};
-    dualshock->applyEvent(&event);
-    pressTime = 0;
-  }
-  void update() {
-    pressTime += timer.dTime();
-    if ( pressTime > 0.1  && dualshock->getState(BUTTON_L1, TYPE_BUTTON) ) {
-      DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_L1};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    } else if( pressTime > 2.0 && !dualshock->getState(BUTTON_L1, TYPE_BUTTON) ) {
-      DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_L1};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    }
-  }
-  void finish() {
-    DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_L1};
-    dualshock->applyEvent(&event);
-  }
-[modifier.tweak]
-    return true;
-  }
-};
-
-[[modifier]]
-name = "Periodic Listen Mode"
-description = "Repeated holds of R1"
-  double pressTime;
-  void begin() {
-    DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_R1};
-    dualshock->applyEvent(&event);
-    pressTime = 0;
-  }
-  void update() {
-    pressTime += timer.dTime();
-    if ( pressTime > 3.0  && dualshock->getState(BUTTON_R1, TYPE_BUTTON) ) {
-      DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_R1};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    } else if( pressTime > 8.0 && !dualshock->getState(BUTTON_R1, TYPE_BUTTON) ) {
-      DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_R1};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    }
-  }
-  void finish() {
-    DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_R1};
-    dualshock->applyEvent(&event);
-  }
-[modifier.tweak]
-    return true;
-  }
-};
-
-[[modifier]]
-name = "No Run/Dodge"
-description = "L1 is disabled"
-  void begin() {
-    DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_L1};
-    dualshock->applyEvent(&event);
-  }
-[modifier.tweak]
-    if (event->id == BUTTON_L1 && event->type == TYPE_BUTTON) {
-      //return false;
-      event->value = 0;
-    }
-    return true;
-  }
-};
-
-[[modifier]]
-name = "Force Running"
-description = "L1 is held down (mostly)"
-  double pressTime;
-  void begin() {
-    DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_L1};
-    dualshock->applyEvent(&event);
-  }
-  void update() {
-    pressTime += timer.dTime();
-    if (pressTime > 4 && dualshock->getState(BUTTON_L1, TYPE_BUTTON)) {
-      DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_L1};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    } else if ( pressTime > 0.1 && !dualshock->getState(BUTTON_L1, TYPE_BUTTON)) {
-      DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_L1};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    }
-  }
-  void finish() {
-    DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_L1};
-    dualshock->applyEvent(&event);
-  }
-[modifier.tweak]
-    if (event->id == BUTTON_L1 && event->type == TYPE_BUTTON) {
-      event->value = 1;
-    }
-    return true;
-  }
-};
-
-[[modifier]]
-name = "Bad Stamina"
-description = "Running gets disabled after 2 seconds and takes 4 seconds to recharge"
-  double stateTime;
-  bool pressedState;
-  double stamina;
-  
-  enum {
-    STAMINA_GOOD,
-    STAMINA_BAD
-  } state;
-  
-  void begin() {
-    pressedState = dualshock->getState(BUTTON_L1, TYPE_BUTTON);
-    stamina = 0.0;
-    state = STAMINA_GOOD;
-    stateTime = 0.0;
-  }
-  void update() {
-    stateTime = timer.dTime();
-    
-    if (state == STAMINA_GOOD) {
-      if (dualshock->getState(BUTTON_L1, TYPE_BUTTON)) {
-	stamina += stateTime;
-	if (stamina > 2.0) {
-	  stamina = 2.0;
-	  state = STAMINA_BAD;
-	  DeviceEvent event = {0, 0, TYPE_BUTTON, BUTTON_L1};
-	  chaosEngine->fakePipelinedEvent(&event, me);
-	}
-      } else {
-	stamina -= stateTime/2.0;
-	if (stamina < 0.0) {
-	  stamina = 0;
-	}
-      }
-    } else if (state == STAMINA_BAD) {
-      stamina -= stateTime/2.0;
-      if (stamina < 0.0) {
-	stamina = 0;
-	state = STAMINA_GOOD;
-      }
-    }
-  }
-[modifier.tweak]
-    if (event->id == BUTTON_L1 && event->type == TYPE_BUTTON) {
-      return state == STAMINA_GOOD;
-    }
-    return true;
-  }
-};
-
-[[modifier]]
-name = "Leeroy Jenkins"
-description = "Alright let's do this! LEEEEROOOOOY NNNJEEEENNKIINNS!!! (Holds forward and sprint)"
-  double pressTime;
-  void begin() {
-    DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_L1};
-    dualshock->applyEvent(&event);
-    event = {0,JOYSTICK_MIN,TYPE_AXIS, AXIS_LY};
-    dualshock->applyEvent(&event);
-  }
-  void update() {
-    pressTime += timer.dTime();
-    DeviceEvent event = {0,JOYSTICK_MIN,TYPE_AXIS, AXIS_LY};
-    dualshock->applyEvent(&event);
-    if (pressTime > 4 && dualshock->getState(BUTTON_L1, TYPE_BUTTON)) {
-      event = {0,0,TYPE_BUTTON, BUTTON_L1};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    } else if ( pressTime > 0.1 && !dualshock->getState(BUTTON_L1, TYPE_BUTTON)) {
-      event = {0,1,TYPE_BUTTON, BUTTON_L1};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    }
-  }
-  void finish() {
-    DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_L1};
-    dualshock->applyEvent(&event);
-    event = {0,0,TYPE_AXIS, AXIS_LY};
-    dualshock->applyEvent(&event);
-  }
-[modifier.tweak]
-    if (event->id == BUTTON_L1 && event->type == TYPE_BUTTON) {
-      event->value = 1;
-    }
-    if (event->id == AXIS_LY && event->type == TYPE_AXIS) {
-      // event->value = JOYSTICK_MIN;
-      return false;
-    }
-    return true;
-  }
-};
-
-[[modifier]]
-  //Prototoxin187
-public:
-name = "Force Aiming"
-description = "L2 is held"
-  double pressTime;
-  void begin() {
-    DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_L2};
-    dualshock->applyEvent(&event);
-  }
-  void update() {
-    pressTime += timer.dTime();
-    if (pressTime > 4 && dualshock->getState(BUTTON_L2, TYPE_BUTTON)) {
-      DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_L2};
-      dualshock->applyEvent(&event);
-      event = {0,JOYSTICK_MIN,TYPE_AXIS, AXIS_L2};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    } else if ( pressTime > 0.1 && !dualshock->getState(BUTTON_L2, TYPE_BUTTON)) {
-      DeviceEvent event = {0,1,TYPE_BUTTON, BUTTON_L2};
-      dualshock->applyEvent(&event);
-      event = {0,JOYSTICK_MAX,TYPE_AXIS, AXIS_L2};
-      dualshock->applyEvent(&event);
-      pressTime = 0;
-    }
-  }
-  void finish() {
-    DeviceEvent event = {0,0,TYPE_BUTTON, BUTTON_L2};
-    dualshock->applyEvent(&event);
-    event = {0,JOYSTICK_MIN,TYPE_AXIS, AXIS_L2};
-    dualshock->applyEvent(&event);
-  }
-[modifier.tweak]
-    if (event->id == BUTTON_L2 && event->type == TYPE_BUTTON) {
-      event->value = 1;
-    } else if (event->id == AXIS_L2 && event->type == TYPE_AXIS) {
-      event->value = JOYSTICK_MAX;
-    }
-    return true;
-  }
-};
-
-[[modifier]]
-name = "Disable Right Joystick"
+name = "Disable Camera"
 description = "Good luck with aiming and looking around!"
-[modifier.tweak]
-    if ( (event->id == AXIS_RX || event->id == AXIS_RY) && event->type == TYPE_AXIS) {
-      event->value = 0;
-    }
-    return true;
-  }
-};
+type = "disable"
+appliesTo = [ "vertical camera", "horizontal camera" ]
 
 [[modifier]]
-  // JustSaft
-public:
 name = "Disable D-pad"
 description = "Inventory selection is disabled"
-[modifier.tweak]
-    if ( (event->id == AXIS_DX || event->id == AXIS_DY) && event->type == TYPE_AXIS) {
-      event->value = 0;
-    }
-    return true;
-  }
-};
-
-[[modifier]]
-name = "D-pad Rotate"
-description = "Rotates the D-pad inputs clockwise"
-[modifier.tweak]
-    if (event->type == TYPE_AXIS) {
-      if (event->id == AXIS_DX) {
-	event->id = AXIS_DY;
-      } else if (event->id == AXIS_DY) {
-	event->id = AXIS_DX;
-	event->value = joystickLimit( -event->value );
-      }
-    }
-    
-    return true;
-  }
-};
+type = "disable"
+appliesTo = [ "select weapon", "select consumable" ]
 
 [[modifier]]
 name = "Moose"
-description = "The moose is dead.  The moose does not move.  (Disables Left Joystick)"
-[modifier.tweak]
-    if ( (event->id == AXIS_LX || event->id == AXIS_LY) && event->type == TYPE_AXIS) {
-      event->value = 0;
-    }
-    return true;
-  }
-};
+description = "The moose is dead. The moose does not move. (Disables movement)"
+type = "disable"
+appliesTo = [ "move forward/back", "move sideways" ]
 
 [[modifier]]
-  //Prototoxin187
-public:
 name = "Only Strafe Movement"
-description = "X-axis on the left joystick is disabled.  Only forward/back motion is allowed."
-[modifier.tweak]
-    if ( event->id == AXIS_LY && event->type == TYPE_AXIS) {
-      event->value = 0;
-    }
-    return true;
-  }
-};
+description = "Side-to-side movement is disabled. Only forward/back motion is allowed."
+type = "disable"
+appliesTo = [ "move sideways" ]
 
 [[modifier]]
 name = "No Strafing"
-description = "Y-axis on the left joystick is disabled.  Only left/right motion is allowed."
-[modifier.tweak]
-    if ( event->id == AXIS_LX && event->type == TYPE_AXIS) {
-      event->value = 0;
-    }
-    return true;
-  }
-};
+description = "Forwards/back movement is disabled. Only side-to-side motion is allowed."
+type = "disable"
+appliesTo = [ "move forward/back" ]
 
 [[modifier]]
 name = "Only Aim Movement"
 description = "Left joystick is disabled if not aiming"
-  
-[modifier.tweak]
-    if ((event->id == AXIS_LX || event->id == AXIS_LY) &&
-	event->type == TYPE_AXIS &&
-	!dualshock->getState(BUTTON_L2, TYPE_BUTTON) ) {
-      event->value = 0;
-    }
-    return true;
-  }
-};
-
-[[modifier]]
-name = "Swap Joysticks"
-description = "You may want to cross your thumbs to work with your muscle memory"
-[modifier.tweak]
-    if( event->type == TYPE_AXIS ) {
-      switch (event->id) {
-      case AXIS_RX: event->id = AXIS_LX; break;
-      case AXIS_RY: event->id = AXIS_LY; break;
-      case AXIS_LX: event->id = AXIS_RX; break;
-      case AXIS_LY: event->id = AXIS_RY; break;
-      default: break;
-      }
-    }
-    return true;
-  }
-};
-
-[[modifier]]
-  //JustForSaft, joshuatimes7
-public:
-name = "Swap D-Pad/Left Joystick"
-description = "Retro style motion, and an odd analog inventory selector"
-  void begin() {
-    DeviceEvent event = {0,0,TYPE_AXIS, AXIS_LY};
-    dualshock->applyEvent(&event);
-    event = {0,0,TYPE_AXIS, AXIS_LX};
-    dualshock->applyEvent(&event);
-  }
-[modifier.tweak]
-    if( event->type == TYPE_AXIS ) {
-      switch (event->id) {
-      case AXIS_DX: event->id = AXIS_LX; event->value = joystickLimit(JOYSTICK_MAX*event->value); break;
-      case AXIS_DY: event->id = AXIS_LY; event->value = joystickLimit(JOYSTICK_MAX*event->value); break;
-      case AXIS_LX:
-	event->id = AXIS_DX;
-	event->value = event->value > JOYSTICK_MAX/2 ? 1 : event->value < JOYSTICK_MIN/2 ? -1 : 0;
-	break;
-      case AXIS_LY:
-	event->id = AXIS_DY;
-	event->value = event->value > JOYSTICK_MAX/2 ? 1 : event->value < JOYSTICK_MIN/2 ? -1 : 0;
-	break;
-      default: break;
-      }
-    }
-    return true;
-  }
-};
-
-[[modifier]]
-  DeviceEvent fakeEvent;
-name = "Swap Shapes/Right Joystick"
-description = "Analog actions, and digital camera movement"
-  void begin() {
-    DeviceEvent event = {0,0,TYPE_AXIS, AXIS_RY};
-    dualshock->applyEvent(&event);
-    event = {0,0,TYPE_AXIS, AXIS_RX};
-    dualshock->applyEvent(&event);
-  }
-[modifier.tweak]
-    if( event->type == TYPE_AXIS ) {
-      switch (event->id) {
-	//				case AXIS_DX: event->id = AXIS_LX; event->value = joystickLimit(JOYSTICK_MAX*event->value); break;
-	//				case AXIS_DY: event->id = AXIS_LY; event->value = joystickLimit(JOYSTICK_MAX*event->value); break;
-      case AXIS_RX:
-	event->type = TYPE_BUTTON;// AXIS_DX;
-	if (event->value < JOYSTICK_MIN/2) {
-	  event->id = BUTTON_SQUARE;
-	  event->value = 1;
-	} else if (event->value > JOYSTICK_MAX/2) {
-	  event->id = BUTTON_CIRCLE;
-	  event->value = 1;
-	} else {
-	  event->id = BUTTON_CIRCLE;
-	  event->value = 0;
-	  
-	  fakeEvent.id = BUTTON_SQUARE;
-	  fakeEvent.value = 0;
-	  chaosEngine->fakePipelinedEvent(&fakeEvent, me);
-	}
-	//event->value = event->value > JOYSTICK_MAX/2 ? 1 : event->value < JOYSTICK_MIN/2 ? -1 : 0;
-	break;
-      case AXIS_RY:
-	event->type = TYPE_BUTTON;// AXIS_DX;
-	if (event->value < JOYSTICK_MIN/2) {
-	  event->id = BUTTON_TRIANGLE;
-	  event->value = 1;
-	} else if (event->value > JOYSTICK_MAX/2) {
-	  event->id = BUTTON_X;
-	  event->value = 1;
-	} else {
-	  event->id = BUTTON_TRIANGLE;
-	  event->value = 0;
-	  
-	  fakeEvent.id = BUTTON_X;
-	  fakeEvent.value = 0;
-	  chaosEngine->fakePipelinedEvent(&fakeEvent, me);
-	}
-	break;
-      default: break;
-      }
-    } else if (event->type == TYPE_BUTTON) {
-      switch (event->id) {
-      case BUTTON_SQUARE:
-	event->type = TYPE_AXIS;
-	event->id = AXIS_RX;
-	event->value = event->value ? JOYSTICK_MIN : 0;
-	break;
-      case BUTTON_CIRCLE:
-	event->type = TYPE_AXIS;
-	event->id = AXIS_RX;
-	event->value = event->value ? JOYSTICK_MAX : 0;
-	break;
-      case BUTTON_TRIANGLE:
-	event->type = TYPE_AXIS;
-	event->id = AXIS_RY;
-	event->value = event->value ? JOYSTICK_MIN : 0;
-	break;
-      case BUTTON_X:
-	event->type = TYPE_AXIS;
-	event->id = AXIS_RY;
-	event->value = event->value ? JOYSTICK_MAX : 0;
-	break;
-	
-      default:
-	break;
-      }
-    }
-    
-    return true;
-  }
-};
-
-[[modifier]]
-name = "Motion Control Movement"
-description = "No more left joystick, tilt the controller to move instead"
-[modifier.tweak]
-    if( event->type == TYPE_AXIS ) {
-      DeviceEvent newEvent;
-      switch (event->id) {
-      case AXIS_ACCX:
-	newEvent = *event;
-	newEvent.id = AXIS_LX;
-	newEvent.value = joystickLimit(-event->value/20);
-	chaosEngine->fakePipelinedEvent(&newEvent, me);
-	break;
-      case AXIS_ACCZ:
-	newEvent = *event;
-	newEvent.id = AXIS_LY;
-	newEvent.value = joystickLimit(-event->value/20);
-	chaosEngine->fakePipelinedEvent(&newEvent, me);
-	break;
-      case AXIS_LX: return false;
-      case AXIS_LY: return false;
-      default: break;
-      }
-    }
-    return true;
-  }
-};
-
-[[modifier]]
-name = "Motion Control Aiming"
-description = "No more right joystick, tilt the controller to aim/look instead"
-[modifier.tweak]
-    if( event->type == TYPE_AXIS ) {
-      DeviceEvent newEvent;
-      switch (event->id) {
-      case AXIS_ACCX:
-	newEvent = *event;
-	newEvent.id = AXIS_RX;
-	newEvent.value = joystickLimit(-event->value/24);
-	chaosEngine->fakePipelinedEvent(&newEvent, me);
-	break;
-      case AXIS_ACCZ:
-	newEvent = *event;
-	newEvent.id = AXIS_RY;
-	newEvent.value = joystickLimit(event->value/24);	// This makes sense to be inverted
-	chaosEngine->fakePipelinedEvent(&newEvent, me);
-	break;
-      case AXIS_RX: return false;
-      case AXIS_RY: return false;
-      default: break;
-      }
-    }
-    return true;
-  }
-};
-
-[[modifier]]
-name = "Touchpad Aiming"
-description = "No more right joystick, finally making use of the touchpad!"
-  
-  short priorX[5];
-  short priorY[5];
-  double timestampPriorX[5];
-  double timestampPriorY[5];
-  bool priorActiveX;
-  bool priorActiveY;
-  
-  bool activeTouch;
-  
-  void begin() {
-    priorActiveX = false;
-    priorActiveY = false;
-    activeTouch = false;
-  }
-  
-  double derivativeX(short currentX, double timestampX) {
-    double ret = 0;
-    if (priorActiveX) {
-      if(timestampX != timestampPriorX[0]) {
-	ret = ((double)(currentX - priorX[0]))/(timestampX-timestampPriorX[0]);
-      }
-    } else {
-      priorActiveX = true;
-      priorX[1] = priorX[2] = priorX[3] = priorX[4] = currentX;
-      timestampPriorX[1] = timestampPriorX[2] =  timestampPriorX[3] =  timestampPriorX[4] = timestampX;
-    }
-    priorX[0] = priorX[1];
-    priorX[1] = priorX[2];
-    priorX[2] = priorX[3];
-    priorX[3] = priorX[4];
-    priorX[4] = currentX;
-    timestampPriorX[0] = timestampPriorX[1];
-    timestampPriorX[1] = timestampPriorX[2];
-    timestampPriorX[2] = timestampPriorX[3];
-    timestampPriorX[3] = timestampPriorX[4];
-    timestampPriorX[4] = timestampX;
-    return ret;
-  }
-  double derivativeY(short currentY, double timestampY) {
-    double ret = 0;
-    if (priorActiveY) {
-      if(timestampY != timestampPriorY[0]) {
-	ret = ((double)(currentY - priorY[0]))/(timestampY-timestampPriorY[0]);
-      }
-    } else {
-      priorActiveY = true;
-      priorY[1] = priorY[2] = priorY[3] = priorY[4] = currentY;
-      timestampPriorY[1] = timestampPriorY[2] = timestampPriorY[3] = timestampPriorY[4] = timestampY;
-    }
-    priorY[0] = priorY[1];
-    priorY[1] = priorY[2];
-    priorY[2] = priorY[3];
-    priorY[3] = priorY[4];
-    priorY[4] = currentY;
-    timestampPriorY[0] = timestampPriorY[1];
-    timestampPriorY[1] = timestampPriorY[2];
-    timestampPriorY[2] = timestampPriorY[3];
-    timestampPriorY[3] = timestampPriorY[4];
-    timestampPriorY[4] = timestampY;
-    return ret;
-  }
-  
-[modifier.tweak]
-    if ( event->type == TYPE_BUTTON && event->id == BUTTON_TOUCHPAD_ACTIVE) {
-      
-      //printf("Touchpad activity: %d\n", event->value);
-      if (activeTouch == false && event->value == false) {	// rising edge
-	priorActiveX = false;
-	priorActiveY = false;
-	//printf("Rising Edge TOuch\n");
-      } else if (activeTouch == true && event->value == true) {	// falling edge
-	DeviceEvent newEvent;
-	newEvent.id = AXIS_RX;
-	newEvent.type = TYPE_AXIS;
-	newEvent.value = 0;
-	chaosEngine->fakePipelinedEvent(&newEvent, me);
-	newEvent.id = AXIS_RY;
-	newEvent.type = TYPE_AXIS;
-	newEvent.value = 0;
-	chaosEngine->fakePipelinedEvent(&newEvent, me);
-	//	printf("Falling Edge TOuch\n");
-      }
-      
-      activeTouch = !event->value;
-    }
-    if( event->type == TYPE_AXIS ) {
-      DeviceEvent newEvent;
-      double derivativeValue;
-      switch (event->id) {
-      case AXIS_TOUCHPAD_X:
-	if(activeTouch ) {
-	  newEvent.id = AXIS_RX;
-	  newEvent.type = TYPE_AXIS;
-	  derivativeValue = (dualshock->getState(BUTTON_L2, TYPE_BUTTON) ? 0.04 : 0.12) * derivativeX(event->value, timer.runningTime());
-	  if (derivativeValue > 0) {
-	    newEvent.value = joystickLimit(derivativeValue + 30);
-	  } else if(derivativeValue < 0) {
-	    newEvent.value = joystickLimit(derivativeValue - 30);
-	  } else  {
-	    newEvent.value = 0;
-	  }
-	  chaosEngine->fakePipelinedEvent(&newEvent, me);
-	}
-	//printf("x derivative: %d\n", newEvent.value);
-	break;
-      case AXIS_TOUCHPAD_Y:
-	if(activeTouch ) {
-	  newEvent.id = AXIS_RY;
-	  newEvent.type = TYPE_AXIS;
-	  derivativeValue = (dualshock->getState(BUTTON_L2, TYPE_BUTTON) ? 0.04 : 0.12) * derivativeY(event->value, timer.runningTime());
-	  if (derivativeValue > 0) {
-	    newEvent.value = joystickLimit(derivativeValue + 30);
-	  } else if(derivativeValue < 0 ) {
-	    newEvent.value = joystickLimit(derivativeValue - 30);
-	  } else  {
-	    newEvent.value = 0;
-	  }
-	  chaosEngine->fakePipelinedEvent(&newEvent, me);
-	}
-	break;
-      case AXIS_RX:
-	return false;
-      case AXIS_RY:
-	return false;
-      default: break;
-      }
-    }
-		
-    return true;
-  }
-};
+type = "disable"
+appliesTo = [ "move forward/back", "move sideways" ]
+unless = [ "aiming" ]
 
 [[modifier]]
 name = "Nascar"
-description = "There is no going right in Nascar.  Right movement/camera disabled"
-[modifier.tweak]
-    if( event->type == TYPE_AXIS ) {
-      if (event->id == AXIS_RX || event->id == AXIS_LX) {
-	event->value = event->value <= 0 ? event->value : 0;
-      }
-    }
-    return true;
-  }
-};
-
+description = "There is no going right in Nascar. Right movement/camera disabled"
+type = "disable"
+appliesTo = [ "move sideways", "horizontal camera" ]
+filter = "above"
 
 [[modifier]]
-  // carnalgasyeah
-public:
 name = "Zoolander"
-description = "We are not an ambiturner, but at least we can look right.  Left movement/camera disabled."
-[modifier.tweak]
-    if( event->type == TYPE_AXIS ) {
-      if (event->id == AXIS_RX || event->id == AXIS_LX) {
-	event->value = event->value >= 0 ? event->value : 0;
-      }
-    }
-    return true;
-  }
-};
+description = "We are not an ambiturner, but at least we can look right. Left movement/camera disabled."
+type = "disable"
+appliesTo = [ "move sideways", "horizontal camera" ]
+filter = "below"
 
 [[modifier]]
 name = "No Backward Movement"
 description = "Moving backwards is not allowed"
-[modifier.tweak]
-    if( event->type == TYPE_AXIS ) {
-      if (event->id == AXIS_LY) {
-	event->value = event->value <= 0 ? event->value : 0;
-      }
-    }
-    return true;
-  }
-};
+type = "disable"
+appliesTo = [ "move forward/back" ]
+filter = "above"
 
 [[modifier]]
 name = "No Forward Movement"
 description = "Moving forward is not allowed"
-[modifier.tweak]
-    if( event->type == TYPE_AXIS ) {
-      if (event->id == AXIS_LY) {
-	event->value = event->value >= 0 ? event->value : 0;
-      }
-    }
-    return true;
-  }
-};
+type = "disable"
+appliesTo = [ "move forward/back" ]
+filter = "below"
+
+[[modifier]]
+name = "No Gun Selection"
+description = "D-Pad Left/Right Disabled"
+type = "disable"
+appliesTo = "select weapon"
+[modifier.begin]
+command = "select consumable"
+value = 1
+
+[[modifier]]
+name = "No Short Guns"
+description = "D-Pad Right Disabled"
+type = "disable"
+filter = "positive"
+appliesTo = "select weapon"
+[modifier.begin]
+command = "select consumable"
+value = 1
+
+[[modifier]]
+name = "No Long Guns"
+description = "D-Pad Left Disabled"
+type = "disable"
+filter = "negative"
+appliesTo = "select weapon"
+[modifier.begin]
+command = "select consumable"
+value = 1
+
+[[modifier]]
+name = "No Consumables"
+description = "Selection of consumables (brick, bottle, med kit, molly, etc.) Disabled"
+type = "disable"
+appliesTo = [ "select consumable" ]
+[modifier.begin]
+command = "select weapon"
+value = 1
+
+[[modifier]]
+name = "Inverted"
+description = "Inverts the vertical axis for aiming"
+type = "formula"
+magnitude = -1
+appliesTo = [ "vertical camera" ]
+
+[[modifier]]
+name = "Moonwalk"
+description = "Be like Michael Jackson! Trying to walk forward will actually make you go backward"
+type = "formula"
+magnitude = -1
+appliesTo = [ "move forward/back" ]
+
+[[modifier]]
+name = "Sideways Moonwalk"
+description = "Go left to go right and go right to go left"
+type = "formula"
+magnitude = -1
+appliesTo = [ "move sideways" ]
+
+[[modifier]]
+name = "Keep Proning"
+description = "Proning at inconvenient times"
+type = "repeat"
+appliesTo = [ "crouch/prone" ]
+timeOn = 2.0
+timeOff = 2.0
+
+[[modifier]]
+name = "Factions Pro"
+description = "Keeping things toxic with teabagging"
+type = "repeat"
+appliesTo = [ "crouch/prone" ]
+timeOn = 0.1
+timeOff = 0.6
+
+[[modifier]]
+name = "Anthony Caliber"
+description = "Flashlight flickering"
+type = "repeat"
+appliesTo = [ "flashlight" ]
+timeOn = 0.066667
+timeOff = 0.089583
+cycle = 8
+delay = 4.0
+
+[[modifier]]
+name = "Keep Jumping"
+description = "Repeated presses of X"
+type = "repeat"
+appliesTo = [ "jump/climb" ]
+timeOn = 0.1
+timeOff = 2.0
+
+[[modifier]]
+name = "Rachy Flail"
+description = "The only way to melee is to follow the master techniques of RachyMonster"
+type = "repeat"
+appliesTo = [ "melee" ]
+timeOn = 0.1
+timeOff = 1.1
+
+[[modifier]]
+name = "Keep Dodging"
+description = "Repeaated dodges. Don't stand too near a ledge"
+type = "repeat"
+appliesTo = [ "dodge/sprint" ]
+timeOn = 0.1
+timeOff = 2.0
+
+[[modifier]]
+name = "Periodic Listen Mode"
+description = "Repeated holds of R1"
+type = "repeat"
+appliesTo = [ "swap/listen" ]
+timeOn = 3.0
+timeOff = 8.0
+
+[[modifier]]
+name = "Force Running"
+description = "To move is to run (mostly)"
+type = "repeat"
+appliesTo = [ "dodge/sprint" ]
+timeOn = 4.0
+timeOff = 0.1
+forceOn = true # this seems sus for the off period
+
+[[modifier]]
+name = "Bad Stamina"
+description = "Running gets disabled after 2 seconds and takes 4 seconds to recharge"
+type = "cooldown"
+appliesTo = [ "dodge/sprint" ]
+timeOn = 2.0
+timeOff = 4.0
+
+[[modifier]]
+name = "Leeroy Jenkins"
+description = "Alright let's do this! LEEEEROOOOOY NNNJEEEENNKIINNS!!! (Holds forward and sprint)"
+type = "repeat"
+appliesTo = [ "dodge/sprint", "move forwards/backwards" ]
+timeOn = 4.0
+timeOff = 0.1
+foceOn = true # same question if necessary as above
+axisVal = "MAX"
+
+[[modifier]]
+name = "Force Aiming"
+description = "The aiming button is held"
+type = "repeat"
+appliesTo = [ "aiming" ]
+timeOn = 4.0
+timeOff = 0.1
+forceOn = true
+
+[[modifier]]
+name = "D-pad Rotate"
+description = "Rotates the D-pad inputs clockwise"
+type = "remap"
+appliesTo = [ "DX", "DY" ]
+becomes = ["DY", "NEG DX" ]
+#appliesTo = [ "select weapon", "select consumable" ]
+#becomes = ["select consumable", "NEG select weapon" ]
+
+[[modifier]]
+name = "Swap Joysticks"
+description = "You may want to cross your thumbs to work with your muscle memory"
+type = "remap"
+appliesTo = [ "RX", "RY", "LX", "LY" ]
+becomes = [ "LX", "LY", "RX", "RY"  ]
+#appliesTo = [ "horizontal camera", "vertical camera", "move sideways", "move forward/back" ]
+#becomes = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
+
+[[modifier]]
+name = "Swap D-Pad/Left Joystick"
+description = "Retro style motion, and an odd analog inventory selector"
+type = "remap"
+appliesTo = [ "DX", "DY", "LX", "LY" ]
+becomes = [ "LX", "LY", "DX", "DY" ]
+
+[[modifier]]
+name = "Swap Shapes/Right Joystick"
+description = "Analog actions, and digital camera movement"
+type = "remap"
+appliesTo = [ "RX", "RY", "SQUARE_CIRCLE", "TRIANGLE_X" ]
+becomes = [ "SQUARE_CIRCLE", "TRIANGLE_X", "RX", "RY" ]
+
+[[modifier]]
+name = "Motion Control Movement"
+description = "No more left joystick, tilt the controller to move instead"
+type = "remap"
+appliesTo = [ "ACCX", "ACCZ", "LX", "LY" ]
+becomes = [ "LX", "LY", "", "" ]
+
+[[modifier]]
+name = "Motion Control Aiming"
+description = "No more right joystick, tilt the controller to aim/look instead"
+type = "remap"
+appliesTo = [ "ACCX", "ACCZ", "RX", "RY" ]
+becomes = [ "RX", "RY", "", "" ]
+
+[[modifier]]
+name = "Touchpad Aiming"
+description = "No more right joystick, finally making use of the touchpad!"
+type = "remap"
+appliesTo = [ "TOUCHPAD_ACTIVE", "RX", "RY" ]
+becomes = [ "RX_RY", "", "" ]
 
 [[modifier]]
 name = "Drunk"
-description = "Random joystick motion.  Also don't push things too far, you may stumble (go prone)"
-  
-  std::map<int,int> axisToValue;
-  std::map<int,int> offsetValue;
-  double buttonPressTime;
-  
-  void begin() {
-    axisToValue[AXIS_RX] = dualshock->getState(AXIS_RX, TYPE_AXIS);
-    axisToValue[AXIS_RY] = dualshock->getState(AXIS_RY, TYPE_AXIS);
-    axisToValue[AXIS_LX] = dualshock->getState(AXIS_LX, TYPE_AXIS);
-    axisToValue[AXIS_LY] = dualshock->getState(AXIS_LY, TYPE_AXIS);
-    offsetValue[AXIS_RX] = 0;
-    offsetValue[AXIS_RY] = 0;
-    offsetValue[AXIS_LX] = 0;
-    offsetValue[AXIS_LY] = 0;
-  }
-  
-  void update() {
-    DeviceEvent event;	// Event to inject
-    event.type = TYPE_AXIS;
-    
-    double i = 0.0;
-    double newValue;
-    double t = timer.runningTime()*2.0;
-    for (std::map<int, int>::iterator it = axisToValue.begin(); it != axisToValue.end(); it++) {
-      event.id = it->first;
-      //newValue = it->second + JOYSTICK_MAX/3.0 * cos((t+i)/4.0)*sin(t*i/4.0);
-      //newValue = it->second + JOYSTICK_MAX/2.0 * (pow((cos(t+i) + cos(2*t)/2) * sin((t+i)*0.2), 3)/3);
-      offsetValue[event.id] = 78 * ( (cos(t+i) + cos(2*t)/2) * sin((t+i)*0.2)/2.0 );
-      
-      event.value = joystickLimit(offsetValue[event.id] + it->second);
-      if (event.value == JOYSTICK_MIN || event.value == JOYSTICK_MAX) {
-	DeviceEvent fallDown = {0,1,TYPE_BUTTON,BUTTON_CIRCLE};
-	dualshock->applyEvent(&fallDown);
-	buttonPressTime = timer.runningTime();
-      }
-      i += 4;
-      
-      //			dualshock->applyEvent(&event);
-      chaosEngine->fakePipelinedEvent(&event, me);
-      
-    }
-    if (timer.runningTime()-buttonPressTime > 1.0) {
-      DeviceEvent fallDown = {0,0,TYPE_BUTTON,BUTTON_CIRCLE};
-      dualshock->applyEvent(&fallDown);
-      buttonPressTime += 10000;
-    }
-  }
-  
-  void finish() {
-    DeviceEvent event = {0,(short)axisToValue[AXIS_LX],TYPE_AXIS,AXIS_LX};
-    chaosEngine->fakePipelinedEvent( &event, me);
-    event = {0,(short)axisToValue[AXIS_LY],TYPE_AXIS,AXIS_LY};
-    chaosEngine->fakePipelinedEvent( &event, me);
-    event = {0,(short)axisToValue[AXIS_RX],TYPE_AXIS,AXIS_RX};
-    chaosEngine->fakePipelinedEvent( &event, me);
-    event = {0,(short)axisToValue[AXIS_RY],TYPE_AXIS,AXIS_RY};
-    chaosEngine->fakePipelinedEvent( &event, me);
-  }
-	
-[modifier.tweak]
-    if( event->type == TYPE_AXIS ) {
-      if (axisToValue.count(event->id) > 0) {
-	axisToValue[event->id] = event->value; // save the value for update() to use
-	event->value = joystickLimit( event->value + offsetValue[event->id] ); // apply the drunk offset
-      }
-    }
-    return true;
-  }
-};
+description = "Random joystick motion. Also don't push things too far, or you may stumble (go prone)"
+type = "formula"
+appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
+offsetMagnitute = 78
+offsetPeriod = 2.0
+onMinMax = [ "crouch/prone" ]
+minMaxLength = 1.0
 
 [[modifier]]
-  // HeHathYought
-public:
 name = "TLOU1 Run Glitch"
 description = "Is this an Any% speedrun of TLOU1? Rapid D-pad circular presses. Try moving while prone."
-	
-  void update() {
-    DeviceEvent event;	// Event to inject
-    event.type = TYPE_AXIS;
-    
-    double i = 0.0;
-    double newValue;
-    double t = timer.runningTime()*8.0*MOGI_PI;
-    
-    event.value = 1.5*cos(t);
-    event.id = AXIS_DX;
-    chaosEngine->fakePipelinedEvent( &event, me);
-    
-    event.value = 1.5*sin(t);
-    event.id = AXIS_DY;
-    chaosEngine->fakePipelinedEvent( &event, me);
-    
-  }
-  
-  void finish() {
-    DeviceEvent event = {0,0,TYPE_AXIS,AXIS_DX};
-    chaosEngine->fakePipelinedEvent( &event, me);
-    event = {0,0,TYPE_AXIS,AXIS_DY};
-    chaosEngine->fakePipelinedEvent( &event, me);
-  }
-  
-[modifier.tweak]
-    if( event->type == TYPE_AXIS &&
-	(event->id == AXIS_DY || event->id == AXIS_DX)) {
-      return false;
-    }
-    return true;
-  }
-};
+type = "formula"
+offsetMagnitute = 1.5
+appliesTo = [ "DX", "DY" ]
 
 [[modifier]]
-name = "Mega Scope Sway"] = [](){ return new MegaScopeSway();}; };
+name = "Mega Scope Sway"
 description = "Good luck landing shots"
-  
-  std::map<int,int> axisToValue;
-  std::map<int,int> offsetValue;
-  
-  void begin() {
-    axisToValue[AXIS_RX] = dualshock->getState(AXIS_RX, TYPE_AXIS);
-    axisToValue[AXIS_RY] = dualshock->getState(AXIS_RY, TYPE_AXIS);
-    offsetValue[AXIS_RX] = 0;
-    offsetValue[AXIS_RY] = 0;
-  }
-  
-  void update() {
-    DeviceEvent event;	// Event to inject
-    event.type = TYPE_AXIS;
-    
-    bool applySway = dualshock->getState( BUTTON_L2, TYPE_BUTTON) != 0;
-    
-    double t = timer.runningTime()*3.0;
-    double i = 1.0;
-    
-    for (std::map<int, int>::iterator it = axisToValue.begin(); it != axisToValue.end(); it++) {
-      event.id = it->first;
-      if (applySway) {
-	offsetValue[event.id] = sin(((t+1.6)*i )*4.0) * JOYSTICK_MAX ;
-	event.value = joystickLimit( it->second + offsetValue[event.id] );
-	chaosEngine->fakePipelinedEvent(&event, me);
-	i += 1;
-      } else {
-	offsetValue[event.id]  = 0;
-      }
-      
-    }
-    
-  }
-	
-  void finish() {
-    DeviceEvent event = {0,(short)axisToValue[AXIS_RX],TYPE_AXIS,AXIS_RX};
-    chaosEngine->fakePipelinedEvent( &event, me);
-    event = {0,(short)axisToValue[AXIS_RY],TYPE_AXIS,AXIS_RY};
-    chaosEngine->fakePipelinedEvent( &event, me);
-  }
-	
-[modifier.tweak]
-    if( event->type == TYPE_AXIS ) {
-      if ( axisToValue.count(event->id) > 0) {
-	axisToValue[event->id] = event->value;
-	event->value = joystickLimit( event->value + offsetValue[event->id] );
-      }
-    }
-    return true;
-  }
-};
+type = "formula"
+appliesTo = [ "horizontal camera", "vertical camera" ]
+condition = "aiming"
+offsetMagnitude = 4.0 # sin(((t+1.6)*i )*4.0) * JOYSTICK_MAX
+timerAmp = 3.0
 
 [[modifier]]
-name = "Only Prone Diving"] = [](){ return new ProneDive();}; };
-description = "RIP elbows and knees. Any movement results in a prone dive"; }
-	
-  // std::map<int,int> axisToValue;
-  // std::map<int,int> offsetValue;
-  double sequenceTime;
-  bool inSequence;
-  double magnitudeSquared;
-  
-  double activeThreshold;
-	
-  void begin() {
-    //		axisToValue[AXIS_LX] = dualshock->getState(AXIS_LX, TYPE_AXIS);
-    //		axisToValue[AXIS_LY] = dualshock->getState(AXIS_LY, TYPE_AXIS);
-		
-    sequenceTime = 0;
-    inSequence = false;
-		
-    activeThreshold = pow( JOYSTICK_MAX*0.2, 2);
-  }
-	
-  void update() {
-    DeviceEvent event;	// Event to inject
-    //event.type = TYPE_AXIS;
-    if (!inSequence) {
-      magnitudeSquared = pow(dualshock->getState(AXIS_LX, TYPE_AXIS), 2) + pow(dualshock->getState(AXIS_LY, TYPE_AXIS), 2);
-      //printf("magnitude = %02f\n", sqrt(magnitudeSquared));
-      if (magnitudeSquared > activeThreshold) {	// magnitude of 9 & max 127
-	inSequence = true;
-      }
-    }
-		
-    if (inSequence) {
-      sequenceTime += timer.dTime();
-      if (sequenceTime >= 0  &&
-	  sequenceTime <= 0.1 &&
-	  dualshock->getState(BUTTON_L1, TYPE_BUTTON) == 0) {
-	event.id = BUTTON_L1;
-	event.type = TYPE_BUTTON;
-	event.value = 1;
-	dualshock->applyEvent(&event);
-	//printf("Dodge!\n");
-      } else if (sequenceTime > 0.1 &&
-		 sequenceTime <= 0.9 &&
-		 dualshock->getState(BUTTON_CIRCLE, TYPE_BUTTON) == 0) {
-	event.id = BUTTON_CIRCLE;
-	event.type = TYPE_BUTTON;
-	event.value = 1;
-	dualshock->applyEvent(&event);
-	//printf("Dive!\n");
-      } else if (sequenceTime > 0.9 &&
-		 sequenceTime < 1.4 &&
-		 dualshock->getState(BUTTON_CIRCLE, TYPE_BUTTON) == 1) {
-	event.id = BUTTON_L1;
-	event.type = TYPE_BUTTON;
-	event.value = 0;
-	dualshock->applyEvent(&event);
-	event.id = BUTTON_CIRCLE;
-	event.type = TYPE_BUTTON;
-	event.value = 0;
-	dualshock->applyEvent(&event);
-	//printf("Release!\n");
-      } else if (sequenceTime > 1.4) {
-	inSequence = false;
-	sequenceTime = 0;
-	//printf("Done.\n");
-      }
-    }
-		
-    //bool applySway = dualshock->getState( BUTTON_L2, TYPE_BUTTON) != 0;
-    //double t = timer.runningTime()*3.0;
-  }
-	
-  void finish() {
-    DeviceEvent event = {0,0,TYPE_BUTTON,BUTTON_CIRCLE};
-    dualshock->applyEvent(&event);
-    event = {0,0,TYPE_BUTTON,BUTTON_L1};
-    dualshock->applyEvent(&event);
-    //		chaosEngine->fakePipelinedEvent( &event, this);
-    //		event = {0,(short)axisToValue[AXIS_RY],TYPE_AXIS,AXIS_RY};
-    //		chaosEngine->fakePipelinedEvent( &event, this);
-  }
-	
-[modifier.tweak]
-    //		if( event->type == TYPE_AXIS ) {
-    //			if ( axisToValue.count(event->id) > 0) {
-    //				axisToValue[event->id] = event->value;	// We only sample the left stick
-    //			}
-    //		}
-		
-    if ( event->type == TYPE_BUTTON) {
-      if (inSequence) {
-	return false;
-      }
-      if ( event->id == BUTTON_L1 ) {
-	return false;
-      }
-      if (event->id == BUTTON_CIRCLE &&
-	  magnitudeSquared > activeThreshold) {
-	return false;
-      }
-    }
-		
-    return true;
-  }
-};
+name = "Only Prone Diving"
+description = "RIP elbows and knees. Any movement results in a prone dive"
+type = "sequence"
+blockInSequence = [ "dodge/listen", "crouch/prone" ]
+startTime = 0.0
+cycleTime = 1.4
+[[modifier.watchdog]]
+triggerOn = [ "move forward/back", "move sideways" ]	
+triggerTheshold = 0.2 # specified as a fraction of maximum delection 
+[[modifier.sequence]]
+command = "dodge/listen"
+applyIf = 0
+value = 1
+timeToNext = 0.1
+[[modifier.sequence]]
+command = "crouch/prone"
+applyIf = 0
+value = 1
+timeToNext = 0.9
+[[modifier.sequence]]
+command = "crouch/prone"
+value = 0
+timeToNext = 1.4
+ifVal = 1
 
 [[modifier]]
-name = "Rubbernecking"] = [](){ return new Rubbernecking();}; };
-description = "Woah!  What's behind you?  Invokes periodic 180 quick turn"; }
+name = "Rubbernecking"
+description = "Woah! What's behind you? Invokes periodic 180 quick turn"
+type = "sequence"
+blockInSequence = [ "jump/climb", "aiming", "move forward/back", "move sideways" ]
+startTime = 6.0
+cycleTime = 6.2
+[[modifier.sequence]]
+command = "jump/climb"
+value = 0
+timeToNext = 6.0
+[[modifier.sequence]]
+command = "aiming"
+value = 0
+timeToNext = 6.0
+[[modifier.sequence]]
+command = "move forward/back"
+value = 127 # JOYSTICK_MAX
+timeToNext = 6.0
+[[modifier.sequence]]
+command = "move sideways"
+value = 0
+timeToNext = 6.0
+[[modifier.sequence]]
+command = "jump/climb"
+value = 1
+timeToNext = 6.1
+[[modifier.sequence]]
+command = "jump/climb"
+value = 0
+timeToNext = 6.2
 	
-  //	std::map<int,int> axisToValue;
-  //std::map<int,int> offsetValue;
-  double sequenceTime;
-  bool inSequence;
-  double magnitudeSquared;
-	
-  //	double activeThreshold;
-	
-  void begin() {
-    //		axisToValue[AXIS_LX] = dualshock->getState(AXIS_LX, TYPE_AXIS);
-    //		axisToValue[AXIS_LY] = dualshock->getState(AXIS_LY, TYPE_AXIS);
-		
-    sequenceTime = 0;
-    inSequence = false;
-		
-    //		activeThreshold = pow( JOYSTICK_MAX*0.2, 2);
-  }
-	
-  void update() {
-    DeviceEvent event;	// Event to inject
-    //event.type = TYPE_AXIS;
-    sequenceTime += timer.dTime();
-    if (!inSequence) {
-      if (sequenceTime > 6) {	// magnitude of 9 & max 127
-	inSequence = true;
-      }
-    }
-		
-    if (inSequence) {
-      if (sequenceTime >= 6  &&
-	  sequenceTime <= 6.1 ) {
-	event.id = BUTTON_X;
-	event.type = TYPE_BUTTON;
-	event.value = 0;
-	dualshock->applyEvent(&event);
-	event.id = BUTTON_L2;	// stop aiming
-	dualshock->applyEvent(&event);
-	event.id = AXIS_LY;
-	event.type = TYPE_AXIS;
-	event.value = JOYSTICK_MAX;
-	dualshock->applyEvent(&event);
-	event.id = AXIS_LX;
-	event.value = 0;
-	dualshock->applyEvent(&event);
-	event.id = AXIS_L2;
-	event.value = JOYSTICK_MIN;
-	dualshock->applyEvent(&event);
-      } else if (sequenceTime > 6.1 && sequenceTime <= 6.2 ) {
-	event.id = BUTTON_X;
-	event.type = TYPE_BUTTON;
-	event.value = 1;
-	dualshock->applyEvent(&event);
-	//printf("Dive!\n");
-      } else if (sequenceTime > 6.2) {
-	event.id = BUTTON_X;
-	event.type = TYPE_BUTTON;
-	event.value = 0;
-	dualshock->applyEvent(&event);
-	inSequence = false;
-	sequenceTime = 0;
-	//printf("Release!\n");
-      }
-    }
-  }
-	
-  void finish() {
-    if (inSequence) {
-      DeviceEvent event = {0,0,TYPE_BUTTON,BUTTON_X};
-      dualshock->applyEvent(&event);
-      event = {0,0,TYPE_BUTTON,BUTTON_L2};
-      dualshock->applyEvent(&event);
-      event = {0,0,TYPE_AXIS,AXIS_LY};
-      dualshock->applyEvent(&event);
-    }
-    //		chaosEngine->fakePipelinedEvent( &event, me);
-    //		event = {0,(short)axisToValue[AXIS_RY],TYPE_AXIS,AXIS_RY};
-    //		chaosEngine->fakePipelinedEvent( &event, me);
-  }
-	
-[modifier.tweak]
-		
-    if (inSequence) {
-      if ( event->type == TYPE_BUTTON &&
-	   (event->id == BUTTON_X ||
-	    event->id == BUTTON_L2) ){
-	return false;
-      }
-      if ( event->type == TYPE_AXIS &&
-	   (event->id == AXIS_LY ||
-	    event->id == AXIS_LX ||
-	    event->id == AXIS_L2) ){
-	return false;
-      }
-    }
-		
-    return true;
-  }
-};
-
-[[modifier]]
-name = "No Gun Selection"] = [](){ return new NoGuns();}; };
-description = "D-Pad Left/Right Disabled"
-	
-  void begin() {
-    DeviceEvent event = {0,0,TYPE_AXIS, AXIS_DX};
-    dualshock->applyEvent(&event);
-    
-    Chaos::Sequence sequence;
-    sequence.addAxisPress( AXIS_DY, 1);	// select a non-gun
-    sequence.send(dualshock);
-  }
-	
-[modifier.tweak]
-    if (event->type == TYPE_AXIS && event->id == AXIS_DX) {
-      return false;
-    }
-    return true;
-  }
-};
-
-[[modifier]]
-name = "No Short Guns"] = [](){ return new NoShortGuns();}; };
-description = "D-Pad Right Disabled"
-	
-  void begin() {
-    DeviceEvent event = {0,0,TYPE_AXIS, AXIS_DX};
-    dualshock->applyEvent(&event);
-		
-    Chaos::Sequence sequence;
-    sequence.addAxisPress( AXIS_DY, 1);	// select a non-gun
-    sequence.send(dualshock);
-  }
-  
-[modifier.tweak]
-    if (event->type == TYPE_AXIS && event->id == AXIS_DX && event->value > 0) {
-      return false;
-    }
-    return true;
-  }
-};
-
-[[modifier]]
-name = "No Long Guns"] = [](){ return new NoLongGuns();}; };
-description = "D-Pad Left Disabled"
-	
-  void begin() {
-    DeviceEvent event = {0,0,TYPE_AXIS, AXIS_DX};
-    dualshock->applyEvent(&event);
-		
-    Chaos::Sequence sequence;
-    sequence.addAxisPress( AXIS_DY, 1);	// select a non-gun
-    sequence.send(dualshock);
-  }
-	
-[modifier.tweak]
-    if (event->type == TYPE_AXIS && event->id == AXIS_DX && event->value < 0) {
-      return false;
-    }
-    return true;
-  }
-};
-
-[[modifier]]
-name = "No Throwables"
-description = "D-Pad Up/Down Disabled"
-	
-  void begin() {
-    DeviceEvent event = {0,0,TYPE_AXIS, AXIS_DY};
-    dualshock->applyEvent(&event);
-		
-    Chaos::Sequence sequence;
-    sequence.addAxisPress( AXIS_DX, 1);	// select a non-gun
-    sequence.send(dualshock);
-  }
-	
-[modifier.tweak]
-    if (event->type == TYPE_AXIS &&
-	event->id == AXIS_DY) {
-      return false;
-    }
-    return true;
-  }
-};
 
 [[modifier]]
 name = "Max Sensitivity"
-description = "Goodbye precision aiming.  Joystick postions multiplied by 5"
-type = "tweak"
-actions = [ {tweak = "multiply", target = "AXIS_LX", value = 5 },
-	{tweak = "multiply", target = "AXIS_LY", value = 5 },
-	{tweak = "multiply", target = "AXIS_RX", value = 5 },
-	{tweak = "multiply", target = "AXIS_RY", value = 5 } ]
+description = "Goodbye precision aiming. Joystick postions multiplied by 5"
+type = "multiply"
+appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
+scaling = 5.0
 
 [[modifier]]
 name = "Min Sensitivity"
 description = "It is like slomo, but not for the enemies.  Joystick positions divided by 2.5"
-type = "tweak"
-actions = [ {tweak = "multiply", target = "AXIS_LX", value = 0.4 },
-	{tweak = "multiply", target = "AXIS_LY", value = 0.4 },
-	{tweak = "multiply", target = "AXIS_RX", value = 0.4 },
-	{tweak = "multiply", target = "AXIS_RY", value = 0.4 } ]
+type = "multiply"
+appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
+scaling = 0.4
 
 [[modifier]]
 name = "Controller Mirror"
@@ -1577,12 +592,13 @@ type = "remap"
 [[modifier]]
 name = "Controller Flip"
 description = "Double joystick inverted, L1 swapped with L2, Triangle swapped with X, etc."
-type = "flip"	
+type = "child"	
+# do this as an inversion child and a remap
 
 [[modifier]]
 name = "Restart Checkpoint"
 description = "Best served prior to the end of a long encounter"
-type = "menu_on"
+type = "menu"
 value = "RESTART_CHECKPOINT"
 
 [[modifier]]
@@ -1910,7 +926,7 @@ description = "Audio mode.  Incompatible with Xenon"
 type = "menu"
 value = "GAMEPLAY_AUDIO_HELIUM"
 
-[[modifier]]	// Working!
+[[modifier]]
 name = "Xenon Audio"
 description = "Audio mode.  Incompatible with Helium"
 type = "menu"
@@ -1919,89 +935,143 @@ value = "GAMEPLAY_AUDIO_XENON"
 [[modifier]]
 name = "Desk Pop"
 description = "We honor the flag, and you crap on it when you don't shoot your gun https://www.youtube.com/watch?v=wWZTTtE5_zQ"
-type = "action"
-begin.commands = [ {action = "select_gun", value = 1},
-	       {action = "delay", value = 1000},
-	       {action = "hold", target = "aiming"},
-	       {action = "delay", value = 1000},
-	       {action = "press", target="fire", value=200},
-	       {action = "release", target = "aiming"} ]
-	
+type = "sequence"
+locked = true
+[[modifier.begin]]
+inject = "select_gun" # inject builds a sequence to send rather than calling applyEvent
+state = "PRESS"
+delay = 1.0
+[[modifier.begin]]
+inject = "aiming"
+state = "HOLD"
+delay = 1.0
+[[modifier.begin]]
+inject ="fire/throw"
+state = "PRESS"
+delay = 0.2
+[[modifier.begin]]
+inject ="aiming"
+state = "RELEASE"
 
-# This one may well be too complex to factor much of the logic out.
-# Currently a placeholder
 [[modifier]]
 name = "Double Tap"
-description = "It's Rule #2. Everytime a shot is fired, another occurs in quick succession.  For Rule #1, see Leeroy Jenkins"
-type = "double_tap"	
+description = "It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins."
+type = "sequence"
 time_between_shots = 1.0
+blockInSequence = "shoot/throw"
+[[modifier.watchdog]]
+triggerOn = [ "shoot/throw" ]
+triggerThreshold = 1
+startTime = 0.2
+[[modifier.sequence]]
+command = "shoot/throw"
+value = 0
+timeToNext = 1.0
+[[modifier.sequence]]
+command = "shoot/throw"
+value = 1
+timeToNext = 1.2
+[[modifier.sequence]]
+command = "shoot/throw"
+value = 0
 
 [[modifier]]
 name = "Use Items"
 description = "Shoots or throws 6 of whatever item is currently equipped (will not work on medkits)"
-type = "action"
-begin.commands = [ {action = "hold", target = "aiming"},
-	       {action = "delay", value = 1000},
-	       {action = "press", target="fire", value = 250, repeat = 6},
-	       {action = "release", target = "aiming"} ]
-	
-[modifier.tweak]
-    if (event->type == TYPE_BUTTON) {
-      if (event->id == BUTTON_L2 ||
-	  event->id == BUTTON_R2) {
-	return !busy;
-      }
-    } else if (event->type == TYPE_AXIS) {
-      if (event->id == AXIS_R2 ||
-	  event->id == AXIS_DX ||
-	  event->id == AXIS_DY) {
-	return !busy;
-      }
-    }
-		
-    return true;
-  }
-};
+type = "sequence"
+[[modifier.begin.initialize]]
+inject = "aiming"
+state = "HOLD"
+delay = 1.0
+[[modifier.begin.loop]]
+repeat = 6
+inject = "shoot/throw"
+state = "HOLD/RELEASE"
+delay = 0.25
+[[modifier.begin.finalize]]
+inject = "aiming"
+state = "RELEASE"
 
 [[modifier]]
 name = "Toss A Molly/Bomb"
-description = "Time to riot, chucks a molly (bomb if Abby)"
-type = "action"
-begin.commands = [  {action = "disable_joysticks" },
-	       {action = "select", target = "item_select", value = 2},
-	       {action = "delay", value = 3000},
-	       {action = "press", target = "throw", value = 500} ]
+description = "Time to riot. Chucks a molly (for Ellie) or bomb (for Abby)."
+type = "sequence"
+[[modifier.begin]]
+inject = "disable_joysticks"
+[[modifier.begin]]
+repeat = 2
+inject = "select consumable"
+state = "PRESS"
+value = 1
+delay = 3.0
+[[modifier.begin]]
+inject = "shoot/throw"
+state = "HOLD"
+delay = 0.5
+[[modifier.begin]]
+inject = "shoot/throw"
+state = "RELEASE"
 	
 [[modifier]]
 name = "CTG Strat"
 description = "Self immolation resulting in death, at least 7/11 times"
-type = "action"
-begin.commands = [  {action = "disable_joysticks" },
-	       {action = "hold_axis", target = "AXIS_RY", value = JOYSTICK_MAX},
-	       {action = "hold_axis", target = "AXIS_RX", value = 0},
-	       {action = "select", target = "item_select", value = 2},
-	       {action = "delay", value = 3000},
-	       {action = "press", target = "throw", value = 500},
-	       {action = "hold_axis", target = "AXIS_RY", value = 0},
-	       {action = "hold_axis", target = "AXIS_RX", value = 0} ] # Is this last one necessary?
+type = "sequence"
+[[modifier.begin]]
+inject = "disable_joysticks"
+[[modifier.begin]]
+inject = "vertical camera"
+state = "HOLD"
+value = 127 # JOYSTICK_MAX
+[[modifier.begin]]
+inject = "horizontal camera"
+state = "HOLD"
+value = 0
+[[modifier.begin]]
+repeat = 2
+inject = "select consumable"
+state = "PRESS"
+delay = 3.0
+[[modifier.begin]]
+inject = "shoot/throw"
+state = "HOLD/RELEASE"
+delay = 0.5
+[[modifier.begin]]
+inject = "vertical camera"
+state = "HOLD"
+value = 0
 	
 [[modifier]]
 name = "Pdub It"
 description = "RIP bricks and bottles"
-type = "action"	
-begin.commands = [  {action = "disable_joysticks" },
-	       {action = "select", target = "item_select", value = 1},
-	       {action = "delay", value = 2500},
-	       {action = "press", target = "throw", value = 200} ]
+type = "sequence"	
+[[modifier.begin]]
+inject = "disable_joysticks"
+[[modifier.begin]]
+inject = "select consumable"
+state = "PRESS"
+value = 1
+delay = 2.5
+[[modifier.begin]]
+inject = "shoot/throw"
+state = "PRESS"
+delay = 0.2
 
 [[modifier]]
 name = "Chuck Smoke Bomb"
 description = "It was taking up space anyway. Does nothing when playing Abby"
-type = "action"
-begin.commands = [ {action = "disable_joysticks" },
-	       {action = "select", target = "item_select", value = -2},
-	       {action = "delay", value = 3000},
-	       {action = "press", target = "throw", value = 200} ]
+type = "sequence"
+[[modifier.begin]]
+inject = "disable_joysticks"
+[[modifier.begin]]
+repeat = 2
+inject = "select consumable"
+state = "PRESS"
+value = -1
+delay = 3.0
+[[modifier.begin]]
+inject = "shoot/throw"
+state = "PRESS"
+delay = 0.2
 
 [[modifier]]
 name = "Infinite Hugging"
@@ -2102,7 +1172,7 @@ value = "TTS_COMBAT_CUES"
 [[modifier]]
 name = "Navigation Assistance"
 description = "Keeps pointing camera in direction of story progression"
-type = "cycle"
+type = "repeat"
 begin.set_menu = [ "NAVIGATION_ASSISTANCE", 1 ]
 begin.event = [ "BUTTON_L3", 0 ]
 finish.set_menu = [ "NAVIGATION_ASSISTANCE", 0 ]
@@ -2238,12 +1308,14 @@ events = [ "BUTTON_L1", "BUTTON_L2", "BUTTON_R1", "BUTTON_R2" ]
 [[modifier]]
 name = "Mystery"
 description = "Applies a random modifier"
-type = "random child"
+type = "child"
+random = true
 value = 1
 
 [[modifier]]
 name = "Chaos"
 description = "Applies 5 random modifiers"
-type = "random child"
+type = "child"
+random = true
 value = 5
 

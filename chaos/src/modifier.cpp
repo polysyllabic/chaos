@@ -18,7 +18,7 @@
  */
 #include <iostream>
 #include <unistd.h>
-#include <sstream>
+//#include <sstream>
 #include <cstdlib>
 #include <json/json.h>
 
@@ -26,18 +26,14 @@
 
 using namespace Chaos;
 
-Modifier::Modifier() {
-  this->timer.initialize();
+Modifier::Modifier(Passkey, Controller* controller, ChaosEngine* engine, toml::table& config) :
+  controller{controller}, engine{engine}
+{
+  timer.initialize();
   me = this;
   pauseTimeAccumulator = 0;
-}
-
-void Modifier::setController(Controller* controller) {
-  this->controller = controller;
-}
-
-void Modifier::setChaosEngine(ChaosEngine* chaosEngine) {
-  this->chaosEngine = chaosEngine;
+  // Initialize those elements from the TOML table that are common to all mod types
+  
 }
 
 void Modifier::_update(bool isPaused) {
@@ -47,40 +43,26 @@ void Modifier::_update(bool isPaused) {
   }
   this->update();
 }
- 
-void Modifier::begin() {	// virtual override
+
+// Default implementations of virtual functions do nothing
+void Modifier::begin() {}
+
+void Modifier::update() {}
+
+void Modifier::finish() {}
+
+bool Modifier::tweak( DeviceEvent* event ) {
+  return true;
 }
 
-void Modifier::update() {	// virtual override
-}
-
-void Modifier::finish() {	// virtual override
-}
-
-const char* Modifier::description() {	// virtual override
-  return "";
-}
-
-std::map<std::string, std::function<Modifier*()>> Modifier::factory;
-
-Modifier* Modifier::build( const std::string& name ) {
-  Modifier* mod = NULL;
-	
-  if (factory.count(name) > 0) {
-    mod = factory[name]();
-  }
-	
-  return mod;
-}
-
-Json::Value modifierToJsonObject( std::string name, Modifier* mod ) {
+Json::Value Modifier::toJsonObject(std::string& name) {
   Json::Value result;
   result["name"] = name;
-  result["desc"] = mod->description();
+  result["desc"] = getDescription();
   return result;
 }
 
-std::string Modifier::getModList(double timePerModifier) {
+std::string Modifier::getModList() {
   Json::Value root;
   Json::Value & data = root["mods"];
   int i = 0;
@@ -101,130 +83,5 @@ double Modifier::lifetime() {
   return timer.runningTime() - pauseTimeAccumulator;
 }
 
-// Alter the signal as necessary.
-// By default, it is valid and we do nothing
-bool Modifier::tweak( DeviceEvent* event ) {
-  return true;
-}
 
-void Modifier::setParentModifier(Modifier* parent) {
-  this->me = parent;
-}
 
-/**
- * Test current state of a button and return its pressed state as boolean.
- */
-bool Modifier::buttonPressed(Button button) {
-  return controller->getState(controller->getButton(button), TYPE_BUTTON);
-}
-
-/**
- * Force the button off. This disables the button press unconditionally.
- */
-void Modifier::buttonOff(DeviceEvent* event, Button button) {
-  if (event->id == controller->getButton(button) && event->type == TYPE_BUTTON) {
-    event->value = 0;
-  }
-}
-
-/**
- * Force the button off if another button is also pressed at the same time.
- */
-void Modifier::buttonOff(DeviceEvent* event, Button button, Button alsoPressed) {
-  if (event->id == controller->getButton(button) && event->type == TYPE_BUTTON && buttonPressed(alsoPressed)) {
-    event->value = 0;
-  }
-}
-
-/**
- * Force the button on. This disables the button press unconditionally.
- */
-void Modifier::buttonOn(DeviceEvent* event, Button button) {
-  if (event->id == controller->getButton(button) && event->type == TYPE_BUTTON) {
-    event->value = 1;
-  }
-}
-
-/**
- * Force an axis to zero.
- */
-void Modifier::axisOff(DeviceEvent* event, Axis axis) {
-  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
-    event->value = 0;
-  }
-}
-
-/**
- * Force an axis to the minimum value.
- */
-void Modifier::axisMin(DeviceEvent* event, Axis axis) {
-  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
-    event->value = controller->getJoystickMin();
-  }
-}
-
-/**
- * Force an axis to the maximum value.
- */
-void Modifier::axisMax(DeviceEvent* event, Axis axis) {
-  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
-    event->value = controller->getJoystickMax();
-  }
-}
-
-/**
- * Invert the axis value (swap positive and negative values).
- */
-void Modifier::axisInvert(DeviceEvent* event, Axis axis) {
-  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
-    event->value = -((int) event->value + 1);
-  }
-}
-
-/**
- * Only allow positive axis values.
- */
-void Modifier::axisPositive(DeviceEvent* event, Axis axis) {
-  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
-    event->value = event->value >= 0 ? event->value  : 0;
-  }
-}
-
-/**
- * Only allow negative axis values.
- */
-void Modifier::axisNegative(DeviceEvent* event, Axis axis) {
-  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
-    event->value = event->value <= 0 ? event->value  : 0;
-  }
-}
-
-/**
- * Make all negative values positive.
- */
-void Modifier::axisAbsolute(DeviceEvent* event, Axis axis) {
-  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
-    event->value = abs(event->value);
-  }
-}
-
-/**
- * Make all positive values negative.
- */
-void Modifier::axisNegAbsolute(DeviceEvent* event, Axis axis) {
-  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS) {
-    event->value = -abs(event->value);
-  }
-}
-
-/**
- * Returns false if the axis criterion matches. When false is returned
- * from a tweak routine, it has the effect of preventing other mods in
- * the list from further modifying this event. If true is returned, further
- * processing can occur.
- */
-bool Modifier::axisDropEvent(DeviceEvent* event, Axis axis) {
-  if (event->id == controller->getAxis(axis) && event->type == TYPE_AXIS)
-    return false;
-  return true;
-}

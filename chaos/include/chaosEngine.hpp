@@ -62,7 +62,7 @@ namespace Chaos {
     bool sniffify(const DeviceEvent* input, DeviceEvent* output); // override from DualShockInjector
     void doAction(); // override from Mogi::Thread
 	
-public:
+  public:
     ChaosEngine(Controller* controller);
 	
     void setInterfaceReply(const std::string& reply);
@@ -70,7 +70,8 @@ public:
     void fakePipelinedEvent(DeviceEvent* fakeEvent, Modifier* modifierThatSentTheFakeEvent);
 	
     bool isPaused();
-};
+
+  };
 
 };
 

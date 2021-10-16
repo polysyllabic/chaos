@@ -21,9 +21,11 @@
 #include <iostream>
 #include <iomanip>
 #include <unistd.h>
+#include <cassert>
 #include <plog/Log.h>
 
 #include "controllerRaw.hpp"
+#include "config.hpp"
 
 using namespace Chaos;
 
@@ -93,34 +95,12 @@ void ControllerRaw::initialize() {
   }
 }
 
-uint8_t ControllerRaw::getButton(Button b) {
-  if (mControllerState == NULL) {
-    PLOG_FATAL << "Attempted to call ControllerRaw::getButton() without initializing controller state.\n";
-    exit(EXIT_FAILURE);
-  }
-  return mControllerState->getButton(b);
-}
-
-uint8_t ControllerRaw::getAxis(Axis a) {
-  if (mControllerState == NULL) {
-    PLOG_FATAL << "Attempted to call ControllerRaw::getAxis() without initializing controller state.\n";
-    exit(EXIT_FAILURE);
-  }
-  return mControllerState->getAxis(a);
-}
-
 int ControllerRaw::getJoystickMin() {
-  if (mControllerState == NULL) {
-    PLOG_FATAL << "Attempted to call ControllerRaw::getAxis() without initializing controller state.\n";
-    exit(EXIT_FAILURE);
-  }
+  assert (mControllerState);
   return mControllerState->getJoystickMin();
 }
 
 int ControllerRaw::getJoystickMax() {
-  if (mControllerState == NULL) {
-    PLOG_FATAL << "Attempted to call ControllerRaw::getAxis() without initializing controller state.\n";
-    exit(EXIT_FAILURE);
-  }
+  assert (mControllerState);
   return mControllerState->getJoystickMax();
 }

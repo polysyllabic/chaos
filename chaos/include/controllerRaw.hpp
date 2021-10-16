@@ -26,7 +26,6 @@
 #include "raw-gadget.hpp"
 
 #include "controller.hpp"
-//#include "device.hpp"	// Joystick, Mouse
 #include "controllerState.hpp"
 #include "chaosUhid.hpp"
 

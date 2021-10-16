@@ -16,18 +16,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef DEVICETYPES_HPP
-#define DEVICETYPES_HPP
+#pragma once
 #include <cstdint>
 
 namespace Chaos {
 
-  // Originally, the button and axis enumerations gave the specific numeric
-  // values for the DualShock. To support other controllers without needing
-  // to recompile, we now treat this as an arbitrary enumeration of the
-  // button/axis names, and each controller class must define a numerical
-  // mapping onto this enumeration.
-  enum class Button {
+  /**
+   * An enumeration of the possible types of gamepad inputs.
+   *
+   * Originally, the button and axis enumerations gave the specific numeric values for the DualShock.
+   * To support other controllers without needing to recompile, we now treat this as an arbitrary
+   * enumeration of all the button/axis names. We use this enumeration for fast lookup of the actual
+   * numerical id that each controller expects, as well as any remapping of the controls.
+   */
+  typedef enum GPInput {
     X,
     CIRCLE,
     TRIANGLE,
@@ -42,16 +44,11 @@ namespace Chaos {
     L3,
     R3,
     TOUCHPAD,
-    TOUCHPAD_ACTIVE
-  };
- 
-  enum class Axis {
+    TOUCHPAD_ACTIVE,
     LX,
     LY,
-    L2,
     RX,
     RY,
-    R2,
     DX,
     DY,
     ACCX,
@@ -61,7 +58,22 @@ namespace Chaos {
     GYRY,
     GYRZ,
     TOUCHPAD_X,
-    TOUCHPAD_Y
+    TOUCHPAD_Y,
+    __COUNT__
+  } GPInput;
+
+  /**
+   * Specific type of gampad input. This is more specific than the basic ButtonType for hints
+   * when remapping controls and other occasions where specific subtypes of gamepad inputs
+   * require differnt handling.
+   */
+  enum class GPInputType {
+    BUTTON,
+    THREE_STATE,
+    AXIS,
+    HYBRID,
+    ACCELEROMETER,
+    GYROSCOPE,
   };
 
   typedef enum ButtonType {
@@ -85,5 +97,3 @@ namespace Chaos {
   } DeviceEvent;
 
 };
-
-#endif

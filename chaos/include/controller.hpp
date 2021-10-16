@@ -16,24 +16,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef CONTROLLER_HPP
-#define CONTROLLER_HPP
+#pragma once
 
 #include <deque>
 #include <array>
 
-//#include "device.hpp"	// Joystick, Mouse
 #include "raw-gadget.hpp"
 #include "controllerState.hpp"
 #include "chaosUhid.hpp"
 #include "deviceTypes.hpp"
+#include "controllerCommand.hpp"
 
 namespace Chaos {
 
   class ControllerInjector  {
   public:
     /**
-     * sniff the input and pass/modify it on way to the output.
+     * Sniff the input and pass/modify it on way to the output.
      */
     virtual bool sniffify(const DeviceEvent* input, DeviceEvent* output) = 0;
   };
@@ -48,26 +47,48 @@ namespace Chaos {
 	
     void handleNewDeviceEvent(const DeviceEvent* event);
 	
-    // Database for tracking current button states:
-    // Input: ((int)event->type<<8) + (int)event->id ] = event->value;
-    // Output: state of that type/id combo
+    /**
+     * Database for tracking current button states:
+     * Input: ((int)event->type<<8) + (int)event->id ] = event->value;
+     *  Output: state of that type/id combo
+     */
     short controllerState[1024];
 	
     ControllerInjector* controllerInjector = NULL;
-	
+
+    /**
+     * Holds the data for the button/axis commands.
+     */
+    std::vector<ControllerCommand> buttonInfo;
+
   public:
     Controller();
-    int getState(int id, ButtonType type);
-	
+    /**
+     * The low-level function to get the current controlller state.
+     */
+    inline int getState(int id, ButtonType type) { return controllerState[((int) type<<8) + (int)id ]; }
+    /**
+     * Get the state of the button/axis. For the hybrid type, the button state is returned
+     */
+    int getState(GPInput command);
+    /**
+     */
+    bool matches(const DeviceEvent& event, GPInput command);
+    /**
+     * Tests if the button/axis is in a particular state
+     */
+    bool isState(GPInput command, int state);
+    /**
+     * Turns off the button/axis
+     */
+    void setOff(GPInput command);
+    
     void applyEvent(const DeviceEvent* event);
     void addInjector(ControllerInjector* injector);
 
-    virtual uint8_t getButton(Button b) = 0;
-    virtual uint8_t getAxis(Axis a) = 0;
     virtual int getJoystickMin() = 0;
     virtual int getJoystickMax() = 0;
   };
 
 };
 
-#endif

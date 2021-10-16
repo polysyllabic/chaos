@@ -16,92 +16,159 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef MODIFIER_HPP
-#define MODIFIER_HPP
+#pragma once
 #include <string>
-#include <functional>
-#include <map>
+#include <unordered_map>
 #include <mogi/math/systems.h>
 
+#include "modifierFactory.hpp"
+
 #include "controller.hpp"
+#include "gameCommand.hpp"
 #include "deviceTypes.hpp"
 
 namespace Chaos {
 
   class ChaosEngine;
+
   /**
-   * Implementation of the base Modifier class for TCC
+   * \brief Definition of the abstract base Modifier class for TCC.
    *
-   * A modifier is a specific alteration of a game's operation, for example
-   * disabling a particular control, or inverting the direction of a joystick
-   * movement. Specific classes of modifiers are implemented as subclasses
-   * of this, the generic modifier class.
+   * A modifier is a specific alteration of a game's operation, for example disabling a particular
+   * control, or inverting the direction of a joystick movement. Specific classes of modifiers
+   * are implemented as subclasses.
+   *
+   * Individual modifiers are objects of a particular child class of Modifier and are created
+   * during initialization based on a definition in the TOML configuration file.
+   *
+   * Within the TOML file, each mod is defined in a [[modifier]] table.
+   * The following keys are required for all modifiers:
+   *
+   * - name: A unique string identifying this mod.
+   * - description: An explanatation of the mod for use by the chat bot.
+   * - type: the subtype of modifier.
+   *
+   * The following modifier types are currently defined:
+   *
+   * - cooldown: Allow a command for a set amount of time and then force a recharge period
+   *   before it can be used again.
+   * - delay: Wait for a set amount of time before sending a command.
+   * - disable: Block a command or commands from being sent to the console.
+   * - formula: Alter the magnitude and/or offset of the signal through a formula
+   * - menu: Apply a setting from the game's menus.
+   * - remap: Change which controls issue which commands.
+   * - sequence: Apply an arbitrary sequence of actions.
+   *
+   * Each type of modifier accepts a different subset of additional parameters. See the
+   * specific classes for details. 
+   * 
+   * Example TOML definitions:
+   *
+   *    [[modifier]]
+   *    name = "Moose"
+   *    description = "The moose is dead. The moose does not move. (Disables movement)"
+   *    type = "disable"
+   *    appliesTo = [ "move forward/back", "move sideways" ]
+   * 
+   *    [[modifier]]
+   *    name = "Moonwalk"
+   *    description = "Be like Michael Jackson! Trying to walk forward will actually make you go backward"
+   *    type = "formula"
+   *    magnitude = -1
+   *    appliesTo = [ "move forward/back" ]
+   *
+   * Specific types of modifiers are built in a self-registering factory. In order to ensure that each
+   * child class is registered properly, that class cannot inherit directly from this one. Instead, you
+   * must define the constructor to invoke Modifier::Register<ChildClass>.
+   *
    */
-  class Modifier {
+  class Modifier : Factory<Modifier, Controller* controller, ChaosEngine* engine, toml::table& config> {
     friend ChaosEngine;
+
   protected:
-    /**
-     * Default constructor
-     */
-    Modifier();
     
     Mogi::Math::Time timer;
+
     Controller* controller;
-    ChaosEngine* chaosEngine;
+    ChaosEngine* engine;
+
     /**
-     * Contains "this" except in cases where there is a parent modifier
+     * \brief The list of specific commands affected by this mod.
+     *
+     * Note that all commands in this list are affected by the same condition (if any). If you want
+     * two different commands to have two different conditions, you should create two mods and
+     * declare them as children of a parent mod.
      */
+    std::vector<GameCommands*> commands;
+    
+    // Contains "this" except in cases where there is a parent modifier.
     Modifier* me; 
     /**
      * Amount of time the engine has been paused.
      */
     double pauseTimeAccumulator;
 	
+    Json::Value toJsonObject(std::string& name);
+    
   public:
+    Modifier(Passkey, Controller* controller, ChaosEngine* engine, toml::table& config);
+
+    static std::string getModList();
+	
+    inline void setParentModifier(Modifier* parent) { this->me = parent; }
+    
     /**
-     * Map linking mods to a specific name
+     * \brief Get how long the mod has been active.
+     * \return The mod's running time minus the accumulated time we've been paused.
      */
-    static std::map<std::string, std::function<Modifier*()>> factory;
-    static Modifier* build( const std::string& name );
-    static std::string getModList( double timePerModifier );
+    inline double lifetime() { return timer.runningTime() - pauseTimeAccumulator; }
 	
-    void setController(Controller* controller);
-    void setChaosEngine(ChaosEngine* chaosEngine);
+    /**
+     * \brief Main entry point into the update loop
+     * \param Is the chaos engine currently paused?
+     *
+     * This function is called directly by the ChaosEngine class. We handle the timer housekeeping and
+     * then call the virtual update function implemented by the concrete child class.
+     * 
+     */
+    void _update(bool isPaused);
 	
-    void _update(bool isPaused);	// ChaosEngine call this, which then calls virtual update();
-	
-    virtual void begin();	        // called when first instantiated
-    virtual void update();	// called regularly
-    virtual void finish();	// called on cleanup
-    virtual const char* description(); // A short description of this mod, for Twitch bot response
-	
-    double lifetime();
-	
+    /**
+     * Commands to execute when the mod is first applied. The default implementation does nothing.
+     */
+    virtual void begin();
+    /**
+     * Commands to execute at fixed intervals throughout the lifetime of the mod. The default
+     * implementation does nothing.
+     */
+    virtual void update();
+    /**
+     * Commands to execute when removing the mod from the active-mod list. The default
+     * implementation does nothing.
+     */
+    virtual void finish();
+
+    /**
+     * \brief Get a short description of this mod for the Twitch-bot.
+     * \return The descrition of the mod.
+     *
+     * TO DO: Internationalize these strings.
+     */
+    inline const std::string& getDescription() const noexcept { return description; }
+
+    /**
+     * \brief Commands to test (and potentially alter) events as necessary.
+     * \param[in,out] event The event coming from the gamepad to test/alter.
+     * \return A boolean indication of whether the event is valid.
+     *
+     * Returning true has the effect of passing the event on to the next modifier (if any) in the
+     * list of active modifiers. Returning false effectively dropps the event, and it will not be
+     * passed on for other modifiers to affect.
+     *
+     * The default implementation simply returns true.
+     */
     virtual bool tweak( DeviceEvent* event );
 	
-    void setParentModifier(Modifier* parent);
-
-    // Directly read the current controller state
-    bool buttonPressed(Button button);
-
-    // Alter event comming from the controller
-    void buttonOff(DeviceEvent* event, Button button);
-    void buttonOff(DeviceEvent* event, Button button, Button alsoPressed);
-    void buttonOn(DeviceEvent* event, Button button);
-  
-    void axisOff(DeviceEvent* event, Axis axis);
-    void axisMin(DeviceEvent* event, Axis axis);
-    void axisMax(DeviceEvent* event, Axis axis);
-    void axisInvert(DeviceEvent* event, Axis axis);
-    void axisPositive(DeviceEvent* event, Axis axis);
-    void axisNegative(DeviceEvent* event, Axis axis);
-    void axisAbsolute(DeviceEvent* event, Axis axis);
-    void axisNegAbsolute(DeviceEvent* event, Axis axis);
-  
-    // Prevent further mods from tweaking this event
-    bool axisDropEvent(DeviceEvent* event, Axis axis);
-};
+  };
 
 };
-
-#endif

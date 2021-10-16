@@ -66,7 +66,7 @@ void ChaosEngine::newCommand(const std::string& command) {
 	
   if (root.isMember("timePerModifier")) {
     int newModifierTime = root["timePerModifier"].asFloat();
-    printf("New Modifier Time: %d\n", newModifierTime);
+    PLOG_DEBUG << "New Modifier Time: " << newModifierTime << std::endl;
     setTimePerModifier(newModifierTime);
   }
 	

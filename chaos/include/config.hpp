@@ -24,7 +24,7 @@
 #define CHAOS_VERSION "2.0.0-alpha.1"
 
 /* #undef RASPBERRY_PI */
-#define USE_DUALSHOCK
+/* #undef USE_DUALSHOCK */
 /* #undef USE_DUALSENSE */
 
 #endif

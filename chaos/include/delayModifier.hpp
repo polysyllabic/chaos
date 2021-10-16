@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef DELAYMODIFIER_HPP
-#define DELAYMODIFIER_HPP
+#pragma once
 #include <queue>
+#include <toml++/toml.h>
 
 #include "modifier.hpp"
 
@@ -32,17 +32,15 @@ namespace Chaos {
   /** Subclass of modifiers that introduce a delay between a button press and
    * when it is passed to the controller.
    */
-  class DelayModifier : public Modifier {
+  class DelayModifier : public Modifier::Register<DelayModifier> {
 
   protected:
-    DelayModifier(double delay);
-
     std::queue<TimeAndEvent> eventQueue;
     double delayTime;
 
   public:
+    DelayModifier(const toml::table& config);    
     void update();
   };
 };
 
-#endif

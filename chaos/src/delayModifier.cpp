@@ -21,8 +21,8 @@
 
 using namespace Chaos;
 
-DelayModifier::DelayModifier(double delay) {
-  delayTime = delay;
+DelayModifier::DelayModifier(const toml::table config) {
+  
 }
 
 void DelayModifier::update() {
