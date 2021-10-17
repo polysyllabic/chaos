@@ -18,20 +18,23 @@
  */
 #include <iostream>
 #include <unistd.h>
-//#include <sstream>
 #include <cstdlib>
-#include <json/json.h>
 
 #include "modifier.hpp"
 
 using namespace Chaos;
 
-Modifier::Modifier(Passkey, Controller* controller, ChaosEngine* engine, toml::table& config) :
-  controller{controller}, engine{engine}
+const std::string Modifier::name = "modifier";
+
+void Modifier::initialize(Controller* ctrlr, ChaosEngine* eng, const toml::table& config)
 {
   timer.initialize();
   me = this;
   pauseTimeAccumulator = 0;
+  totalLifespan = -1;    // An erroneous value that if set should be positive
+  controller = ctrlr;
+  engine = eng;
+  
   // Initialize those elements from the TOML table that are common to all mod types
   
 }
@@ -55,32 +58,25 @@ bool Modifier::tweak( DeviceEvent* event ) {
   return true;
 }
 
-Json::Value Modifier::toJsonObject(std::string& name) {
+Json::Value Modifier::toJsonObject(const std::string& name) {
   Json::Value result;
   result["name"] = name;
   result["desc"] = getDescription();
+  result["lifespan"] = lifespan();
   return result;
 }
 
 std::string Modifier::getModList() {
   Json::Value root;
-  Json::Value & data = root["mods"];
+  Json::Value& data = root["mods"];
   int i = 0;
-  for (std::map<std::string,std::function<Modifier*()>>::iterator it = factory.begin();
-       it != factory.end();
-       it++) {
-    Modifier* tempMod = it->second();
-    data[i++] = modifierToJsonObject( it->first, tempMod);
-    delete tempMod;
+  for (auto const& [key, val] : mod_list) {
+    data[i++] = val->toJsonObject(key);
   }
 	
   Json::StreamWriterBuilder builder;
 	
   return Json::writeString(builder, root);
-}
-
-double Modifier::lifetime() {
-  return timer.runningTime() - pauseTimeAccumulator;
 }
 
 

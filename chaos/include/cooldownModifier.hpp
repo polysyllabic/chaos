@@ -17,9 +17,24 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#define CHAOS_VERSION_MAJOR @CHAOS_MAJOR@
-#define CHAOS_VERSION_MINOR @CHAOS_MINOR@
-#define CHAOS_VERSION "@CHAOS_VERSION@"
+#include <queue>
+#include <toml++/toml.h>
 
-#cmakedefine RASPBERRY_PI
-#cmakedefine USE_DUALSENSE
+#include "modifier.hpp"
+
+namespace Chaos {
+
+  /**
+   * \brief Modifier that allows an action for a set period of time and then blocks it until a
+   * cooldown period has expired.
+   */
+  class CooldownModifier : public Modifier::Registrar<CooldownModifier> {
+
+  public:
+    static const std::string name;
+    CooldownModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
+    
+    void update();
+  };
+};
+

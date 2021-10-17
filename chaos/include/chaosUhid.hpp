@@ -16,9 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef CHAOS_UHID_HPP
-#define CHAOS_UHID_HPP
-
+#pragma once
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -56,5 +54,3 @@ public:
   };
 
 };
-
-#endif

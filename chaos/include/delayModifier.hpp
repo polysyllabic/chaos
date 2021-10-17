@@ -32,14 +32,15 @@ namespace Chaos {
   /** Subclass of modifiers that introduce a delay between a button press and
    * when it is passed to the controller.
    */
-  class DelayModifier : public Modifier::Register<DelayModifier> {
+  class DelayModifier : public Modifier::Registrar<DelayModifier> {
 
   protected:
     std::queue<TimeAndEvent> eventQueue;
     double delayTime;
-
+    
   public:
-    DelayModifier(const toml::table& config);    
+    static const std::string name;
+    DelayModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
     void update();
   };
 };

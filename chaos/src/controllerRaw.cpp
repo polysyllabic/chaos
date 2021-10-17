@@ -95,12 +95,12 @@ void ControllerRaw::initialize() {
   }
 }
 
-int ControllerRaw::getJoystickMin() {
+short int ControllerRaw::getJoystickMin() {
   assert (mControllerState);
   return mControllerState->getJoystickMin();
 }
 
-int ControllerRaw::getJoystickMax() {
+short int ControllerRaw::getJoystickMax() {
   assert (mControllerState);
   return mControllerState->getJoystickMax();
 }

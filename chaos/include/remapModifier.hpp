@@ -17,9 +17,29 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#define CHAOS_VERSION_MAJOR @CHAOS_MAJOR@
-#define CHAOS_VERSION_MINOR @CHAOS_MINOR@
-#define CHAOS_VERSION "@CHAOS_VERSION@"
+#include <map>
+#include <toml++/toml.h>
 
-#cmakedefine RASPBERRY_PI
-#cmakedefine USE_DUALSENSE
+#include "modifier.hpp"
+#include "deviceTypes.hpp"
+
+namespace Chaos {
+
+  /** Subclass of modifiers that alters the signal by changing it through a
+   * configurable formula.
+   */
+  class RemapModifier : public Modifier::Registrar<RemapModifier> {
+
+  protected:
+    std::map<GPInput, GPInput> remapping;
+
+  public:
+    static const std::string name;
+    
+    RemapModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
+
+    void begin();
+    void update();
+  };
+};
+

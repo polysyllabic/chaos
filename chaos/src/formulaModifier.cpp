@@ -1,7 +1,7 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
+ * the top-level directory of this distribution for details of the contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,10 +16,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#pragma once
-#define CHAOS_VERSION_MAJOR @CHAOS_MAJOR@
-#define CHAOS_VERSION_MINOR @CHAOS_MINOR@
-#define CHAOS_VERSION "@CHAOS_VERSION@"
+#include "formulaModifier.hpp"
 
-#cmakedefine RASPBERRY_PI
-#cmakedefine USE_DUALSENSE
+using namespace Chaos;
+
+const std::string FormulaModifier::name = "formula";
+
+FormulaModifier::FormulaModifier(Controller* controller, ChaosEngine* engine, const toml::table& config) {
+  initialize(controller, engine, config); 
+}
+
+void FormulaModifier::begin() {
+}
+
+void FormulaModifier::update() {
+}

@@ -16,9 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef CONTROLLER_RAW_HPP
-#define CONTROLLER_RAW_HPP
-
+#pragma once
 #include <cstdio>
 #include <deque>
 #include <array>
@@ -33,7 +31,6 @@ namespace Chaos {
 
   class ControllerRaw : public Controller, public EndpointObserver, public Mogi::Thread {
   private:
-    ControllerState* mControllerState;
     std::deque<std::array<unsigned char,64>> bufferQueue;
 	
     ChaosUhid* chaosHid;
@@ -51,12 +48,8 @@ namespace Chaos {
 	
     void initialize();
     
-    uint8_t getButton(Button b);
-    uint8_t getAxis(Axis a);
-    int getJoystickMin();
-    int getJoystickMax();
+    short int getJoystickMin();
+    short int getJoystickMax();
   };
 
 };
-
-#endif

@@ -16,22 +16,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef MENUMODIFIER_HPP
-#define MENUMODIFIER_HPP
-
+#pragma once
 #include "modifier.hpp"
 
 namespace Chaos {
 
   // subclass of modifiers that select options through the game menu
-  class MenuModifier : public Chaos::Modifier {
+  class MenuModifier : public Modifier::Registrar<MenuModifier> {
   private:
     bool busy;
-  protected:
-    MenuModifier();
+    
   public:
+    static const std::string name;
+    
+    MenuModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
+    void begin();
     bool tweak(DeviceEvent* event);
   };
 };
-
-#endif

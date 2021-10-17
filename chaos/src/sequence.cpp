@@ -23,53 +23,64 @@
 
 using namespace Chaos;
 
-Sequence::Sequence(Controller* c) : controller{c} {
+void Sequence::disableControls() {
+  events.push_back( {0, 0, TYPE_AXIS, controller->getGPInfo(GPInput::DX).getID()} );
+  events.push_back( {0, 0, TYPE_AXIS, controller->getGPID(GPInput::DY)} );
+  events.push_back( {0, 0, TYPE_AXIS, controller->getGPID(GPInput::RX)} );
+  events.push_back( {0, 0, TYPE_AXIS, controller->getGPID(GPInput::RY)} );
+  events.push_back( {0, 0, TYPE_AXIS, controller->getGPID(GPInput::LX)} );
+  events.push_back( {0, -128, TYPE_AXIS, controller->getGPSecondID(GPInput::L2)} );
+  events.push_back( {0, -128, TYPE_AXIS, controller->getGPSecondID(GPInput::R2)} );
+  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::X)} );
+  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::SQUARE)} );
+  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::TRIANGLE)} );
+  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::CIRCLE)} );
+  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::R1)} );
+  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::L1)} );
+  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::R2)} );
+  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::L2)} );
+  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::R3)} );
+  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::L3)} );
+  events.push_back( {TIME_AFTER_JOYSTICK_DISABLE, 0, TYPE_AXIS, controller->getGPID(GPInput::LY)} );
 }
 
-void Sequence::disablejoysticks() {
-  events.push_back( {0, 0, TYPE_AXIS, controller->getAxis(Axis::DX)} );
-  events.push_back( {0, 0, TYPE_AXIS, controller->getAxis(Axis::DY)} );
-  events.push_back( {0, 0, TYPE_AXIS, controller->getAxis(Axis::RX)} );
-  events.push_back( {0, 0, TYPE_AXIS, controller->getAxis(Axis::RY)} );
-  events.push_back( {0, 0, TYPE_AXIS, controller->getAxis(Axis::LX)} );
-  events.push_back( {0, -128, TYPE_AXIS, controller->getAxis(Axis::L2)} );
-  events.push_back( {0, -128, TYPE_AXIS, controller->getAxis(Axis::R2)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getButton(Button::X)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getButton(Button::SQUARE)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getButton(Button::TRIANGLE)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getButton(Button::CIRCLE)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getButton(Button::R1)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getButton(Button::L1)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getButton(Button::R2)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getButton(Button::L2)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getButton(Button::R3)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getButton(Button::L3)} );
-  events.push_back( {TIME_AFTER_JOYSTICK_DISABLE, 0, TYPE_AXIS, controller->getAxis(Axis::LY)} );
+void Sequence::addButtonPress(GPInput button) {
+  assert(controller->getGPButtonType(button) == TYPE_BUTTON);
+  
+  events.push_back( {  TIME_PER_BUTTON_PRESS, 1, TYPE_BUTTON, controller->getGPID(button)} );
+  events.push_back( {TIME_PER_BUTTON_RELEASE, 0, TYPE_BUTTON, controller->getGPID(button)} );
 }
 
-void Sequence::addButtonPress( Button id ) {
-  events.push_back( {  TIME_PER_BUTTON_PRESS, 1, TYPE_BUTTON, controller->getButton(id)} );
-  events.push_back( {TIME_PER_BUTTON_RELEASE, 0, TYPE_BUTTON, controller->getButton(id)} );
+void Sequence::addButtonHold(GPInput button) {
+  assert(controller->getGPButtonType(button) == TYPE_BUTTON);
+  
+  events.push_back( {  0, 1, TYPE_BUTTON, controller->getGPID(button)} );
+}
+void Sequence::addButtonRelease(GPInput button) {
+  assert(controller->getGPButtonType(button) == TYPE_BUTTON);
+  
+  events.push_back( {  0, 0, TYPE_BUTTON, controller->getGPID(button)} );
 }
 
-void Sequence::addButtonHold( Button id ) {
-  events.push_back( {  0, 1, TYPE_BUTTON, controller->getButton(id)} );
-}
-void Sequence::addButtonRelease( Button id ) {
-  events.push_back( {  0, 0, TYPE_BUTTON, controller->getButton(id)} );
-}
-
-void Sequence::addTimeDelay( unsigned int timeInMilliseconds ) {
+void Sequence::addTimeDelay(unsigned int timeInMilliseconds) {
   events.push_back( { timeInMilliseconds*1000, 0, 255, 255} );
 }
 
-void Sequence::addAxisPress( Axis id, short value ) {
-  events.push_back( {  TIME_PER_BUTTON_PRESS, value, TYPE_AXIS, controller->getAxis(id)} );
-  events.push_back( {TIME_PER_BUTTON_RELEASE, 0, TYPE_AXIS, controller->getAxis(id)} );
+void Sequence::addAxisPress(GPInput axis, short value ) {
+  assert(controller->getGPButtonType(axis) == TYPE_AXIS);
+  
+  uint8_t ctrl = (controller->getGPType(axis) == GPInputType::HYBRID) ?
+    controller->getGPSecondID(axis) : controller->getGPID(axis);
+  events.push_back( {  TIME_PER_BUTTON_PRESS, value, TYPE_AXIS, ctrl} );
+  events.push_back( {TIME_PER_BUTTON_RELEASE, 0, TYPE_AXIS, ctrl} );
 }
 
-void Sequence::addAxisHold( Axis id, short value ) {
-  events.push_back( {  TIME_PER_BUTTON_PRESS, value, TYPE_AXIS, controller->getAxis(id)} );
+void Sequence::addAxisHold(GPInput axis, short value ) {
+  assert(controller->getGPButtonType(axis) == TYPE_AXIS);
+  
+  uint8_t ctrl = (controller->getGPType(axis) == GPInputType::HYBRID) ?
+    controller->getGPSecondID(axis) : controller->getGPID(axis);
+  events.push_back( {  0, value, TYPE_AXIS, ctrl} );
 }
 
 void Sequence::send() {
@@ -78,7 +89,9 @@ void Sequence::send() {
     PLOG_VERBOSE << "Sending event for button " << (int) event.type << ": " << (int) event.id
 	       << ":" << (int) event.value << "\t sleeping for " << event.time << '\n';
     controller->applyEvent( &event );
-    usleep( event.time );
+    if (event.time) {
+      usleep(event.time);
+    }
   }
 }
 

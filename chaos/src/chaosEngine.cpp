@@ -49,12 +49,12 @@ void ChaosEngine::newCommand(const std::string& command) {
   }
 	
   if (root.isMember("winner")) {
-    Modifier* mod = Modifier::build(root["winner"].asString());
+    Modifier* mod = Modifier::mod_list.at(root["winner"].asString());
     if (mod != NULL) {
       PLOG_DEBUG << "Adding Modifier: " << typeid(*mod).name() << std::endl;
 			
-      mod->setController(controller);
-      mod->setChaosEngine(this);
+      //mod->setController(controller);
+      //mod->setChaosEngine(this);
       lock();
       modifiers.push_back(mod);
       modifiersThatNeedToStart.push(mod);
@@ -81,7 +81,8 @@ void ChaosEngine::doAction() {
     pausedPrior = true;
     return;    
   }
-	
+
+  // initialize the mods that are waiting
   lock();
   while(!modifiersThatNeedToStart.empty()) {
     modifiersThatNeedToStart.front()->begin();
@@ -99,7 +100,8 @@ void ChaosEngine::doAction() {
   // Check front element.  If timer ran out, remove it.
   if (modifiers.size() > 0) {
     Modifier* front = modifiers.front();
-    if (front->lifetime() > timePerModifier) {
+    if ((front->lifespan() >= 0 && front->lifetime() > front->lifespan()) ||
+	(front->lifespan()  < 0 && front->lifetime() > timePerModifier)) {
       PLOG_DEBUG << "Killing Modifier: " << typeid(*front).name() << std::endl;
       lock();
       front->finish();	// Do any cleanup, if necessary
@@ -118,8 +120,7 @@ bool ChaosEngine::sniffify(const DeviceEvent* input, DeviceEvent* output) {
   lock();
   
   // The options button pauses the chaos engine
-  if (input->type == TYPE_BUTTON &&
-      (input->id == controller->getButton(Button::OPTIONS) || input->id == controller->getButton(Button::PS)) ) {
+  if (controller->matches(input, GPInput::OPTIONS) || controller->matches(input, GPInput::PS))  {
     if(input->value == 1 && pause == false) { // on rising edge
       pause = true;
       chaosInterface.sendMessage("{\"pause\":1}");
@@ -129,7 +130,7 @@ bool ChaosEngine::sniffify(const DeviceEvent* input, DeviceEvent* output) {
   }
 
   // The share button resumes the chaos engine
-  if (input->type == TYPE_BUTTON && input->id == controller->getButton(Button::SHARE)) {
+  if (controller->matches(input, GPInput::SHARE)) {
     if(input->value == 1 && pause == true) { // on rising edge
       pausePrimer = true;
     } else if(input->value == 0 && pausePrimer == true) { // falling edge

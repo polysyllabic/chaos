@@ -16,8 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef CHAOS_INTERFACE_HPP
-#define CHAOS_INTERFACE_HPP
+#pragma once
 #include <queue>
 #include <string>
 #include <mogi/thread.h>
@@ -82,5 +81,3 @@ namespace Chaos {
   };
 
 };
-
-#endif

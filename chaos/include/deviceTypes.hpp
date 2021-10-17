@@ -45,6 +45,7 @@ namespace Chaos {
     R3,
     TOUCHPAD,
     TOUCHPAD_ACTIVE,
+    TOUCHPAD_ACTIVE_2,
     LX,
     LY,
     RX,
@@ -59,6 +60,8 @@ namespace Chaos {
     GYRZ,
     TOUCHPAD_X,
     TOUCHPAD_Y,
+    TOUCHPAD_X_2,
+    TOUCHPAD_Y_2,
     __COUNT__
   } GPInput;
 
@@ -74,6 +77,7 @@ namespace Chaos {
     HYBRID,
     ACCELEROMETER,
     GYROSCOPE,
+    TOUCHPAD
   };
 
   typedef enum ButtonType {

@@ -18,7 +18,9 @@
  */
 #pragma once
 #include <string>
+#include <functional>
 #include <unordered_map>
+#include <json/json.h>
 #include <mogi/math/systems.h>
 
 #include "modifierFactory.hpp"
@@ -82,10 +84,11 @@ namespace Chaos {
    * must define the constructor to invoke Modifier::Register<ChildClass>.
    *
    */
-  class Modifier : Factory<Modifier, Controller* controller, ChaosEngine* engine, toml::table& config> {
+  struct Modifier : Factory<Modifier, Controller*, ChaosEngine*, const toml::table&> {
     friend ChaosEngine;
 
   protected:
+    std::string description;
     
     Mogi::Math::Time timer;
 
@@ -99,7 +102,7 @@ namespace Chaos {
      * two different commands to have two different conditions, you should create two mods and
      * declare them as children of a parent mod.
      */
-    std::vector<GameCommands*> commands;
+    std::vector<GameCommand*> commands;
     
     // Contains "this" except in cases where there is a parent modifier.
     Modifier* me; 
@@ -107,11 +110,30 @@ namespace Chaos {
      * Amount of time the engine has been paused.
      */
     double pauseTimeAccumulator;
-	
-    Json::Value toJsonObject(std::string& name);
+    /**
+     * Designates a custom lifespan, if necessary.
+     */
+    double totalLifespan;
+    
+    Json::Value toJsonObject(const std::string& name);
+
+    /**
+     * The map of all the mods defined through the TOML file
+     */
+    static std::unordered_map<std::string, Modifier*> mod_list;
     
   public:
-    Modifier(Passkey, Controller* controller, ChaosEngine* engine, toml::table& config);
+    static const std::string name;
+
+    Modifier(Passkey) {}
+    
+    /**
+     * Common initialization of the modifier.
+     * Parts of the TOML table are used by all child classes, so we provide a common routine
+     * to initialize it here.
+     *
+     */
+    void initialize(Controller* controller, ChaosEngine* engine, const toml::table& config);
 
     static std::string getModList();
 	
@@ -122,7 +144,7 @@ namespace Chaos {
      * \return The mod's running time minus the accumulated time we've been paused.
      */
     inline double lifetime() { return timer.runningTime() - pauseTimeAccumulator; }
-	
+    double lifespan();
     /**
      * \brief Main entry point into the update loop
      * \param Is the chaos engine currently paused?

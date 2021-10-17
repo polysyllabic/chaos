@@ -1,7 +1,7 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the COPYRIGHT
- * file at the top-level directory of this distribution.
+ * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
+ * the top-level directory of this distribution for details of the contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,36 +16,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef GAMEMENU_HPP
-#define GAMEMENU_HPP
-#include <iostream>
-#include <toml++/toml.h>
+#include "cooldownModifier.hpp"
+//#include "chaosEngine.hpp"
 
-#include "sequence.h"
+using namespace Chaos;
 
-class GameMenu {
-private:
-  GameMenu();
+const std::string CooldownModifier::name = "cooldown";
 
-  toml::table menu;
+CooldownModifier::CooldownModifier(Controller* controller, ChaosEngine* engine, const toml::table& config) {
+  initialize(controller, engine, config);
   
-  Chaos::Sequence sequence;
-    
-  // used to save the menu state
+}
 
-  void selectMenu()
-  void deselectMenu();
-    
-  void moveToMenuItem( int difference );
-	
-  void sendSequence(Chaos::Controller* controller);
-    
-public:
-  static Menuing* getInstance();
+void CooldownModifier::update() {
+}
 
-  void setMenuItem(bool enable, Chaos::Controller* controller);
-  
-};
-
-
-#endif

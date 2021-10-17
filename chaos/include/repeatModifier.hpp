@@ -1,7 +1,7 @@
 /*
  * Twitch Controls Chaos (TCC)
  * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * at the top-level directory of this distribution for contributor details.
+ * in top-level directory of this distribution for a list of the contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,32 +16,33 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef COMMAND_HPP
-#define COMMAND_HPP
-#include <string>
+#pragma once
+#include <queue>
+#include <toml++/toml.h>
+
+#include "modifier.hpp"
 
 namespace Chaos {
 
-  /**
-   * Implementation of Command class for TCC
-   *
-   * The Command class maps an individual game command onto a particular
-   * button/joystick signal. By maintaining a map, we can define
-   * modifiers according to affect a command rather than a button press.
+  /** Subclass of modifiers that alters the signal by changing it through a
+   * configurable formula.
    */
-  class Commands {
-    
-  protected:
-    /**
-     * Default constructor
-     */
-    Commands();
+  class RepeatModifier : public Modifier::Registrar<RepeatModifier> {
 
-  private:
-    
-    
+  protected:
+    double timeOn;
+    double timeOff;
+    int cycle;
+    double delay;
+
+  public:
+    static const std::string name;
+
+    RepeatModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
+    void begin();
+    void update();
+    void finish();
+    bool tweak(DeviceEvent* event);
   };
 };
 
-
-#endif

@@ -21,15 +21,19 @@
 
 using namespace Chaos;
 
-DelayModifier::DelayModifier(const toml::table config) {
+const std::string DelayModifier::name = "delay";
+
+DelayModifier::DelayModifier(Controller* controller, ChaosEngine* engine, const toml::table& config) {
+  initialize(controller, engine, config);
   
 }
+
 
 void DelayModifier::update() {
   while ( !eventQueue.empty() ) {
     if( (timer.runningTime() - eventQueue.front().time) >= delayTime ) {
       // Where events are actually sent:
-      chaosEngine->fakePipelinedEvent(&eventQueue.front().event, me);
+      engine->fakePipelinedEvent(&eventQueue.front().event, me);
       eventQueue.pop();
     }
     else {

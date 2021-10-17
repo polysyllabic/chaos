@@ -17,9 +17,29 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#define CHAOS_VERSION_MAJOR @CHAOS_MAJOR@
-#define CHAOS_VERSION_MINOR @CHAOS_MINOR@
-#define CHAOS_VERSION "@CHAOS_VERSION@"
+#include <vector>
+#include <string>
+#include <toml++/toml.h>
 
-#cmakedefine RASPBERRY_PI
-#cmakedefine USE_DUALSENSE
+#include "modifier.hpp"
+#include "chaosEngine.hpp"
+
+namespace Chaos {
+
+  /**
+   * A modifier that enables child modifiers, either from a specific list or randomly selected.
+   */
+  class ParentModifier : public Modifier::Registrar<ParentModifier> {
+  protected:
+    std::vector<Modifier*> children;
+    
+  public:
+    static const std::string name;
+    
+    ParentModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
+
+    void begin();
+    bool tweak(DeviceEvent* event);
+
+  };
+};

@@ -20,6 +20,15 @@
 
 using namespace Chaos;
 
+const std::string MenuModifier::name = "menu";
+
+MenuModifier::MenuModifier(Controller* controller, ChaosEngine* engine, const toml::table& config) {
+  initialize(controller, engine, config);
+}
+
+void MenuModifier::begin() {
+}
+
 bool MenuModifier::tweak(DeviceEvent* event) {
   return !busy;
 }

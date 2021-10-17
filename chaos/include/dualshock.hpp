@@ -37,6 +37,14 @@ namespace Chaos {
   private:
     void getDeviceEvents(unsigned char* buffer, int length, std::vector<DeviceEvent>& events);
 
+    bool priorFingerActive[2];
+    unsigned char touchCounter;
+    unsigned char touchCounterSaved[2];
+    unsigned char touchTimeStamp;
+    unsigned char touchTimeStampToReport;
+    short lastX[2];
+    short lastY[2];
+    
     typedef struct {
       uint8_t counter : 7;
       uint8_t active : 1;	// first 7 bits are a counter.  bit 8 is a touch indicator
@@ -46,8 +54,7 @@ namespace Chaos {
 
     typedef struct {
       uint8_t timestamp;
-      TouchpadFinger finger1;
-      TouchpadFinger finger2;
+      TouchpadFinger finger[2];
     }__attribute__((packed)) TouchpadEvent;
 
     typedef struct {

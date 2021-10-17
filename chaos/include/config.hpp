@@ -16,15 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef CONFIG_HPP
-#define CONFIG_HPP
-
+#pragma once
 #define CHAOS_VERSION_MAJOR 2
 #define CHAOS_VERSION_MINOR 0
 #define CHAOS_VERSION "2.0.0-alpha.1"
 
 /* #undef RASPBERRY_PI */
-/* #undef USE_DUALSHOCK */
 /* #undef USE_DUALSENSE */
-
-#endif

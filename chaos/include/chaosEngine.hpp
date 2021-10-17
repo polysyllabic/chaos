@@ -16,9 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef CHAOSENGINE_HPP
-#define CHAOSENGINE_HPP
-
+#pragma once
 #include <mogi/thread.h>
 #include <list>
 #include <string>
@@ -58,7 +56,6 @@ namespace Chaos {
     bool pausePrimer = false;
     bool pausedPrior = false;
 	
-    void newCommand(const std::string& command);	// override from CommandListenerObserver
     bool sniffify(const DeviceEvent* input, DeviceEvent* output); // override from DualShockInjector
     void doAction(); // override from Mogi::Thread
 	
@@ -68,11 +65,12 @@ namespace Chaos {
     void setInterfaceReply(const std::string& reply);
     void setTimePerModifier(double time);
     void fakePipelinedEvent(DeviceEvent* fakeEvent, Modifier* modifierThatSentTheFakeEvent);
-	
+
+    void newCommand(const std::string& command);	// override from CommandListenerObserver
+
     bool isPaused();
 
   };
 
 };
 
-#endif

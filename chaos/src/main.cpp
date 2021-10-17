@@ -93,8 +93,8 @@ int main(int argc, char** argv) {
   // The TOML file defines bindings as an array of tables, each table containing one
   // command-to-controll mapping.
   auto bindings = config["command"];
-  if (toml::array* arr = cmds.as_array()) {
-    for (toml::node& elem : arr) {
+  if (toml::array* arr = bindings.as_array()) {
+    for (toml::node& elem : *arr) {
       if (toml::table* command = elem.as_table()) {
 	if (command->contains("name") && command->contains("binding")) {
 	  std::optional<std::string_view> cmd_name = command->get("name")->value<std::string_view>();

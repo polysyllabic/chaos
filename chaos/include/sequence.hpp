@@ -16,8 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef SEQUENCE_HPP
-#define SEQUENCE_HPP
+#pragma once
 #include <vector>
 
 #include "controller.hpp"
@@ -25,7 +24,7 @@
 namespace Chaos {
 
   class Sequence {
-  private:
+  protected:
     std::vector<DeviceEvent> events;
     Controller* controller;
     
@@ -35,18 +34,46 @@ namespace Chaos {
     unsigned int MENU_SELECT_DELAY = 50; // in ms
     
   public:
-    Sequence(Controller* c);
-    void disablejoysticks();	// Needed for proper menuing, probably
-    void addButtonPress( Button id );
-    void addButtonHold( Button id );
-    void addButtonRelease( Button id );
-    void addTimeDelay( unsigned int timeInMilliseconds );
-    void addAxisPress( Axis id, short value );
-    void addAxisHold( Axis id, short value );
-    void send();
+    Sequence(Controller* c) : controller{c} {}
+
+    /**
+     * \brief Stop all control input.
+     *
+     * Needed (probably) to ensure that the user can't interfere with menuing selection.
+     */
+    void disableControls();
+    void addButtonPress(GPInput button);
+    void addButtonHold(GPInput button);
+    void addButtonRelease(GPInput button);
+    void addTimeDelay(unsigned int timeInMilliseconds);
+    void addAxisPress(GPInput axis, short value);
+    void addAxisHold(GPInput axis, short value);
+    
+    virtual void send();
+    
     void clear();
   };
 
-};
+  class SequenceRelative : public Sequence {
+  private:
+    int tickTime;
 
-#endif
+  public:
+    SequenceRelative(Controller* c);
+
+    void send();
+    void setMinimumTickInMicroseconds(int minTickTime);
+  };
+
+  class SequenceAbsolute : public Sequence {
+  private:
+    int tickTime;
+
+  public:
+    SequenceAbsolute(Controller* c);
+
+    void send();
+    void setMinimumTickInMicroseconds(int minTickTime);
+  };
+
+};

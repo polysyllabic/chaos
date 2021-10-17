@@ -17,9 +17,26 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#define CHAOS_VERSION_MAJOR @CHAOS_MAJOR@
-#define CHAOS_VERSION_MINOR @CHAOS_MINOR@
-#define CHAOS_VERSION "@CHAOS_VERSION@"
+#include <map>
+#include <toml++/toml.h>
 
-#cmakedefine RASPBERRY_PI
-#cmakedefine USE_DUALSENSE
+#include "modifier.hpp"
+
+namespace Chaos {
+
+  /** 
+   *Subclass of modifiers that executes an arbitrary sequence of commands, either once
+   * or in a cycle.
+   */
+  class SequenceModifier : public Modifier::Registrar<SequenceModifier> {
+
+  public:
+    static const std::string name;
+
+    SequenceModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
+    
+    void begin();
+    void update();
+  };
+};
+

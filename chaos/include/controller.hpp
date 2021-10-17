@@ -17,7 +17,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-
 #include <deque>
 #include <array>
 
@@ -39,6 +38,8 @@ namespace Chaos {
 
   class Controller {
   protected:
+    ControllerState* mControllerState;
+
     std::deque<DeviceEvent> deviceEventQueue;
 	
     virtual bool applyHardware(const DeviceEvent* event) = 0;
@@ -56,11 +57,6 @@ namespace Chaos {
 	
     ControllerInjector* controllerInjector = NULL;
 
-    /**
-     * Holds the data for the button/axis commands.
-     */
-    std::vector<ControllerCommand> buttonInfo;
-
   public:
     Controller();
     /**
@@ -72,8 +68,17 @@ namespace Chaos {
      */
     int getState(GPInput command);
     /**
+     * \brief Set the state of the controller to a new value.
+     *
+     * This routine accounts for potential remapping of the controller command. If the commands are
+     * remapped across button types, we need some extra logic to handle the differences in signals.
+     *
      */
-    bool matches(const DeviceEvent& event, GPInput command);
+    void setState(DeviceEvent* event, int new_value, GPInput remapped, GPInput real);
+    /**
+     * Is the even an instance of the given gamepad command.
+     */
+    bool matches(const DeviceEvent* event, GPInput command);
     /**
      * Tests if the button/axis is in a particular state
      */
@@ -86,8 +91,17 @@ namespace Chaos {
     void applyEvent(const DeviceEvent* event);
     void addInjector(ControllerInjector* injector);
 
-    virtual int getJoystickMin() = 0;
-    virtual int getJoystickMax() = 0;
+    inline ControllerCommand& getGPInfo(GPInput button) { return mControllerState->buttonInfo[button]; }
+    inline uint8_t getGPID(GPInput button) { return getGPInfo(button).getID(); }
+    inline uint8_t getGPSecondID(GPInput button) { return getGPInfo(button).getSecondID(); }
+    inline GPInputType getGPType(GPInput button) { return getGPInfo(button).getType(); }
+    inline ButtonType getGPButtonType(GPInput button) { return getGPInfo(button).getButtonType(); }
+
+    inline int getGPIndex(GPInput button) { return getGPInfo(button).getIndex(); }
+    inline int getGPIndex2(GPInput button) { return getGPInfo(button).getIndex2(); }
+
+    virtual short int getJoystickMin() = 0;
+    virtual short int getJoystickMax() = 0;
   };
 
 };
