@@ -22,8 +22,8 @@ using namespace Chaos;
 
 const std::string MenuModifier::name = "menu";
 
-MenuModifier::MenuModifier(Controller* controller, ChaosEngine* engine, const toml::table& config) {
-  initialize(controller, engine, config);
+MenuModifier::MenuModifier(const toml::table& config) {
+  initialize(config);
 }
 
 void MenuModifier::begin() {

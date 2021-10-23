@@ -22,8 +22,8 @@ using namespace Chaos;
 
 const std::string FormulaModifier::name = "formula";
 
-FormulaModifier::FormulaModifier(Controller* controller, ChaosEngine* engine, const toml::table& config) {
-  initialize(controller, engine, config); 
+FormulaModifier::FormulaModifier(const toml::table& config) {
+  initialize(config);
 }
 
 void FormulaModifier::begin() {

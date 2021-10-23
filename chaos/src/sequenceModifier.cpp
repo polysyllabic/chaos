@@ -22,9 +22,9 @@ using namespace Chaos;
 
 const std::string SequenceModifier::name = "sequence";
 
-SequenceModifier::SequenceModifier(Controller* controller, ChaosEngine* engine, const toml::table& config) {
-  initialize(controller, engine, config);
-  
+SequenceModifier::SequenceModifier(const toml::table& config) {
+  initialize(config);
+ 
 }
 
 

@@ -17,18 +17,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <iostream>
+#include <memory>
 #include <unistd.h>
 #include <cmath>
 #include <algorithm>
 #include <json/json.h>
 #include <plog/Log.h>
+#include <toml++/toml.h>
 
 #include "chaosEngine.hpp"
 
 using namespace Chaos;
 
-ChaosEngine::ChaosEngine(Controller* controller)
-  : controller{controller}, timePerModifier{30.0}, pause{true}
+ChaosEngine::ChaosEngine(Controller* controller) : controller(controller), pause(true)
 {
   controller->addInjector(this);
   time.initialize();
@@ -49,12 +50,10 @@ void ChaosEngine::newCommand(const std::string& command) {
   }
 	
   if (root.isMember("winner")) {
-    Modifier* mod = Modifier::mod_list.at(root["winner"].asString());
+    std::shared_ptr<Modifier> mod = Modifier::mod_list.at(root["winner"].asString());
     if (mod != NULL) {
       PLOG_DEBUG << "Adding Modifier: " << typeid(*mod).name() << std::endl;
 			
-      //mod->setController(controller);
-      //mod->setChaosEngine(this);
       lock();
       modifiers.push_back(mod);
       modifiersThatNeedToStart.push(mod);
@@ -91,22 +90,22 @@ void ChaosEngine::doAction() {
   unlock();
 	
   lock();
-  for (std::list<Modifier*>::iterator it = modifiers.begin(); it != modifiers.end(); it++) {
-    (*it)->_update(pausedPrior);
+  for (auto& mod : modifiers) {
+    (*mod)._update(pausedPrior);
   }
   pausedPrior = false;
   unlock();
 	
   // Check front element.  If timer ran out, remove it.
   if (modifiers.size() > 0) {
-    Modifier* front = modifiers.front();
+    std::shared_ptr<Modifier> front = modifiers.front();
     if ((front->lifespan() >= 0 && front->lifetime() > front->lifespan()) ||
 	(front->lifespan()  < 0 && front->lifetime() > timePerModifier)) {
       PLOG_DEBUG << "Killing Modifier: " << typeid(*front).name() << std::endl;
       lock();
       front->finish();	// Do any cleanup, if necessary
       modifiers.pop_front();
-      delete front;
+      //      delete front;
       unlock();
     }
   }
@@ -145,8 +144,8 @@ bool ChaosEngine::sniffify(const DeviceEvent* input, DeviceEvent* output) {
 	
   if (!pause) {
     lock();
-    for (std::list<Modifier*>::iterator it = modifiers.begin(); it != modifiers.end(); it++) {
-      valid &= (*it)->tweak(output);
+    for (auto& mod : modifiers) {
+      valid = (*mod).tweak(output);
       if (!valid) {
 	break;
       }
@@ -159,15 +158,18 @@ bool ChaosEngine::sniffify(const DeviceEvent* input, DeviceEvent* output) {
 // This function is called by modifiers to inject a fake event into the event pipeline.
 // Because the event can be modified by other mods, we find the location of the modifier
 // and feed the fake event through the rest of the modifiers, in order.
-void ChaosEngine::fakePipelinedEvent(DeviceEvent* fakeEvent, Modifier* modifierThatSentTheFakeEvent) {
+void ChaosEngine::fakePipelinedEvent(DeviceEvent* fakeEvent, std::shared_ptr<Modifier> modifierThatSentTheFakeEvent) {
   bool valid = true;
 	
   if (!pause) {
     // Find the modifier that sent the fake event in the modifier list
-    std::list<Modifier*>::iterator it = std::find(modifiers.begin(), modifiers.end(), modifierThatSentTheFakeEvent);
+    std::list<std::shared_ptr<Modifier>>::iterator mod =
+      std::find_if(modifiers.begin(), modifiers.end(), [&](const auto& p) {
+	return p == modifierThatSentTheFakeEvent; } );
+    
     // iterate from the next element till the end and apply any tweaks
-    for ( it++; it != modifiers.end(); it++) {
-      valid &= (*it)->tweak(fakeEvent);
+    for ( mod++; mod != modifiers.end(); mod++) {
+      valid = (*mod)->tweak(fakeEvent);
       if (!valid) {
 	break;
       }
@@ -183,10 +185,4 @@ void ChaosEngine::setInterfaceReply(const std::string& reply) {
   chaosInterface.sendMessage(reply);
 }
 
-void ChaosEngine::setTimePerModifier(double time) {
-  timePerModifier = time;
-}
 
-bool ChaosEngine::isPaused() {
-  return pause;
-}

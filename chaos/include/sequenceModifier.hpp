@@ -33,7 +33,7 @@ namespace Chaos {
   public:
     static const std::string name;
 
-    SequenceModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
+    SequenceModifier(const toml::table& config);
     
     void begin();
     void update();

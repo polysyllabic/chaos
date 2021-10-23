@@ -38,7 +38,7 @@ namespace Chaos {
   public:
     static const std::string name;
 
-    RepeatModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
+    RepeatModifier(const toml::table& config);
     void begin();
     void update();
     void finish();

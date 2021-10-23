@@ -95,16 +95,16 @@ namespace Chaos {
      * in the specified condition.
      */
     bool invertCondition;
-    /**
-     * Global map for defined commands.
-     */
-    static std::unordered_map<std::string, std::unique_ptr<GameCommand>> bindingMap;
     /** 
      * Vector to hold the button type and id value(s)
      */
     static std::vector<ControllerCommand> buttonInfo;
     
   public:
+    /**
+     * Global map for defined commands.
+     */
+    static std::unordered_map<std::string, std::shared_ptr<GameCommand>> bindingMap;
     /**
      * \brief The public constructor to define the controller input that corresponds
      * to a single game command.

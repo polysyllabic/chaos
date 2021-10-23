@@ -18,7 +18,8 @@
  */
 #pragma once
 #include <string>
-#include <functional>
+#include <memory>
+//#include <functional>
 #include <unordered_map>
 #include <json/json.h>
 #include <mogi/math/systems.h>
@@ -79,12 +80,28 @@ namespace Chaos {
    *    magnitude = -1
    *    appliesTo = [ "move forward/back" ]
    *
-   * Specific types of modifiers are built in a self-registering factory. In order to ensure that each
-   * child class is registered properly, that class cannot inherit directly from this one. Instead, you
-   * must define the constructor to invoke Modifier::Register<ChildClass>.
+   * Specific types of modifiers are built in a self-registering factory. In order to ensure that
+   * each child class is registered properly, that class cannot inherit directly from this one.
+   * Instead, you must inherit from the Modifier::Registrar, with the name of the child class in
+   * the template.:
    *
+   *     class ChildModifier : public Modifier::Registrar<ChildModifier>
+   *
+   * The child class's public constructor must take a const refernce to a toml table as the
+   * only parameter, and it should pass this to the parent constructor with the same
+   * parameter.
+   *
+   *    ChildModifier::DisableModifier(const toml::table& config) : Modifier(config) {
+   *      // Initialization specific to the child modifier here
+   *    }
+   *
+   * The parent constructor will initialize the data for the parts of the modifier that are common
+   * to multiple types. The following fields are recognized and need not be reprocessed by the
+   * child class:
+   * - description
+   * - appliesTo
    */
-  struct Modifier : Factory<Modifier, Controller*, ChaosEngine*, const toml::table&> {
+  struct Modifier : Factory<Modifier, const toml::table&>, public std::enable_shared_from_this<Modifier> {
     friend ChaosEngine;
 
   protected:
@@ -92,8 +109,8 @@ namespace Chaos {
     
     Mogi::Math::Time timer;
 
-    Controller* controller;
-    ChaosEngine* engine;
+    static Controller* controller;
+    static ChaosEngine* engine;
 
     /**
      * \brief The list of specific commands affected by this mod.
@@ -102,10 +119,12 @@ namespace Chaos {
      * two different commands to have two different conditions, you should create two mods and
      * declare them as children of a parent mod.
      */
-    std::vector<GameCommand*> commands;
+    std::vector<std::shared_ptr<GameCommand>> commands;
     
-    // Contains "this" except in cases where there is a parent modifier.
-    Modifier* me; 
+    /**
+     * Contains "this" except in cases where there is a parent modifier.
+     */
+    std::shared_ptr<Modifier> me; 
     /**
      * Amount of time the engine has been paused.
      */
@@ -120,24 +139,43 @@ namespace Chaos {
     /**
      * The map of all the mods defined through the TOML file
      */
-    static std::unordered_map<std::string, Modifier*> mod_list;
+    static std::unordered_map<std::string, std::shared_ptr<Modifier>> mod_list;
+
+    /**
+     * \brief Common initialization.
+     *
+     * Because of the registrar factory method is designed to prevent classes from invoking this
+     * class as a direct base class, we can't put common initialization in the constructor here.
+     * Instead, child classes should call this initialization routine in their own constructors.
+     *
+     * This will parse those parts of the TOML table definition that are used by all or many
+     * mods. The fields handled here (which need not be re-parsed by the child class) are the
+     * following:
+     *
+     * - description
+     * - appliesTo
+     *
+     */
+    void initialize(const toml::table& config);
     
   public:
     static const std::string name;
-
+    /**
+     * This constructor can only be invoked by the Registrar class
+     */
     Modifier(Passkey) {}
     
+    static void setController(Controller* contr);
+    static void setEngine(ChaosEngine* eng);
+    
     /**
-     * Common initialization of the modifier.
-     * Parts of the TOML table are used by all child classes, so we provide a common routine
-     * to initialize it here.
-     *
+     * Create the overall list of mods from the TOML file.
      */
-    void initialize(Controller* controller, ChaosEngine* engine, const toml::table& config);
-
+    static void buildModList(toml::table& config);
+    
     static std::string getModList();
 	
-    inline void setParentModifier(Modifier* parent) { this->me = parent; }
+    inline void setParentModifier(std::shared_ptr<Modifier> parent) { me = parent; }
     
     /**
      * \brief Get how long the mod has been active.
@@ -156,17 +194,15 @@ namespace Chaos {
     void _update(bool isPaused);
 	
     /**
-     * Commands to execute when the mod is first applied. The default implementation does nothing.
+     * \brief Commands to execute when the mod is first applied. 
      */
     virtual void begin();
     /**
-     * Commands to execute at fixed intervals throughout the lifetime of the mod. The default
-     * implementation does nothing.
+     * \brief Commands to execute at fixed intervals throughout the lifetime of the mod.
      */
     virtual void update();
     /**
-     * Commands to execute when removing the mod from the active-mod list. The default
-     * implementation does nothing.
+     * \brief Commands to execute when removing the mod from the active-mod list.
      */
     virtual void finish();
 
@@ -185,11 +221,10 @@ namespace Chaos {
      *
      * Returning true has the effect of passing the event on to the next modifier (if any) in the
      * list of active modifiers. Returning false effectively dropps the event, and it will not be
-     * passed on for other modifiers to affect.
+     * passed on for other modifiers to alter.
      *
-     * The default implementation simply returns true.
      */
-    virtual bool tweak( DeviceEvent* event );
+    virtual bool tweak(DeviceEvent* event);
 	
   };
 

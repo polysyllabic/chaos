@@ -28,7 +28,7 @@
 
 using namespace Chaos;
 
-std::unordered_map<std::string, std::unique_ptr<GameCommand>> GameCommand::bindingMap;
+std::unordered_map<std::string, std::shared_ptr<GameCommand>> GameCommand::bindingMap;
 
 /*
  * The constructor for the command binding. The name of the command has already been read and will
@@ -41,28 +41,21 @@ GameCommand::GameCommand(toml::table& definition) {
   // Binding the command to a specific controller command
   std::optional<std::string> bind = definition["binding"].value<std::string>();
   if (!bind) {
-    // PLOG_ERROR << "Missing command binding for '" << *name << "': " << definition << "\n";
-    throw std::runtime_error("Missing command binding");
+    throw std::runtime_error("Missing command binding.");
   }
   // The binding value must exist in the controller commands list
   if (ControllerCommand::buttonNames.contains(*bind)) {
     binding = ControllerCommand::buttonNames.at(*bind);
     binding_remap = binding;
   } else {
-    // PLOG_ERROR << "The specified command binding does not exist: " << definition << "\n";
-    throw std::runtime_error("Bad command binding");
+    throw std::runtime_error("Specified command binding does not exist.");
   }
 
   std::optional<std::string> cond = definition["condition"].value<std::string>();
 
   if (definition.contains("unless")) {
-    // 'condition' and 'unless' are mutually exclusive options.
     if (cond) {
-      // PLOG_ERROR << "Command definition '" << *name <<
-      //   "': Cannot use both 'condition' and 'unless' in one command definition.\n";
-      std::cerr << "Command definition '" << *name <<
-	"': Cannot use both 'condition' and 'unless' in one command definition.\n";
-      throw std::runtime_error("Incompatible command options");
+      throw std::runtime_error("'condition' and 'unless' are mutually exclusive options");
     }
     cond = definition["unless"].value<std::string>();
     invertCondition = true;
@@ -78,8 +71,7 @@ GameCommand::GameCommand(toml::table& definition) {
       // default threshold for a condition
       threshold = 1;
     } else {
-      // PLOG_ERROR << "Condition '" << *cond << " must be defined before it is used.\n"; 
-      std::cerr << "Condition '" << *cond << " must be defined before it is used.\n";
+      throw std::runtime_error("Condition refers to unknown game command."); 
     }
 
     // If there's a specific threshold, set it.
@@ -97,33 +89,39 @@ GameCommand::GameCommand(toml::table& definition) {
  * We walk through the portion of the TOML config file that defines command bindings and build a map
  * from that. Note that if the game supports remapping commands in its own menus, the user can update
  * the TOML file to reflect those changes rather than merely relying on the default setup.
+ *
+ * We log non-fatal errors, and throw fatal ones.
  */
 void GameCommand::initialize(toml::table& config) {
-
-  auto bnd = config["command"];
-  // we should have an array of tables. Each table defines one command binding.
-  if (toml::array* arr = bnd.as_array()) {
-    for (toml::node& elem : * arr) {
+  
+  assert(bindingMap.size() == 0);
+  
+  // We should have an array of tables. Each table defines one command binding.
+  toml::array* arr = config["command"].as_array();
+  if (arr) {
+    for (toml::node& elem : *arr) {
       if (toml::table* command = elem.as_table()) {
 	if (command->contains("name")) {
 	  std::string cmd_name = command->get("name")->value_or("ERROR");
 	  if (bindingMap.contains(cmd_name)) {
-	    // PLOG_WARNING << "Duplicate command binding for '" << *cmd_name << "'. Earlier one will be overwritten.\n";
-	    std::cerr << "Duplicate command binding for '" << cmd_name << "'. Earlier one will be overwritten.\n";
+	    PLOG_WARNING << "Duplicate command binding for '" << cmd_name << "'. Earlier one will be overwritten.\n";
 	  }
-	  std::cout << "inserting '" << cmd_name << "': " << command << "\n";
-	  bindingMap.insert({cmd_name, std::make_unique<GameCommand>(*command)});
+	  PLOG_VERBOSE << "inserting '" << cmd_name << "': " << command << "\n";
+	  try {
+	    bindingMap.insert({cmd_name, std::make_unique<GameCommand>(*command)});
+	  }
+	  catch (const std::runtime_error& e) {
+	    PLOG_ERROR << "In definition for game command '" << cmd_name << "': " << e.what() << std::endl; 
+	  }
 	}
 	else {
-	  //	  PLOG_ERROR << "Bad command-binding definition: " << *command << "\n";
-	  std::cerr << "Bad command-binding definition: " << *command << "\n";
+	  PLOG_ERROR << "Bad command-binding definition: " << *command << "\n";
 	}
       }
     }
   }
   if (bindingMap.size() == 0) {
-    //    PLOG_ERROR << "No command bindings defined\n";
-    std::cerr << "No command bindings defined\n";
+    throw std::runtime_error("No game commands were defined.");
   }
 }
 

@@ -37,7 +37,9 @@ namespace Chaos {
     static std::unique_ptr<Base> create(const std::string& name, T&&... args) {
       return factory().at(name)(std::forward<T>(args)...);
     }
-
+    static bool hasType(std::string& mod_type) {
+      return factory().contains(mod_type);
+    }
     /**
      * The Registrar class registers the child class with the factory.
      */

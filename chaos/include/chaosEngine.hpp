@@ -18,6 +18,7 @@
  */
 #pragma once
 #include <mogi/thread.h>
+#include <memory>
 #include <list>
 #include <string>
 #include <queue>
@@ -42,33 +43,36 @@ namespace Chaos {
 	
     Mogi::Math::Time time;
     double timePerModifier;
-    DeviceEvent event;
     /**
      * The list of currently active modifiers
      */
-    std::list<Modifier*> modifiers;
+    std::list<std::shared_ptr<Modifier>> modifiers;
     /**
      * List of modifiers that have been selected but not yet initialized.
      */
-    std::queue<Modifier*> modifiersThatNeedToStart;
+    std::queue<std::shared_ptr<Modifier>> modifiersThatNeedToStart;
 	
-    bool pause;
+    bool pause = true;
     bool pausePrimer = false;
     bool pausedPrior = false;
-	
-    bool sniffify(const DeviceEvent* input, DeviceEvent* output); // override from DualShockInjector
-    void doAction(); // override from Mogi::Thread
+
+    // overridden from ControllerInjector
+    bool sniffify(const DeviceEvent* input, DeviceEvent* output);
+    // overridden from Mogi::Thread
+    void doAction();
 	
   public:
     ChaosEngine(Controller* controller);
 	
     void setInterfaceReply(const std::string& reply);
-    void setTimePerModifier(double time);
-    void fakePipelinedEvent(DeviceEvent* fakeEvent, Modifier* modifierThatSentTheFakeEvent);
+    
+    inline void setTimePerModifier(double time) { timePerModifier = time; }
+    
+    void fakePipelinedEvent(DeviceEvent* fakeEvent, std::shared_ptr<Modifier> modifierThatSentTheFakeEvent);
 
     void newCommand(const std::string& command);	// override from CommandListenerObserver
 
-    bool isPaused();
+    inline bool isPaused() { return pause; }
 
   };
 

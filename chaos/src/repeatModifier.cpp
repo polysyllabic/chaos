@@ -22,8 +22,8 @@ using namespace Chaos;
 
 const std::string RepeatModifier::name = "repeat";
 
-RepeatModifier::RepeatModifier(Controller* controller, ChaosEngine* engine, const toml::table& config) {
-  initialize(controller, engine, config);
+RepeatModifier::RepeatModifier(const toml::table& config) {
+  initialize(config);
   
 }
 

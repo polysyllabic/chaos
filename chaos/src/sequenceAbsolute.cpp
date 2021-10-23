@@ -29,7 +29,7 @@ SequenceAbsolute::SequenceAbsolute(Controller* c) : Sequence(c) {
   tickTime = 200;
 }
 
-void SequenceRelative::send() {
+void SequenceAbsolute::send() {
   struct timeval startTime;
   gettimeofday(&startTime, NULL);
 

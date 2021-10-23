@@ -23,9 +23,8 @@ using namespace Chaos;
 
 const std::string DelayModifier::name = "delay";
 
-DelayModifier::DelayModifier(Controller* controller, ChaosEngine* engine, const toml::table& config) {
-  initialize(controller, engine, config);
-  
+DelayModifier::DelayModifier(const toml::table& config) {
+  initialize(config);
 }
 
 

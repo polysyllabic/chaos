@@ -32,9 +32,12 @@ namespace Chaos {
 
   public:
     static const std::string name;
-    CooldownModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
+    CooldownModifier(const toml::table& config);
     
+    void begin();
     void update();
+    void finish();
+    bool tweak(DeviceEvent* event);
   };
 };
 

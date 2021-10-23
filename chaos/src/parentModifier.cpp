@@ -22,9 +22,9 @@ using namespace Chaos;
 
 const std::string ParentModifier::name = "parent";
 
-ParentModifier::ParentModifier(Controller* controller, ChaosEngine* engine, const toml::table& config) {
-  initialize(controller, engine, config);
-  
+ParentModifier::ParentModifier(const toml::table& config) {
+  initialize(config);
+ 
 }
 
 void ParentModifier::begin() {

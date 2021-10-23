@@ -23,11 +23,15 @@ using namespace Chaos;
 
 const std::string CooldownModifier::name = "cooldown";
 
-CooldownModifier::CooldownModifier(Controller* controller, ChaosEngine* engine, const toml::table& config) {
-  initialize(controller, engine, config);
-  
+CooldownModifier::CooldownModifier(const toml::table& config) {
+  initialize(config);
 }
 
-void CooldownModifier::update() {
-}
+void CooldownModifier::begin() {}
+
+void CooldownModifier::update() {}
+
+void CooldownModifier::finish() {}
+
+bool CooldownModifier::tweak(DeviceEvent* event) { return true; }
 

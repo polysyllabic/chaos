@@ -19,7 +19,8 @@
 #pragma once
 #define CHAOS_VERSION_MAJOR 2
 #define CHAOS_VERSION_MINOR 0
-#define CHAOS_VERSION "2.0.0-alpha.1"
+#define CHAOS_VERSION "2.0.0-alpha.2"
 
-/* #undef RASPBERRY_PI */
+#define RASPBERRY_PI
 /* #undef USE_DUALSENSE */
+ 

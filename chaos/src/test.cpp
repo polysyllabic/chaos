@@ -1,8 +1,9 @@
 #include <string_view>
 #include <iostream>
-
+#include <unordered_map>
 #include <toml++/toml.h>
 #include <fstream>
+#include <plog/Log.h>
 
 #include "gameCommand.hpp"
 
@@ -10,30 +11,78 @@ using namespace Chaos;
 using namespace std::literals::string_view_literals;
 
 int main(int argc, char** argv) {
-  ControllerCommand::initialize();
+
   // Read the toml configuration file
-  toml::table config;
-  try {
-    std::cout << "Reading TOML file\n";
-    config = toml::parse_file("../examples/tlou2.toml");
-  }
-  catch (const toml::parse_error& err) {
-    std::cerr << "Parsing the configuration file failed:" << std::endl << err << std::endl;
-    exit (EXIT_FAILURE);
-  }
-  std::optional<std::string_view> toml_version = config["chaos_toml"].value<std::string_view>();
-  if (!toml_version) {
-    std::cerr << "Could not find version id (chaos_toml). Are you sure this is the right file?\n";
-    exit(EXIT_FAILURE);
-  }
-  std::string_view chaos_game = config["game"].value_or("game unknown");
+  TOMLReader config = new TOMLReader("../examples/tlou2.toml");
 
-  std::cout << "TOML format v" << *toml_version << "\n";
-  std::cout << "Game: " << chaos_game << "\n";
+  std::cout << "Game: " << config.getGameName() << "\n";
 
-  // Assign the default mapping of commands to button/joystick presses
-  // The TOML file defines bindings as an array of tables, each table containing one
-  // command-to-controll mapping.
-  GameCommand::initialize(config);
+  std::unordered_map<std::string, std::string> mod_list;
   
+  auto mods = config["modifier"];
+  if (! mods) {
+    std::cerr << "TOML file contains no modifier definitions!\n";
+    return -1;
+  }
+  // should have an array of tables, each one defining an individual modifier
+  toml::array* arr = mods.as_array();
+  if (! arr) {
+    std::cerr << "Modifiers should be defined as an array of tables, i.e., start with [[modifier]]\n";
+    return -1;
+  }
+  for (toml::node& elem : *arr) {
+    // grab the table for the individual modifier
+    toml::table* modifier = elem.as_table();
+    if (! modifier) {
+      std::cerr << "Modifier definition must be a table\n";
+      continue;
+    }
+    std::cout << "Table: " << *modifier << "\n";
+    if (!modifier->contains("name")) {
+      std::cerr << "Modifier missing required 'name' field: " << *modifier << "\n";
+      continue;
+    }
+    std::optional<std::string> mod_name = modifier->get("name")->value<std::string>();
+    if (mod_list.contains(*mod_name)) {
+      std::cerr << "The modifier '" << *mod_name << " has already been defined\n";
+      continue;
+    }
+    if (!modifier->contains("type")) {
+      std::cerr << "Modifier missing required 'type' field: " << *modifier << "\n";
+      continue;
+    }
+    std::optional<std::string> mod_type = modifier->get("type")->value<std::string>();
+    // screen for type here
+    std::cout << "Creating modifier '" << *mod_name << "' of type '" << *mod_type << "'\n";
+    
+    std::optional<std::string> description = modifier->get("description")->value<std::string>();
+    if (description) {
+      std::cout << " -- " << *description << "\n";
+    }
+    std::vector<std::shared_ptr<GameCommand>> commands;
+    if (modifier->contains("appliesTo")) {
+      if (toml::array* cmd_list = modifier->get("appliesTo")->as_array()) {
+	if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
+	  std::cout << "  appliesTo must be an array of strings!\n";
+	}
+	for (auto& elem : *cmd_list) {
+	  std::optional<std::string> cmd = elem.value<std::string>();
+	  if (cmd) {
+	    if (GameCommand::bindingMap.contains(*cmd)) {
+	      commands.push_back(GameCommand::bindingMap[*cmd]);
+	      std::cout << "   applies to: " << *cmd << std::endl;
+	    } else {
+	      std::cout << "*** unrecognized command: " << *cmd << std::endl;
+	    }
+	  }
+	}
+      } else {
+	std::cerr << "*** ->  appliesTo must be an array!\n";
+      }
+    }
+    if (modifier->contains("begin")) {
+      auto b = modifier->get("begin");
+      std::cout << "BEGIN = " << b.value();
+    }
+  }
 }

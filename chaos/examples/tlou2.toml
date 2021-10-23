@@ -17,17 +17,37 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
 #
-# This is a game-specific configuration file for the TCC engine.
-#
-# Root-level definitions
-#
-# chaos_toml: A version string. Used now to verify that we're reading the
-# right file. Note that this is the version of the TOML format, not the chaos
-# engine's version number.
+# Configuration file for the TCC engine. It defines the operation for a single
+# game.
+
+
+# chaos_toml: A version string for the TOML file format. Currently used only to
+# verify that we're reading the right file.
 chaos_toml = "1.0"
 
 # game: User-friendly name of the game this configuration file defines.
 game = "The Last of Us Part II"
+
+# log_file: Name of the log file. Default = "chaos.log"
+log_file = "chaos.log"
+
+# log_verbosity: Level of message detail sent to the log file. Must be an
+# integer from 0 to 6. Higher numbers include all messages of the lower types.
+# 0 = NONE (logging disabled)
+# 1 = FATAL
+# 2 = ERROR
+# 3 = WARNING
+# 4 = INFO
+# 5 = DEBUG
+# 6 = VERBOSE
+log_verbosity = 5
+# max_log_size: maximum log-file size in bytes
+max_log_size = 1000000
+# max_log_files: maximum number of log files to keep (0 = disable log rolling)
+max_log_files = 8
+
+# Chaos Engine parameters
+TIME_PER_MODIFIER = 30.0
 
 #-----------------------------------------------------------------------------
 # Command Mapping
@@ -175,7 +195,7 @@ type = "disable"
 appliesTo = [ "crouch/prone" ]
 disableOnStart = true
 
-m[[modifier]]
+[[modifier]]
 name = "No Run/Dodge"
 description = "L1 is disabled"
 type = "disable"
@@ -245,10 +265,24 @@ appliesTo = [ "move forward/back" ]
 
 [[modifier]]
 name = "Only Aim Movement"
-description = "Left joystick is disabled if not aiming"
+description = "Movement is disabled if not aiming"
 type = "disable"
 appliesTo = [ "move forward/back", "move sideways" ]
 unless = [ "aiming" ]
+
+[[modifier]]
+name = "No Aim Movement"
+description = "Movement is disabled if aiming"
+type = "disable"
+appliesTo = [ "move forward/back", "move sideways" ]
+condition = [ "aiming" ]
+
+[[modifier]]
+name = "No Aiming Camera"
+description = "Camera is disabled if aiming"
+type = "disable"
+appliesTo = [ "vertical camera", "horizontal camera" ]
+condition = [ "aiming" ]
 
 [[modifier]]
 name = "Nascar"
@@ -280,20 +314,25 @@ filter = "below"
 
 [[modifier]]
 name = "No Gun Selection"
-description = "D-Pad Left/Right Disabled"
+description = "No picking a new gun"
 type = "disable"
-appliesTo = "select weapon"
-[modifier.begin]
+appliesTo = [ "select weapon" ]
+disableOnStart = true
+[[modifier.begin]] 
+event= "press"
 command = "select consumable"
 value = 1
+
 
 [[modifier]]
 name = "No Short Guns"
 description = "D-Pad Right Disabled"
 type = "disable"
 filter = "positive"
-appliesTo = "select weapon"
-[modifier.begin]
+appliesTo = [ "select weapon" ]
+disableOnStart = true
+[[modifier.begin]]
+event = "press"
 command = "select consumable"
 value = 1
 
@@ -302,8 +341,10 @@ name = "No Long Guns"
 description = "D-Pad Left Disabled"
 type = "disable"
 filter = "negative"
-appliesTo = "select weapon"
-[modifier.begin]
+appliesTo = [ "select weapon" ]
+disableOnStart = true
+[[modifier.begin]]
+event = "press"
 command = "select consumable"
 value = 1
 
@@ -312,7 +353,9 @@ name = "No Consumables"
 description = "Selection of consumables (brick, bottle, med kit, molly, etc.) Disabled"
 type = "disable"
 appliesTo = [ "select consumable" ]
-[modifier.begin]
+disableOnStart = true
+[[modifier.begin]]
+event = "press"
 command = "select weapon"
 value = 1
 
@@ -416,7 +459,7 @@ timeOff = 4.0
 name = "Leeroy Jenkins"
 description = "Alright let's do this! LEEEEROOOOOY NNNJEEEENNKIINNS!!! (Holds forward and sprint)"
 type = "repeat"
-appliesTo = [ "dodge/sprint", "move forwards/backwards" ]
+appliesTo = [ "dodge/sprint", "move forward/backwards" ]
 timeOn = 4.0
 timeOff = 0.1
 foceOn = true # same question if necessary as above
@@ -435,54 +478,55 @@ forceOn = true
 name = "D-pad Rotate"
 description = "Rotates the D-pad inputs clockwise"
 type = "remap"
-appliesTo = [ "DX", "DY" ]
-becomes = ["DY", "NEG DX" ]
-#appliesTo = [ "select weapon", "select consumable" ]
-#becomes = ["select consumable", "NEG select weapon" ]
+#remapFrom = [ "DX", "DY" ]
+#remapTo = ["DY", "NEG DX" ]
+appliesTo = [ "select weapon", "select consumable" ]
+becomes = ["select consumable", "select weapon" ]
+invert = [ "select weapon" ]
 
 [[modifier]]
 name = "Swap Joysticks"
 description = "You may want to cross your thumbs to work with your muscle memory"
 type = "remap"
-appliesTo = [ "RX", "RY", "LX", "LY" ]
-becomes = [ "LX", "LY", "RX", "RY"  ]
-#appliesTo = [ "horizontal camera", "vertical camera", "move sideways", "move forward/back" ]
-#becomes = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
+#remapFrom = [ "RX", "RY", "LX", "LY" ]
+#remapTo = [ "LX", "LY", "RX", "RY"  ]
+appliesTo = [ "horizontal camera", "vertical camera", "move sideways", "move forward/back" ]
+becomes = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
 
 [[modifier]]
 name = "Swap D-Pad/Left Joystick"
 description = "Retro style motion, and an odd analog inventory selector"
 type = "remap"
-appliesTo = [ "DX", "DY", "LX", "LY" ]
-becomes = [ "LX", "LY", "DX", "DY" ]
+remapFrom = [ "DX", "DY", "LX", "LY" ]
+remapTo = [ "LX", "LY", "DX", "DY" ]
 
 [[modifier]]
 name = "Swap Shapes/Right Joystick"
 description = "Analog actions, and digital camera movement"
 type = "remap"
-appliesTo = [ "RX", "RY", "SQUARE_CIRCLE", "TRIANGLE_X" ]
-becomes = [ "SQUARE_CIRCLE", "TRIANGLE_X", "RX", "RY" ]
+remapFrom = [ "RX", "RY", "SQUARE_CIRCLE", "TRIANGLE_X" ]
+remapTo = [ "SQUARE_CIRCLE", "TRIANGLE_X", "RX", "RY" ]
 
 [[modifier]]
 name = "Motion Control Movement"
 description = "No more left joystick, tilt the controller to move instead"
 type = "remap"
-appliesTo = [ "ACCX", "ACCZ", "LX", "LY" ]
-becomes = [ "LX", "LY", "", "" ]
+remapFrom = [ "ACCX", "ACCZ", "LX", "LY" ]
+remapTo = [ "LX", "LY", "", "" ]
 
 [[modifier]]
 name = "Motion Control Aiming"
 description = "No more right joystick, tilt the controller to aim/look instead"
 type = "remap"
-appliesTo = [ "ACCX", "ACCZ", "RX", "RY" ]
-becomes = [ "RX", "RY", "", "" ]
+remapFrom = [ "ACCX", "ACCZ", "RX", "RY" ]
+remapTo = [ "RX", "RY", "", "" ]
 
 [[modifier]]
 name = "Touchpad Aiming"
 description = "No more right joystick, finally making use of the touchpad!"
 type = "remap"
-appliesTo = [ "TOUCHPAD_ACTIVE", "RX", "RY" ]
-becomes = [ "RX_RY", "", "" ]
+remapFrom = [ "TOUCHPAD_ACTIVE", "RX", "RY" ]
+remapTo = [ "RX_RY", "", "" ]
 
 [[modifier]]
 name = "Drunk"
@@ -499,7 +543,7 @@ name = "TLOU1 Run Glitch"
 description = "Is this an Any% speedrun of TLOU1? Rapid D-pad circular presses. Try moving while prone."
 type = "formula"
 offsetMagnitute = 1.5
-appliesTo = [ "DX", "DY" ]
+#appliesTo = [ "DX", "DY" ]
 
 [[modifier]]
 name = "Mega Scope Sway"
@@ -592,7 +636,7 @@ type = "remap"
 [[modifier]]
 name = "Controller Flip"
 description = "Double joystick inverted, L1 swapped with L2, Triangle swapped with X, etc."
-type = "child"	
+type = "parent"	
 # do this as an inversion child and a remap
 
 [[modifier]]
@@ -938,19 +982,19 @@ description = "We honor the flag, and you crap on it when you don't shoot your g
 type = "sequence"
 locked = true
 [[modifier.begin]]
-inject = "select_gun" # inject builds a sequence to send rather than calling applyEvent
-state = "PRESS"
+event = "press"
+command = "select_gun"
 delay = 1.0
 [[modifier.begin]]
-inject = "aiming"
-state = "HOLD"
+event = "hold"
+command = "aiming"
 delay = 1.0
 [[modifier.begin]]
-inject ="fire/throw"
+command ="fire/throw"
 state = "PRESS"
 delay = 0.2
 [[modifier.begin]]
-inject ="aiming"
+command ="aiming"
 state = "RELEASE"
 
 [[modifier]]
@@ -980,16 +1024,16 @@ name = "Use Items"
 description = "Shoots or throws 6 of whatever item is currently equipped (will not work on medkits)"
 type = "sequence"
 [[modifier.begin.initialize]]
-inject = "aiming"
+command = "aiming"
 state = "HOLD"
 delay = 1.0
 [[modifier.begin.loop]]
 repeat = 6
-inject = "shoot/throw"
+command = "shoot/throw"
 state = "HOLD/RELEASE"
 delay = 0.25
 [[modifier.begin.finalize]]
-inject = "aiming"
+command = "aiming"
 state = "RELEASE"
 
 [[modifier]]
@@ -997,19 +1041,19 @@ name = "Toss A Molly/Bomb"
 description = "Time to riot. Chucks a molly (for Ellie) or bomb (for Abby)."
 type = "sequence"
 [[modifier.begin]]
-inject = "disable_joysticks"
+command = "disable_joysticks"
 [[modifier.begin]]
 repeat = 2
-inject = "select consumable"
+command = "select consumable"
 state = "PRESS"
 value = 1
 delay = 3.0
 [[modifier.begin]]
-inject = "shoot/throw"
+command = "shoot/throw"
 state = "HOLD"
 delay = 0.5
 [[modifier.begin]]
-inject = "shoot/throw"
+command = "shoot/throw"
 state = "RELEASE"
 	
 [[modifier]]
@@ -1017,26 +1061,26 @@ name = "CTG Strat"
 description = "Self immolation resulting in death, at least 7/11 times"
 type = "sequence"
 [[modifier.begin]]
-inject = "disable_joysticks"
+command = "disable_joysticks"
 [[modifier.begin]]
-inject = "vertical camera"
+command = "vertical camera"
 state = "HOLD"
 value = 127 # JOYSTICK_MAX
 [[modifier.begin]]
-inject = "horizontal camera"
+command = "horizontal camera"
 state = "HOLD"
 value = 0
 [[modifier.begin]]
 repeat = 2
-inject = "select consumable"
+command = "select consumable"
 state = "PRESS"
 delay = 3.0
 [[modifier.begin]]
-inject = "shoot/throw"
+command = "shoot/throw"
 state = "HOLD/RELEASE"
 delay = 0.5
 [[modifier.begin]]
-inject = "vertical camera"
+command = "vertical camera"
 state = "HOLD"
 value = 0
 	
@@ -1045,14 +1089,14 @@ name = "Pdub It"
 description = "RIP bricks and bottles"
 type = "sequence"	
 [[modifier.begin]]
-inject = "disable_joysticks"
+command = "disable_joysticks"
 [[modifier.begin]]
-inject = "select consumable"
+command = "select consumable"
 state = "PRESS"
 value = 1
 delay = 2.5
 [[modifier.begin]]
-inject = "shoot/throw"
+command = "shoot/throw"
 state = "PRESS"
 delay = 0.2
 
@@ -1061,15 +1105,15 @@ name = "Chuck Smoke Bomb"
 description = "It was taking up space anyway. Does nothing when playing Abby"
 type = "sequence"
 [[modifier.begin]]
-inject = "disable_joysticks"
+command = "disable_joysticks"
 [[modifier.begin]]
 repeat = 2
-inject = "select consumable"
+command = "select consumable"
 state = "PRESS"
 value = -1
 delay = 3.0
 [[modifier.begin]]
-inject = "shoot/throw"
+command = "shoot/throw"
 state = "PRESS"
 delay = 0.2
 
@@ -1308,14 +1352,14 @@ events = [ "BUTTON_L1", "BUTTON_L2", "BUTTON_R1", "BUTTON_R2" ]
 [[modifier]]
 name = "Mystery"
 description = "Applies a random modifier"
-type = "child"
+type = "parent"
 random = true
 value = 1
 
 [[modifier]]
 name = "Chaos"
 description = "Applies 5 random modifiers"
-type = "child"
+type = "parent"
 random = true
 value = 5
 

@@ -9,9 +9,8 @@ endif()
 
 # Main flags to control the build
 set(CMAKE_BUILD_TYPE Debug)
-set(RASPBERRY_PI FALSE)
+set(RASPBERRY_PI TRUE)
 set(USE_DUALSENSE FALSE)
-set(USE_DUALSHOCK TRUE)
 
 # Parse version variables
 file(READ "VERSION" ver)
@@ -56,11 +55,6 @@ include(FetchContent)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/")
 
 FetchContent_Declare(
-	tclap
-	GIT_REPOSITORY https://github.com/mirror/tclap.git
-	GIT_TAG	       v1.2.4
-)
-FetchContent_Declare(
 	tomlplusplus
 	GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
 	GIT_TAG	       v2.5.0
@@ -90,9 +84,8 @@ FetchContent_Declare(
 	GIT_REPOSITORY https://github.com/polysyllabic/raw-gadget.git
 	GIT_TAG	       origin/master
 )
-FetchContent_MakeAvailable(tclap tomlplusplus plog mogi zmqpp sniffify raw-gadget)
+FetchContent_MakeAvailable(tomlplusplus plog mogi zmqpp sniffify raw-gadget)
 
-include_directories (${tclap_SOURCE_DIR}/include)
 include_directories (${tomlplusplus_SOURCE_DIR}/include)
 include_directories (${plog_SOURCE_DIR}/include)
 include_directories (${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi/include )
@@ -129,27 +122,62 @@ add_executable(chaos include/config.hpp
 		     src/controllerRaw.cpp
 		     include/controllerState.hpp
 		     src/controllerState.cpp
-		     include/dualsense.hpp
-		     src/dualsense.cpp
 		     include/dualshock.hpp
 		     src/dualshock.cpp
-#		     include/device.hpp
-#		     src/device.cpp
 		     include/deviceTypes.hpp
-#		     src/joystick.cpp
+		     include/controllerCommand.hpp
+		     src/controllerCommand.cpp
+		     include/gameCommand.hpp
+		     src/gameCommand.cpp
+		     include/modifierFactory.hpp
 		     include/modifier.hpp
 		     src/modifier.cpp
+		     include/cooldownModifier.hpp
+		     src/cooldownModifier.cpp
 		     include/delayModifier.hpp
 		     src/delayModifier.cpp
+		     include/disableModifier.hpp
+		     src/disableModifier.cpp
+		     include/formulaModifier.hpp
+		     src/formulaModifier.cpp
 		     include/menuModifier.hpp
 		     src/menuModifier.cpp
-#		     src/mouse.cpp
+		     include/parentModifier.hpp
+		     src/parentModifier.cpp
+		     include/remapModifier.hpp
+		     src/remapModifier.cpp
+		     include/repeatModifier.hpp
+		     src/repeatModifier.cpp
+		     include/sequenceModifier.hpp
+		     src/sequenceModifier.cpp
 		     include/sequence.hpp
 		     src/sequence.cpp
+		     src/sequenceAbsolute.cpp
+		     src/sequenceRelative.cpp
+		     include/tomlReader.hpp
+		     src/tomlReader.cpp
 		     src/main.cpp)
 
-target_compile_features(chaos PRIVATE cxx_std_17)
+
+if(USE_DUALSENSE)
+	add_target_sources(chaos PUBLIC include/dualsense.hpp
+				 	src/dualsense.cpp)
+endif()
+
+target_compile_features(chaos PRIVATE cxx_std_20)
 
 target_include_directories (chaos PUBLIC include )
 
 target_link_libraries(chaos PUBLIC zmqpp zmq sniffify)
+
+# add_executable(chaostest include/controllerCommand.hpp
+#			 src/controllerCommand.cpp
+#			 include/gameCommand.hpp
+#			 src/gameCommand.cpp
+#			 include/tomlReader.hpp
+#			 src/tomlReader.cpp
+#			 src/test.cpp)
+#
+# target_include_directories (chaostest PUBLIC include )
+#
+# target_compile_features(chaostest PRIVATE cxx_std_20)

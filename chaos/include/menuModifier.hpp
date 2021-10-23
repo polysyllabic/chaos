@@ -29,7 +29,7 @@ namespace Chaos {
   public:
     static const std::string name;
     
-    MenuModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
+    MenuModifier(const toml::table& config);
     void begin();
     bool tweak(DeviceEvent* event);
   };

@@ -36,7 +36,7 @@ namespace Chaos {
   public:
     static const std::string name;
     
-    RemapModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
+    RemapModifier(const toml::table& config);
 
     void begin();
     void update();

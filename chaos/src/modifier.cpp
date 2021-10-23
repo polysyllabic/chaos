@@ -19,6 +19,10 @@
 #include <iostream>
 #include <unistd.h>
 #include <cstdlib>
+#include <string_view>
+#include <stdexcept>
+
+#include <plog/Log.h>
 
 #include "modifier.hpp"
 
@@ -26,17 +30,76 @@ using namespace Chaos;
 
 const std::string Modifier::name = "modifier";
 
-void Modifier::initialize(Controller* ctrlr, ChaosEngine* eng, const toml::table& config)
-{
+void Modifier::initialize(const toml::table& config) {
   timer.initialize();
-  me = this;
+  me = shared_from_this();
   pauseTimeAccumulator = 0;
   totalLifespan = -1;    // An erroneous value that if set should be positive
-  controller = ctrlr;
-  engine = eng;
+
+  description = config["description"].value_or("Description not available");
   
-  // Initialize those elements from the TOML table that are common to all mod types
+  if (config.contains("appliesTo")) {
+    const toml::array* cmd_list = config.get("appliesTo")->as_array();
+    if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
+      throw std::runtime_error("'appliesTo' must be an array of strings.");
+    }
+    for (auto& elem : *cmd_list) {
+      std::optional<std::string> cmd = elem.value<std::string>();
+      if (cmd && GameCommand::bindingMap.contains(*cmd)) {
+	commands.push_back(GameCommand::bindingMap[*cmd]);
+      } else {
+	throw std::runtime_error("unrecognized command '" + *cmd + "' in appliesTo");
+      }
+    }
+  }
+}
+
+// Static function to construct the list of mods from their TOML-file definitions
+void Modifier::buildModList(toml::table& config) {
   
+  // Should have an array of tables, each one defining an individual modifier.
+  toml::array* arr = config["modifier"].as_array();
+  
+  if (arr) {
+    // Each node in the array should contain the definition for a modifier.
+    // If there's a parsing error at this point, we skip that mod and keep going.
+    for (toml::node& elem : *arr) {
+      toml::table* modifier = elem.as_table();
+      if (! modifier) {
+	PLOG_ERROR << "Modifier definition must be a table\n";
+	continue;
+      }
+      if (! modifier->contains("name")) {
+	PLOG_ERROR << "Modifier missing required 'name' field: " << *modifier << "\n";
+	continue;
+      }
+      std::optional<std::string> mod_name = modifier->get("name")->value<std::string>();
+      if (mod_list.contains(*mod_name)) {
+	PLOG_ERROR << "The modifier '" << *mod_name << " has already been defined\n";
+	continue;
+      } 
+      if (! modifier->contains("type")) {
+	PLOG_ERROR << "Modifier '" << *mod_name << " does not specify a type\n";
+	continue;
+      }
+      std::optional<std::string> mod_type = modifier->get("type")->value<std::string>();
+      if (! hasType(*mod_type)) {
+	PLOG_ERROR << "Modifier '" << *mod_name << "' has unknown type '" << *mod_type << "'\n";
+	continue;
+      }
+      // Now we can finally create the mod. The constructors handle the rest of the configuration.
+      try {
+	mod_list[*mod_name] = Modifier::create(*mod_type, config);
+      }
+      catch (std::runtime_error e) {
+	PLOG_ERROR << "Modifier '" << *mod_name << "' not created: " << e.what() << std::endl;
+      }
+    }
+  }
+  if (mod_list.size() == 0) {
+    PLOG_FATAL << "No modifiers were defined.\n";
+    throw std::runtime_error("No modifiers defined");
+  }
 }
 
 void Modifier::_update(bool isPaused) {
@@ -44,8 +107,9 @@ void Modifier::_update(bool isPaused) {
   if (isPaused) {
     pauseTimeAccumulator += timer.dTime();
   }
-  this->update();
+  update();
 }
+
 
 // Default implementations of virtual functions do nothing
 void Modifier::begin() {}
@@ -56,7 +120,7 @@ void Modifier::finish() {}
 
 bool Modifier::tweak( DeviceEvent* event ) {
   return true;
-}
+  }
 
 Json::Value Modifier::toJsonObject(const std::string& name) {
   Json::Value result;
@@ -79,5 +143,12 @@ std::string Modifier::getModList() {
   return Json::writeString(builder, root);
 }
 
+void Modifier::setController(Controller* contr) {
+  controller = contr;
+}
+
+void Modifier::setEngine(ChaosEngine* eng) {
+  engine = eng;
+}
 
 

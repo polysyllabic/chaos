@@ -22,8 +22,8 @@ using namespace Chaos;
 
 const std::string RemapModifier::name = "remap";
 
-RemapModifier::RemapModifier(Controller* controller, ChaosEngine* engine, const toml::table& config) {
-  initialize(controller, engine, config);
+RemapModifier::RemapModifier(const toml::table& config) {
+  initialize(config);
   
 }
 

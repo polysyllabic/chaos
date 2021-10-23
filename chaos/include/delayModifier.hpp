@@ -40,7 +40,7 @@ namespace Chaos {
     
   public:
     static const std::string name;
-    DelayModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
+    DelayModifier(const toml::table& config);
     void update();
   };
 };

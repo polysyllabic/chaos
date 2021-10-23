@@ -43,9 +43,13 @@ namespace Chaos {
    *   what portion of the values to block. If this key is omitted, all non-zero signals will be
    *   blocked. If it is set to 'below' or 'above', only signals below or above the threshold value,
    *   respectively, will be blocked.
-   * - threshold (optional): The threshold state above or below which signals will be filtered.
+   * - filterThreshold (optional): The threshold state above or below which signals will be filtered.
    *   The default is 0.
-   *
+   * - condition: Specifies a game command other than those in the appliesTo list. The appliesTo commands
+   *   will be blocked only if if the input signal of condition is equal to, above (for positive
+   *   thresholds) or below (for negative thresholds) the conditionThreshold.
+   * - conditionThreshold: The default is 1.
+   * - unless: Equivalent to 'condition', but the commands are disabled if the condition is NOT true.
    */
   class DisableModifier : public Modifier::Registrar<DisableModifier> {
   protected:
@@ -54,18 +58,19 @@ namespace Chaos {
      */
     bool disableOnStart;
     /**
-     * A condition to test. The event will only be tested if threshold <> 0.
+     * A condition to test. The event will only be tested if condition_threshold <> 0.
      */
     GPInput condition;
     GPInput condition_remap;
+    int condition_threshold;
     /**
      * If true, we invert the polarity of the condition (i.e., it must be false to disable the signal)
      */
-    bool unless;
+    bool invertCondition;
     /**
      * Limit above or below which values will be disabled
      */
-    int threshold;
+    int filter_threshold;
     /**
      * What type of filtering to apply to the signal
      */
@@ -75,12 +80,10 @@ namespace Chaos {
     
     /**
      * \brief The public constructor
-     * \param controller A pointer to the gamepad device
-     * \param engine A pointer to the chaos engine
      * \param config A TOML modifier table object. If the constructor is properly dispatched, this object
      * will contain the key/value pair 'type=disable'.
      */
-    DisableModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
+    DisableModifier(const toml::table& config);
     /**
      * \brief The routine called each time the mod is started up.
      */

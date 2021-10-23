@@ -36,7 +36,7 @@ namespace Chaos {
   public:
     static const std::string name;
     
-    ParentModifier(Controller* controller, ChaosEngine* engine, const toml::table& config);
+    ParentModifier(const toml::table& config);
 
     void begin();
     bool tweak(DeviceEvent* event);
