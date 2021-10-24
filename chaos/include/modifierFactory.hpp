@@ -38,7 +38,7 @@ namespace Chaos {
       return factory().at(name)(std::forward<T>(args)...);
     }
     static bool hasType(std::string& mod_type) {
-      return factory().contains(mod_type);
+      return (factory().count(mod_type) == 1);
     }
     /**
      * The Registrar class registers the child class with the factory.
