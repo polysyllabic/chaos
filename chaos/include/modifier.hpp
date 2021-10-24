@@ -109,8 +109,8 @@ namespace Chaos {
     
     Mogi::Math::Time timer;
 
-    static Controller* controller;
-    static ChaosEngine* engine;
+    inline static Controller* controller;
+    inline static ChaosEngine* engine;
 
     /**
      * \brief The list of specific commands affected by this mod.
@@ -139,7 +139,7 @@ namespace Chaos {
     /**
      * The map of all the mods defined through the TOML file
      */
-    static std::unordered_map<std::string, std::shared_ptr<Modifier>> mod_list;
+    inline static std::unordered_map<std::string, std::shared_ptr<Modifier>> mod_list;
 
     /**
      * \brief Common initialization.
@@ -182,7 +182,7 @@ namespace Chaos {
      * \return The mod's running time minus the accumulated time we've been paused.
      */
     inline double lifetime() { return timer.runningTime() - pauseTimeAccumulator; }
-    double lifespan();
+    inline double lifespan() { return totalLifespan; }
     /**
      * \brief Main entry point into the update loop
      * \param Is the chaos engine currently paused?

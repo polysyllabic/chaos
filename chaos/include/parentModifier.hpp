@@ -39,7 +39,6 @@ namespace Chaos {
     ParentModifier(const toml::table& config);
 
     void begin();
-    bool tweak(DeviceEvent* event);
 
   };
 };

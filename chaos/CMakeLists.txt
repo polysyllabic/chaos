@@ -1,13 +1,14 @@
 # Main CMakeLists for chaos project.
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.18)
 
-project(chaos VERSION 1.0)
+project(chaos VERSION 2.0
+	      DESCRIPTION "Twitch Controls Chaos"
+	      LANGUAGES CXX)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(FATAL_ERROR "Do not build in-source. Please remove CMakeCache.txt and the CMakeFiles/ directory. Then build out-of-source.")
 endif()
 
-# Main flags to control the build
 set(CMAKE_BUILD_TYPE Debug)
 set(RASPBERRY_PI TRUE)
 set(USE_DUALSENSE FALSE)
@@ -54,6 +55,7 @@ include(FetchContent)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/")
 
+# tomlplusplus and plog are header-only libraries
 FetchContent_Declare(
 	tomlplusplus
 	GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
@@ -68,6 +70,7 @@ FetchContent_Declare(
 	mogi
 	GIT_REPOSITORY https://github.com/mogillc/nico.git
 	GIT_TAG	       origin/master
+	SOURCE_SUBDIR  edisonLibmogiPackage/libmogi
 )
 FetchContent_Declare(
 	zmqpp
@@ -84,28 +87,14 @@ FetchContent_Declare(
 	GIT_REPOSITORY https://github.com/polysyllabic/raw-gadget.git
 	GIT_TAG	       origin/master
 )
+
 FetchContent_MakeAvailable(tomlplusplus plog mogi zmqpp sniffify raw-gadget)
 
-include_directories (${tomlplusplus_SOURCE_DIR}/include)
-include_directories (${plog_SOURCE_DIR}/include)
-include_directories (${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi/include )
-include_directories (${zmqpp_SOURCE_DIR}/src)
-include_directories (${sniffify_SOURCE_DIR}/include)
+#add_subdirectory(${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi)
 
 find_package (Threads REQUIRED)
-set(LIBS ${LIBS} pthread mogi)
-
 find_package (LibJsoncpp REQUIRED)
-include_directories(${LIBJSONCPP_INCLUDE_DIRS})
-set(LIBS ${LIBS} jsoncpp)
-
 find_package (Libusb1 REQUIRED)
-include_directories(${LIBUSB1_INCLUDE_DIRS})
-set(LIBS ${LIBS} ${LIBUSB1_LIBRARIES})
-
-if(RASPBERRY_PI)
-	set(LIBS ${LIBS} crypt rt )
-endif()
 
 add_executable(chaos include/config.hpp
 		     include/chaosEngine.hpp
@@ -166,18 +155,14 @@ endif()
 
 target_compile_features(chaos PRIVATE cxx_std_17)
 
-target_include_directories (chaos PUBLIC include )
+target_include_directories (chaos PUBLIC include 
+			   	  	 ${tomlplusplus_SOURCE_DIR}/include
+			   	  	 ${plog_SOURCE_DIR}/include
+					 ${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi/include
+					 ${zmqpp_SOURCE_DIR}/src
+					 ${sniffify_SOURCE_DIR}/include
+					 ${LIBJSONCPP_INCLUDE_DIRS}
+					 ${LIBUSB1_INCLUDE_DIRS})
 
-target_link_libraries(chaos PUBLIC zmqpp zmq sniffify)
+target_link_libraries(chaos PUBLIC sniffify mogi zmqpp)
 
-# add_executable(chaostest include/controllerCommand.hpp
-#			 src/controllerCommand.cpp
-#			 include/gameCommand.hpp
-#			 src/gameCommand.cpp
-#			 include/tomlReader.hpp
-#			 src/tomlReader.cpp
-#			 src/test.cpp)
-#
-# target_include_directories (chaostest PUBLIC include )
-#
-# target_compile_features(chaostest PRIVATE cxx_std_17)
