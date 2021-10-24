@@ -44,7 +44,7 @@ GameCommand::GameCommand(toml::table& definition) {
     throw std::runtime_error("Missing command binding.");
   }
   // The binding value must exist in the controller commands list
-  if (ControllerCommand::buttonNames.contains(*bind)) {
+  if (ControllerCommand::buttonNames.count(*bind) == 1) {
     binding = ControllerCommand::buttonNames.at(*bind);
     binding_remap = binding;
   } else {
@@ -63,7 +63,7 @@ GameCommand::GameCommand(toml::table& definition) {
   
   // Condition/unless should be the name of a previously defined GameCommand
   if (cond) {
-    if (bindingMap.contains(*cond)) {
+    if (bindingMap.count(*cond) == 1) {
       // Look up the controller command that maps to this game command. We store the index to the
       // controller command for efficiency.
       condition = bindingMap.at(*cond)->getReal();
@@ -103,7 +103,7 @@ void GameCommand::initialize(toml::table& config) {
       if (toml::table* command = elem.as_table()) {
 	if (command->contains("name")) {
 	  std::string cmd_name = command->get("name")->value_or("ERROR");
-	  if (bindingMap.contains(cmd_name)) {
+	  if (bindingMap.count(cmd_name) == 1) {
 	    PLOG_WARNING << "Duplicate command binding for '" << cmd_name << "'. Earlier one will be overwritten.\n";
 	  }
 	  PLOG_VERBOSE << "inserting '" << cmd_name << "': " << command << "\n";

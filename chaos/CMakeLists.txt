@@ -164,7 +164,7 @@ if(USE_DUALSENSE)
 				 	src/dualsense.cpp)
 endif()
 
-target_compile_features(chaos PRIVATE cxx_std_20)
+target_compile_features(chaos PRIVATE cxx_std_17)
 
 target_include_directories (chaos PUBLIC include )
 
@@ -180,4 +180,4 @@ target_link_libraries(chaos PUBLIC zmqpp zmq sniffify)
 #
 # target_include_directories (chaostest PUBLIC include )
 #
-# target_compile_features(chaostest PRIVATE cxx_std_20)
+# target_compile_features(chaostest PRIVATE cxx_std_17)

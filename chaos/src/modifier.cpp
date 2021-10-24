@@ -45,7 +45,7 @@ void Modifier::initialize(const toml::table& config) {
     }
     for (auto& elem : *cmd_list) {
       std::optional<std::string> cmd = elem.value<std::string>();
-      if (cmd && GameCommand::bindingMap.contains(*cmd)) {
+      if (cmd && GameCommand::bindingMap.count(*cmd) == 1) {
 	commands.push_back(GameCommand::bindingMap[*cmd]);
       } else {
 	throw std::runtime_error("unrecognized command '" + *cmd + "' in appliesTo");
@@ -74,7 +74,7 @@ void Modifier::buildModList(toml::table& config) {
 	continue;
       }
       std::optional<std::string> mod_name = modifier->get("name")->value<std::string>();
-      if (mod_list.contains(*mod_name)) {
+      if (mod_list.count(*mod_name) == 1) {
 	PLOG_ERROR << "The modifier '" << *mod_name << " has already been defined\n";
 	continue;
       } 

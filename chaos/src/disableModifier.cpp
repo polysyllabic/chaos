@@ -64,9 +64,10 @@ DisableModifier::DisableModifier(const toml::table& config) {
   
   // Condition/unless should be the name of a previously defined GameCommand
   if (cond) {
-    if (GameCommand::bindingMap.contains(*cond)) {
+    if (GameCommand::bindingMap.count(*cond) == 1) {
       // Look up the controller command that maps to this game command. We store the index to the
       // controller command for efficiency.
+      
       condition = GameCommand::bindingMap.at(*cond)->getReal();
       condition_remap = condition;
       // default threshold for a condition
