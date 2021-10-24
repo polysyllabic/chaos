@@ -1,5 +1,5 @@
 # Main CMakeLists for chaos project.
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.15)
 
 project(chaos VERSION 2.0
 	      DESCRIPTION "Twitch Controls Chaos"
@@ -70,7 +70,6 @@ FetchContent_Declare(
 	mogi
 	GIT_REPOSITORY https://github.com/mogillc/nico.git
 	GIT_TAG	       origin/master
-	SOURCE_SUBDIR  edisonLibmogiPackage/libmogi
 )
 FetchContent_Declare(
 	zmqpp
@@ -88,9 +87,13 @@ FetchContent_Declare(
 	GIT_TAG	       origin/master
 )
 
-FetchContent_MakeAvailable(tomlplusplus plog mogi zmqpp sniffify raw-gadget)
+# Life would be easier if the Raspberry OS cmake were 3.18 or greater
+if(NOT mogi_POPULATED)
+       FetchContent_Populate(mogi)
+       add_subdirectory(${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi)
+endif()
 
-#add_subdirectory(${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi)
+FetchContent_MakeAvailable(tomlplusplus plog zmqpp sniffify raw-gadget)
 
 find_package (Threads REQUIRED)
 find_package (LibJsoncpp REQUIRED)
