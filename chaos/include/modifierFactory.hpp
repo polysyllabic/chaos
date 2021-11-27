@@ -20,7 +20,6 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <toml++/toml.h>
 
 namespace Chaos {
 

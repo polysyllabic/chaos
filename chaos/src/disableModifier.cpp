@@ -31,6 +31,10 @@ const std::string DisableModifier::name = "disable";
 DisableModifier::DisableModifier(const toml::table& config) {
   initialize(config);
 
+  if (commands.empty() && ! applies_to_all) {
+    throw std::runtime_error("No command(s) specified with 'appliesTo'");
+  }
+  
   disableOnStart = config["disableOnStart"].value_or(false);
 
   // If the filter isn't specified, default to block all values of the signal
@@ -45,11 +49,9 @@ DisableModifier::DisableModifier(const toml::table& config) {
       PLOG_WARNING << "Unrecognized filter type: '" << *f << "'. Using ALL instead.\n";
     }
   }
-  std::optional<int> ft = config["filterThreshold"].value<int>();
-  if (ft) {
-    filter_threshold = *ft;
-  }
-
+  filter_threshold = config["filterThreshold"].value_or(0);
+  
+  condition = GPInput::NONE;
   std::optional<std::string> cond = config["condition"].value<std::string>();
 
   if (config.contains("unless")) {
@@ -62,69 +64,60 @@ DisableModifier::DisableModifier(const toml::table& config) {
     invertCondition = true;
   } 
   
-  // Condition/unless should be the name of a previously defined GameCommand
+  // If the condition doesn't match a defined GameCommand name, this will be set to GPInput::NONE.
   if (cond) {
-    if (GameCommand::bindingMap.count(*cond) == 1) {
-      // Look up the controller command that maps to this game command. We store the index to the
-      // controller command for efficiency.
-      
-      condition = GameCommand::bindingMap.at(*cond)->getReal();
-      condition_remap = condition;
-      // default threshold for a condition
-      condition_threshold = 1;
-      
-    } else {
-      PLOG_ERROR << "Condition '" << *cond << "' is not a defined command.\n"; 
-      throw std::runtime_error("Condition is an undefined command");
-    }
+    condition = GameCommand::getInput(*cond);
   }
-  
 }
 
-// add an explicit event to turn off if the button is currently pressed when we apply the mod.
 void DisableModifier::begin() {
   DeviceEvent event;
   if (disableOnStart) {
+    // Turn off the commands we're disabling if the player is currently holding down that input
     for (auto& cmd : commands) {
-      controller->setOff(cmd->getReal());
+      controller->setOff(cmd);
     }
   }
 }
 
 /**
- * Disables an incoming game command, in part or in full
+ * \brief Disables an incoming game command, in part or in full
+ * \param event The incoming device event we need to check
+ * \return Whether the event is valid. Returning false stops further processing.
  *
  * We look up the current mapping of the command to button preses and block presses comming from
  * that button/axis. This ensures that we disable the right control regardless of any command
  * remapping that may have occurred.
  */
-bool DisableModifier::tweak (DeviceEvent* event) {
-  // check any condition
-  if (condition_threshold) {
-    // State is true if the value equals or exceeds the threshold
-    bool state = controller->isState(condition_remap, condition_threshold);
-    // Don't filter if the state is false under the ordinary condition, or the state is true with
-    // inverted polarity.
-    if ((state && invertCondition) || (!state && !invertCondition)) {
+bool DisableModifier::tweak (DeviceEvent& event) {
+  bool disable = false;
+  updateGamestates(event);
+  if (! inGamestate()) {
+    return true;
+  }
+  // Check any condition
+  if (condition != GPInput::NONE) {
+    // Only filter if in state under the ordinary condition, or the state is false with inverted
+    // polarity. In other words, if the two states are equal, we do not filter and so return immediately.
+    if (controller->isOn(condition) == invertCondition) {
       return true;
     }
   }
-  // traverse the list of affected commands
-  // we match against the remapped command but alter the real one
+  // Traverse the list of affected commands
   for (auto& cmd : commands) {
-    int new_val;
-    if (controller->matches(event, cmd->getRemap())) {
+    if (controller->matches(event, cmd)) {
       switch (filter) {
       case DisableFilter::ALL:
-	new_val = 0;
+	event.value = 0;
 	break;
       case DisableFilter::ABOVE_THRESHOLD:
-	new_val = (event->value > filter_threshold) ? 0 : event->value;
+	event.value = (event.value > filter_threshold) ? 0 : event.value;
 	break;
       case DisableFilter::BELOW_THRESHOLD:
-	new_val = (event->value < filter_threshold) ? 0 : event->value;
+	event.value = (event.value < filter_threshold) ? 0 : event.value;
       }
-      controller->setState(event, new_val, cmd->getRemap(), cmd->getReal());
+      // no need to keep searching after a match
+      break;
     }
   }
   return true;

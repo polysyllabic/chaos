@@ -28,7 +28,7 @@
 
 using namespace Chaos;
 
-std::unordered_map<std::string, std::shared_ptr<GameCommand>> GameCommand::bindingMap;
+std::unordered_map<std::string, std::shared_ptr<GameCommand>> GameCommand::commands;
 
 /*
  * The constructor for the command binding. The name of the command has already been read and will
@@ -43,14 +43,12 @@ GameCommand::GameCommand(toml::table& definition) {
   if (!bind) {
     throw std::runtime_error("Missing command binding.");
   }
-  // The binding value must exist in the controller commands list
-  if (ControllerCommand::buttonNames.count(*bind) == 1) {
-    binding = ControllerCommand::buttonNames.at(*bind);
-    binding_remap = binding;
-  } else {
+  std::shared_ptr<GamepadInput> bnd = GamepadInput::get(*bind);
+  if (! bnd) {
     throw std::runtime_error("Specified command binding does not exist.");
   }
-
+  binding = bnd->getSignal();
+  
   std::optional<std::string> cond = definition["condition"].value<std::string>();
 
   if (definition.contains("unless")) {
@@ -63,22 +61,14 @@ GameCommand::GameCommand(toml::table& definition) {
   
   // Condition/unless should be the name of a previously defined GameCommand
   if (cond) {
-    if (bindingMap.count(*cond) == 1) {
-      // Look up the controller command that maps to this game command. We store the index to the
-      // controller command for efficiency.
-      condition = bindingMap.at(*cond)->getReal();
-      condition_remap = condition;
-      // default threshold for a condition
-      threshold = 1;
+    if (commands.count(*cond) == 1) {
+      condition = commands.at(*cond)->getBinding();
     } else {
       throw std::runtime_error("Condition refers to unknown game command."); 
     }
 
     // If there's a specific threshold, set it.
-    std::optional<int> thresh = definition["threshold"].value<int>();
-    if (thresh) {
-      threshold = *thresh;
-    }
+    threshold = definition["threshold"].value_or(1);
   }
 }
 
@@ -94,7 +84,7 @@ GameCommand::GameCommand(toml::table& definition) {
  */
 void GameCommand::initialize(toml::table& config) {
   
-  assert(bindingMap.size() == 0);
+  assert(commands.size() == 0);
   
   // We should have an array of tables. Each table defines one command binding.
   toml::array* arr = config["command"].as_array();
@@ -103,12 +93,12 @@ void GameCommand::initialize(toml::table& config) {
       if (toml::table* command = elem.as_table()) {
 	if (command->contains("name")) {
 	  std::string cmd_name = command->get("name")->value_or("ERROR");
-	  if (bindingMap.count(cmd_name) == 1) {
+	  if (commands.count(cmd_name) == 1) {
 	    PLOG_WARNING << "Duplicate command binding for '" << cmd_name << "'. Earlier one will be overwritten.\n";
 	  }
 	  PLOG_VERBOSE << "inserting '" << cmd_name << "': " << command << "\n";
 	  try {
-	    bindingMap.insert({cmd_name, std::make_unique<GameCommand>(*command)});
+	    commands.insert({cmd_name, std::make_shared<GameCommand>(*command)});
 	  }
 	  catch (const std::runtime_error& e) {
 	    PLOG_ERROR << "In definition for game command '" << cmd_name << "': " << e.what() << std::endl; 
@@ -120,9 +110,24 @@ void GameCommand::initialize(toml::table& config) {
       }
     }
   }
-  if (bindingMap.size() == 0) {
+  if (commands.size() == 0) {
     throw std::runtime_error("No game commands were defined.");
   }
 }
 
+std::shared_ptr<GameCommand> GameCommand::get(const std::string& name) {
+  auto iter = commands.find(name);
+  if (iter != commands.end()) {
+    return iter->second;
+  }
+  return NULL;
+}
 
+GPInput GameCommand::getInput(const std::string& name) {
+  std::shared_ptr<GameCommand> cmd = get(name);
+  if (cmd) {
+    return cmd->getBinding();
+  }
+  PLOG_WARNING << "In GameCommand::getInput - command '" << name << "' not recognized\n";
+  return GPInput::NONE;
+}

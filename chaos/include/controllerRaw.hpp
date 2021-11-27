@@ -35,21 +35,24 @@ namespace Chaos {
 	
     ChaosUhid* chaosHid;
 	
-    bool applyHardware(const DeviceEvent* event);
+    bool applyHardware(const DeviceEvent& event);
 	
     // Main purpose of this Mogi::Thread is to handle DeviceEvent queue
     void doAction();
-	
-    void notification(unsigned char* buffer, int length); // overloaded from EndpointObserver
 
-    //FILE* spooferFile = NULL;
+    // overloaded from EndpointObserver
+    void notification(unsigned char* buffer, int length);
+
+    const short int JOYSTICK_MIN = -128;
+    const short int JOYSTICK_MAX = 128;
+    
   public:
     RawGadgetPassthrough mRawGadgetPassthrough;
 	
     void initialize();
     
-    short int getJoystickMin();
-    short int getJoystickMax();
+    short int getJoystickMin() { return JOYSTICK_MIN; }
+    short int getJoystickMax() { return JOYSTICK_MAX; }
   };
 
 };

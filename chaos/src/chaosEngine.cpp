@@ -26,6 +26,7 @@
 #include <toml++/toml.h>
 
 #include "chaosEngine.hpp"
+#include "gamepadInput.hpp"
 
 using namespace Chaos;
 
@@ -103,24 +104,30 @@ void ChaosEngine::doAction() {
 	(front->lifespan()  < 0 && front->lifetime() > timePerModifier)) {
       PLOG_DEBUG << "Killing Modifier: " << typeid(*front).name() << std::endl;
       lock();
-      front->finish();	// Do any cleanup, if necessary
+      // Do cleanup for this mod, if necessary
+      front->finish();
+      // delete front;
       modifiers.pop_front();
-      //      delete front;
+      // Execute apply() on remaining modifiers for post-removal actions
+      for (auto& m : modifiers) {
+	m->apply();
+      }
       unlock();
     }
   }
 }
 
 // Tweak the event based on modifiers
-bool ChaosEngine::sniffify(const DeviceEvent* input, DeviceEvent* output) {
-  *output = *input;
-	
+bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
+  output = input;	
   bool valid = true;
+  
   lock();
   
-  // The options button pauses the chaos engine
-  if (controller->matches(input, GPInput::OPTIONS) || controller->matches(input, GPInput::PS))  {
-    if(input->value == 1 && pause == false) { // on rising edge
+  // The options button pauses the chaos engine (always check real buttons for this, not a remap)
+  if (GamepadInput::matchesID(input, GPInput::OPTIONS) ||
+      GamepadInput::matchesID(input, GPInput::PS)) {
+    if(input.value == 1 && pause == false) { // on rising edge
       pause = true;
       chaosInterface.sendMessage("{\"pause\":1}");
       pausePrimer = false;
@@ -128,26 +135,31 @@ bool ChaosEngine::sniffify(const DeviceEvent* input, DeviceEvent* output) {
     }
   }
 
-  // The share button resumes the chaos engine
-  if (controller->matches(input, GPInput::SHARE)) {
-    if(input->value == 1 && pause == true) { // on rising edge
+  // The share button resumes the chaos engine (also not remapped)
+  if (GamepadInput::matchesID(input, GPInput::SHARE)) {
+    if(input.value == 1 && pause == true) { // on rising edge
       pausePrimer = true;
-    } else if(input->value == 0 && pausePrimer == true) { // falling edge
+    } else if(input.value == 0 && pausePrimer == true) { // falling edge
       pause = false;
       chaosInterface.sendMessage("{\"pause\":0}");
       PLOG_INFO << "Resumed" << std::endl;
     }
-    output->value = 0;
+    output.value = 0;
   }
 	
   unlock();
 	
   if (!pause) {
     lock();
-    for (auto& mod : modifiers) {
-      valid = (*mod).tweak(output);
-      if (!valid) {
-	break;
+
+    // Translate incomming signal to what the console expects before passing that on to the mods
+    valid = Modifier::remapEvent(output);
+    if (valid) {
+      for (auto& mod : modifiers) {
+	valid = (*mod).tweak(output);
+	if (!valid) {
+	  break;
+	}
       }
     }
     unlock();
@@ -158,7 +170,7 @@ bool ChaosEngine::sniffify(const DeviceEvent* input, DeviceEvent* output) {
 // This function is called by modifiers to inject a fake event into the event pipeline.
 // Because the event can be modified by other mods, we find the location of the modifier
 // and feed the fake event through the rest of the modifiers, in order.
-void ChaosEngine::fakePipelinedEvent(DeviceEvent* fakeEvent, std::shared_ptr<Modifier> modifierThatSentTheFakeEvent) {
+void ChaosEngine::fakePipelinedEvent(DeviceEvent& fakeEvent, std::shared_ptr<Modifier> modifierThatSentTheFakeEvent) {
   bool valid = true;
 	
   if (!pause) {

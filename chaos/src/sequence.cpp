@@ -24,42 +24,43 @@
 using namespace Chaos;
 
 void Sequence::disableControls() {
-  events.push_back( {0, 0, TYPE_AXIS, controller->getGPInfo(GPInput::DX).getID()} );
-  events.push_back( {0, 0, TYPE_AXIS, controller->getGPID(GPInput::DY)} );
-  events.push_back( {0, 0, TYPE_AXIS, controller->getGPID(GPInput::RX)} );
-  events.push_back( {0, 0, TYPE_AXIS, controller->getGPID(GPInput::RY)} );
-  events.push_back( {0, 0, TYPE_AXIS, controller->getGPID(GPInput::LX)} );
-  events.push_back( {0, -128, TYPE_AXIS, controller->getGPSecondID(GPInput::L2)} );
-  events.push_back( {0, -128, TYPE_AXIS, controller->getGPSecondID(GPInput::R2)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::X)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::SQUARE)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::TRIANGLE)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::CIRCLE)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::R1)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::L1)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::R2)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::L2)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::R3)} );
-  events.push_back( {0, 0, TYPE_BUTTON, controller->getGPID(GPInput::L3)} );
-  events.push_back( {TIME_AFTER_JOYSTICK_DISABLE, 0, TYPE_AXIS, controller->getGPID(GPInput::LY)} );
+  events.push_back( {0, 0, TYPE_AXIS, GamepadInput::get(GPInput::DX)->getID()} );
+  events.push_back( {0, 0, TYPE_AXIS, GamepadInput::get(GPInput::DY)->getID()} );
+  events.push_back( {0, 0, TYPE_AXIS, GamepadInput::get(GPInput::RX)->getID()} );
+  events.push_back( {0, 0, TYPE_AXIS, GamepadInput::get(GPInput::RY)->getID()} );
+  events.push_back( {0, 0, TYPE_AXIS, GamepadInput::get(GPInput::LX)->getID()} );
+  events.push_back( {0, 0, TYPE_AXIS, GamepadInput::get(GPInput::LY)->getID()} );
+  events.push_back( {0, -128, TYPE_AXIS, GamepadInput::get(GPInput::L2)->getHybridAxis()} );
+  events.push_back( {0, -128, TYPE_AXIS, GamepadInput::get(GPInput::R2)->getHybridAxis()} );
+  events.push_back( {0, 0, TYPE_BUTTON, GamepadInput::get(GPInput::X)->getID()} );
+  events.push_back( {0, 0, TYPE_BUTTON, GamepadInput::get(GPInput::SQUARE)->getID()} );
+  events.push_back( {0, 0, TYPE_BUTTON, GamepadInput::get(GPInput::TRIANGLE)->getID()} );
+  events.push_back( {0, 0, TYPE_BUTTON, GamepadInput::get(GPInput::CIRCLE)->getID()} );
+  events.push_back( {0, 0, TYPE_BUTTON, GamepadInput::get(GPInput::R1)->getID()} );
+  events.push_back( {0, 0, TYPE_BUTTON, GamepadInput::get(GPInput::L1)->getID()} );
+  events.push_back( {0, 0, TYPE_BUTTON, GamepadInput::get(GPInput::R2)->getID()} );
+  events.push_back( {0, 0, TYPE_BUTTON, GamepadInput::get(GPInput::L2)->getID()} );
+  events.push_back( {0, 0, TYPE_BUTTON, GamepadInput::get(GPInput::R3)->getID()} );
+  events.push_back( {0, 0, TYPE_BUTTON, GamepadInput::get(GPInput::L3)->getID()} );
+  events.push_back( {TIME_AFTER_JOYSTICK_DISABLE, 0, TYPE_AXIS, GamepadInput::get(GPInput::LY)->getID()} );
 }
 
 void Sequence::addButtonPress(GPInput button) {
-  assert(controller->getGPButtonType(button) == TYPE_BUTTON);
+  assert(GamepadInput::get(button)->getButtonType() == TYPE_BUTTON);
   
-  events.push_back( {  TIME_PER_BUTTON_PRESS, 1, TYPE_BUTTON, controller->getGPID(button)} );
-  events.push_back( {TIME_PER_BUTTON_RELEASE, 0, TYPE_BUTTON, controller->getGPID(button)} );
+  events.push_back( {  TIME_PER_BUTTON_PRESS, 1, TYPE_BUTTON, GamepadInput::get(button)->getID()} );
+  events.push_back( {TIME_PER_BUTTON_RELEASE, 0, TYPE_BUTTON, GamepadInput::get(button)->getID()} );
 }
 
 void Sequence::addButtonHold(GPInput button) {
-  assert(controller->getGPButtonType(button) == TYPE_BUTTON);
+  assert(GamepadInput::get(button)->getButtonType() == TYPE_BUTTON);
   
-  events.push_back( {  0, 1, TYPE_BUTTON, controller->getGPID(button)} );
+  events.push_back( {  0, 1, TYPE_BUTTON, GamepadInput::get(button)->getID()} );
 }
 void Sequence::addButtonRelease(GPInput button) {
-  assert(controller->getGPButtonType(button) == TYPE_BUTTON);
+  assert(GamepadInput::get(button)->getButtonType() == TYPE_BUTTON);
   
-  events.push_back( {  0, 0, TYPE_BUTTON, controller->getGPID(button)} );
+  events.push_back( {  0, 0, TYPE_BUTTON, GamepadInput::get(button)->getID()} );
 }
 
 void Sequence::addTimeDelay(unsigned int timeInMilliseconds) {
@@ -67,19 +68,19 @@ void Sequence::addTimeDelay(unsigned int timeInMilliseconds) {
 }
 
 void Sequence::addAxisPress(GPInput axis, short value ) {
-  assert(controller->getGPButtonType(axis) == TYPE_AXIS);
+  assert(GamepadInput::get(axis)->getButtonType() == TYPE_AXIS);
   
-  uint8_t ctrl = (controller->getGPType(axis) == GPInputType::HYBRID) ?
-    controller->getGPSecondID(axis) : controller->getGPID(axis);
+  uint8_t ctrl = (GamepadInput::get(axis)->getType() == GPInputType::HYBRID) ?
+    GamepadInput::get(axis)->getHybridAxis() : GamepadInput::get(axis)->getID();
   events.push_back( {  TIME_PER_BUTTON_PRESS, value, TYPE_AXIS, ctrl} );
   events.push_back( {TIME_PER_BUTTON_RELEASE, 0, TYPE_AXIS, ctrl} );
 }
 
 void Sequence::addAxisHold(GPInput axis, short value ) {
-  assert(controller->getGPButtonType(axis) == TYPE_AXIS);
+  assert(GamepadInput::get(axis)->getButtonType() == TYPE_AXIS);
   
-  uint8_t ctrl = (controller->getGPType(axis) == GPInputType::HYBRID) ?
-    controller->getGPSecondID(axis) : controller->getGPID(axis);
+  uint8_t ctrl = (GamepadInput::get(axis)->getType() == GPInputType::HYBRID) ?
+    GamepadInput::get(axis)->getHybridAxis() : GamepadInput::get(axis)->getID();
   events.push_back( {  0, value, TYPE_AXIS, ctrl} );
 }
 
@@ -88,7 +89,7 @@ void Sequence::send() {
     DeviceEvent& event = (*it);
     PLOG_VERBOSE << "Sending event for button " << (int) event.type << ": " << (int) event.id
 	       << ":" << (int) event.value << "\t sleeping for " << event.time << '\n';
-    controller->applyEvent( &event );
+    controller->applyEvent( event );
     if (event.time) {
       usleep(event.time);
     }

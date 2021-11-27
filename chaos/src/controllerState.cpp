@@ -29,8 +29,6 @@
 
 using namespace Chaos;
 
-std::vector<ControllerCommand> ControllerState::buttonInfo;
-
 ControllerState::~ControllerState() {}
 
 void* ControllerState::getHackedState() {
@@ -39,44 +37,6 @@ void* ControllerState::getHackedState() {
 }
 
 ControllerState* ControllerState::factory(int vendor, int product) {
-
-  // These are the values for the DualShock2, the only controller currently supported. They're
-  // defined with ID values that can be changed in case we are able to add additional controller
-  // types some day. NB: the order of insertion must match the enumeration in GPInput, since we
-  // use that as an index for this vector.
-  buttonInfo.push_back(ControllerCommand(GPInputType::BUTTON, 1)); // GPInput::X
-  buttonInfo.push_back(ControllerCommand(GPInputType::BUTTON, 2)); // GPInput::TRIANGLE
-  buttonInfo.push_back(ControllerCommand(GPInputType::BUTTON, 3)); // GPInput::SQUARE
-  buttonInfo.push_back(ControllerCommand(GPInputType::BUTTON, 4)); // GPInput::L1
-  buttonInfo.push_back(ControllerCommand(GPInputType::BUTTON, 5)); // GPInput::R1
-  buttonInfo.push_back(ControllerCommand(GPInputType::HYBRID, 6, 2)); // GPInput::L2
-  buttonInfo.push_back(ControllerCommand(GPInputType::HYBRID, 7, 5)); // GPInput::R2
-  buttonInfo.push_back(ControllerCommand(GPInputType::BUTTON, 8)); // GPInput::SHARE
-  buttonInfo.push_back(ControllerCommand(GPInputType::BUTTON, 9)); // GPInput::OPTIONS
-  buttonInfo.push_back(ControllerCommand(GPInputType::BUTTON, 10)); // GPInput::PS
-  buttonInfo.push_back(ControllerCommand(GPInputType::BUTTON, 11)); // GPInput::L3
-  buttonInfo.push_back(ControllerCommand(GPInputType::BUTTON, 12)); // GPInput::R3
-  buttonInfo.push_back(ControllerCommand(GPInputType::BUTTON, 13)); // GPInput::TOUCHPAD
-  buttonInfo.push_back(ControllerCommand(GPInputType::BUTTON, 14)); // GPInput::TOUCHPAD_ACTIVE
-  buttonInfo.push_back(ControllerCommand(GPInputType::BUTTON, 15)); // GPInput::TOUCHPAD_ACTIVE_2
-  buttonInfo.push_back(ControllerCommand(GPInputType::AXIS, 0)); // GPInput::LX
-  buttonInfo.push_back(ControllerCommand(GPInputType::AXIS, 1)); // GPInput::LY
-  buttonInfo.push_back(ControllerCommand(GPInputType::AXIS, 3)); // GPInput::RX
-  buttonInfo.push_back(ControllerCommand(GPInputType::AXIS, 4)); // GPInput::RY
-  buttonInfo.push_back(ControllerCommand(GPInputType::THREE_STATE, 6)); // GPInput::DX
-  buttonInfo.push_back(ControllerCommand(GPInputType::THREE_STATE, 7)); // GPInput::DY
-  buttonInfo.push_back(ControllerCommand(GPInputType::ACCELEROMETER, 8)); // GPInput::ACCX
-  buttonInfo.push_back(ControllerCommand(GPInputType::ACCELEROMETER, 9)); // GPInput::ACCY
-  buttonInfo.push_back(ControllerCommand(GPInputType::ACCELEROMETER, 10)); // GPInput::ACCZ
-  buttonInfo.push_back(ControllerCommand(GPInputType::GYROSCOPE, 11)); // GPInput::GYRX
-  buttonInfo.push_back(ControllerCommand(GPInputType::GYROSCOPE, 12)); // GPInput::GYRY
-  buttonInfo.push_back(ControllerCommand(GPInputType::GYROSCOPE, 13)); // GPInput::GYRZ
-  buttonInfo.push_back(ControllerCommand(GPInputType::TOUCHPAD, 14)); // GPInput::TOUCHPAD_X
-  buttonInfo.push_back(ControllerCommand(GPInputType::TOUCHPAD, 15)); // GPInput::TOUCHPAD_Y
-  buttonInfo.push_back(ControllerCommand(GPInputType::TOUCHPAD, 16)); // GPInput::TOUCHPAD_X_2
-  buttonInfo.push_back(ControllerCommand(GPInputType::TOUCHPAD, 17)); // GPInput::TOUCHPAD_Y_2
-
-  assert(buttonInfo.size() == GPInput::__COUNT__);
   
   if (vendor == 0x054c && product == 0x09cc) {
     return new Dualshock;

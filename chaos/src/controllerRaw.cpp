@@ -30,7 +30,7 @@
 using namespace Chaos;
 
 // State will already be stored, nothing to be done for raw
-bool ControllerRaw::applyHardware(const DeviceEvent* event) {
+bool ControllerRaw::applyHardware(const DeviceEvent& event) {
   return true;
 }
 
@@ -52,7 +52,7 @@ void ControllerRaw::doAction() {
 	 it != deviceEvents.end();
 	 it++) {
       DeviceEvent& event = *it;
-      handleNewDeviceEvent( &event );
+      handleNewDeviceEvent(event);
     }
     pause();
   }
@@ -93,14 +93,4 @@ void ControllerRaw::initialize() {
 	       << " product=0x" << std::setfill('0') << std::setw(4) << std::hex << mRawGadgetPassthrough.getProduct() << std::endl;
     exit(EXIT_FAILURE);
   }
-}
-
-short int ControllerRaw::getJoystickMin() {
-  assert (mControllerState);
-  return mControllerState->getJoystickMin();
-}
-
-short int ControllerRaw::getJoystickMax() {
-  assert (mControllerState);
-  return mControllerState->getJoystickMax();
 }

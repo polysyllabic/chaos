@@ -18,13 +18,13 @@
  */
 #include <fstream>
 #include <stdexcept>
+#include <algorithm>
 
 #include <plog/Log.h>
 #include <plog/Initializers/RollingFileInitializer.h>
 
 #include "tomlReader.hpp"
 #include "config.hpp"
-#include "controllerCommand.hpp"
 #include "gameCommand.hpp"
 #include "modifier.hpp"
 
@@ -66,14 +66,24 @@ TOMLReader::TOMLReader(const std::string& fname) {
     PLOG_WARNING << "No name specified for this game.\n";
   }
 
-  // set up static definitions of controller input names
-  ControllerCommand::initialize();
-  // Assign the default mappings of game commands to specific button/joystick presses
-  GameCommand::initialize(configuration);
   // Create the modifiers
   Modifier::buildModList(configuration);
 }
 
+GPInput TOMLReader::getSignal(const toml::table& config, const std::string& key, bool required) {
+  if (! config.contains(key)) {
+    if (required) {
+      throw std::runtime_error("missing required '" + key + "' field");
+    }
+    return GPInput::NONE;
+  }
+  std::optional<std::string> signal = config.get(key)->value<std::string>();
+  std::shared_ptr<GamepadInput> inp = GamepadInput::get(*signal);
+  if (! inp) {
+    throw std::runtime_error("Gamepad signal '" + *signal + "' not defined");
+  }
+  return inp->getSignal();
+}
 
 std::string_view TOMLReader::getGameName() {
   return (game) ? *game : "UNKNOWN";

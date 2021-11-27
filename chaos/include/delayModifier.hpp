@@ -29,8 +29,9 @@ namespace Chaos {
     DeviceEvent event;
   } TimeAndEvent;
 
-  /** Subclass of modifiers that introduce a delay between a button press and
-   * when it is passed to the controller.
+  /**
+   * Subclass of modifiers that introduce a delay between a button press and when it is passed to
+   * the controller.
    */
   class DelayModifier : public Modifier::Registrar<DelayModifier> {
 
@@ -40,8 +41,10 @@ namespace Chaos {
     
   public:
     static const std::string name;
+    
     DelayModifier(const toml::table& config);
     void update();
+    bool tweak(DeviceEvent& event);
   };
 };
 

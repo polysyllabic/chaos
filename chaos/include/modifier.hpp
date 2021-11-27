@@ -19,16 +19,18 @@
 #pragma once
 #include <string>
 #include <memory>
-//#include <functional>
 #include <unordered_map>
 #include <json/json.h>
 #include <mogi/math/systems.h>
+#include <toml++/toml.h>
 
 #include "modifierFactory.hpp"
 
 #include "controller.hpp"
-#include "gameCommand.hpp"
 #include "deviceTypes.hpp"
+#include "gameCommand.hpp"
+#include "gameState.hpp"
+#include "touchpad.hpp"
 
 namespace Chaos {
 
@@ -74,6 +76,19 @@ namespace Chaos {
    *    appliesTo = [ "move forward/back", "move sideways" ]
    * 
    *    [[modifier]]
+   *    name = "Touchpad Aiming"
+   *    description = "No more aiming with the joystick. Finally making use of the touchpad!"
+   *    type = "remap"
+   *    signals = [ "RX", "RY" ]
+   *    remap = [
+   *          {from = "TOUCHPAD_ACTIVE", to="NOTHING"},
+   *          {from = "TOUCHPAD_X", to="RX"},
+   *          {from = "TOUCHPAD_Y", to="RY"},
+   *          {from = "RX", to="NOTHING"},
+   *          {from = "RY", to="NOTHING"}
+   *          ]
+   *
+   *    [[modifier]]
    *    name = "Moonwalk"
    *    description = "Be like Michael Jackson! Trying to walk forward will actually make you go backward"
    *    type = "formula"
@@ -105,13 +120,25 @@ namespace Chaos {
     friend ChaosEngine;
 
   protected:
+    /**
+     * Description of this mod for the use of the chat bot.
+     */
     std::string description;
+    /**
+     * \brief A group to classify the type of mod.
+     *
+     * The default if not specified is the type name. Set it to something different to establish
+     * groupings within or across mod types. For example, render modifiers can be a special group
+     * instead of being lumped in with all the other menu modifiers.
+     */
+    std::string group;
     
     Mogi::Math::Time timer;
 
-    inline static Controller* controller;
-    inline static ChaosEngine* engine;
+    static Controller* controller;
+    static ChaosEngine* engine;
 
+    static Touchpad* touchpad;
     /**
      * \brief The list of specific commands affected by this mod.
      *
@@ -122,9 +149,27 @@ namespace Chaos {
     std::vector<std::shared_ptr<GameCommand>> commands;
     
     /**
+     * Instead of listing all commands separately, a mod can announce that it affects all game
+     * commands. This allows us to avoid testing an entire list when the result will always be true.
+     */
+    bool applies_to_all;
+
+    /**
+     * For mods that need to reference specific signals, not game commands.
+     */
+    std::vector<GPInput> signals;
+    /**
+     * List of game states that must be true for the mod to apply
+     */
+    std::vector<std::shared_ptr<GameState>> gamestates;
+
+    bool any_state;
+    bool no_state;
+    /**
      * Contains "this" except in cases where there is a parent modifier.
      */
     std::shared_ptr<Modifier> me; 
+
     /**
      * Amount of time the engine has been paused.
      */
@@ -137,14 +182,9 @@ namespace Chaos {
     Json::Value toJsonObject(const std::string& name);
 
     /**
-     * The map of all the mods defined through the TOML file
-     */
-    inline static std::unordered_map<std::string, std::shared_ptr<Modifier>> mod_list;
-
-    /**
      * \brief Common initialization.
      *
-     * Because of the registrar factory method is designed to prevent classes from invoking this
+     * Because the registrar factory method is designed to prevent classes from invoking this
      * class as a direct base class, we can't put common initialization in the constructor here.
      * Instead, child classes should call this initialization routine in their own constructors.
      *
@@ -154,11 +194,50 @@ namespace Chaos {
      *
      * - description
      * - appliesTo
+     * - condition
+     * - gamestate
      *
      */
     void initialize(const toml::table& config);
+
+    /**
+     * \brief Translate an axis event to events for one of a pair of buttons.
+     * \param[in,out] event The event to be modified
+     * \param positive The id of the button for positive values of the axis
+     * \param negative The id of the button for negative values of the axis
+     * \param threshold The absolute value of the threhold the axis must exceed for the button to be
+     * set to on.
+     */
+    static void AxisToButtons(DeviceEvent& event, uint8_t positive, uint8_t negative, int threshold);
+
+    /**
+     * \brief Translate a button event to an axis event
+     * \param[in,out] event The event to be modified
+     * \param axis The id of the axis to be modified
+     * \param to_min If true, a button press sets axis to joystick minimum. Otherwise set to maximum.
+     */   
+    static void ButtonToAxis(DeviceEvent& event, uint8_t axis, bool to_min, int min_val, int max_val);
+
+    /**
+     * If the touchpad axis is currently being remapped, send a 0 signal to the remapped axis.
+     */
+    static void disableTPAxis(GPInput tp_axis);
+
+    /**
+     * Set up and tear down touchpad state on receiving a new touchpad active signal.
+     */
+    static void PrepTouchpad(const DeviceEvent& event);
+    
+    /**
+     * \brief Translate a touchpad event to an axis event
+     * \param[in,out] event The event to be modified
+     */
+    static void TouchpadToAxis(DeviceEvent& event, uint8_t to_axis);
     
   public:
+    /**
+     * Name by which this mod type will be identified in the TOML file
+     */
     static const std::string name;
     /**
      * This constructor can only be invoked by the Registrar class
@@ -169,20 +248,40 @@ namespace Chaos {
     static void setEngine(ChaosEngine* eng);
     
     /**
+     * The map of all the mods defined through the TOML file
+     */
+    static std::unordered_map<std::string, std::shared_ptr<Modifier>> mod_list;
+
+    /**
      * Create the overall list of mods from the TOML file.
      */
     static void buildModList(toml::table& config);
-    
+
+    /**
+     * Return list of modifiers for the chat bot.
+     */
     static std::string getModList();
-	
+
+    /**
+     * \brief Alters the incomming event to the value expected by the console
+     * \param[in,out] event The signal coming from the controller
+     * \return Validity of the signal. False signals are dropped from processing by the mods and not sent to
+     * the console.
+     *
+     * This remapping is invoked from the chaos engine's sniffify routine before the list of regular
+     * mods is traversed. That means that mods can operate on the signals associated with particular
+     * commands without worrying about the state of the remapping.
+     */
+    static bool remapEvent(DeviceEvent& event);
+    
     inline void setParentModifier(std::shared_ptr<Modifier> parent) { me = parent; }
     
     /**
      * \brief Get how long the mod has been active.
      * \return The mod's running time minus the accumulated time we've been paused.
      */
-    inline double lifetime() { return timer.runningTime() - pauseTimeAccumulator; }
-    inline double lifespan() { return totalLifespan; }
+    double lifetime() { return timer.runningTime() - pauseTimeAccumulator; }
+    double lifespan() { return totalLifespan; }
     /**
      * \brief Main entry point into the update loop
      * \param Is the chaos engine currently paused?
@@ -205,7 +304,11 @@ namespace Chaos {
      * \brief Commands to execute when removing the mod from the active-mod list.
      */
     virtual void finish();
-
+    /**
+     * \brief Commands to execute after another mod has executed its finish() routine and been
+     * removed from the stack of active mods.
+     */ 
+    virtual void apply();
     /**
      * \brief Get a short description of this mod for the Twitch-bot.
      * \return The descrition of the mod.
@@ -224,8 +327,21 @@ namespace Chaos {
      * passed on for other modifiers to alter.
      *
      */
-    virtual bool tweak(DeviceEvent* event);
-	
+    virtual bool tweak(DeviceEvent& event);
+
+    /**
+     * \brief Traverses the list of any monitored game states and updates accordingly.
+     *
+     * This is a helper function intended to be called from the tweak() routine of any child class
+     * that needs to monitor game states.
+     */
+    void updateGamestates(const DeviceEvent& event);
+
+    /**
+     * Test if we're currently in the defined game state(s)
+     */
+    bool inGamestate();
+    
   };
 
 };

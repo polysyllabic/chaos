@@ -116,11 +116,15 @@ add_executable(chaos include/config.hpp
 		     src/controllerState.cpp
 		     include/dualshock.hpp
 		     src/dualshock.cpp
+		     include/touchpad.hpp
+		     src/touchpad.cpp
 		     include/deviceTypes.hpp
-		     include/controllerCommand.hpp
-		     src/controllerCommand.cpp
+		     include/gamepadInput.hpp
+		     src/gamepadInput.cpp
 		     include/gameCommand.hpp
 		     src/gameCommand.cpp
+		     include/gameState.hpp
+		     src/gameState.cpp
 		     include/modifierFactory.hpp
 		     include/modifier.hpp
 		     src/modifier.cpp
@@ -167,5 +171,5 @@ target_include_directories (chaos PUBLIC include
 					 ${LIBJSONCPP_INCLUDE_DIRS}
 					 ${LIBUSB1_INCLUDE_DIRS})
 
-target_link_libraries(chaos PUBLIC sniffify mogi zmqpp)
+target_link_libraries(chaos PUBLIC sniffify mogi zmqpp ${LIBUSB_LIBRARIES})
 

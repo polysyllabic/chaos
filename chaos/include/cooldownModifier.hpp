@@ -18,6 +18,7 @@
  */
 #pragma once
 #include <queue>
+#include <memory>
 #include <toml++/toml.h>
 
 #include "modifier.hpp"
@@ -30,13 +31,25 @@ namespace Chaos {
    */
   class CooldownModifier : public Modifier::Registrar<CooldownModifier> {
 
+  protected:
+    DeviceEvent cooldownCommand;
+    bool pressedState;
+    double cooldownTimer;
+    bool inCooldown;
+    /**
+     * Time that the event is allowed before we block it
+     */
+    double time_on;
+    /**
+     * Time that the event is held in cooldown before re-enabled.
+     */
+    double time_off;
   public:
     static const std::string name;
     CooldownModifier(const toml::table& config);
     
     void begin();
     void update();
-    void finish();
     bool tweak(DeviceEvent* event);
   };
 };

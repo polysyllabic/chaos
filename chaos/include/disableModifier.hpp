@@ -50,6 +50,7 @@ namespace Chaos {
    *   thresholds) or below (for negative thresholds) the conditionThreshold.
    * - conditionThreshold: The default is 1.
    * - unless: Equivalent to 'condition', but the commands are disabled if the condition is NOT true.
+   * - gamestate: Only take action if the specified gamestate is true.
    */
   class DisableModifier : public Modifier::Registrar<DisableModifier> {
   protected:
@@ -58,11 +59,11 @@ namespace Chaos {
      */
     bool disableOnStart;
     /**
-     * A condition to test. The event will only be tested if condition_threshold <> 0.
+     * A condition to test.
+     *
+     * If there is a condition to test, we currently just look for a non-zero value.
      */
     GPInput condition;
-    GPInput condition_remap;
-    int condition_threshold;
     /**
      * If true, we invert the polarity of the condition (i.e., it must be false to disable the signal)
      */
@@ -92,7 +93,7 @@ namespace Chaos {
      * \brief The routine called to check each event coming from the controller for possible action.
      * \param event A structure containing the id and value of the device event.
      */
-    bool tweak(DeviceEvent* event);
+    bool tweak(DeviceEvent& event);
 
   };
 };

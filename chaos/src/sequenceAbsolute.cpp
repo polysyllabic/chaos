@@ -46,7 +46,7 @@ void SequenceAbsolute::send() {
     while (!done) {
       // Send ASAP, and then check the next event.
       if (event.time <= runningTimeInMicroseconds) {
-	controller->applyEvent( &event );
+	controller->applyEvent( event );
 	done = true;
 	continue;
       }

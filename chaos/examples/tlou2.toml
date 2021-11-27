@@ -49,6 +49,23 @@ max_log_files = 8
 # Chaos Engine parameters
 TIME_PER_MODIFIER = 30.0
 
+# These parameters control the formula to convert from touchpad to axis events
+# based on the change in axis value over time (derivative).
+# The base formula is SCALE * derivative +/- skew, where the sign of the
+# skew is the same sign as the derivative. This result is then clipped to the
+# limits of the joystick value.
+#
+# If the SCALE_ON condition is defined, the value of SCALE is replaced with the
+# value of SCALE_IF. If the condition is false, or if SCALE_ON is not defined,
+# then SCALE is used.
+[touchpad]
+# SCALE_ON defines a condition which, if true, uses SCALE_IF to scale the derviative.
+# The SCALE_ON value must be a defined command.
+SCALE_ON = "aiming"
+SCALE_IF = 0.04
+SCALE = 0.12
+SKEW = 30
+
 #-----------------------------------------------------------------------------
 # Command Mapping
 #
@@ -157,6 +174,17 @@ name = "hold breath"
 condition = "aiming"
 binding = "L3"
 
+# Gamestate Conditions
+[[gamestate]]
+name = "gun selected"
+trueOn = "select weapon"
+falseOn = "select consumable"
+
+[[gamestate]]
+name = "consumable selected"
+trueOn = "select consumable"
+falseOn = "select weapon"
+
 # Gameplay Modifiers
 [[modifier]]
 name = "No Melee"
@@ -230,8 +258,8 @@ name = "No Reloading"
 description = "If guns were last selected, R2 is disabled without L2"
 type = "disable"
 appliesTo = [ "reload/toss" ]
+gamestate = [ "gun selected" ]
 unless = [ "aiming" ]
-gameState = [ "gun selected" ]
 
 [[modifier]]
 name = "Disable Camera"
@@ -478,55 +506,135 @@ forceOn = true
 name = "D-pad Rotate"
 description = "Rotates the D-pad inputs clockwise"
 type = "remap"
-#remapFrom = [ "DX", "DY" ]
-#remapTo = ["DY", "NEG DX" ]
-appliesTo = [ "select weapon", "select consumable" ]
-becomes = ["select consumable", "select weapon" ]
-invert = [ "select weapon" ]
+remap = [
+      {from = "DX", to = "DY"},
+      {from = "DY", to = "DX", invert = true} ]
 
 [[modifier]]
 name = "Swap Joysticks"
 description = "You may want to cross your thumbs to work with your muscle memory"
 type = "remap"
-#remapFrom = [ "RX", "RY", "LX", "LY" ]
-#remapTo = [ "LX", "LY", "RX", "RY"  ]
-appliesTo = [ "horizontal camera", "vertical camera", "move sideways", "move forward/back" ]
-becomes = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
+remap = [
+      {from = "RX", to = "LX"},
+      {from = "RY", to = "LY"},
+      {from = "LX", to = "RX"},
+      {from = "LY", to = "RY"} ]
 
 [[modifier]]
 name = "Swap D-Pad/Left Joystick"
-description = "Retro style motion, and an odd analog inventory selector"
+description = "Retro-style motion and an odd analog inventory selector"
 type = "remap"
-remapFrom = [ "DX", "DY", "LX", "LY" ]
-remapTo = [ "LX", "LY", "DX", "DY" ]
+signals = [ "LX", "LY" ]
+disableOnStart = true
+remap = [
+      {from = "DX", to = "LX"},
+      {from = "DY", to = "LY"},
+      {from = "LX", to = "DX"},
+      {from = "LY", to = "DY"} ]
 
 [[modifier]]
 name = "Swap Shapes/Right Joystick"
-description = "Analog actions, and digital camera movement"
+description = "Analog actions and digital camera movement"
 type = "remap"
-remapFrom = [ "RX", "RY", "SQUARE_CIRCLE", "TRIANGLE_X" ]
-remapTo = [ "SQUARE_CIRCLE", "TRIANGLE_X", "RX", "RY" ]
+signals = [ "RX", "RY" ]
+disableOnStart = true
+remap = [
+      {from = "RX", to = "SQUARE", to_neg = "CIRCLE", threshold=64},
+      {from = "RY", to = "X", to_neg = "TRIANGLE", threshold=64},
+      {from = "SQUARE", to = "RX", to_min = true},
+      {from = "CIRCLE", to = "RX"},
+      {from = "TRIANGLE", to = "RY", to_min = true},
+      {from = "X", to = "RY"},
+      ]
 
 [[modifier]]
 name = "Motion Control Movement"
-description = "No more left joystick, tilt the controller to move instead"
+description = "No more movement with the joystick. Tilt the controller to move instead."
 type = "remap"
-remapFrom = [ "ACCX", "ACCZ", "LX", "LY" ]
-remapTo = [ "LX", "LY", "", "" ]
+remap = [
+      {from = "ACCX", to = "LX", scale=20},
+      {from = "ACCZ", to = "LY", scale=20},
+      {from = "LX", to = "NOTHING"},
+      {from = "LY", to = "NOTHING"}
+      ]
 
 [[modifier]]
 name = "Motion Control Aiming"
-description = "No more right joystick, tilt the controller to aim/look instead"
+description = "No more aiming with the joystick. Tilt the controller to aim/look instead."
 type = "remap"
-remapFrom = [ "ACCX", "ACCZ", "RX", "RY" ]
-remapTo = [ "RX", "RY", "", "" ]
+remap = [
+      {from = "ACCX", to = "RX", scale=24},
+      {from = "ACCZ", to = "RY", scale=24},
+      {from = "RX", to = "NOTHING"},
+      {from = "RY", to = "NOTHING"}
+      ]
 
 [[modifier]]
 name = "Touchpad Aiming"
-description = "No more right joystick, finally making use of the touchpad!"
+description = "No more aiming with the joystick. Finally making use of the touchpad!"
 type = "remap"
-remapFrom = [ "TOUCHPAD_ACTIVE", "RX", "RY" ]
-remapTo = [ "RX_RY", "", "" ]
+signals = [ "RX", "RY" ]
+remap = [
+      {from = "TOUCHPAD_ACTIVE", to="NOTHING"},
+      {from = "TOUCHPAD_X", to="RX"},
+      {from = "TOUCHPAD_Y", to="RY"},
+      {from = "RX", to="NOTHING"},
+      {from = "RY", to="NOTHING"}
+      ]
+
+[[modifier]]
+name = "Controller Mirror"
+description = "Left and right joysticks are swapped. R2 is now L2. Circle is D-pad left, etc."
+type = "remap"
+remap = [
+      {from = "LX", to = "RX"},
+      {from = "LY", to = "RY"},
+      {from = "RX", to = "LX"},
+      {from = "RY", to = "LY"},
+      {from = "DX", to = "SQUARE", to_neg = "CIRCLE"},
+      {from = "DY", to = "X", to_neg = "TRIANGLE"},
+      {from = "R1", to = "L1"},
+      {from = "L1", to = "R1"},
+      {from = "L2", to = "R2"},
+      {from = "R2", to = "L2"},
+      {from = "SQUARE", to = "DX", to_min = true},
+      {from = "CIRCLE", to = "DX"},
+      {from = "TRIANGLE", to = "DY", to_min = true},
+      {from = "X", toMax = "DY"} ]
+
+[[modifier]]
+name = "Controller Flip"
+description = "Up is down. Joysticks and D-pad inverted vertially, L1 swapped with L2, Triangle swapped with X, etc."
+type = "remap"	
+remap = [
+      {from = "DY", to = "DY", invert = true},
+      {from = "LY", to = "LY", invert = true},
+      {from = "RY", to = "RY", invert = true},
+      {from = "R1", to = "R2"},
+      {from = "L1", to = "L2"},
+      {from = "R2", to = "R1"},
+      {from = "L2", to = "L1"},
+      {from = "TRIANGLE", to = "X"},
+      {from = "X", to = "TRIANGLE"}
+      ]
+
+[[modifier]]
+name = "Shape Shuffle"
+description = "Randomly remaps the shape buttons (square, circle, triangle, X)"
+type = "remap"
+random_remap = [ "X", "SQUARE", "CIRCLE", "TRIANGLE" ]
+
+[[modifier]]
+name = "Random Remap"
+description = "Randomly remaps buttons (square, circle, triangle, X, L1, R1, L2, R2, L3, R3)"
+type = "remap"
+random_remap = [ "X", "SQUARE", "CIRCLE", "TRIANGLE", "L1", "L2", "L3", "R1", "R2", "R3" ]
+	
+[[modifier]]
+name = "Trigger Remap"
+description = "Randomly remaps trigger/bumper buttons (L1, R1, L2, R2)"
+type = "remap"	
+random_remap = [ "L1", "L2", "R1", "R2" ]
 
 [[modifier]]
 name = "Drunk"
@@ -628,18 +736,6 @@ appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertic
 scaling = 0.4
 
 [[modifier]]
-name = "Controller Mirror"
-description = "Left Joystick swapped with Right Joystick, R2 is now L2. Circle is D-Pad Left, etc."
-type = "remap"
-# TO FILL OUT
-
-[[modifier]]
-name = "Controller Flip"
-description = "Double joystick inverted, L1 swapped with L2, Triangle swapped with X, etc."
-type = "parent"	
-# do this as an inversion child and a remap
-
-[[modifier]]
 name = "Restart Checkpoint"
 description = "Best served prior to the end of a long encounter"
 type = "menu"
@@ -649,6 +745,7 @@ value = "RESTART_CHECKPOINT"
 name = "No Reticle"
 description = "Headshots just got trickier"
 type = "menu"
+group = "UI"
 value = "HUD_RETICLE"
 enable = -2
 disable = 2
@@ -657,6 +754,7 @@ disable = 2
 name = "No Inventory HUD"
 description = "Blind weapon and throwable selection"
 type = "menu"
+group = "UI"
 value = "HUD_WEAPON_CROSS"
 enable = -1
 disable = 1
@@ -665,6 +763,7 @@ disable = 1
 name = "No Damage Indicators"
 description = "Locating the source of damage will be harder"
 type = "menu"
+group = "UI"
 value = "HUD_DAMAGE_INDICATORS"
 enable = -1
 disable = 1
@@ -673,6 +772,7 @@ disable = 1
 name = "No Awareness Indicators"
 description = "Stealth strats have no visual feedback"
 type = "menu"
+group = "UI"
 value = "HUD_AWARENESS_INDICATORS"
 enable = -2
 disable = 1
@@ -681,6 +781,7 @@ disable = 1
 name = "No Hit Markers"
 description = "No feedback on connected shots"
 type = "menu"
+group = "UI"
 value = "HUD_HIT_MARKERS"
 enable = -2
 disable = 2
@@ -689,6 +790,7 @@ disable = 2
 name = "No Arc Throw Paths"
 description = "The trajectory of your throwable will now be based on feel"
 type = "menu"
+group = "UI"
 value = "HUD_ARC_THROW_PATH"
 enable = -1
 disable = 1
@@ -697,6 +799,7 @@ disable = 1
 name = "No Health HUD"
 description = "The health and weapon HUD int he lower right is disabled"
 type = "menu"
+group = "UI"
 value = "HUD_HEALTH_AND_WEAPON"
 enable = -1
 disable = 1
@@ -713,6 +816,7 @@ disable = -1
 name = "Large Subtitles"
 description = "The ability to read subtitles even at 160p"
 type = "menu"
+group = "UI"
 value = "SUBTITLES_SIZE"
 enable = 2
 disable = -1
@@ -722,174 +826,203 @@ disable = -1
 name = "Graphic"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_GRAPHIC"
 
 [[modifier]]
 name = "Headache"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_HEADACHE"
 
 [[modifier]]
 name = "Afterlife"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_AFTERLIFE"
 
 [[modifier]]
 name = "8-Bit"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_EIGHTBIT"
 
 [[modifier]]
 name = "Water Color"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_WATERCOLOR"
 
 [[modifier]]
 name = "Dungeon"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_DUNGEON"
 
 [[modifier]]
 name = "Void"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_VOID"
 
 [[modifier]]
 name = "Pop Poster"
 description = "Stream Destroyer.  This kills the bitrate"
 type = "menu"
+group = "render mode"
 value = "RENDER_POPPOSTER"
 
 [[modifier]]
 name = "1960"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_NINETEENSIXTY"
 
 [[modifier]]
 name = "Cool"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_COOL"
 
 [[modifier]]
 name = "Warm"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_WARM"
 
 [[modifier]]
 name = "Vibrant"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_VIBRANT"
 
 [[modifier]]
 name = "Noir"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_NOIR"
 
 [[modifier]]
 name = "Blorange"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_BLORANGE"
 
 [[modifier]]
 name = "Sepia"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_SEPIA"
 
 [[modifier]]
 name = "Vintage"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_VINTAGE"
 
 [[modifier]]
 name = "Beasts"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_BEASTS"
 
 [[modifier]]
 name = "Terminated"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_TERMINATED"
 
 [[modifier]]
 name = "Gridlocked"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_GRIDLOCKED"
 
 [[modifier]]
 name = "Blacklight"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_BLACKLIGHT"
 
 [[modifier]]
 name = "Desert Fog"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_DESERT_FOG"
 
 [[modifier]]
 name = "Blood"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_BLOOD"
 
 [[modifier]]
 name = "Inferno"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_INFERNO"
 
 [[modifier]]
 name = "Fire"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_FIRE"
 
 [[modifier]]
 name = "Trinity"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_TRINITY"
 
 [[modifier]]
 name = "Pusher"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_PUSHER"
 
 [[modifier]]
 name = "Demons"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_DEMONS"
 
 [[modifier]]
 name = "Drug Zone"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_DRUGZONE"
 
 [[modifier]]
 name = "Moonlight"
 description = "Render Mode"
 type = "menu"
+group = "render mode"
 value = "RENDER_MOONLIGHT"
 
 [[modifier]]
@@ -914,66 +1047,77 @@ value = "GAMEPLAY_SLOW_MOTION"
 name = "Bullet Speed"
 description = "Slow motion when aiming"
 type = "menu"
+group = "buff"
 value = "GAMEPLAY_BULLET_SPEED"
 
 [[modifier]]
 name = "Infinite Ammo"
 description = "The strimmer responds with <3"
 type = "menu"
+group = "buff"
 value = "GAMEPLAY_INFINITE_AMMO"
 	
 [[modifier]]
 name = "Infinite Crafting"
 description = "Molotovs for everyone!"
 type = "menu"
+group = "buff"
 value = "GAMEPLAY_INFINITE_CRAFT"
 
 [[modifier]]
 name = "Infinite Melee Durability"
 description = "Finally realistic durability"
 type = "menu"
+group = "buff"
 value = "GAMEPLAY_INFINITE_MELEE_DURABILTY"
 
 [[modifier]]
 name = "Infinite Listen Range"
 description = "There used to be a limit?"
 type = "menu"
+group = "buff"
 value = "GAMEPLAY_INFINITE_LISTEN_RANGE"
 
 [[modifier]]
 name = "One Shot"
 description = "Golden guns activated"
 type = "menu"
+group = "buff"
 value = "GAMEPLAY_ONE_SHOT"
 	
 [[modifier]]
 name = "Touch Of Death"
 description = "Golden fists activated. One hit enemy deaths"
 type = "menu"
+group = "buff"
 value = "GAMEPLAY_TOUCH_OF_DEATH"
 
 [[modifier]]
 name = "8-Bit Audio"
 description = "Audio mode. Incompatible with 4-bit"
 type = "menu"
+group = "sound"
 value = "GAMEPLAY_AUDIO_EIGHT_BIT"
 	
 [[modifier]]
 name = "4-Bit Audio"
 description = "Audio mode. Incompatible with 8-bit"
 type = "menu"
+group = "sound"
 value = "GAMEPLAY_AUDIO_FOUR_BIT"
 
 [[modifier]]
 name = "Helium Audio"
 description = "Audio mode.  Incompatible with Xenon"
 type = "menu"
+group = "sound"
 value = "GAMEPLAY_AUDIO_HELIUM"
 
 [[modifier]]
 name = "Xenon Audio"
 description = "Audio mode.  Incompatible with Helium"
 type = "menu"
+group = "sound"
 value = "GAMEPLAY_AUDIO_XENON"
 
 [[modifier]]
@@ -1121,42 +1265,49 @@ delay = 0.2
 name = "Infinite Hugging"
 description = "Hugging enemies from behind forever <3 Enables option Hostages Do Not Escape"
 type = "menu"
+group = "buff"
 value = "COMBAT_HOSTAGES_DONT_ESCAPE"
 	
 [[modifier]]
 name = "No Plus Signs"
 description = "Speedrunners need this.  Allies do not get grabbed."
 type = "menu"
+group = "buff"
 value = "COMBAT_ALLIES_DONT_GET_GRABBED"
 	
 [[modifier]]
 name = "Enemies Do Not Flank"
 description = "Very effective on infected Kappa"
 type = "menu"
+group = "buff"
 value = "COMBAT_ENEMIES_DONT_FLANK"
 	
 [[modifier]]
 name = "Reduced Enemy Perception"
 description = "Finally clickers are truly blind"
 type = "menu"
+group = "buff"
 value = "COMBAT_REDUCED_ENEMY_PERCEPTION"
 	
 [[modifier]]
 name = "Potato Enemies"
 description = "Does not work on melee. Turns on Reduced Enemy Accuracy"
 type = "menu"
+group = "buff"
 value = "COMBAT_REDUCED_ENEMY_ACCURACY"
   
 [[modifier]]
 name = "Enhanced Dodge"
 description = "I wish I knew what this does (built-in option)"
 type = "menu"
+group = "buff"
 value = "COMBAT_ENHANCED_DODGE"
 	
 [[modifier]]
 name = "Invisible While Prone"
 description = "Proning is now even more OP"
 type = "menu"
+group = "buff"
 value = "COMBAT_INVISBLE_WHILE_PRONE"
 	
 [[modifier]]
@@ -1174,6 +1325,7 @@ value = "ALTERNATE_CAMERA_ASSIST"
 [[modifier]]
 name = "Aimbot"
 description = "Aimbot... but like a detuned aimbot.  Turns on Lock On Aim"
+group = "buff"
 type = "menu"
 value = "ALTERNATE_LOCK_ON_AIM"
 	
@@ -1181,6 +1333,7 @@ value = "ALTERNATE_LOCK_ON_AIM"
 name = "Aimbot Throwables"
 description = "Aimbot for throwables. Turns on Lock On Throwables"
 type = "menu"
+group = "buff"
 value = "ALTERNATE_ARC_THROW_LOCK_ON"
 	
 [[modifier]]
@@ -1193,24 +1346,28 @@ value = "ALTERNATE_AUTO_PICK_UP"
 name = "Large HUD"
 description = "HUD like in a game from the 1990s"
 type = "menu"
+group = "UI"
 value = "MAGNIFICATION_HUD_SCALE"
 
 [[modifier]]
 name = "High Contrast Display"
 description = "Render mode, but overrides any other render mode"
 type = "menu"
+group = "render"
 value = "MAGNIFICATION_HIGH_CONTRAST"
 	
 [[modifier]]
 name = "Musical Traversal"
 description = "Add some music to climbable objects with Traversal Audio Cues"
 type = "menu"
+group = "sound"
 value = "TTS_TRAVERSAL_CUES"
 	
 [[modifier]]
 name = "Musical Combat"
 description = "Add some music to combat prompts with Combat Audio Cues"
 type = "menu"
+group = "sound"
 value = "TTS_COMBAT_CUES"
 
 [[modifier]]
@@ -1247,6 +1404,7 @@ value = "NAVIGATION_INFINITE_BREATH"
 name = "Mute Sound Effects"
 description = "Gunshots hurt our ears :("
 type = "menu"
+group = "sound"
 value = "AUDIO_EFFECTS"
 enable = -20
 disable = 20
@@ -1255,6 +1413,7 @@ disable = 20
 name = "Mute Music"
 description = "The music is too intense, let's turn it off!"
 type = "menu"
+group = "sound"
 value = "AUDIO_MUSIC"
 enable = -20
 disable = 20
@@ -1263,6 +1422,7 @@ disable = 20
 name = "Mute Dialogue"
 description = "Sorry Shannon :("
 type = "menu"
+group = "sound"
 value = "AUDIO_DIALOG"
 enable = -20
 disable = 20
@@ -1271,6 +1431,7 @@ disable = 20
 name = "Mono Audio"
 description = "No more stereo. Where did that gunshot come from?"
 type = "menu"
+group = "sound"
 value = "AUDIO_MONO"
 
 [[modifier]]
@@ -1278,77 +1439,57 @@ name = "Input Delay"
 description = "Introduces a 0.2 second delay to the controller"
 type = "delay"
 value = 0.2
-commands = [ "ALL" ]
+appliesTo = "ALL"
 
 [[modifier]]
 name = "Melee Delay"
 description = "Introduces a 0.5 second delay to melee presses"
 type = "delay"
 value = 0.5
-commands = [ "melee" ]
+appliesTo = [ "melee" ]
 
 [[modifier]]
 name = "Jump Delay"
 description = "Introduces a 2.0 second delay to jump/climb presses"
 type = "delay"
 value = 2.0
-commands = [ "jump/climb" ]	
+appliesTo = [ "jump/climb" ]	
 
 [[modifier]]
 name = "Dodge Delay"
 description = "Introduces a 0.5 second delay to dodge/sprint"
 type = "delay"
 value = 0.5
-commands = [ "dodge/sprint" ]	
+appliesTo = [ "dodge/sprint" ]	
 
 [[modifier]]
 name = "Aim Delay"
-description = "Introduces a 1 second delay to L2 presses"
+description = "Introduces a 1 second delay to aiming"
 type = "delay"
 value = 1.0
-commands = [ "aiming", "aim axis" ]	
+appliesTo = [ "aiming" ]	
 
 [[modifier]]
 name = "Shooting Delay"
-description = "Introduces a 0.5 second delay to R2 presses"
+description = "Introduces a 0.5 second delay to shooting and throwing"
 type = "delay"
 value = 0.5
-commands = [ "BUTTON_R2", "AXIS_R2" ]	
+appliesTo = [ "shoot/throw" ]	
 
 [[modifier]]
-name = "Dpad Delay"
-description = "Introduces a 5 second delay to the D-pad"
+name = "Select Delay"
+description = "Introduces a 5 second delay to selecting weapons or consumables"
 type = "delay"
-tweak.value = 5.0
-tweak.list = [ "AXIS_DY", "AXIS_DX" ]
+value = 5.0
+appliesTo = [ "select weapon", "select consumable" ]
 
 [[modifier]]
 name = "Joystick Delay"
-description = "Introduces a 0.2 second delay to joysticks"	
+description = "Introduces a 0.2 second delay to movement and aiming"
 type = "delay"
 value = 0.2
-commands = [ "AXIS_RX", "AXIS_RY", "AXIS_LY", "AXIS_LX" ]
+appliesTo = [ "AXIS_RX", "AXIS_RY", "AXIS_LY", "AXIS_LX" ]
 
-[[modifier]]
-name = "Shape Shuffle"
-description = "Randomly remaps the shape buttons (square, circle, triangle, X)"
-type = "remap"
-events = [ "BUTTON_X", "BUTTON_SQUARE", "BUTTON_CIRCLE", "BUTTON_TRIANGLE" ]
-
-[[modifier]]
-name = "Random Remap"
-description = "Randomly remaps buttons (square, circle, triangle, X, L1, R1, L2, R2, L3, R3)"
-type = "remap"
-events = [ "BUTTON_X", "BUTTON_SQUARE", "BUTTON_CIRCLE", "BUTTON_TRIANGLE",
-    "BUTTON_L1", "BUTTON_L2", "BUTTON_L3",
-    "BUTTON_R1", "BUTTON_R2", "BUTTON_R3" ]
-	
-[[modifier]]
-name = "Trigger Remap"
-description = "Randomly remaps trigger/bumper buttons (L1, R1, L2, R2)"
-type = "remap"	
-events = [ "BUTTON_L1", "BUTTON_L2", "BUTTON_R1", "BUTTON_R2" ]
-	
 [[modifier]]
 name = "Mystery"
 description = "Applies a random modifier"

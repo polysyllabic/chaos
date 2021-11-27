@@ -21,64 +21,45 @@
 
 namespace Chaos {
 
-  /**
-   * An enumeration of the possible types of gamepad inputs.
-   *
-   * Originally, the button and axis enumerations gave the specific numeric values for the DualShock.
-   * To support other controllers without needing to recompile, we now treat this as an arbitrary
-   * enumeration of all the button/axis names. We use this enumeration for fast lookup of the actual
-   * numerical id that each controller expects, as well as any remapping of the controls.
-   */
-  typedef enum GPInput {
-    X,
-    CIRCLE,
-    TRIANGLE,
-    SQUARE,
-    L1,
-    R1,
-    L2,
-    R2,
-    SHARE,
-    OPTIONS,
-    PS,
-    L3,
-    R3,
-    TOUCHPAD,
-    TOUCHPAD_ACTIVE,
-    TOUCHPAD_ACTIVE_2,
-    LX,
-    LY,
-    RX,
-    RY,
-    DX,
-    DY,
-    ACCX,
-    ACCY,
-    ACCZ,
-    GYRX,
-    GYRY,
-    GYRZ,
-    TOUCHPAD_X,
-    TOUCHPAD_Y,
-    TOUCHPAD_X_2,
-    TOUCHPAD_Y_2,
-    __COUNT__
-  } GPInput;
-
-  /**
-   * Specific type of gampad input. This is more specific than the basic ButtonType for hints
-   * when remapping controls and other occasions where specific subtypes of gamepad inputs
-   * require differnt handling.
-   */
-  enum class GPInputType {
-    BUTTON,
-    THREE_STATE,
-    AXIS,
-    HYBRID,
-    ACCELEROMETER,
-    GYROSCOPE,
-    TOUCHPAD
-  };
+  typedef enum ButtonID {
+  BUTTON_X = 0,
+  BUTTON_CIRCLE = 1,
+  BUTTON_TRIANGLE = 2,
+  BUTTON_SQUARE = 3,
+  BUTTON_L1 = 4,
+  BUTTON_R1 = 5,
+  BUTTON_L2 = 6,
+  BUTTON_R2 = 7,
+  BUTTON_SHARE = 8,
+  BUTTON_OPTIONS = 9,
+  BUTTON_PS = 10,
+  BUTTON_L3 = 11,
+  BUTTON_R3 = 12,
+  BUTTON_TOUCHPAD = 13,
+  BUTTON_TOUCHPAD_ACTIVE = 14,
+  BUTTON_TOUCHPAD_ACTIVE_2 = 15
+} ButtonID;
+ 
+ typedef enum AxisID {
+   AXIS_LX = 0,
+   AXIS_LY = 1,
+   AXIS_L2 = 2,
+   AXIS_RX = 3,
+   AXIS_RY = 4,
+   AXIS_R2 = 5,
+   AXIS_DX = 6,
+   AXIS_DY = 7,
+   AXIS_ACCX = 8,
+   AXIS_ACCY = 9,
+   AXIS_ACCZ = 10,
+   AXIS_GYRX = 11,
+   AXIS_GYRY = 12,
+   AXIS_GYRZ = 13,
+   AXIS_TOUCHPAD_X = 14,
+   AXIS_TOUCHPAD_Y = 15,
+   AXIS_TOUCHPAD_X_2 = 16,
+   AXIS_TOUCHPAD_Y_2 = 17
+ } AxisID;
 
   typedef enum ButtonType {
     TYPE_BUTTON = 0,
@@ -90,7 +71,11 @@ namespace Chaos {
     short int value;
     uint8_t type;
     uint8_t id;
-	
+
+    int index() const {
+      return ((int) type << 8) + (int) id;
+    }
+    
     bool operator==(const DeviceEvent &other) const {
       return type == other.type && id == other.id;
     }

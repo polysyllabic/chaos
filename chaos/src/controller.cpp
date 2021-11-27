@@ -29,38 +29,40 @@ Controller::Controller() {
   memset(controllerState, 0, sizeof(controllerState));
 }
 
+// for hybrid controlls, we only check the button
 int Controller::getState(GPInput command) {
-  return getState(getGPInfo(command).getID(), getGPInfo(command).getButtonType());
+  std::shared_ptr<GamepadInput> input = GamepadInput::get(command);
+  return getState(input->getID(), input->getButtonType());
 }
 
-void Controller::storeState(const DeviceEvent* event) {
-  int location = ((int)event->type<<8) + (int)event->id;
+void Controller::storeState(const DeviceEvent& event) {
+  int location = ((int) event.type << 8) + (int) event.id;
   if (location < 1024) {
-    controllerState[ location ] = event->value;
+    controllerState[location] = event.value;
   }
 }
 
-void Controller::handleNewDeviceEvent(const DeviceEvent* event) {
+void Controller::handleNewDeviceEvent(const DeviceEvent& event) {
 	
-  // We have an event!  Let's send it right away, but let's let chaos engine play around with the values
+  // We have an event!  BEfore sending it, allow the mods to play around with the values
   DeviceEvent updatedEvent;
   bool validEvent = false;
   if (controllerInjector != NULL) {
-    validEvent = controllerInjector->sniffify(event, &updatedEvent);
+    validEvent = controllerInjector->sniffify(event, updatedEvent);
   } else {
     validEvent = true;
-    updatedEvent = *event;
+    updatedEvent = event;
   }
 	
   // Is our event valid?  If so, send the chaos modified data:
   if (validEvent) {
-    applyEvent(&updatedEvent);
+    applyEvent(updatedEvent);
   } else {
-    PLOG_VERBOSE << "Event with id " << event->id << " was NOT applied\n";
+    PLOG_VERBOSE << "Event with id " << event.id << " was NOT applied\n";
   }	
 }
 
-void Controller::applyEvent(const DeviceEvent* event) {
+void Controller::applyEvent(const DeviceEvent& event) {
   if (!applyHardware(event)) {
     return;
   }
@@ -72,52 +74,35 @@ void Controller::addInjector(ControllerInjector* injector) {
   this->controllerInjector = injector;
 }
 
-bool Controller::isState(GPInput command, int state) {
-  return (getState(command) == state);
+bool Controller::matches(const DeviceEvent& event, GPInput signal) {
+  std::shared_ptr<GamepadInput> sig = GamepadInput::get(signal);
+  return (event.type == sig->getButtonType() && event.id == sig->getID());
 }
 
-void Controller::setOff(GPInput command) {
+bool Controller::matches(const DeviceEvent& event, std::shared_ptr<GameCommand> command) {
+  if (command->getCondition() != GPInput::NONE) {
+    if (isOn(command->getCondition()) == command->conditionInverted()) {
+      return false;
+    }
+  }
+  return (event.type == command->getInput()->getButtonType() && event.id == command->getInput()->getID());
+}
+
+// Send a new event to turn off the command.
+void Controller::setOff(std::shared_ptr<GameCommand> command) {
   DeviceEvent event;
-  switch (getGPInfo(command).getType()) {
+  switch (command->getInput()->getType()) {
   case GPInputType::BUTTON:
-    event = {0, 0, TYPE_BUTTON, getGPInfo(command).getID()};
+    event = {0, 0, TYPE_BUTTON, command->getInput()->getID()};
     break;
   case GPInputType::HYBRID:
-    event = {0, 0, TYPE_BUTTON, getGPInfo(command).getID()};
-    applyEvent(&event);
-    event = {0, getJoystickMin(), TYPE_AXIS, getGPInfo(command).getSecondID()};
+    event = {0, 0, TYPE_BUTTON, command->getInput()->getID()};
+    applyEvent(event);
+    event = {0, getJoystickMin(), TYPE_AXIS, command->getInput()->getHybridAxis()};
     break;
   default:
-    event = {0, 0, TYPE_AXIS, getGPInfo(command).getID()};
+    event = {0, 0, TYPE_AXIS, command->getInput()->getID()};
   }
-  applyEvent(&event);
+  applyEvent(event);
 }
 
-bool Controller::matches(const DeviceEvent* event, GPInput command) {
-  
-  if (getGPInfo(command).getType() == GPInputType::HYBRID) {
-    return ((event->id == getGPInfo(command).getID() && event->type == TYPE_BUTTON) ||
-	    (event->id == getGPInfo(command).getSecondID() && event->type == TYPE_AXIS));
-    
-  }
-  return (event->id == getGPInfo(command).getID() && event->type == getGPInfo(command).getButtonType());
-}
-
-void Controller::setState(DeviceEvent* event, int new_value, GPInput remapped, GPInput real) {
-  if (remapped == real) {
-    // No remapping has occurred
-    event->value = new_value;
-  }
-  else if (getGPInfo(remapped).getType() == getGPInfo(real).getType()) {
-    // The swap is among controller commands of the same type
-    event->value = new_value;
-    if (getGPInfo(real).getType() == GPInputType::HYBRID && event->type == TYPE_AXIS) {
-      event->id = getGPInfo(real).getSecondID();
-    } else {
-      event->id = getGPInfo(real).getID();
-    }
-  } else {
-    // The swap is between controller commands of different types
-  }
-    
-}

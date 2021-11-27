@@ -51,7 +51,7 @@ void SequenceRelative::send() {
       if (((long long) event.time + lastTime) <= runningTimeInMicroseconds) {
 	lastTime += event.time;
 	
-	controller->applyEvent( &event );
+	controller->applyEvent( event );
 	done = true;
 	continue;
       }

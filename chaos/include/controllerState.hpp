@@ -21,7 +21,6 @@
 #include <cstdint>
 #include <map>
 
-#include "controllerCommand.hpp"
 #include "gameCommand.hpp"
 #include "deviceTypes.hpp"
 
@@ -41,9 +40,6 @@ namespace Chaos {
     void* trueState;
     void* hackedState;
 
-    static const short int JOYSTICK_MIN = -128;
-    static const short int JOYSTICK_MAX = 128;
-
     // Helper functions for raw interpretation:
     
     inline short int unpackJoystick(uint8_t& input) { return ((short int) input) - 128;}
@@ -53,17 +49,12 @@ namespace Chaos {
     // short int unfixShort(short int& input);
 
     short int positionDY(const uint8_t& input );
-    short int  positionDX(const uint8_t& input );
+    short int positionDX(const uint8_t& input );
     uint8_t packDpad(const short int& dx, const short int& dy);
     
   public:
     static ControllerState* factory(int vendor, int product);
 
-    /**
-     * Holds the data about the button/axis commands.
-     */
-    static std::vector<ControllerCommand> buttonInfo;
-    
     virtual void getDeviceEvents(unsigned char* buffer, int length, std::vector<DeviceEvent>& events) = 0;
 	
     // This has to be virtual since we don't modify all values in a report structure:
@@ -72,9 +63,6 @@ namespace Chaos {
     virtual ~ControllerState() = 0;
 	
     void* getHackedState();
-
-    inline short int getJoystickMin() { return JOYSTICK_MIN; }
-    inline short int getJoystickMax() { return JOYSTICK_MAX; }
 
   };
   

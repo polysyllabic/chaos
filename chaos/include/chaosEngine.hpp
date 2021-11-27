@@ -57,7 +57,7 @@ namespace Chaos {
     bool pausedPrior = false;
 
     // overridden from ControllerInjector
-    bool sniffify(const DeviceEvent* input, DeviceEvent* output);
+    bool sniffify(const DeviceEvent& input, DeviceEvent& output);
     // overridden from Mogi::Thread
     void doAction();
 	
@@ -68,7 +68,7 @@ namespace Chaos {
     
     inline void setTimePerModifier(double time) { timePerModifier = time; }
     
-    void fakePipelinedEvent(DeviceEvent* fakeEvent, std::shared_ptr<Modifier> modifierThatSentTheFakeEvent);
+    void fakePipelinedEvent(DeviceEvent& fakeEvent, std::shared_ptr<Modifier> modifierThatSentTheFakeEvent);
 
     void newCommand(const std::string& command);	// override from CommandListenerObserver
 

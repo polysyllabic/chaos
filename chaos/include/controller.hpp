@@ -19,12 +19,13 @@
 #pragma once
 #include <deque>
 #include <array>
+#include <memory>
 
 #include "raw-gadget.hpp"
 #include "controllerState.hpp"
 #include "chaosUhid.hpp"
 #include "deviceTypes.hpp"
-#include "controllerCommand.hpp"
+#include "gamepadInput.hpp"
 
 namespace Chaos {
 
@@ -33,7 +34,7 @@ namespace Chaos {
     /**
      * Sniff the input and pass/modify it on way to the output.
      */
-    virtual bool sniffify(const DeviceEvent* input, DeviceEvent* output) = 0;
+    virtual bool sniffify(const DeviceEvent& input, DeviceEvent& output) = 0;
   };
 
   class Controller {
@@ -42,11 +43,11 @@ namespace Chaos {
 
     std::deque<DeviceEvent> deviceEventQueue;
 	
-    virtual bool applyHardware(const DeviceEvent* event) = 0;
+    virtual bool applyHardware(const DeviceEvent& event) = 0;
 	
-    void storeState(const DeviceEvent* event);
+    void storeState(const DeviceEvent& event);
 	
-    void handleNewDeviceEvent(const DeviceEvent* event);
+    void handleNewDeviceEvent(const DeviceEvent& event);
 	
     /**
      * Database for tracking current button states:
@@ -59,49 +60,64 @@ namespace Chaos {
 
   public:
     Controller();
+
     /**
-     * The low-level function to get the current controlller state.
+     * \brief The low-level function to get the current controlller state.
+     * \param id The id of the axis/button
+     * \param type The signal type
+     * \return The current value of the signal.
+     *
+     * Directly reads the buffer holding the current controller state.
+     *
      */
-    inline int getState(int id, ButtonType type) { return controllerState[((int) type<<8) + (int)id ]; }
+    inline int getState(uint8_t id, uint8_t type) {
+      return controllerState[((int) type << 8) + (int) id];
+    }
     /**
-     * Get the state of the button/axis. For the hybrid type, the button state is returned
+     * \brief Get the current controlller state of a particular gampepad input.
+     * \param command  The signal to check
+     *
+     * Directly read the buffer holding the current controller state. Note that for the
+     * hybrid controls, we deliberately only read the button form, since currently we're
+     * only interested in whether it is on or off. This may need to change for other
+     * games.
+     *
      */
     int getState(GPInput command);
+
     /**
-     * \brief Set the state of the controller to a new value.
-     *
-     * This routine accounts for potential remapping of the controller command. If the commands are
-     * remapped across button types, we need some extra logic to handle the differences in signals.
-     *
+     * \brief Test if event matches a specific input signal
+     * 
+     * This tests the signal only, regarless of any condition associated with a game command.
      */
-    void setState(DeviceEvent* event, int new_value, GPInput remapped, GPInput real);
+    bool matches(const DeviceEvent& event, GPInput signal);
     /**
-     * Is the even an instance of the given gamepad command.
+     * \brief Is the event an instance of the specified input command?
+     * 
+     * This tests both that the event against the defined signal and that any defined condition
+     * is also in effect.
      */
-    bool matches(const DeviceEvent* event, GPInput command);
+    bool matches(const DeviceEvent& event, std::shared_ptr<GameCommand> command);
     /**
-     * Tests if the button/axis is in a particular state
+     * Tests if the button/axis is in on or off
      */
-    bool isState(GPInput command, int state);
+    bool isOn(GPInput command) { return getState(command) != 0; }
     /**
-     * Turns off the button/axis
+     * Turns off the button/axis associated with a command.
+     * \param[in] The command that we're disabling.
      */
-    void setOff(GPInput command);
+    void setOff(std::shared_ptr<GameCommand> command);
     
-    void applyEvent(const DeviceEvent* event);
+    void applyEvent(const DeviceEvent& event);
     void addInjector(ControllerInjector* injector);
-
-    inline ControllerCommand& getGPInfo(GPInput button) { return mControllerState->buttonInfo[button]; }
-    inline uint8_t getGPID(GPInput button) { return getGPInfo(button).getID(); }
-    inline uint8_t getGPSecondID(GPInput button) { return getGPInfo(button).getSecondID(); }
-    inline GPInputType getGPType(GPInput button) { return getGPInfo(button).getType(); }
-    inline ButtonType getGPButtonType(GPInput button) { return getGPInfo(button).getButtonType(); }
-
-    inline int getGPIndex(GPInput button) { return getGPInfo(button).getIndex(); }
-    inline int getGPIndex2(GPInput button) { return getGPInfo(button).getIndex2(); }
 
     virtual short int getJoystickMin() = 0;
     virtual short int getJoystickMax() = 0;
+
+    inline short joystickLimit(int input) {
+      return fmin(fmax(input, getJoystickMin()), getJoystickMax());
+    }
+    
   };
 
 };

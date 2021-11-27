@@ -23,8 +23,8 @@
 #include <toml++/toml.h>
 
 #include "gameCommand.hpp"
-#include "controllerCommand.hpp"
 #include "deviceTypes.hpp"
+#include "gamepadInput.hpp"
 
 namespace Chaos {
   
@@ -66,7 +66,6 @@ namespace Chaos {
    *     binding = "R2"
    *     condition = "aiming"
    *
-   * TODO: Allow commands to be conditional on a persistant game state.
    */
   class GameCommand {
   private:
@@ -75,36 +74,25 @@ namespace Chaos {
      */
     GPInput binding;
     /**
-     * The remappped command that we accept from the player.
-     */
-    GPInput binding_remap;
-    /**
      * Additional controller state that must be true for the command to apply.
      */
     GPInput condition;
-    /**
-     * The remapped condition that we look for from the player.
-     */
-    GPInput condition_remap;
     /**
      * Input value threshold that must be exceeded for the condition to be true.
      */
     int threshold;
     /**
-     * Reverse the polarity of the condition test. If true, the command is applied *unless* the gamepad is
-     * in the specified condition.
+     * Reverse the polarity of the condition test. If true, the command is applied *unless* the
+     * gamepad is in the specified condition.
      */
     bool invertCondition;
-    /** 
-     * Vector to hold the button type and id value(s)
+    
+    /**
+     * \brief Map of defined commands identified by a string name.
      */
-    static std::vector<ControllerCommand> buttonInfo;
+    static std::unordered_map<std::string, std::shared_ptr<GameCommand>> commands;
     
   public:
-    /**
-     * Global map for defined commands.
-     */
-    static std::unordered_map<std::string, std::shared_ptr<GameCommand>> bindingMap;
     /**
      * \brief The public constructor to define the controller input that corresponds
      * to a single game command.
@@ -126,22 +114,55 @@ namespace Chaos {
     static void initialize(toml::table& config);
 
     /**
-     * Return the actual input command the console expects.
+     * \brief Accessor to GameCommand pointer by command name.
+     * \param name Name by which the game command is identified in the TOML file.
+     * \return The GameCommand pointer for this command, or NULL if not found.
      */
-    inline GPInput getReal() { return binding; }
-    /**
-     * Return the remapped command that the player needs to produce.
-     */
-    inline GPInput getRemap() { return binding_remap; }
-    /**
-     * Set the remap to a new value
-     */
-    inline void setRemap(GPInput new_id) { binding_remap = new_id; }
-    /**
-     * Restore the command to the default control mapping
-     */
-    inline void resetRemap() { binding_remap = binding; }
+    static std::shared_ptr<GameCommand> get(const std::string& name);
 
+    /**
+     * \brief Get the command as an gamepad input enumeration.
+     * \param name The name of the command as defined in the TOML file
+     * \return The GPInput signal associated with this command, or GPInput::NONE if the command
+     * does not exist.
+     *
+     * Note that because of conditions, more than one command can return the same GPInput. This
+     * should only be used when you really want the signal and don't care about testing for the
+     * context of a particular game command.
+     */
+    static GPInput getInput(const std::string& name);
+
+    /**
+     * \brief Accessor for the gamepad input bound to this command.
+     */
+    inline std::shared_ptr<GamepadInput> getInput() {
+      return GamepadInput::get(binding);
+    }
+    
+    /**
+     * \brief Accessor for the signal bound to this command.
+     * \return The input command the console expects.
+     */
+    inline GPInput getBinding() { return binding; }
+
+    /**
+     * \brief Accessor for a condition that must also be true for this command to apply.
+     * \return The condition 
+     */
+    inline GPInput getCondition() { return condition; }
+    /**
+     * \brief Accessor for a the threshold value that the condition must meet or exceed for the
+     * condition to be true.
+     * \return The threshold
+     *
+     * The threshold should be a positive value. The absolute value of the signal will be tested
+     * against this.
+     */    
+    inline int getThreshold() { return threshold; }
+    /**
+     * If true, test for the condition being false rather than true.
+     */
+    inline bool conditionInverted() { return invertCondition; }
   };
 };
 
