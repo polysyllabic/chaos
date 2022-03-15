@@ -22,9 +22,9 @@
 #include <unordered_map>
 #include <toml++/toml.h>
 
-#include "gameCommand.hpp"
-#include "deviceTypes.hpp"
+#include "signalTypes.hpp"
 #include "gamepadInput.hpp"
+#include "gameCondition.hpp"
 
 namespace Chaos {
   
@@ -35,25 +35,16 @@ namespace Chaos {
    * During initialization, we parse a TOML file to produce a map of these command bindings,
    * which in turn is used to initialize the individual modifiers. Each command also maintains a
    * record of the current remapping state, so the inputs for particular commands can be swapped
-   * on a per-command, rather than per input, basis.
+   * on a per-command basis.
    *
    * Accepted TOML entries:
-   * - name (required): a string to refer to this command elsewhere in the TOML file.
-   * - binding (required): the name of a gamepad input. The legal names are defined in
-   *   ControllerCommand::buttonNames.
-   * - condition (optional): the name of another command whose state must also be true for the
-   *   command to apply. Mutually exclusive with "unless".
-   * - unless (optional): the inverse of "condition": the name of another command whose state
-   *   must be *false* for the command to apply. Mutually exclusive with "condition".
-   * - threshold (optional): set a specific integer value that the input must exceed for the
-   *   condition to be true. The default threshold is 1, which is the state we expect for ordinary
-   *   buttons when pressed. If a condition is defined without an explicit threshold, it will be
-   *   set to 1 automatically, so this key is only necessary if you need a custom value for an
-   *   axis. A threshold is 0 signifies that there is no condition to test. If you want to test for
-   *   a specific button *not* being pressed, use "unless" instead of "condition".
-   *
-   * Note that commands referenced in condition or unless lines must be defined earlier in the TOML
-   * file.
+   * - name: A string to refer to this command elsewhere in the TOML file. (_Required_)
+   * - binding: The name of a gamepad input. The legal names are defined in
+   * ControllerCommand::buttonNames. (_Required_)
+   * - condition: The name of a defined condition whose state must be true for the command to
+   * apply. Mutually exclusive with "unless". (_Optional_)
+   * - unless: The inverse of "condition": the name of a defined condition whose state must be
+   * _false_ for the command to apply. Mutually exclusive with "condition".
    *
    * Example TOML defintitions:
    *
@@ -72,20 +63,22 @@ namespace Chaos {
     /**
      * The real button/axis we send to the console for this command.
      */
-    GPInput binding;
+    //GPInput binding;
+    std::shared_ptr<GamepadInput> binding;
+
     /**
-     * Additional controller state that must be true for the command to apply.
+     * \brief Additional condition that must be true for the command to apply.
+     *
+     * This is a single condition (unlike the lists of conditions maintained in the modifiers)
+     * and does not support recursion of conditions.
      */
-    GPInput condition;
-    /**
-     * Input value threshold that must be exceeded for the condition to be true.
-     */
-    int threshold;
+    std::shared_ptr<GameCondition> condition;
+
     /**
      * Reverse the polarity of the condition test. If true, the command is applied *unless* the
      * gamepad is in the specified condition.
      */
-    bool invertCondition;
+    bool invert_condition;
     
     /**
      * \brief Map of defined commands identified by a string name.
@@ -97,25 +90,45 @@ namespace Chaos {
      * \brief The public constructor to define the controller input that corresponds
      * to a single game command.
      *
-     * The constructor expects a single table from the TOML file which must contain
-     * a binding of this command to a particular button/axis on the controller.
-     * The valid names for gamepad inputs are defined in ControllerCommand::buttonNames.
-     *
-     * The command definition may optionally contain a condition, which must be the name
-     * of another command definition that is also defined in the TOML file. Any conditions
-     * referenced in a command definition must be defined *before* they are referenced.
-     *
+     * \param config A single table from the TOML file that defines this command.
      */
     GameCommand(toml::table& config);
+
     /**
-     * Initialize the global map to hold the command definitions. This is called once
-     * during the start-up phase.
+     * \brief Initialize the global map to hold the command definitions without conditions.
+     *
+     * \param config The object containing the complete parsed TOML file
+     *
+     * Because commands can reference conditions and conditions are based on commands, we need some
+     * extra steps to avoid initialization deadlocks and infinite recursion. We therefore use a
+     * two-stage initialization process. First, this routine initializes all "direct" commands
+     * (those without conditions). Next, we initialize all conditions. Finally, we initialize
+     * those commands based on a condition with #buildCommandMapCondition().
+     *
+     * This routine is called once during the start-up phase.
      */
-    static void initialize(toml::table& config);
+    static void buildCommandMapDirect(toml::table& config);
+
+    /**
+     * \brief Initialize the global map to hold the command definitions with conditions.
+     *
+     * \param config The object containing the complete parsed TOML file
+     *
+     * Because commands can reference conditions and conditions are based on commands, we need some
+     * extra steps to avoid initialization deadlocks and infinite recursion. We therefore use a
+     * two-stage initialization process. First, #buildCommandMapDirect() initializes all commands
+     * without conditions. Next, we initialize all conditions. Finally, we initialize those
+     * commands based on a condition in this routine.
+     *
+     * This routine is called once during the start-up phase.
+     */
+    static void buildCommandMapCondition(toml::table& config);
 
     /**
      * \brief Accessor to GameCommand pointer by command name.
+     *
      * \param name Name by which the game command is identified in the TOML file.
+     *
      * \return The GameCommand pointer for this command, or NULL if not found.
      */
     static std::shared_ptr<GameCommand> get(const std::string& name);
@@ -133,36 +146,27 @@ namespace Chaos {
     static GPInput getInput(const std::string& name);
 
     /**
-     * \brief Accessor for the gamepad input bound to this command.
+     * \brief Accessor for the gamepad input object bound to this command.
+     * \return std::shared_ptr to the GamepadInput object.
      */
-    inline std::shared_ptr<GamepadInput> getInput() {
-      return GamepadInput::get(binding);
-    }
+    std::shared_ptr<GamepadInput> getInput() { 
+      return binding; 
+      }
     
-    /**
-     * \brief Accessor for the signal bound to this command.
-     * \return The input command the console expects.
-     */
-    inline GPInput getBinding() { return binding; }
-
     /**
      * \brief Accessor for a condition that must also be true for this command to apply.
      * \return The condition 
      */
-    inline GPInput getCondition() { return condition; }
-    /**
-     * \brief Accessor for a the threshold value that the condition must meet or exceed for the
-     * condition to be true.
-     * \return The threshold
-     *
-     * The threshold should be a positive value. The absolute value of the signal will be tested
-     * against this.
-     */    
-    inline int getThreshold() { return threshold; }
+    std::shared_ptr<GameCondition> getCondition() { 
+      return condition; 
+      }
+
     /**
      * If true, test for the condition being false rather than true.
      */
-    inline bool conditionInverted() { return invertCondition; }
+    bool conditionInverted() { 
+      return invert_condition; 
+      }
   };
 };
 

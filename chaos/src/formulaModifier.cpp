@@ -17,12 +17,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "formulaModifier.hpp"
+#include "tomlReader.hpp"
 
 using namespace Chaos;
 
 const std::string FormulaModifier::name = "formula";
 
-FormulaModifier::FormulaModifier(const toml::table& config) {
+FormulaModifier::FormulaModifier(toml::table& config) {
   initialize(config);
 }
 

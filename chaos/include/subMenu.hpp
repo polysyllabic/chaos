@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,28 +18,32 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <vector>
 #include <string>
+#include <memory>
+#include <unordered_map>
 #include <toml++/toml.h>
 
-#include "modifier.hpp"
-#include "chaosEngine.hpp"
+#include "menuItem.hpp"
 
 namespace Chaos {
 
   /**
-   * A modifier that enables child modifiers, either from a specific list or randomly selected.
+   * \brief Implements a menu item that selects a subordinate set of menu items.
+   * 
+   * 
    */
-  class ParentModifier : public Modifier::Registrar<ParentModifier> {
+  class SubMenu : public MenuItem {
   protected:
-    std::vector<Modifier*> children;
-    
+    /**
+     * \brief Value of the last child item selected
+     */
+    int last_child_selected;
+
   public:
-    static const std::string name;
-    
-    ParentModifier(toml::table& config);
+    SubMenu(toml::table& config) : MenuItem(config) {}
 
-    void begin();
-
+    void setLastChildSelected(int last);
+    int getLastChildSelected() { return last_child_selected; }
   };
+
 };

@@ -23,36 +23,25 @@
 #include <plog/Log.h>
 
 #include "disableModifier.hpp"
+#include "tomlReader.hpp"
+#include "config.hpp"
 
 using namespace Chaos;
 
 const std::string DisableModifier::name = "disable";
 
-DisableModifier::DisableModifier(const toml::table& config) {
+DisableModifier::DisableModifier(toml::table& config) {
+  assert(config.contains("name"));
+  
+  TOMLReader::checkValid(config, std::vector<std::string>{
+      "name", "description", "type", "groups", "appliesTo", "startSequence", "finishSequence",
+      "filter", "threshold", "condition", "conditionTest", "unless", "unlessTest"});
+
   initialize(config);
 
   if (commands.empty() && ! applies_to_all) {
     throw std::runtime_error("No command(s) specified with 'appliesTo'");
   }
-  
-  disableOnStart = config["disableOnStart"].value_or(false);
-
-  // If the filter isn't specified, default to block all values of the signal
-  filter = DisableFilter::ALL;
-  std::optional<std::string_view> f = config["filter"].value<std::string_view>();
-  if (f) {
-    if (*f == "above") {
-      filter = DisableFilter::ABOVE_THRESHOLD;
-    } else if (*f == "below") {
-      filter = DisableFilter::BELOW_THRESHOLD;
-    } else if (*f != "all") {
-      PLOG_WARNING << "Unrecognized filter type: '" << *f << "'. Using ALL instead.\n";
-    }
-  }
-  filter_threshold = config["filterThreshold"].value_or(0);
-  
-  condition = GPInput::NONE;
-  std::optional<std::string> cond = config["condition"].value<std::string>();
 
   if (config.contains("unless")) {
     // 'condition' and 'unless' are mutually exclusive options.
@@ -63,60 +52,72 @@ DisableModifier::DisableModifier(const toml::table& config) {
     cond = config["unless"].value<std::string>();
     invertCondition = true;
   } 
-  
-  // If the condition doesn't match a defined GameCommand name, this will be set to GPInput::NONE.
-  if (cond) {
-    condition = GameCommand::getInput(*cond);
+
+  // If the filter isn't specified, default to block all values of the signal
+  filter = DisableFilter::ALL;
+  std::optional<std::string_view> f = config["filter"].value<std::string_view>();
+  if (f) {
+    if (*f == "above") {
+      filter = DisableFilter::ABOVE_THRESHOLD;
+    } else if (*f == "below") {
+      filter = DisableFilter::BELOW_THRESHOLD;
+    } else if (*f != "all") {
+      PLOG_WARNING << "Unrecognized filter type: '" << *f << "' in definition for '" << config["name"]
+		   << "' modifier. Using ALL instead.\n";
+    }
   }
+  filterThreshold = config["filterThreshold"].value_or(0);
+  
+#ifndef NDEBUG
+  PLOG_DEBUG << " - filter: ";
+  switch (filter) {
+  case DisableFilter::ALL:
+    PLOG_DEBUG << "ALL\n";
+    break;
+  case DisableFilter::ABOVE_THRESHOLD:
+    PLOG_DEBUG << "ABOVE\n";
+    break;
+  case DisableFilter::BELOW_THRESHOLD:
+    PLOG_DEBUG << "BELOW\n";
+  }
+  PLOG_DEBUG << " - filterThreshold: " << filterThreshold << std::endl;
+#endif
+
+  condition = TOMLReader::ReadCondition(config);
 }
 
 void DisableModifier::begin() {
-  DeviceEvent event;
-  if (disableOnStart) {
-    // Turn off the commands we're disabling if the player is currently holding down that input
-    for (auto& cmd : commands) {
-      controller->setOff(cmd);
-    }
-  }
+  sendBeginSequence();
 }
 
-/**
- * \brief Disables an incoming game command, in part or in full
- * \param event The incoming device event we need to check
- * \return Whether the event is valid. Returning false stops further processing.
- *
- * We look up the current mapping of the command to button preses and block presses comming from
- * that button/axis. This ensures that we disable the right control regardless of any command
- * remapping that may have occurred.
- */
+void DisableModifier::finish() {
+  sendFinishSequence();
+}
+
 bool DisableModifier::tweak (DeviceEvent& event) {
-  bool disable = false;
-  updateGamestates(event);
-  if (! inGamestate()) {
+  updatePersistent();
+
+  // If the condition test returns false, or the unless test returns true, do not block
+  if (inCondition() == false || inUnless() == true) {
     return true;
   }
-  // Check any condition
-  if (condition != GPInput::NONE) {
-    // Only filter if in state under the ordinary condition, or the state is false with inverted
-    // polarity. In other words, if the two states are equal, we do not filter and so return immediately.
-    if (controller->isOn(condition) == invertCondition) {
-      return true;
-    }
-  }
+  
   // Traverse the list of affected commands
   for (auto& cmd : commands) {
-    if (controller->matches(event, cmd)) {
+    if (Controller::instance().matches(event, cmd)) {
+      short min_val = (event.type == TYPE_AXIS && cmd->getInput()->getType() == GPInputType::HYBRID)
+        ? JOYSTICK_MIN : 0;
       switch (filter) {
       case DisableFilter::ALL:
-	event.value = 0;
-	break;
+	      event.value = min_val;
+        break;
       case DisableFilter::ABOVE_THRESHOLD:
-	event.value = (event.value > filter_threshold) ? 0 : event.value;
-	break;
+      	event.value = (event.value > filterThreshold) ? min_val : event.value;
+      	break;
       case DisableFilter::BELOW_THRESHOLD:
-	event.value = (event.value < filter_threshold) ? 0 : event.value;
+      	event.value = (event.value < filterThreshold) ? min_val : event.value;
       }
-      // no need to keep searching after a match
+      // No need to keep searching after a match
       break;
     }
   }

@@ -17,27 +17,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <queue>
-#include <memory>
+#include <string>
 #include <toml++/toml.h>
 
 #include "modifier.hpp"
 
 namespace Chaos {
 
-  /**
-   * \brief Modifier that allows an action for a set period of time and then blocks it until a
-   * cooldown period has expired.
+  /** 
+   * \brief A modifier that inverts an axis-based command.
    *
-   * Example TOML definition:
-   * [[modifier]]
-   * name = "Bad Stamina"
-   * description = "Running is disabled after 2 seconds and takes 4 seconds to recharge."
-   * type = "cooldown"
-   * groups = [ "movement" ]
-   * appliesTo = [ "dodge/sprint" ]
-   * timeOn = 2.0
-   * timeOff = 4.0
+   * The following fields are used to define an invert modifier in the TOML file:
    *
    * The following keys are defined for this class of modifier:
    *
@@ -46,35 +36,23 @@ namespace Chaos {
    * - type = "cooldown" (_Required_)
    * - groups: A list of functional groups to classify the mod for voting. (_Optional_)
    * - appliesTo: A commands affected by the mod. (_Required_)
-   * - timeOn: Length of time to allow the command. (_Required_)
-   * - timeOff: Length of time spent in cooldown, where the command is blocked. (_Required_)
-   *
-   * Note: Although the appliesTo key takes an array, this mod type expects only a single
-   * command. All but the first will be ignored.
+   * - type = "disable"
+   * - disableOnStart: A boolean value that, if true, sends a disable signal to any commands in the
+   * appliesTo list during the begin() routine. (_Optional_)
+   * - disableOnFinish: A boolean value that, if true, sends a disable signal to any commands in the
+   * appliesTo list during the finish() routine. (_Optional_)
    */
-  class CooldownModifier : public Modifier::Registrar<CooldownModifier> {
+  class InvertModifier : public Modifier::Registrar<InvertModifier> {
 
-  protected:
-    DeviceEvent cooldownCommand;
-    bool pressedState;
-    double cooldownTimer;
-    bool inCooldown;
-    /**
-     * Time that the event is allowed before we block it
-     */
-    double time_on;
-    /**
-     * Time that the event is held in cooldown before re-enabled.
-     */
-    double time_off;
   public:
     static const std::string name;
-    CooldownModifier(toml::table& config);
     
+    InvertModifier(toml::table& config);
+
     void begin();
-    void update();
     void finish();
-    bool tweak(DeviceEvent* event);
+    bool tweak(DeviceEvent& event);
+
   };
 };
 

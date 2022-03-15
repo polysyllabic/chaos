@@ -21,32 +21,34 @@
 
 #include "delayModifier.hpp"
 #include "chaosEngine.hpp"
+#include "tomlReader.hpp"
 
 using namespace Chaos;
 
 const std::string DelayModifier::name = "delay";
 
-DelayModifier::DelayModifier(const toml::table& config) {
+DelayModifier::DelayModifier(toml::table& config) {
+  
+  TOMLReader::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
+							  "appliesTo", "delay"});
   initialize(config);
 
   if (commands.empty() && ! applies_to_all) {
     throw std::runtime_error("No command(s) specified with 'appliesTo'");
   }
   
-  std::optional<double> delay_time = config["value"].value<double>();
-  if (delay_time) {
-    delayTime = *delay_time;
+  delayTime = config["delay"].value_or(0.0);
+  if (delayTime <= 0) {
+    throw std::runtime_error("Bad or missing delay time. The 'delay' parameter must be positive.");
   }
-  else {
-    throw std::runtime_error("Missing 'value' or wrong value type (double required).");
-  }
+  PLOG_DEBUG << " - delay: " << delayTime;
 }
 
 void DelayModifier::update() {
   while ( !eventQueue.empty() ) {
     if( (timer.runningTime() - eventQueue.front().time) >= delayTime ) {
       // Reintroduce the event.
-      engine->fakePipelinedEvent(eventQueue.front().event, me);
+      ChaosEngine::instance().fakePipelinedEvent(eventQueue.front().event, me);
       eventQueue.pop();
     }
     else {
@@ -64,8 +66,8 @@ bool DelayModifier::tweak(DeviceEvent& event) {
     return false;
   }
   else {
-    for (auto& cmd : commands) {
-      if (controller->matches(event, cmd->getBinding())) {
+    for (auto cmd : commands) {
+      if (Controller::instance().matches(event, cmd)) {
 	eventQueue.push ({this->timer.runningTime(), event});
 	return false;
       }

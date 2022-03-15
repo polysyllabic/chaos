@@ -36,7 +36,7 @@ namespace Chaos {
   public:
     static const std::string name;
 
-    FormulaModifier(const toml::table& config);
+    FormulaModifier(toml::table& config);
     void begin();
     void update();
   };

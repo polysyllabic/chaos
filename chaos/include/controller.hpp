@@ -21,11 +21,15 @@
 #include <array>
 #include <memory>
 
-#include "raw-gadget.hpp"
+#include <raw-gadget.hpp>
+
+#include "config.hpp"
+
 #include "controllerState.hpp"
 #include "chaosUhid.hpp"
-#include "deviceTypes.hpp"
+#include "signalTypes.hpp"
 #include "gamepadInput.hpp"
+#include "gameCommand.hpp"
 
 namespace Chaos {
 
@@ -37,13 +41,32 @@ namespace Chaos {
     virtual bool sniffify(const DeviceEvent& input, DeviceEvent& output) = 0;
   };
 
-  class Controller {
+  /**
+   * Class to manage the gamepad controller.
+   *
+   * Since this is a unique hardware device, it's a legit. instance of a singleton.
+   * We use Scott Meyers's technique of creating global objects with local static initialization.
+   */
+  class Controller : public EndpointObserver, public Mogi::Thread {
+  private:
+    std::deque<std::array<unsigned char,64>> bufferQueue;
+	
+    ChaosUhid* chaosHid;
+	
+    // Main purpose of this Mogi::Thread is to handle DeviceEvent queue
+    void doAction();
+
+    // overloaded from EndpointObserver
+    void notification(unsigned char* buffer, int length);
+    
+    RawGadgetPassthrough mRawGadgetPassthrough;
+    
   protected:
+    Controller();
+    
     ControllerState* mControllerState;
 
     std::deque<DeviceEvent> deviceEventQueue;
-	
-    virtual bool applyHardware(const DeviceEvent& event) = 0;
 	
     void storeState(const DeviceEvent& event);
 	
@@ -59,7 +82,12 @@ namespace Chaos {
     ControllerInjector* controllerInjector = NULL;
 
   public:
-    Controller();
+    void initialize();
+    
+    static Controller& instance() {
+      static Controller controller{};
+      return controller;
+    }
 
     /**
      * \brief The low-level function to get the current controlller state.
@@ -67,24 +95,32 @@ namespace Chaos {
      * \param type The signal type
      * \return The current value of the signal.
      *
-     * Directly reads the buffer holding the current controller state.
-     *
+     * Directly reads the buffer holding the current controller state for the specified button
+     * or axis. This is the low-level routine and returns the raw controller state. It does not
+     * handle the remapping of signals.
      */
     inline int getState(uint8_t id, uint8_t type) {
       return controllerState[((int) type << 8) + (int) id];
     }
     /**
      * \brief Get the current controlller state of a particular gampepad input.
-     * \param command  The signal to check
+     * \param command  The command to check
      *
-     * Directly read the buffer holding the current controller state. Note that for the
-     * hybrid controls, we deliberately only read the button form, since currently we're
-     * only interested in whether it is on or off. This may need to change for other
-     * games.
-     *
+     * Read the current controller state for the given command as it is currently mapped. In other
+     * words, this routine returns the state of whatever signal the game command is currently
+     * mapped to. Note that for the hybrid controls, we only read the button form, since currently
+     * we're only interested in whether it is on or off. This may need to change for other games.
      */
-    int getState(GPInput command);
+    int getState(std::shared_ptr<GameCommand> command);
+    int getState(std::shared_ptr<GamepadInput> signal);
 
+    /**
+     * \brief Change the controller state
+     * 
+     * \param event New event to go to the console
+     */
+    void applyState(const DeviceEvent& event) { storeState(event); }
+    
     /**
      * \brief Test if event matches a specific input signal
      * 
@@ -98,24 +134,22 @@ namespace Chaos {
      * is also in effect.
      */
     bool matches(const DeviceEvent& event, std::shared_ptr<GameCommand> command);
-    /**
-     * Tests if the button/axis is in on or off
-     */
-    bool isOn(GPInput command) { return getState(command) != 0; }
+    
     /**
      * Turns off the button/axis associated with a command.
      * \param[in] The command that we're disabling.
      */
     void setOff(std::shared_ptr<GameCommand> command);
+    /**
+     * Sets the button/axis associated with a command to its maximum.
+     * \param[in] The command that we're turning on.
+     */
+    void setOn(std::shared_ptr<GameCommand> command);
     
-    void applyEvent(const DeviceEvent& event);
     void addInjector(ControllerInjector* injector);
 
-    virtual short int getJoystickMin() = 0;
-    virtual short int getJoystickMax() = 0;
-
-    inline short joystickLimit(int input) {
-      return fmin(fmax(input, getJoystickMin()), getJoystickMax());
+    short joystickLimit(int input) {
+      return fmin(fmax(input, JOYSTICK_MIN), JOYSTICK_MAX);
     }
     
   };

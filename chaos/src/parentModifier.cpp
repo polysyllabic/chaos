@@ -17,12 +17,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "parentModifier.hpp"
+#include "tomlReader.hpp"
 
 using namespace Chaos;
 
 const std::string ParentModifier::name = "parent";
 
-ParentModifier::ParentModifier(const toml::table& config) {
+ParentModifier::ParentModifier(toml::table& config) {
   initialize(config);
  
 }

@@ -16,45 +16,52 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "menuModifier.hpp"
+#include <stdexcept>
+#include <plog/Log.h>
+#include <toml++/toml.h>
+
+#include "invertModifier.hpp"
 #include "tomlReader.hpp"
 
 using namespace Chaos;
 
-const std::string MenuModifier::name = "menu";
+const std::string InvertModifier::name = "invert";
 
-MenuModifier::MenuModifier(toml::table& config) {
+InvertModifier::InvertModifier(toml::table& config) {
   TOMLReader::checkValid(config, std::vector<std::string>{
-    "name", "description", "type", "groups", "begin", "finish", "beginSequence", "finishSequence"});
-
+      "name", "description", "type", "groups", "appliesTo", "disableOnStart", "disableOnFinish"});
   initialize(config);
 
-  TOMLReader::buildMenuCommand(config, "begin", begin_menu);
-  
-  TOMLReader::buildMenuCommand(config, "finish", finish_menu);
+  if (commands.empty()) {
+    throw std::runtime_error("No commands defined in appliesTo");
+  }
 
 }
 
-void MenuModifier::begin() {
-  // Perform any non-menu-related actions
-  sendBeginSequence();
-
-  // execute all menu commands in the list
-  for (auto& m : begin_menu) {
-    m.doAction();
+void InvertModifier::begin() {  
+  if (disable_on_begin) {
+    for (auto& cmd : commands) {
+      Controller::instance().setOff(cmd);
+    }
   }
 }
 
-void MenuModifier::finish() {
-  sendFinishSequence();
-
-  for (auto& m : finish_menu) {
-    m.doAction();
+void InvertModifier::finish() {  
+  if (disable_on_finish) {
+    for (auto& cmd : commands) {
+      Controller::instance().setOff(cmd);
+    }
   }
 }
 
-bool MenuModifier::tweak(DeviceEvent* event) {
-  // block all signals if we're busy sending a sequence
-  return !in_sequence;
+bool InvertModifier::tweak(DeviceEvent& event) {
+  // Traverse the list of affected commands
+  for (auto& cmd : commands) {
+    if (Controller::instance().matches(event, cmd)) {
+      event.value = -((int)event.value+1);
+      break;
+    }
+  }
+  return true;
 }
 

@@ -21,12 +21,15 @@
 
 #include "cooldownModifier.hpp"
 #include "chaosEngine.hpp"
+#include "tomlReader.hpp"
 
 using namespace Chaos;
 
 const std::string CooldownModifier::name = "cooldown";
 
-CooldownModifier::CooldownModifier(const toml::table& config) {
+CooldownModifier::CooldownModifier(toml::table& config) {
+  TOMLReader::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
+							  "startSequence", "finishSequence", "appliesTo", "timeOn", "timeOff"});
   initialize(config);
   if (commands.empty()) {
     throw std::runtime_error("No command associated with cooldown modifier.");
@@ -40,13 +43,23 @@ CooldownModifier::CooldownModifier(const toml::table& config) {
   cooldownCommand.type = commands[0]->getInput()->getButtonType();
   cooldownCommand.id = commands[0]->getInput()->getID(cooldownCommand.type);
   time_on = config["timeOn"].value_or(0.0);
+  if (time_on == 0) {
+    PLOG_WARNING << "The timeOn for this cooldown mod is 0 seconds!\n";
+  }
+  PLOG_DEBUG << " - timeOn: " << time_on << std::endl;
+  
   time_off = config["timeOff"].value_or(0.0);
+  if (time_off == 0) {
+    PLOG_WARNING << "The timeOff for this cooldown mod is 0 seconds!\n";
+  }
+  PLOG_DEBUG << " - timeOff: " << time_off << std::endl;
 }
 
 void CooldownModifier::begin() {
-  pressedState = controller->getState(cooldownCommand.id, cooldownCommand.type);
+  pressedState = Controller::instance().getState(cooldownCommand.id, cooldownCommand.type);
   cooldownTimer = 0.0;
   inCooldown = false;
+  sendBeginSequence();
 }
 
 void CooldownModifier::update() {
@@ -61,7 +74,7 @@ void CooldownModifier::update() {
       cooldownTimer = 0.0;
     }
   } else {
-    if (controller->getState(cooldownCommand.id, cooldownCommand.type)) {
+    if (Controller::instance().getState(cooldownCommand.id, cooldownCommand.type)) {
       // increment cooldown timer until time_on exceeded
       cooldownTimer += deltaT;
       if (cooldownTimer > time_on) {
@@ -69,7 +82,7 @@ void CooldownModifier::update() {
 	inCooldown = true;
 	// Disable event
 	// TODO: allow cooldown to do things other than block a signal
-	engine->fakePipelinedEvent(cooldownCommand, me);
+	ChaosEngine::instance().fakePipelinedEvent(cooldownCommand, me);
       }
     }
   }
@@ -82,3 +95,6 @@ bool CooldownModifier::tweak(DeviceEvent* event) {
   return true;
 }
 
+void CooldownModifier::finish() {
+  sendFinishSequence();
+}

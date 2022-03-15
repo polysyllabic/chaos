@@ -21,8 +21,7 @@
 #include <cstdint>
 #include <map>
 
-#include "gameCommand.hpp"
-#include "deviceTypes.hpp"
+#include "signalTypes.hpp"
 
 namespace Chaos {
   
@@ -45,11 +44,13 @@ namespace Chaos {
     inline short int unpackJoystick(uint8_t& input) { return ((short int) input) - 128;}
     inline uint8_t packJoystick(short int& input) { return input + 128; }
 
-    short int fixShort(short int input);
-    // short int unfixShort(short int& input);
+    short int fixShort(short int input) {
+      return input;
+      // return ((input & 0x00ff) << 8) | ((input & 0xff00) >> 8);
+    }
 
-    short int positionDY(const uint8_t& input );
-    short int positionDX(const uint8_t& input );
+    short int positionDY(const uint8_t& input);
+    short int positionDX(const uint8_t& input);
     uint8_t packDpad(const short int& dx, const short int& dy);
     
   public:

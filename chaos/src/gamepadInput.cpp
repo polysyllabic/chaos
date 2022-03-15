@@ -17,6 +17,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <cassert>
+#include <climits>
+#include "config.hpp"
 #include "gamepadInput.hpp"
 
 using namespace Chaos;
@@ -98,9 +100,6 @@ std::vector<std::shared_ptr<GamepadInput>> GamepadInput::inputs = {
   std::make_shared<GamepadInput>(GPInput::TOUCHPAD_Y_2, GPInputType::TOUCHPAD, 17),
 };
 
-// On init, there is no remapping, so from and to are the same
-//std::vector<std::shared_ptr<GamepadInput>> GamepadInput::to_inputs = GamepadInput::from_inputs;
-
 std::unordered_map<int, GPInput> GamepadInput::by_index = {
   { inputs[GPInput::X]->getIndex(), GPInput::X },
   { inputs[GPInput::CIRCLE]->getIndex(), GPInput::CIRCLE },
@@ -153,6 +152,19 @@ std::shared_ptr<GamepadInput> GamepadInput::get(const std::string& name) {
     return inputs[iter->second];
   }
   return NULL;
+}
+
+std::string GamepadInput::getName(GPInput signal) {
+  for (auto it = inputNames.begin(); it != inputNames.end(); it++) {
+    if (it->second == signal) {
+      return it->first;
+    }
+  }
+  return "NOT FOUND";
+}
+
+std::string GamepadInput::getName() {
+  return getName(remap.from_controller);
 }
 
 GPInputType GamepadInput::getType(const DeviceEvent& event) {
@@ -208,3 +220,41 @@ void GamepadInput::setCascadingRemap(const SignalRemap& remapping) {
   remap = remapping;
 }
 
+short int GamepadInput::getMin(ButtonType type) {
+  switch (input_type) {
+  case GPInputType::BUTTON:
+    return 0;
+  case GPInputType::THREE_STATE:
+    return -1;
+  case GPInputType::HYBRID:
+    return (type == TYPE_AXIS) ? JOYSTICK_MIN : 0;
+  case GPInputType::AXIS:
+    return JOYSTICK_MIN;
+  }
+  // The accelerometer, gyroscope, and touchpad signals probably should never be set to the extreme,
+  // but we allow it
+  return SHRT_MIN;
+}
+
+short int GamepadInput::getMax(ButtonType type) {
+  switch (input_type) {
+  case GPInputType::BUTTON:
+  case GPInputType::THREE_STATE:
+    return 1;
+  case GPInputType::HYBRID:
+    return (type == TYPE_AXIS) ? JOYSTICK_MAX : 1;
+  case GPInputType::AXIS:
+    return JOYSTICK_MAX;    
+  }
+  // Accelerometer, gyroscope, and touchpad fall through to here
+  return SHRT_MAX;
+}
+
+short int GamepadInput::getMax(std::shared_ptr<GamepadInput> signal) {
+  return signal->getMax(TYPE_AXIS);
+}
+
+short int GamepadInput::getState() {
+  auto& signal = inputs[remap.from_controller];
+  return Controller::instance()->getState(signal);  
+}

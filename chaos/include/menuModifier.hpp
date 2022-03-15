@@ -21,16 +21,27 @@
 
 namespace Chaos {
 
-  // subclass of modifiers that select options through the game menu
+  /**
+   * \brief A modifier that executes a particular commands in the game's menu system.
+   *
+   * Mods of this type are defined in the TOML configuration file with the following keys in
+   * adition to the required name and description:
+   *
+   */
   class MenuModifier : public Modifier::Registrar<MenuModifier> {
-  private:
-    bool busy;
-    
+  protected:
+    std::vector<MenuAction> begin_menu;
+    std::vector<MenuAction> finish_menu;
+
   public:
     static const std::string name;
     
-    MenuModifier(const toml::table& config);
+    MenuModifier(toml::table& config);
+    
     void begin();
+    void finish();
     bool tweak(DeviceEvent* event);
+
+    
   };
 };

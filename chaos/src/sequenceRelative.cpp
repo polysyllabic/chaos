@@ -21,11 +21,11 @@
 #include <plog/Log.h>
 
 #include "sequence.hpp"
-
+#include "controller.hpp"
 
 using namespace Chaos;
 
-SequenceRelative::SequenceRelative(Controller* c) : Sequence(c) {
+SequenceRelative::SequenceRelative() {
   tickTime = 200;
 }
 
@@ -51,7 +51,7 @@ void SequenceRelative::send() {
       if (((long long) event.time + lastTime) <= runningTimeInMicroseconds) {
 	lastTime += event.time;
 	
-	controller->applyEvent( event );
+	Controller::instance().applyEvent(event);
 	done = true;
 	continue;
       }

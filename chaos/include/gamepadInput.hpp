@@ -22,8 +22,9 @@
 #include <memory>
 #include <cmath>
 #include <unordered_map>
+#include <plog/Log.h>
 
-#include "deviceTypes.hpp"
+#include "signalTypes.hpp"
 
 namespace Chaos {
 
@@ -38,40 +39,18 @@ namespace Chaos {
    * one.
    */
   typedef enum GPInput {
-    X,
-    CIRCLE,
-    TRIANGLE,
-    SQUARE,
-    L1,
-    R1,
-    L2,
-    R2,
-    SHARE,
-    OPTIONS,
-    PS,
-    L3,
-    R3,
-    TOUCHPAD,
-    TOUCHPAD_ACTIVE,
-    TOUCHPAD_ACTIVE_2,
-    LX,
-    LY,
-    RX,
-    RY,
-    DX,
-    DY,
-    ACCX,
-    ACCY,
-    ACCZ,
-    GYRX,
-    GYRY,
-    GYRZ,
-    TOUCHPAD_X,
-    TOUCHPAD_Y,
-    TOUCHPAD_X_2,
-    TOUCHPAD_Y_2,
-    NONE,
-    NOTHING
+    X, CIRCLE, TRIANGLE, SQUARE,
+    L1, R1, L2, R2,
+    SHARE, OPTIONS, PS,
+    L3, R3,
+    TOUCHPAD, TOUCHPAD_ACTIVE, TOUCHPAD_ACTIVE_2,
+    LX, LY, RX, RY,
+    DX, DY,
+    ACCX, ACCY, ACCZ,
+    GYRX, GYRY, GYRZ,
+    TOUCHPAD_X, TOUCHPAD_Y,
+    TOUCHPAD_X_2, TOUCHPAD_Y_2,
+    NONE, NOTHING
   } GPInput;
 
   /**
@@ -143,7 +122,9 @@ namespace Chaos {
   };
   
   /**
-   * Defines the nature of a particular gamepad input.
+   * \brief Defines the nature of a particular signal coming from the controller (i.e., gamepad).
+   *
+   * Signals are 
    */
   class GamepadInput {
   private:
@@ -204,7 +185,7 @@ namespace Chaos {
      * \param name Name of the input
      * \return The gamepad input identified by the given string
      *
-     * Used for processing the TOML file 
+     * Used for processing the TOML file.
      */
     static std::shared_ptr<GamepadInput> get(const std::string& name);
     
@@ -213,9 +194,10 @@ namespace Chaos {
      * \param gp The enumeration of the gamepad signal
      */
     static std::shared_ptr<GamepadInput> get(GPInput gp) { return inputs[gp]; }
+    
     /**
      * \brief Get the GamepadInput object for the incoming signal from the controller.
-     * \param[in] event The event coming from the controller.
+     * \param event The event coming from the controller.
      */
     static std::shared_ptr<GamepadInput> get(const DeviceEvent& event) {
       GPInput gp = by_index[(int)event.index()];
@@ -230,35 +212,75 @@ namespace Chaos {
     }
 
     /**
-     * Returns the appropriate ID for button or axis. The type is used to distinguish
-     * whether we want the button or the axis id for hybrid types.
+     * \brief Get the appropriate ID for button or axis.
+     * \param type Whether we want a button or an axis for hybrid controls.
+     *
+     * The type is ignored unless the input is a hybrid control (L2/R2), which sends both a button
+     * and an axis signal. In this case, it is used to distinguish whether we want the button or
+     * the axis id for hybrid types. For the type, you can pass the appropriate #ButtonType
+     * enumeration.
      */
     uint8_t getID(uint8_t type) {
       if (input_type == GPInputType::HYBRID) {
-	return (type == TYPE_BUTTON) ? button_id : hybrid_axis;
+	      return (type == TYPE_BUTTON) ? button_id : hybrid_axis;
       }
       return button_id;
     }
     
     /**
-     * Get the button/axis id (button id for hybrid)
+     * \brief Get the button/axis id.
+     * \return The ID of the signal as an unsigned integer
+     *
+     * For hybrid controls (L2/R2) this returnd the ID of the button.
      */
     uint8_t getID() { return button_id; }
-    /**
-     * Get the axis id of a hybrid control
-     */
-    uint8_t getHybridAxis() { return hybrid_axis; }
 
     /**
-     * Get the extended input type
+     * \brief Get the axis id of a hybrid control
+     * \return The ID of the signal as an unsigned integer
+     *
+     * Used to get the ID of the axis signal for a hybrid control (L2/R2). It is a programming
+     * error to call this for other types of controls. In that case, we note the error in the
+     * log file and return the button ID, which is probably what we want anyway.
+     */
+    uint8_t getHybridAxis() { 
+      if (input_type != GPInputType::HYBRID) {
+        PLOG_ERROR << "Call to getHybridAxis() for non-hybrid condrol. Returning the normal ID.\n";
+        return button_id;
+      }
+      return hybrid_axis; 
+      }
+
+    /**
+     * \brief Get the extended input type.
+     * \return The category of input to which this event belongs.
+     *
+     * In order to remap different types of controls to one another, we distinguish the gamepad events
+     * into different classes.
      */
     GPInputType getType() { return input_type; }
 
     /**
-     * Translate a DeviceEvent into the extended GPInputType
+     * \brief Translate a DeviceEvent into the extended #GPInputType.
+     * \param event The incoming event from the controller.
+     *
+     * This static function allows is to determine the category into which an incomming event falls
+     * (button, axis, accelerometer, etc.).
      */
     static GPInputType getType(const DeviceEvent& event);
+    
+    /**
+     * \brief Get the name of a particular signal as defined in the TOML file.
+     * 
+     * \param signal The enumeration of the signal coming from the controller
+     * \return std::string 
+     *
+     *
+     */
+    static std::string getName(GPInput signal);
 
+    std::string getName();
+    
     /**
      * Get the basic button type (button vs. axis). In the case of hybrid
      * inputs, we return the button.
@@ -277,6 +299,27 @@ namespace Chaos {
     int getRemapThreshold() { return remap.threshold; }
     int getRemapSensitivity() { return remap.sensitivity; }
 
+    /**
+     * \brief Get the minimum value for this signal.
+     * \param type Whether the signal is an axis or a button
+     *
+     * The type distinguishes the case for hybrid controls.
+     */
+    short getMin(ButtonType type);
+    /**
+     * \brief Get the maximum value for this signal.
+     * \param type Whether the signal is an axis or a button
+     *
+     * The type distinguishes the case for hybrid controls.
+     */
+    short getMax(ButtonType type);
+    /**
+     * \brief Get the maximum value for this signal.
+     *
+     * For the hybrid controls, we return the maximum of the axis, because that's the value we need
+     * to pass when building sequences.
+     */
+    static short getMax(std::shared_ptr<GamepadInput> signal);
     /**
      * \brief Directly set the remapping signal only.
      * \param remapping The signal that should go to the console
@@ -309,6 +352,15 @@ namespace Chaos {
      */
     static bool matchesID(const DeviceEvent& event, GPInput gp);
 
+    /**
+     * \brief Get the current state of the controller for this signal
+     * 
+     * \return short 
+     *
+     * When checking the current state, we look at the remapped signal. That is, we case about what
+     * the user is actually doing, not what signal is going to the console.
+     */
+    short int getState();
   };
 
 };

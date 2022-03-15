@@ -19,13 +19,13 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <plog/Log.h>
-
+#include "controller.hpp"
 #include "sequence.hpp"
 
 
 using namespace Chaos;
 
-SequenceAbsolute::SequenceAbsolute(Controller* c) : Sequence(c) {
+SequenceAbsolute::SequenceAbsolute() {
   tickTime = 200;
 }
 
@@ -46,7 +46,7 @@ void SequenceAbsolute::send() {
     while (!done) {
       // Send ASAP, and then check the next event.
       if (event.time <= runningTimeInMicroseconds) {
-	controller->applyEvent( event );
+	Controller::instance().applyEvent(event);
 	done = true;
 	continue;
       }

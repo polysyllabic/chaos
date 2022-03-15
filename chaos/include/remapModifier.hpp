@@ -39,8 +39,8 @@ namespace Chaos {
    * - name (required)
    * - description (required)
    * - type = "remap"
-   * - signals: An array of signals (expected to be axes) that the touchpad will affect.
-   * - disableOnStart: If true, all the signals lised in the signals list will all receive a 0 signal
+   * - signals: An array of signals (expected to be axes) that the remap needs to process.
+   * - disableSignals: If true, all the signals lised in the signals list will all receive a 0 signal
    * when the mod is initialized.
    * - remap An array of the signals that will be remapped. Each remap definition should be
    * contained in an inline table with the following possible keys:
@@ -70,7 +70,7 @@ namespace Chaos {
     /**
      * If true, sends events to zero out the button on initialization.
      */
-    bool disableOnStart;
+    bool disable_signals;
 
     /**
      * \brief The list of signals affected by this mod.
@@ -82,7 +82,7 @@ namespace Chaos {
   public:
     static const std::string name;
     
-    RemapModifier(const toml::table& config);
+    RemapModifier(toml::table& config);
 
     void begin();
     void apply();

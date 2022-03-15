@@ -22,6 +22,7 @@
 #include <mogi/math/systems.h>
 
 #include "gamepadInput.hpp"
+#include "gameCommand.hpp"
 
 namespace Chaos {
 
@@ -33,10 +34,7 @@ namespace Chaos {
      * The scaling of the touchpad can be affected by a game condition, such as whehter or not the
      * user is aiming. If there is no condition, this will be set to GPInput::NONE.
      */
-    GPInput condition;
-    /**
-     *
-     */
+    std::shared_ptr<GameCommand> condition;
     double scale;
     double scale_if;
     int skew;
@@ -46,7 +44,7 @@ namespace Chaos {
      */
     bool active;
     /**
-     * Tell mod
+     * Signal that the ordinary axes require disabling.
      */
     bool disableAxes;
     
@@ -85,10 +83,15 @@ namespace Chaos {
     
   public:
     /**
-     * Constructor uses the TOML file for initialization.
+     * Initialize touchpad parameters from the TOML file.
      */
-    Touchpad(const toml::table& config);
+    void initialize(const toml::table& config);
     
+    static Touchpad& instance() {
+      static Touchpad touchpad{};
+      return touchpad;
+    }
+
     /**
      * \brief Reset touchpad's priorActive status 
      */
@@ -104,7 +107,7 @@ namespace Chaos {
      */
     void setActive(bool state) { active = state; }
 
-    GPInput getCondition() { return condition; }
+    std::shared_ptr<GameCommand> getCondition() { return condition; }
     
     int toAxis(const DeviceEvent& event, bool inCondition);
   };

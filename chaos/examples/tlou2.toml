@@ -1,28 +1,24 @@
-#-----------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
 # Twitch Controls Chaos (TCC)
-# Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
-# at the top-level directory of this distribution for contributor details.
+# Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at the top-level
+# directory of this distribution for contributor details.
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU
+# General Public License as published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-#-----------------------------------------------------------------------------
+# You should have received a copy of the GNU General Public License along with this program. If not,
+# see <https://www.gnu.org/licenses/>.
+#---------------------------------------------------------------------------------------------------
 #
-# Configuration file for the TCC engine. It defines the operation for a single
-# game.
+# Configuration file for the TCC engine. It defines the operation for a single game.
 
-
-# chaos_toml: A version string for the TOML file format. Currently used only to
-# verify that we're reading the right file.
+# chaos_toml: A version string for the TOML file format. Currently used only to verify that we're
+# reading the right file.
 chaos_toml = "1.0"
 
 # game: User-friendly name of the game this configuration file defines.
@@ -31,8 +27,8 @@ game = "The Last of Us Part II"
 # log_file: Name of the log file. Default = "chaos.log"
 log_file = "chaos.log"
 
-# log_verbosity: Level of message detail sent to the log file. Must be an
-# integer from 0 to 6. Higher numbers include all messages of the lower types.
+# log_verbosity: Level of message detail sent to the log file. Must be an integer from 0 to 6.
+# Higher numbers include all messages of the lower types.
 # 0 = NONE (logging disabled)
 # 1 = FATAL
 # 2 = ERROR
@@ -41,45 +37,80 @@ log_file = "chaos.log"
 # 5 = DEBUG
 # 6 = VERBOSE
 log_verbosity = 5
-# max_log_size: maximum log-file size in bytes
+# max_log_size: Maximum log-file size in bytes
 max_log_size = 1000000
-# max_log_files: maximum number of log files to keep (0 = disable log rolling)
+# max_log_files: Maximum number of log files to keep (0 = disable log rolling)
 max_log_files = 8
 
+#---------------------------------------------------------------------------------------------------
 # Chaos Engine parameters
-TIME_PER_MODIFIER = 30.0
+# Lifetime (exclusive of pauses) of an individual modifier, in seconds.
+time_per_modifier = 180.0
 
-# These parameters control the formula to convert from touchpad to axis events
-# based on the change in axis value over time (derivative).
-# The base formula is SCALE * derivative +/- skew, where the sign of the
-# skew is the same sign as the derivative. This result is then clipped to the
-# limits of the joystick value.
-#
-# If the SCALE_ON condition is defined, the value of SCALE is replaced with the
-# value of SCALE_IF. If the condition is false, or if SCALE_ON is not defined,
-# then SCALE is used.
+
+# The touchpad parameters control the formula to convert from touchpad to axis events based on the
+# change in axis value over time (derivative). The formula is scale * derivative + skew. This result
+# is then clipped to the limits of the joystick value.
 [touchpad]
-# SCALE_ON defines a condition which, if true, uses SCALE_IF to scale the derviative.
-# The SCALE_ON value must be a defined command.
-SCALE_ON = "aiming"
-SCALE_IF = 0.04
-SCALE = 0.12
-SKEW = 30
+# scale_on defines a condition, which must be a command defined in this file. If the condition is
+# defined, the engine will check the state of the controller for this command being pressed. If
+# the controller is in this condition, the derivative will be multiplied by the value of scale_if.
+# If the condition is false, or if scale_on is not defined, then scale is used. The scale_on value
+# must be a defined command. If you want the same scaling to apply to all states, comment out both
+# the scale_on and the scale_if lines.
+scale_on = "aiming"
+scale_if = 0.04
+scale = 0.12
+# An offset to apply to the axis value when the derivative is non-zero. The sign of the skew is
+# the same as the sign of the derivative. In other words, if the derivative is positive, the skew
+# is added to the result, and the derivative is negative, the skew is subtractecd.
+skew = 30
 
-#-----------------------------------------------------------------------------
+# The sequence parameters define default timings for button presses when constructing sequences of
+# commands to pass to the console. All times are in milliseconds and are double values. (The actual
+# events sent to the console use microsecond precision.)
+[sequence]
+# With menu commands, we interrupt all signals from the user before invoking the menu commands. The
+# delay_after_disable time specifies how long to wait after disabling the commands before starting
+# with the menu commands. The default is 1/3 of a second.
+delay_after_disable = 333.333
+# Length of time to hold down a button when issuing a command.
+button_press_time = 62.5
+# Length of time to release a button when before going on to the next command.
+button_release_time = 62.5
+# Delay after entering a menu before issuing the next comand.
+menu_select_delay = 50
+
+#---------------------------------------------------------------------------------------------------
 # Command Mapping
 #
-# This section defines the commands that this game supports, or at least the
-# ones that we can interect and modify. This mapping allows to support
-# modifiers that do the right thing even when controller buttons are remapped.
+# This section defines the commands that this game supports, or at least the ones that we can
+# intercept and modify. If you have remapped the game controls from their default settings, you
+# should edit this section to reflect the values that the game expects to receive.
+#
 # There are three parts to each command definition: 
-# name -- The label used to refer to the action in the modifiers
-# context -- A particular game state that must be true for the specific
-# controller event to have the assigned meanings. An individual command can
-# be set to a state by declaring state = TRUE. If non context is defined,
-# the command applies in the default situation (independent of other button
-# presses, etc.
-# Note that 
+# name:    The label used to refer to the action in the modifiers
+#
+# binding: The controller event (button, axis, etc.) attached to this command.
+#          The following names are defined for the control bindings. Note that thsese cannot be
+#          changed in this file:
+#          Main Buttons: X, CIRCLE, TRIANGLE, SQUARE
+#          Bumper buttons: L1, R1
+#          Hybrid button/axis: L2, R2
+#          Other buttons: SHARE, OPTIONS, PS
+#          Joystick buttons: L3, R3
+#          Left joystick: LX, LY
+#          Right joystick: RX, RY
+#          D-pad: DX, DY
+#          Touchpad buttons: TOUCHPAD, TOUCHPAD_ACTIVE, TOUCHPAD_ACTIVE_2
+#          Touchpad axes: TOUCHPAD_X, TOUCHPAD_Y, TOUCHPAD_X_2, TOUCHPAD_Y_2
+#          Accelerometer: ACCX, ACCY, ACCZ
+#          Gyroscope: GYRX, GYRY, GYRZ
+#         
+# context: A particular game state that must be true for the specific controller event to have the
+# assigned meaning. For example, a particular command may apply only when aiming a weapon. The
+# context is optional, but if used should be the name of another command defined without a context.
+# 
 [[command]]
 name = "grab/interact"
 binding = "TRIANGLE"
@@ -174,7 +205,14 @@ name = "hold breath"
 condition = "aiming"
 binding = "L3"
 
+#---------------------------------------------------------------------------------------------------
 # Gamestate Conditions
+# These are persistent conditions that are triggered by a transient event, such as selecting a
+# weapon. (Ordinary conditions track the current state of the controller, e.g, a button that is
+# being held down.). All of the following fields are required:
+# name: The name by which the game state is identified in the TOML file.
+# trueOn: The command that sets the gamestate to true.
+# falseOn: The command that sets the gamestate to false.
 [[gamestate]]
 name = "gun selected"
 trueOn = "select weapon"
@@ -185,6 +223,7 @@ name = "consumable selected"
 trueOn = "select consumable"
 falseOn = "select weapon"
 
+#---------------------------------------------------------------------------------------------------
 # Gameplay Modifiers
 [[modifier]]
 name = "No Melee"
@@ -255,7 +294,7 @@ appliesTo = [ "shoulder swap" ]
 
 [[modifier]]
 name = "No Reloading"
-description = "If guns were last selected, R2 is disabled without L2"
+description = "You can still shoot, but you can't reload."
 type = "disable"
 appliesTo = [ "reload/toss" ]
 gamestate = [ "gun selected" ]
@@ -390,22 +429,19 @@ value = 1
 [[modifier]]
 name = "Inverted"
 description = "Inverts the vertical axis for aiming"
-type = "formula"
-magnitude = -1
+type = "invert"
 appliesTo = [ "vertical camera" ]
 
 [[modifier]]
 name = "Moonwalk"
 description = "Be like Michael Jackson! Trying to walk forward will actually make you go backward"
-type = "formula"
-magnitude = -1
+type = "invert"
 appliesTo = [ "move forward/back" ]
 
 [[modifier]]
 name = "Sideways Moonwalk"
 description = "Go left to go right and go right to go left"
-type = "formula"
-magnitude = -1
+type = "invert"
 appliesTo = [ "move sideways" ]
 
 [[modifier]]
@@ -663,77 +699,131 @@ offsetMagnitude = 4.0 # sin(((t+1.6)*i )*4.0) * JOYSTICK_MAX
 timerAmp = 3.0
 
 [[modifier]]
-name = "Only Prone Diving"
-description = "RIP elbows and knees. Any movement results in a prone dive"
-type = "sequence"
-blockInSequence = [ "dodge/listen", "crouch/prone" ]
-startTime = 0.0
-cycleTime = 1.4
-[[modifier.watchdog]]
-triggerOn = [ "move forward/back", "move sideways" ]	
-triggerTheshold = 0.2 # specified as a fraction of maximum delection 
-[[modifier.sequence]]
-command = "dodge/listen"
-applyIf = 0
-value = 1
-timeToNext = 0.1
-[[modifier.sequence]]
-command = "crouch/prone"
-applyIf = 0
-value = 1
-timeToNext = 0.9
-[[modifier.sequence]]
-command = "crouch/prone"
-value = 0
-timeToNext = 1.4
-ifVal = 1
-
-[[modifier]]
-name = "Rubbernecking"
-description = "Woah! What's behind you? Invokes periodic 180 quick turn"
-type = "sequence"
-blockInSequence = [ "jump/climb", "aiming", "move forward/back", "move sideways" ]
-startTime = 6.0
-cycleTime = 6.2
-[[modifier.sequence]]
-command = "jump/climb"
-value = 0
-timeToNext = 6.0
-[[modifier.sequence]]
-command = "aiming"
-value = 0
-timeToNext = 6.0
-[[modifier.sequence]]
-command = "move forward/back"
-value = 127 # JOYSTICK_MAX
-timeToNext = 6.0
-[[modifier.sequence]]
-command = "move sideways"
-value = 0
-timeToNext = 6.0
-[[modifier.sequence]]
-command = "jump/climb"
-value = 1
-timeToNext = 6.1
-[[modifier.sequence]]
-command = "jump/climb"
-value = 0
-timeToNext = 6.2
-	
-
-[[modifier]]
 name = "Max Sensitivity"
 description = "Goodbye precision aiming. Joystick postions multiplied by 5"
-type = "multiply"
+type = "formula"
 appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
 scaling = 5.0
 
 [[modifier]]
 name = "Min Sensitivity"
-description = "It is like slomo, but not for the enemies.  Joystick positions divided by 2.5"
-type = "multiply"
+description = "It is like slomo, but not for the enemies. Joystick positions divided by 2.5"
+type = "formula"
 appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
 scaling = 0.4
+
+
+[[modifier]]
+name = "Only Prone Diving"
+description = "RIP elbows and knees. Any movement results in a prone dive."
+type = "sequence"
+blockWhileBusy = [ "dodge/listen", "crouch/prone" ]
+trigger = [ "move forward/back", "move sideways" ]	
+triggerThreshold = 26 # 20% of maximum deflection
+cycleTime = 1.4
+repeatSequence = [
+	{ command = "dodge/listen", applyIf = 0, value = 1, timeToNext = 0.1 },
+	{ command = "crouch/prone", applyIf = 0, value = 1, timeToNext = 0.9 },
+	{ command = "crouch/prone", value = 0, timeToNext = 1.4, ifVal = 1 }
+	]
+
+[[modifier]]
+name = "Rubbernecking"
+description = "Woah! What's behind you? Invokes a periodic, 180-degree quick turn."
+type = "sequence"
+blockWhileBusy = [ "jump/climb", "aiming", "move forward/back", "move sideways" ]
+delaySequence = 6.0
+cycleTime = 6.2
+repeatSequence = [
+	 { event = "release", command = "jump/climb" },
+	 { event = "release", command = "aiming" },
+	 { event = "hold", command = "move forward/back" },
+	 { event = "release", "move sideways" },
+	 { event = "hold", command = "jump/climb", delay = 0.1 },
+	 { event = "release", command = "jump/climb" }
+	 ]
+
+[[modifier]]
+name = "Desk Pop"
+description = "We honor the flag, and you crap on it when you don't shoot your gun https://www.youtube.com/watch?v=wWZTTtE5_zQ"
+type = "sequence"
+locked = true
+beginSequence = [
+	 { event = "press", command = "select_gun", delay = 1.0 },
+	 { event = "hold", command = "aiming", delay = 1.0 },
+	 { event = "hold", command ="fire/throw", delay = 0.2 },
+	 { event = "release", command ="fire/throw" },
+	 { event = "release", command = "aiming" }
+	 ]
+
+[[modifier]]
+name = "Double Tap"
+description = "It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins."
+type = "sequence"
+blockWhileBusy = [ "shoot/throw" ]
+trigger = [ "shoot/throw" ]
+startTime = 0.2
+repeatSequence = [
+	 { event = "release", command = "shoot/throw", delay = 1.0 },
+	 { event = "hold", command = "shoot/throw", delay = 0.2 },
+	 { event = "release", command = "shoot/throw" }
+	 ]
+
+[[modifier]]
+name = "Use Items"
+description = "Shoots or throws 6 of whatever item is currently equipped (will not work on medkits)"
+type = "sequence"
+beginSequence = [
+	 { event="hold", command = "aiming", delay = 1.0 },
+	 { event="press", command = "shoot/throw", repeat = 6, delay = 0.25 },
+	 { event="release", command = "aiming" }
+	 ]
+
+[[modifier]]
+name = "Toss A Molly/Bomb"
+description = "Time to riot. Chucks a molly (for Ellie) or bomb (for Abby)."
+type = "sequence"
+locked = true
+beginSequence = [
+	 { event = "disable" },
+	 { event = "press", command = "select consumable", repeat = 2, delay = 3.0 },
+	 { event = "hold", command = "shoot/throw", delay = 0.5 },
+	 { event = "release", command = "shoot/throw" }
+	 ]
+	
+[[modifier]]
+name = "CTG Strat"
+description = "Self immolation resulting in death, at least 7/11 times"
+type = "sequence"
+begin_sequence = [
+	 { event = "disable" },
+	 { event = "hold", command = "vertical camera", value = 127 },
+	 { event = "hold", command = "horizontal camera", value = 0 },
+	 { event = "press", command = "select consumable", delay = 3.0, repeat = 2 },
+	 { event = "hold/release", command = "shoot/throw", delay = 0.5 },
+	 { event = "hold", command = "vertical camera", value = 0 }
+	 ]
+	
+[[modifier]]
+name = "Pdub It"
+description = "RIP bricks and bottles"
+type = "sequence"
+begin_sequence = [
+	{ event = "disable" },
+	{ event = "press", command = "select consumable", delay = 2.5 },
+	{ event = "press", command = "shoot/throw", delay= 0.2 }
+	]
+
+[[modifier]]
+name = "Chuck Smoke Bomb"
+description = "It was taking up space anyway. Does nothing when playing Abby"
+type = "sequence"
+begin_sequence = [
+        { event = "disable" },
+       	{ event = "press", command = "select consumable", value = -1, repeat = 2 },
+       	{ event = "delay", value = 3.0 },
+       	{ event = "press", command = "shoot/throw", delay = 0.2 }
+       	]
 
 [[modifier]]
 name = "Restart Checkpoint"
@@ -1119,147 +1209,6 @@ description = "Audio mode.  Incompatible with Helium"
 type = "menu"
 group = "sound"
 value = "GAMEPLAY_AUDIO_XENON"
-
-[[modifier]]
-name = "Desk Pop"
-description = "We honor the flag, and you crap on it when you don't shoot your gun https://www.youtube.com/watch?v=wWZTTtE5_zQ"
-type = "sequence"
-locked = true
-[[modifier.begin]]
-event = "press"
-command = "select_gun"
-delay = 1.0
-[[modifier.begin]]
-event = "hold"
-command = "aiming"
-delay = 1.0
-[[modifier.begin]]
-command ="fire/throw"
-state = "PRESS"
-delay = 0.2
-[[modifier.begin]]
-command ="aiming"
-state = "RELEASE"
-
-[[modifier]]
-name = "Double Tap"
-description = "It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins."
-type = "sequence"
-time_between_shots = 1.0
-blockInSequence = "shoot/throw"
-[[modifier.watchdog]]
-triggerOn = [ "shoot/throw" ]
-triggerThreshold = 1
-startTime = 0.2
-[[modifier.sequence]]
-command = "shoot/throw"
-value = 0
-timeToNext = 1.0
-[[modifier.sequence]]
-command = "shoot/throw"
-value = 1
-timeToNext = 1.2
-[[modifier.sequence]]
-command = "shoot/throw"
-value = 0
-
-[[modifier]]
-name = "Use Items"
-description = "Shoots or throws 6 of whatever item is currently equipped (will not work on medkits)"
-type = "sequence"
-[[modifier.begin.initialize]]
-command = "aiming"
-state = "HOLD"
-delay = 1.0
-[[modifier.begin.loop]]
-repeat = 6
-command = "shoot/throw"
-state = "HOLD/RELEASE"
-delay = 0.25
-[[modifier.begin.finalize]]
-command = "aiming"
-state = "RELEASE"
-
-[[modifier]]
-name = "Toss A Molly/Bomb"
-description = "Time to riot. Chucks a molly (for Ellie) or bomb (for Abby)."
-type = "sequence"
-[[modifier.begin]]
-command = "disable_joysticks"
-[[modifier.begin]]
-repeat = 2
-command = "select consumable"
-state = "PRESS"
-value = 1
-delay = 3.0
-[[modifier.begin]]
-command = "shoot/throw"
-state = "HOLD"
-delay = 0.5
-[[modifier.begin]]
-command = "shoot/throw"
-state = "RELEASE"
-	
-[[modifier]]
-name = "CTG Strat"
-description = "Self immolation resulting in death, at least 7/11 times"
-type = "sequence"
-[[modifier.begin]]
-command = "disable_joysticks"
-[[modifier.begin]]
-command = "vertical camera"
-state = "HOLD"
-value = 127 # JOYSTICK_MAX
-[[modifier.begin]]
-command = "horizontal camera"
-state = "HOLD"
-value = 0
-[[modifier.begin]]
-repeat = 2
-command = "select consumable"
-state = "PRESS"
-delay = 3.0
-[[modifier.begin]]
-command = "shoot/throw"
-state = "HOLD/RELEASE"
-delay = 0.5
-[[modifier.begin]]
-command = "vertical camera"
-state = "HOLD"
-value = 0
-	
-[[modifier]]
-name = "Pdub It"
-description = "RIP bricks and bottles"
-type = "sequence"	
-[[modifier.begin]]
-command = "disable_joysticks"
-[[modifier.begin]]
-command = "select consumable"
-state = "PRESS"
-value = 1
-delay = 2.5
-[[modifier.begin]]
-command = "shoot/throw"
-state = "PRESS"
-delay = 0.2
-
-[[modifier]]
-name = "Chuck Smoke Bomb"
-description = "It was taking up space anyway. Does nothing when playing Abby"
-type = "sequence"
-[[modifier.begin]]
-command = "disable_joysticks"
-[[modifier.begin]]
-repeat = 2
-command = "select consumable"
-state = "PRESS"
-value = -1
-delay = 3.0
-[[modifier.begin]]
-command = "shoot/throw"
-state = "PRESS"
-delay = 0.2
 
 [[modifier]]
 name = "Infinite Hugging"

@@ -24,24 +24,23 @@
 
 using namespace Chaos;
 
-Touchpad::Touchpad(const toml::table& config) {
+void Touchpad::initialize(const toml::table& config) {
 
   timer.initialize();
   
-  condition = GPInput::NONE;
-  std::optional<std::string> tp_condition = config["touchpad"]["SCALE_ON"].value<std::string>();
+  //  condition = GPInput::NONE;
+  std::optional<std::string> tp_condition = config["touchpad"]["scale_on"].value<std::string>();
   if (tp_condition) {
-    std::shared_ptr<GameCommand> cond = GameCommand::get(*tp_condition);
+    std::shared_ptr<GameCommand> condition = GameCommand::get(*tp_condition);
     // condition must be an existing command
-    if (cond) {
-      condition = cond->getBinding();
-      scale_if = config["touchpad"]["SCALE_IF"].value_or(1.0);      
+    if (condition) {
+      scale_if = config["touchpad"]["scale_if"].value_or(1.0);      
     } else {
       throw std::runtime_error("Touchpad condition '" + *tp_condition + "' does not exist");
     }
   }
-  scale = config["touchpad"]["SCALE"].value_or(1.0);
-  skew = config["touchpad"]["SKEW"].value_or(0);
+  scale = config["touchpad"]["scale"].value_or(1.0);
+  skew = config["touchpad"]["skew"].value_or(0);
 
 }
 
@@ -81,7 +80,7 @@ int Touchpad::toAxis(const DeviceEvent& event, bool inCondition) {
     }
     
     derivativeValue = derivative(dd, event.value, timer.runningTime()) *
-      (condition != GPInput::NONE && inCondition) ? scale_if : scale;
+      (condition->getBinding() != GPInput::NONE && inCondition) ? scale_if : scale;
 
     if (derivativeValue > 0) {
       ret = (int) derivativeValue + skew;

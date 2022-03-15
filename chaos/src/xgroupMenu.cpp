@@ -16,15 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#pragma once
-#define CHAOS_VERSION_MAJOR 2
-#define CHAOS_VERSION_MINOR 0
-#define CHAOS_VERSION "2.0.0-alpha.2"
+#include <stdexcept>
+#include <toml++/toml.h>
+#include <plog/Log.h>
 
-#define RASPBERRY_PI
-/* #undef USE_DUALSENSE */
+#include "xgroupMenu.hpp"
+//#include "tomlReader.hpp"
 
-// These values probably should be encapsulated in a class somewhere, at least if they can ever
-// change between controllers. For now we leave them as global defines.
-#define JOYSTICK_MIN (-128)
-#define JOYSTICK_MAX (127)
+using namespace Chaos;

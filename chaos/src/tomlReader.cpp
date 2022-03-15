@@ -26,7 +26,9 @@
 #include "tomlReader.hpp"
 #include "config.hpp"
 #include "gameCommand.hpp"
+#include "gameCondition.hpp"
 #include "modifier.hpp"
+#include "menuAction.hpp"
 
 using namespace Chaos;
 
@@ -60,14 +62,132 @@ TOMLReader::TOMLReader(const std::string& fname) {
   
   game = configuration["game"].value<std::string_view>();
   if (!game) {
-    PLOG_NONE << "Playing " << *game << "\n";
+    PLOG_NONE << "Playing " << *game << std::endl;
   }
   else {
     PLOG_WARNING << "No name specified for this game.\n";
   }
 
+  // Initialize defined sequences and static parameters for sequences
+  Sequence::initialize(configuration);
+
+  // Initialize menu items and global paramerts for the menu system
+  MenuAction::initialize(configuration);
+
   // Create the modifiers
   Modifier::buildModList(configuration);
+}
+
+void TOMLReader::buildSequence(toml::table& config, const std::string& key, Sequence& sequence) {
+  toml::array* arr = config[key].as_array();
+  std::optional<std::string> event, cmd;
+  unsigned int repeat, value;
+  int max_val = 1;
+  if (arr) {
+    for (toml::node& elem : *arr) {
+      assert (elem.as_table());
+      toml::table& definition = *elem.as_table();
+
+      checkValid(definition, std::vector<std::string>{"event", "command", "delay", "repeat", "value"}, "buildSequence");
+      
+      event = definition["event"].value<std::string>();
+      if (! event) {
+	      throw std::runtime_error("Sequence missing required 'event' parameter");
+      }
+
+      double delay = definition["delay"].value_or(0.0);
+      if (delay < 0) {
+	      throw std::runtime_error("Delay must be a non-negative number of seconds.");
+      }
+      short delay_time = (short) delay*1000000;
+      
+      repeat = definition["repeat"].value_or(1);
+      if (repeat < 1) {
+	      PLOG_ERROR << "The value of 'repeat' should be an integer greater than 1. Will ignore.";
+	      repeat = 1;
+      }
+
+      // CHECK: should value really be unsigned?
+      value = definition["value"].value_or(max_val);
+
+      std::shared_ptr<GamepadInput> signal;
+      std::shared_ptr<MenuItem> menu_command;
+
+      cmd = definition["command"].value<std::string>();
+
+      if (*event == "set menu") {
+        
+      } else if (*event == "restore menu") {
+
+      }
+
+      if (cmd) {
+	      signal = GamepadInput::get(*cmd);
+	      // If this signal is a hybrid control, this gets the axis max, which is needed for addHold().
+        if (signal) {
+	        max_val = GamepadInput::getMax(signal);
+        }
+      }
+
+      PLOG_DEBUG << " - sequence event: ";
+      if (*event == "delay") {
+	      if (delay_time == 0) {
+	        PLOG_ERROR << "You've tried to add a delay of 0 microseconds. This will be ignored.\n";
+	      } else {
+	        sequence.addDelay(delay_time);
+          PLOG_DEBUG << " delay " << delay_time << " microseconds\n";
+	      }
+      } else if (*event == "disable") {
+	      sequence.disableControls();
+      } else if (*event == "hold") {
+	      if (!signal) {
+	        throw std::runtime_error("A 'hold' event must be associated with a valid command.");
+      	}
+	      if (repeat > 1) {
+	        PLOG_WARNING << "Repeat is not supported with 'hold' and will be ignored. (Did you want 'press'?)\n";
+      	}
+	      sequence.addHold(signal, value, 0);
+        PLOG_DEBUG << " hold " << signal->getName() << std::endl;
+      } else if (*event == "press") {
+	      if (!signal) {
+	        throw std::runtime_error("A 'press' event must be associated with a valid command.");
+	      }
+	      for (int i = 0; i < repeat; i++) {
+	        sequence.addPress(signal, value);
+	        if (delay_time > 0) {
+	          sequence.addDelay(delay_time);
+	        }
+          PLOG_DEBUG << " press " << signal->getName() << "with delay of " << delay_time << " microseconds." << std::endl;
+	      }
+      } else if (*event == "release") {
+	      if (!signal) {
+	        throw std::runtime_error("A 'release' event must be associated with a valid command.");
+	      }
+	      if (repeat > 1) {
+	        PLOG_WARNING << "Repeat is not supported with 'release' and will be ignored. (Did you want 'press'?)\n";
+	      }
+	      sequence.addRelease(signal, delay_time);
+        PLOG_DEBUG << " release " << signal->getName() << "with delay of " << delay_time << " microseconds." << std::endl;
+      } else {
+      	throw std::runtime_error("Unrecognized event type.");
+      }
+    }
+  }
+}
+
+void TOMLReader::buildMenuCommand(toml::table& config, const std::string& key, std::vector<MenuAction>& menu) {
+  toml::array* arr = config[key].as_array();
+  std::optional<std::string> event, cmd;
+  unsigned int repeat, value;
+  int max_val = 1;
+  if (arr) {
+    for (toml::node& elem : *arr) {
+      assert (elem.as_table());
+      toml::table& definition = *elem.as_table();
+
+      menu.push_back(MenuAction(definition));
+    }
+  }
 }
 
 GPInput TOMLReader::getSignal(const toml::table& config, const std::string& key, bool required) {
@@ -83,6 +203,39 @@ GPInput TOMLReader::getSignal(const toml::table& config, const std::string& key,
     throw std::runtime_error("Gamepad signal '" + *signal + "' not defined");
   }
   return inp->getSignal();
+}
+
+ConditionCheck TOMLReader::getConditionTest(const toml::table& config, const std::string& key) {
+  std::optional<std::string_view> ttype = config[key].value<std::string_view>();
+
+  // Default type is magnitude
+  ConditionType rval = ConditionTest::ANY;
+  if (ttype) {
+    if (*ttype == "any") {
+      rval = ConditionTest::ANY;
+    } else if (*ttype == "none") {
+      rval = ConditionTest::NONE;
+    } else if (*ttype != "all") {
+      PLOG_WARNING << "Invalid ConditionTest '" << *ttype << "': using 'all' instead." std::endl;
+    }
+  return rval;
+}
+
+// warn if any keys in the table are unknown
+bool TOMLReader::checkValid(const toml::table& config, const std::vector<std::string>& goodKeys) {
+  return checkValid(config, goodKeys, config["name"].value_or("??"));
+}
+
+bool TOMLReader::checkValid(const toml::table& config, const std::vector<std::string>& goodKeys,
+			    const std::string& name) {
+  bool ret = true;
+  for (auto&& [k, v] : config) {
+    if (std::find(goodKeys.begin(), goodKeys.end(), k) == goodKeys.end()) {
+      PLOG_WARNING << "The key '" << k << "' is unused in " << name << std::endl;
+      ret = false;
+    }
+  }
+  return ret;
 }
 
 std::string_view TOMLReader::getGameName() {

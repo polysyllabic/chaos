@@ -39,9 +39,13 @@ namespace Chaos {
   class ChaosEngine : public CommandListenerObserver, public ControllerInjector, public Mogi::Thread {
   private:
     ChaosInterface chaosInterface;
-    Controller* controller;
+
+    Controller& controller;
 	
     Mogi::Math::Time time;
+    /**
+    * Time in seconds modifiers last before they are removed from the queue.
+    */
     double timePerModifier;
     /**
      * The list of currently active modifiers
@@ -60,10 +64,16 @@ namespace Chaos {
     bool sniffify(const DeviceEvent& input, DeviceEvent& output);
     // overridden from Mogi::Thread
     void doAction();
-	
+
+  protected:	
+    ChaosEngine();
+
   public:
-    ChaosEngine(Controller* controller);
-	
+    static ChaosEngine& instance() {
+      static ChaosEngine engine{};
+      return engine;
+    }
+
     void setInterfaceReply(const std::string& reply);
     
     inline void setTimePerModifier(double time) { timePerModifier = time; }
@@ -77,4 +87,3 @@ namespace Chaos {
   };
 
 };
-

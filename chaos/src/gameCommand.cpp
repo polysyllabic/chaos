@@ -43,47 +43,33 @@ GameCommand::GameCommand(toml::table& definition) {
   if (!bind) {
     throw std::runtime_error("Missing command binding.");
   }
-  std::shared_ptr<GamepadInput> bnd = GamepadInput::get(*bind);
-  if (! bnd) {
+  binding = GamepadInput::get(*bind);
+  if (! binding) {
     throw std::runtime_error("Specified command binding does not exist.");
   }
-  binding = bnd->getSignal();
   
   std::optional<std::string> cond = definition["condition"].value<std::string>();
 
   if (definition.contains("unless")) {
     if (cond) {
-      throw std::runtime_error("'condition' and 'unless' are mutually exclusive options");
+      throw std::runtime_error("'condition' and 'unless' are mutually exclusive options in a command definition");
     }
     cond = definition["unless"].value<std::string>();
     invertCondition = true;
   } 
   
-  // Condition/unless should be the name of a previously defined GameCommand
+  // Condition/unless should be the name of a defined GameCondition. The constructors for game
+  // commands with conditions should only be called after those conditions have been initialized.
   if (cond) {
-    if (commands.count(*cond) == 1) {
-      condition = commands.at(*cond)->getBinding();
-    } else {
-      throw std::runtime_error("Condition refers to unknown game command."); 
+    condition = GameCondition::get(*cond);
+    if (!condition) {
+      throw std::runtime_error("Game command '" + *name + "' refers to unknown condition '" + *cond + "'"); 
     }
-
-    // If there's a specific threshold, set it.
-    threshold = definition["threshold"].value_or(1);
   }
 }
 
-/**
- * Factory to create the map of default bindings between the game's commands and the button/joystick
- * commands that invoke these commands.
- *
- * We walk through the portion of the TOML config file that defines command bindings and build a map
- * from that. Note that if the game supports remapping commands in its own menus, the user can update
- * the TOML file to reflect those changes rather than merely relying on the default setup.
- *
- * We log non-fatal errors, and throw fatal ones.
- */
-void GameCommand::initialize(toml::table& config) {
-  
+void GameCommand::buildCommandMapDirect(toml::table& config) {
+  // This routine should always be called before buildCommandMapCondition (and only once)
   assert(commands.size() == 0);
   
   // We should have an array of tables. Each table defines one command binding.
@@ -91,22 +77,57 @@ void GameCommand::initialize(toml::table& config) {
   if (arr) {
     for (toml::node& elem : *arr) {
       if (toml::table* command = elem.as_table()) {
-	if (command->contains("name")) {
-	  std::string cmd_name = command->get("name")->value_or("ERROR");
-	  if (commands.count(cmd_name) == 1) {
-	    PLOG_WARNING << "Duplicate command binding for '" << cmd_name << "'. Earlier one will be overwritten.\n";
-	  }
-	  PLOG_VERBOSE << "inserting '" << cmd_name << "': " << command << "\n";
-	  try {
-	    commands.insert({cmd_name, std::make_shared<GameCommand>(*command)});
-	  }
-	  catch (const std::runtime_error& e) {
-	    PLOG_ERROR << "In definition for game command '" << cmd_name << "': " << e.what() << std::endl; 
-	  }
-	}
-	else {
-	  PLOG_ERROR << "Bad command-binding definition: " << *command << "\n";
-	}
+        // skip command definitions that contain conditions
+        if (command->contains("condition") || command->contains("unless")) {
+          continue;
+        }
+	      if (! command->contains("name")) {
+	        PLOG_ERROR << "Command definition missing required 'name' field: " << *command << "\n";
+          continue;
+        }
+        std::string cmd_name = command->get("name")->value_or("");
+	      if (commands.count(cmd_name) == 1) {
+	        PLOG_ERROR << "Duplicate command definition for '" << cmd_name << "'. Later one will be ignored.\n";
+          continue;
+	      }
+	      PLOG_VERBOSE << "Inserting '" << cmd_name << "' into game command list: " << command << "\n";
+	      try {
+      	  commands.insert({cmd_name, std::make_shared<GameCommand>(*command)});
+	      }
+	      catch (const std::runtime_error& e) {
+	        PLOG_ERROR << "In definition for game command '" << cmd_name << "': " << e.what() << std::endl; 
+	      }
+	    }
+    }
+  }
+  if (commands.size() == 0) {
+    PLOG_WARNING << "No unconditional game commands were defined.\n";
+  }
+}
+
+void GameCommand::buildCommandMapCondition(toml::table& config) {
+  
+  // We should have an array of tables. Each table defines one command binding.
+  toml::array* arr = config["command"].as_array();
+  if (arr) {
+    for (toml::node& elem : *arr) {
+      if (toml::table* command = elem.as_table()) {
+        // We already logged an error if the command is missing a name field, so just skip here
+      	if (! command->contains("name")) {
+          continue;
+        }
+	      std::string cmd_name = command->get("name")->value_or("");
+        // Skip conditions already defined by call to buldCommandMapDirect
+    	  if (commands.count(cmd_name) == 1) {
+	        continue;
+	      }
+	      PLOG_VERBOSE << "inserting '" << cmd_name << "': " << command << "\n";
+	      try {
+    	    commands.insert({cmd_name, std::make_shared<GameCommand>(*command)});
+	      }
+	      catch (const std::runtime_error& e) {
+	        PLOG_ERROR << "In definition for game command '" << cmd_name << "': " << e.what() << std::endl; 
+	      }
       }
     }
   }
@@ -131,3 +152,4 @@ GPInput GameCommand::getInput(const std::string& name) {
   PLOG_WARNING << "In GameCommand::getInput - command '" << name << "' not recognized\n";
   return GPInput::NONE;
 }
+

@@ -30,8 +30,27 @@ namespace Chaos {
   } TimeAndEvent;
 
   /**
-   * Subclass of modifiers that introduce a delay between a button press and when it is passed to
-   * the controller.
+   * \brief Subclass of modifiers that introduce a delay between a button press and when it is
+   * passed to the controller.
+   *
+   * Example TOML definition:
+   * [[modifier]]
+   * name = "Shooting Delay"
+   * description = "Introduces a 0.5 second delay to shooting and throwing"
+   * type = "delay"
+   * groups = [ "debuff", "combat" ]
+   * appliesTo = [ "shoot/throw" ]	
+   * delay = 0.5
+   *
+   * The following keys are defined for this class of modifier:
+   *
+   * - name: A unique string identifying this mod. (_Required_)
+   * - description: An explanatation of the mod for use by the chat bot. (_Required_)
+   * - type = "cooldown" (_Required_)
+   * - groups: A list of functional groups to classify the mod for voting. (_Optional_)
+   * - appliesTo: A list of commands affected by the mod. (_Required_)
+   * - delay: Time in seconds to delay the listed commands. (_Required_)
+   *
    */
   class DelayModifier : public Modifier::Registrar<DelayModifier> {
 
@@ -42,7 +61,7 @@ namespace Chaos {
   public:
     static const std::string name;
     
-    DelayModifier(const toml::table& config);
+    DelayModifier(toml::table& config);
     void update();
     bool tweak(DeviceEvent& event);
   };

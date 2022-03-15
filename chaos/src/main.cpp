@@ -28,7 +28,7 @@
 #include "config.hpp"
 #include "chaosEngine.hpp"
 #include "modifier.hpp"
-#include "controllerRaw.hpp"
+#include "controller.hpp"
 #include "tomlReader.hpp"
 
 using namespace Chaos;
@@ -40,25 +40,21 @@ int main(int argc, char** argv) {
     exit (EXIT_FAILURE);
   }
   std::string configfile(argv[1]);
-  // Configure the controller
-  ControllerRaw controller;
-  controller.initialize();
-  controller.start();
-
-  TOMLReader config(configfile);
   
-  ChaosEngine chaosEngine(&controller);
-  chaosEngine.start();
+  // Configure the controller
+  Controller::instance().initialize();
+  Controller::instance().start();
 
-  //  double timePerModifier = 30.0;
-  //  chaosEngine.setTimePerModifier(timePerModifier);
-  Modifier::setController(&controller);
-  Modifier::setEngine(&chaosEngine);
-  //  Modifier::buildModList(config);
+  // Process the TOML file. This will initialize all the mods and associated data.
+  TOMLReader config(configfile);
 
+  // Start the engine
+  ChaosEngine::instance().start();
+
+  // Announce the mods to the chaos interface
   std::string reply = Modifier::getModList();
   while(1) {
-    chaosEngine.setInterfaceReply( reply );
+    ChaosEngine::instance().setInterfaceReply( reply );
     usleep(10000000);
   }
   

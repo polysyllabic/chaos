@@ -30,9 +30,9 @@
 
 using namespace Chaos;
 
-ChaosEngine::ChaosEngine(Controller* controller) : controller(controller), pause(true)
+ChaosEngine::ChaosEngine() : controller{Controller::instance()}, pause(true)
 {
-  controller->addInjector(this);
+  controller.addInjector(this);
   time.initialize();
   chaosInterface.addObserver(this);
 }
@@ -177,19 +177,19 @@ void ChaosEngine::fakePipelinedEvent(DeviceEvent& fakeEvent, std::shared_ptr<Mod
     // Find the modifier that sent the fake event in the modifier list
     std::list<std::shared_ptr<Modifier>>::iterator mod =
       std::find_if(modifiers.begin(), modifiers.end(), [&](const auto& p) {
-	return p == modifierThatSentTheFakeEvent; } );
+	      return p == modifierThatSentTheFakeEvent; } );
     
-    // iterate from the next element till the end and apply any tweaks
-    for ( mod++; mod != modifiers.end(); mod++) {
-      valid = (*mod)->tweak(fakeEvent);
-      if (!valid) {
-	break;
+      // iterate from the next element till the end and apply any tweaks
+      for ( mod++; mod != modifiers.end(); mod++) {
+        valid = (*mod)->tweak(fakeEvent);
+        if (!valid) {
+	      break;
       }
     }
   }
   // unless canceled, send the event out
   if (valid) {
-    controller->applyEvent(fakeEvent);
+    controller.applyState(fakeEvent);
   }
 }
 

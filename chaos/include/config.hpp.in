@@ -23,4 +23,8 @@
 
 #cmakedefine RASPBERRY_PI
 #cmakedefine USE_DUALSENSE
- 
+
+// These values probably should be encapsulated in a class somewhere, at least if they can ever
+// change between controllers. For now we leave them as global defines.
+#define JOYSTICK_MIN (-128)
+#define JOYSTICK_MAX (127)

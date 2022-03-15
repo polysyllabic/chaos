@@ -19,7 +19,7 @@
 #include <cstddef>
 #include <plog/Log.h>
 
-#include "config.hpp"
+#include <config.hpp>
 #include "controllerState.hpp"
 #include "dualshock.hpp"
 
@@ -50,12 +50,6 @@ ControllerState* ControllerState::factory(int vendor, int product) {
     return new Dualshock;
   }	
   return NULL;
-}
-
-
-short int ControllerState::fixShort(short int input) {
-  return input;
-  // return ((input & 0x00ff) << 8) | ((input & 0xff00) >> 8);
 }
 
 short int ControllerState::positionDY( const uint8_t& input ) {

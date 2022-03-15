@@ -29,8 +29,9 @@
 #include <linux/uhid.h>
 
 #include <mogi/thread.h>
+
 #include "controllerState.hpp"
-#include "deviceTypes.hpp"
+#include "signalTypes.hpp"
 
 namespace Chaos {
 

@@ -1,7 +1,7 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
+ * the top-level directory of this distribution for details of the contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,14 +17,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#define CHAOS_VERSION_MAJOR 2
-#define CHAOS_VERSION_MINOR 0
-#define CHAOS_VERSION "2.0.0-alpha.2"
+#include <vector>
+#include <toml++/toml.h>
 
-#define RASPBERRY_PI
-/* #undef USE_DUALSENSE */
+#include "menuAction.hpp"
 
-// These values probably should be encapsulated in a class somewhere, at least if they can ever
-// change between controllers. For now we leave them as global defines.
-#define JOYSTICK_MIN (-128)
-#define JOYSTICK_MAX (127)
+namespace Chaos {
+
+  class addSetMenuOption : public MenuAction {
+    
+  };
+};

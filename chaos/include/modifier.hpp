@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the COPYRIGHT
- * file at the top-level directory of this distribution.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file at the top-level directory of this distribution for details of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,13 +25,14 @@
 #include <mogi/math/systems.h>
 #include <toml++/toml.h>
 
-#include "modifierFactory.hpp"
+#include "factory.hpp"
 
 #include "controller.hpp"
-#include "deviceTypes.hpp"
+#include "signalTypes.hpp"
 #include "gameCommand.hpp"
-#include "gameState.hpp"
+#include "gameCondition.hpp"
 #include "touchpad.hpp"
+#include "sequence.hpp"
 
 namespace Chaos {
 
@@ -47,26 +49,57 @@ namespace Chaos {
    * during initialization based on a definition in the TOML configuration file.
    *
    * Within the TOML file, each mod is defined in a [[modifier]] table.
-   * The following keys are required for all modifiers:
+   * The following keys are defined for all modifiers:
    *
-   * - name: A unique string identifying this mod.
-   * - description: An explanatation of the mod for use by the chat bot.
-   * - type: the subtype of modifier.
+   * - name: A unique string identifying this mod (_Required_)
+   * - description: An explanatation of the mod for use by the chat bot (_Required_)
+   * - type: The class of modifier (_Required_). The following modifier classes are currently implemented:
+   *       - cooldown: Allow a command for a set time then force a recharge period before it can be used again.
+   *       - delay: Wait for a set amount of time before sending a command.
+   *       - disable: Block commands from being sent to the console.
+   *       - formula: Alter the magnitude and/or offset of the signal through a formula
+   *       - invert: Invert the sign of the signal.
+   *       - menu: Apply a setting from the game's menus.
+   *       - parent: A mod that contains other mods as children.
+   *       - remap: Change which controls issue which commands.
+   *       - repeat: Repeat a particular command at intervals.
+   *       - sequence: Issue an arbitrary sequence of actions.
+   *       .
+   * - group: A group (separate from the type) to classify the mod for voting (_Optional_)
    *
-   * The following modifier types are currently defined:
+   * Each type of modifier accepts a different subset of additional parameters. Some parameters,
+   * however, are parsed by the general initialization routine called by all child classes and so
+   * are available for any class that needs to use them. Note that the parent Modifier class parses
+   * these entries, and provides variables to store the result and functions to perform the most
+   * common actions, but child classes must implement the logic for handling this information and
+   * determining its consequences for manipulating the signal stream.
    *
-   * - cooldown: Allow a command for a set amount of time and then force a recharge period
-   *   before it can be used again.
-   * - delay: Wait for a set amount of time before sending a command.
-   * - disable: Block a command or commands from being sent to the console.
-   * - formula: Alter the magnitude and/or offset of the signal through a formula
-   * - menu: Apply a setting from the game's menus.
-   * - remap: Change which controls issue which commands.
-   * - sequence: Apply an arbitrary sequence of actions.
+   * The following parameters are available for use by all child mods. Whether they are required,
+   * optional, or unused by the child mods depends on the type of modifier:
    *
-   * Each type of modifier accepts a different subset of additional parameters. See the
-   * specific classes for details. 
+   * - appliesTo: A list of GameCommand objects affected by the mod.
+   * - condition: A list of GameCondition objects whose total evaluation returns true or false.
+   * Mods that use conditions should do something when the evaluation is true.
+   * - unless: A list of GameCondition objects whose total evaluation returns true or false. The
+   * evaluation of conditions occurs the same way Mods
+   * that use condiditions should do something when the evaluation is false.
+   * take place. The test of listed commands functions exactly as 'condition', but the commands are
+   * disabled only if test of the conditions returns false.
+   * - conditionTest: Type of test to perform on the conditions in the array.
+   * - unlessTest: Type of test to perform on the conditions in the unless array.
+   * - sequenceBegin:  A sequence of commands to issue when the mod is activated. Mods that want
+   * to use this command can call sendBeginSequence() in their #begin routine. 
+   * - sequenceFinish: A sequence of commands to issue when the mod is deactivated. Mods that want
+   * to use this command can call sendFinishSequence() in their #finish routine.
+   *
+   * Both conditionTest and unlessTest accept the following values:
+   * - all: All conditions must be true (for condition) or false (for unless) simultaneously
+   * - any: Any one condition must be true (for condition) or false (for unless) at one time
+   * - none: None of the defined conditions must be true (for condition) or false (for unless)
    * 
+   * Additional parameters that are specific to individual types of mods are listed in the
+   * documentation for those classes.
+   *
    * Example TOML definitions:
    *
    *    [[modifier]]
@@ -75,6 +108,12 @@ namespace Chaos {
    *    type = "disable"
    *    appliesTo = [ "move forward/back", "move sideways" ]
    * 
+   *    [[modifier]]
+   *    name = "Moonwalk"
+   *    description = "Be like Michael Jackson! Trying to walk forward will actually make you go backward."
+   *    type = "invert"
+   *    appliesTo = [ "move forward/back" ]
+   *
    *    [[modifier]]
    *    name = "Touchpad Aiming"
    *    description = "No more aiming with the joystick. Finally making use of the touchpad!"
@@ -88,13 +127,6 @@ namespace Chaos {
    *          {from = "RY", to="NOTHING"}
    *          ]
    *
-   *    [[modifier]]
-   *    name = "Moonwalk"
-   *    description = "Be like Michael Jackson! Trying to walk forward will actually make you go backward"
-   *    type = "formula"
-   *    magnitude = -1
-   *    appliesTo = [ "move forward/back" ]
-   *
    * Specific types of modifiers are built in a self-registering factory. In order to ensure that
    * each child class is registered properly, that class cannot inherit directly from this one.
    * Instead, you must inherit from the Modifier::Registrar, with the name of the child class in
@@ -106,17 +138,12 @@ namespace Chaos {
    * only parameter, and it should pass this to the parent constructor with the same
    * parameter.
    *
-   *    ChildModifier::DisableModifier(const toml::table& config) : Modifier(config) {
+   *    ChildModifier::DisableModifier(toml::table& config) : Modifier(config) {
    *      // Initialization specific to the child modifier here
    *    }
    *
-   * The parent constructor will initialize the data for the parts of the modifier that are common
-   * to multiple types. The following fields are recognized and need not be reprocessed by the
-   * child class:
-   * - description
-   * - appliesTo
    */
-  struct Modifier : Factory<Modifier, const toml::table&>, public std::enable_shared_from_this<Modifier> {
+  struct Modifier : Factory<Modifier, toml::table&>, public std::enable_shared_from_this<Modifier> {
     friend ChaosEngine;
 
   protected:
@@ -133,49 +160,102 @@ namespace Chaos {
      */
     std::string group;
     
+    /**
+     * \brief Running count of how long this mod has been active.
+     */
     Mogi::Math::Time timer;
 
-    static Controller* controller;
-    static ChaosEngine* engine;
-
-    static Touchpad* touchpad;
     /**
      * \brief The list of specific commands affected by this mod.
      *
-     * Note that all commands in this list are affected by the same condition (if any). If you want
-     * two different commands to have two different conditions, you should create two mods and
-     * declare them as children of a parent mod.
+     * This vector holds pointers to the list of GameCommand objects lised in the appliesTo
+     * parameter of the TOML file. Note that all commands in this list are affected by the same
+     * condition (if any). If you want two different commands to have two different conditions,
+     * you should create two mods and declare them as children of a parent mod.
      */
     std::vector<std::shared_ptr<GameCommand>> commands;
-    
+
     /**
+     * \brief Flag to indicate mod applies to all commands.
+     *
      * Instead of listing all commands separately, a mod can announce that it affects all game
-     * commands. This allows us to avoid testing an entire list when the result will always be true.
+     * commands. This allows us to avoid testing an entire list when the result will always be
+     * true. This flag can be set from the TOML file by using the special keyword "ALL" in place
+     * of an array of commands.
      */
     bool applies_to_all;
 
     /**
-     * For mods that need to reference specific signals, not game commands.
+     * \brief A sequence of commands to execute when initializing the mod.
+     *
+     * The TOML key for this parameter is beginSequence, and the value must be an array of inline
+     * arrays, each of which contains a sequence command. This can be used, for example, to ensure
+     * that certain commands are set to 0. The format for sequences is described in the
+     * documentation for the SequenceModifier class.
      */
-    std::vector<GPInput> signals;
+    Sequence on_begin;
     /**
-     * List of game states that must be true for the mod to apply
+     * \brief A sequence of commands to execute when unloading the mod.
+     *
+     * The TOML key for this parameter is finishSequence, and the value must be an array of inline
+     * arrays, each of which contains a sequence command. This can be used, for example, to ensure
+     * that certain commands are set to 0. The format for sequences is described in the
+     * documentation for the SequenceModifier class.
      */
-    std::vector<std::shared_ptr<GameState>> gamestates;
+    Sequence on_finish;
 
-    bool any_state;
-    bool no_state;
     /**
-     * Contains "this" except in cases where there is a parent modifier.
+     * \brief The current state of any begin or finish sequence that is beeing issued
+     */
+    bool in_sequence;
+
+    /**
+     * \brief If true, lock out all events listed in appliesTo while sending a sequence.
+     */
+    bool lock_while_busy;
+
+    /**
+     * \brief List of game conditions to test
+     *
+     * The list of conditions is tested according to the rule in condition_test, and mods are expected
+     * to take action if the result of the test is true.
+     */
+    std::vector<std::shared_ptr<GameCondition>> conditions;
+
+    /**
+     * \brief Rule to apply for the test of the #conditions list.
+     *
+     * Currently supports all, any, or none true. 
+     */
+    ConditionCheck condition_test;
+
+    /**
+     * \brief List of game conditions to test
+     *
+     * The list of conditions is tested according to the rule in unless_test, and mods are expected
+     * to take action if the result of the test is true.
+     */
+    std::vector<std::shared_ptr<GameCondition>> unless_conditions;
+
+    /**
+     * \brief Rule to apply for the test of the #unless_conditions list.
+     *
+     * Currently supports all, any, or none true. 
+     */
+    ConditionCheck unless_test;
+
+    /**
+     * \brief Contains "this" except in cases where there is a parent modifier.
      */
     std::shared_ptr<Modifier> me; 
 
     /**
-     * Amount of time the engine has been paused.
+     * \brief Amount of time the engine has been paused.
      */
     double pauseTimeAccumulator;
+
     /**
-     * Designates a custom lifespan, if necessary.
+     * \brief Designates a custom lifespan, if necessary.
      */
     double totalLifespan;
     
@@ -198,7 +278,43 @@ namespace Chaos {
      * - gamestate
      *
      */
-    void initialize(const toml::table& config);
+    void initialize(toml::table& config);
+
+    /**
+     * \brief Send any sequence intended to issue when the mod initializes.
+     * 
+     * Mods that support begining sequences should put a call to this function in their begin()
+     * routine. If the sequence is empty, this will do nothing.
+     */
+    void sendBeginSequence();
+
+    /**
+     * \brief Send any sequence intended to issue when the mod is finishing.
+     * 
+     * Mods that support begining sequences should put a call to this function in their finish()
+     * routine. If the sequence is empty, this will do nothing.
+     */
+    void sendFinishSequence();
+
+    /**
+     * \brief Test if the current controller state matches the defined conditions
+     * 
+     * \param conditions A vector of the conditions to check
+     * \param cond_type The type of test to apply to the conditions (all, any, none)
+     * \return true 
+     * \return false 
+     */
+    bool testConditions(std::vector<std::shared_ptr<GameCondition>> conditions, ConditionCheck cond_type);
+
+    /**
+     * \brief Update the state of any persistent game conditions.
+     * 
+     * \param event 
+     *
+     * This function should be called from the tweak routines of child modifiers that can track
+     * persistent states.
+     */
+    void updatePersistent(const DeviceEvent& event);
 
     /**
      * \brief Translate an axis event to events for one of a pair of buttons.
@@ -244,16 +360,15 @@ namespace Chaos {
      */
     Modifier(Passkey) {}
     
-    static void setController(Controller* contr);
-    static void setEngine(ChaosEngine* eng);
-    
     /**
-     * The map of all the mods defined through the TOML file
+     * \brief The map of all the mods defined through the TOML file
      */
     static std::unordered_map<std::string, std::shared_ptr<Modifier>> mod_list;
 
     /**
-     * Create the overall list of mods from the TOML file.
+     * \brief Create the overall list of mods from the TOML file.
+     * \param config The object containing the fully parsed TOML file
+     *
      */
     static void buildModList(toml::table& config);
 
@@ -307,40 +422,65 @@ namespace Chaos {
     /**
      * \brief Commands to execute after another mod has executed its finish() routine and been
      * removed from the stack of active mods.
+     *
+     * This is currently used only by remap mods to clean up the remap table in the event that
+     * more than one active mod is remapping things.
      */ 
     virtual void apply();
     /**
      * \brief Get a short description of this mod for the Twitch-bot.
      * \return The descrition of the mod.
      *
-     * TO DO: Internationalize these strings.
+     * \todo Internationalize the description strings.
      */
-    inline const std::string& getDescription() const noexcept { return description; }
+    inline std::string& getDescription() { return description; }
 
+    inline std::string& getGroup() { return group; }
+    
     /**
      * \brief Commands to test (and potentially alter) events as necessary.
      * \param[in,out] event The event coming from the gamepad to test/alter.
-     * \return A boolean indication of whether the event is valid.
+     * \return true if the event is valid and should be passed on to other mods and the controller
+     * \return false if the event should be dropped and not sent to other mods or the controller
      *
-     * Returning true has the effect of passing the event on to the next modifier (if any) in the
-     * list of active modifiers. Returning false effectively dropps the event, and it will not be
-     * passed on for other modifiers to alter.
-     *
+     * This command will be called for every event coming from the controller after any events have
+     * been remapped.
      */
     virtual bool tweak(DeviceEvent& event);
 
     /**
-     * \brief Traverses the list of any monitored game states and updates accordingly.
+     * \brief Checks the list of game conditions 
+     * 
+     * \return true if we're in the defined state, or if the list is empty
+     * \return false if we're not in the defined state
      *
-     * This is a helper function intended to be called from the tweak() routine of any child class
-     * that needs to monitor game states.
+     * Traverses the list of GameCondition objects stored in #conditions. The state of 
+     * #conditionTest determines the logic for how to chain together multiple conditions.
+     *
+     * If the #conditions list is empty, always returns true. In other words, defining no
+     * conditions is equivalent to "always do this".
      */
-    void updateGamestates(const DeviceEvent& event);
-
+    bool inCondition();
+    
     /**
-     * Test if we're currently in the defined game state(s)
+     * \brief Checks the list of negative game conditions 
+     * 
+     * \return true if we're in the defined state
+     * \return false if we're not in the defined state, or if the list is empty
+     *
+     * Traverses the list of GameCondition objects stored in #unless_conditions. The state of 
+     * #unlessTest determines the logic for how to chain together multiple conditions.
+     *
+     * Note that the test on a non-empty list is conducted the same way as the one for
+     * inCondition(). For example, if #unlessTest is set to ConditionCheck::ALL and all
+     * conditions are true, this function returns true. You should think of the return value
+     * as answering the question "Are we in the state defined in this list?" and not "should we
+     * take action?" The answer to the second question is one to be determined by the child
+     * mod that makes use of this function.
+     * 
+     * If the #unless_conditions list is empty, always returns false.
      */
-    bool inGamestate();
+    bool inUnless();
     
   };
 
