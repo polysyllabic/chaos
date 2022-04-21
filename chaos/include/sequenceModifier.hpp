@@ -21,11 +21,10 @@
 
 #include "modifier.hpp"
 #include "sequence.hpp"
-#include "gamepadCondition.hpp"
 
 namespace Chaos {
 
-  enum class {UNTRIGGERED, STARTING, IN_SEQUENCE, ENDING} SequenceState;
+  enum class SequenceState {UNTRIGGERED, STARTING, IN_SEQUENCE, ENDING};
 
   /** 
    * \brief Subclass of modifiers that executes arbitrary sequences of commands once. Seperate
@@ -128,7 +127,7 @@ namespace Chaos {
     std::vector<std::shared_ptr<GameCommand>> block_while;
     
     double sequence_time;
-    short int last_state;
+    short sequence_step;
 
     void processSequence(Sequence& seq);
     

@@ -62,8 +62,10 @@ namespace Chaos {
     static const std::string name;
     
     DelayModifier(toml::table& config);
+    void begin();
     void update();
     bool tweak(DeviceEvent& event);
+    void finish();
   };
 };
 

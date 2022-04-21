@@ -31,9 +31,8 @@ const std::string SequenceModifier::name = "sequence";
 SequenceModifier::SequenceModifier(toml::table& config) {
 
   TOMLReader::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "disableOnStart", "startSequence",
-      "blockWhileBusy", "repeatSequence", "disableOnFinish", "finishSequence",
-      "trigger", "triggerThreshold", "triggerType", 
+      "name", "description", "type", "groups", "beginSequence", "finishSequence",
+      "blockWhileBusy", "repeatSequence", "condition",
       "startDelay", "cycleDelay"});
 
   initialize(config);
@@ -47,32 +46,19 @@ SequenceModifier::SequenceModifier(toml::table& config) {
   lock_while_busy = TOMLReader::addToVectorOrAll<GameCommand>(config, "blockWhileBusy", block_while);
 
   start_delay = config["startDelay"].value_or(0.0);
-  cycle_delay = config["cycleDelay"].value_or(0.0);
+  repeat_delay = config["cycleDelay"].value_or(0.0);
 
 #ifndef NDEBUG
   PLOG_DEBUG << " - startDelay: " << start_delay << std::endl;
-  PLOG_DEBUG << " - cycleDelay: " << cycle_delay << std::endl;
+  PLOG_DEBUG << " - cycleDelay: " << repeat_delay << std::endl;
 #endif
   
-  TOMLReader::addToVector<GameCommand>(config, "trigger", triggers);
-  distance_threshold = config["distanceThreshold"].value_or(false);
-  double threshold_fraction = config["triggerThreshold"].value_or(0.0);
-  if (! triggers.empty()) {
-    
-  }
 }
 
 void SequenceModifier::begin() {
-  last_state = 0;
   sequence_time = 0;
-  in_sequence = UNTRIGGERED;
-
-  // zero out all signals that need it
-  if (disable_on_begin && ! commands.empty()) {
-    for (auto& cmd : commands) {
-      Controller::instance().setOff(cmd);
-    }
-  }
+  sequence_step = 0;
+  sequence_state = SequenceState::UNTRIGGERED;
   sendBeginSequence();
 }
 
@@ -83,60 +69,62 @@ void SequenceModifier::update() {
   }
   sequence_time += timer.dTime();
   
-  switch (in_sequence) {
-  case UNTRIGGERED:
-    if (triggers.empty()) {
-      // No trigger. Start immediately
-      in_sequence = STARTING;
-    } else {
-      // check for a trigger condition
-      if (magnitude_trigger) {
-
+  switch (sequence_state) {
+  case SequenceState::UNTRIGGERED:
+    // If there is no condition, this will also return true
+    if (inCondition()) {
+      if (start_delay == 0) {
+        // go straight into the sequence
+        sequence_state = SequenceState::IN_SEQUENCE;
       } else {
-        for (auto& t : triggers) {
-          short current = Controller::instance().getState(t);
-          if () {
-            
-          }
-
-        }
+        // delay before starting the sequence
+        sequence_state = SequenceState::STARTING;
       }
-    }
-  case STARTING:
-    if (sequence_time >= start_delay) {
-      in_sequence = IN_SEQUENCE;
       sequence_time = 0;
-    }
-  case IN_SEQUENCE:
-    DeviceEvent event = repeat_sequence.getEvent(sequence_time);
-    if (event.time == 0 && event.value == 0 && event.id == 255 && event.type == 255) {
-      in_sequence = ENDING;
-      sequence_time = 0;
-    } else {
-      if (Controller::instance().getState(event.id, event.type) == last_state) {
-        // should the time in this event be set to zero?
-        Controller::instance().applyEvent(event);
-      }
     }
     break;
-  case ENDING:
-    if (sequence_time >= repeat_delay) {
-      in_sequence = UNTRIGGERED;
+  case SequenceState::STARTING:
+    // In the starting state, we wait for any initial delay before the sequence starts
+    if (sequence_time >= start_delay) {
+      sequence_state = SequenceState::IN_SEQUENCE;
       sequence_time = 0;
+    }
+    break;
+case SequenceState::IN_SEQUENCE:
+    // The sequence of actions here are not exclusive (other things can be happening while these
+    // commands are in train. 
+    if (repeat_sequence.sendParallel(sequence_time)) {
+      sequence_state = SequenceState::ENDING;
+      sequence_time = 0;
+    }
+    break;
+  case SequenceState::ENDING:
+    // After the sequence, we wait for the delay amount before resetting the trigger
+    if (sequence_time >= repeat_delay) {
+      sequence_state = SequenceState::UNTRIGGERED;
+      sequence_time = 0;
+      sequence_step = 0;
     }
   }
 }
 
 void SequenceModifier::finish() {
-  // zero out all signals that need it
-  if (disable_on_finish && ! commands.empty()) {
-    for (auto& cmd : commands) {
-      Controller::instance().setOff(cmd);
-    }
-  }
   sendFinishSequence();
 }
 
 bool SequenceModifier::tweak(DeviceEvent& event) {
-  return !in_sequence;
+  if (sequence_state == SequenceState::IN_SEQUENCE) {
+    if (lock_while_busy) {
+      // drop all signals while in sequence
+      return false;
+    } else {
+      // while in the sequence, block the commands in the while-busy list
+      for (auto& cmd : block_while) {
+        if (Controller::instance().matches(event, cmd)) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
 }

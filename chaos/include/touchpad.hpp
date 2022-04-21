@@ -22,7 +22,7 @@
 #include <mogi/math/systems.h>
 
 #include "gamepadInput.hpp"
-#include "gameCommand.hpp"
+#include "gameCondition.hpp"
 
 namespace Chaos {
 
@@ -30,11 +30,13 @@ namespace Chaos {
    * \brief A class to encapulate the touchpad functionality on the controller.
    */
   class Touchpad {
+  private:
     /**
-     * The scaling of the touchpad can be affected by a game condition, such as whehter or not the
-     * user is aiming. If there is no condition, this will be set to GPInput::NONE.
+     * The scaling of the touchpad can be affected by a game condition, such as whether or not the
+     * user is aiming. If there is no condition, this will be set to NULL.
      */
-    std::shared_ptr<GameCommand> condition;
+    std::shared_ptr<GameCondition> condition;
+
     double scale;
     double scale_if;
     int skew;
@@ -107,8 +109,8 @@ namespace Chaos {
      */
     void setActive(bool state) { active = state; }
 
-    std::shared_ptr<GameCommand> getCondition() { return condition; }
-    
+    bool inCondition() { return condition->inCondition(); }
+
     int toAxis(const DeviceEvent& event, bool inCondition);
   };
   

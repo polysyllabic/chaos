@@ -25,11 +25,12 @@
 #include <plog/Log.h>
 
 #include "gameCommand.hpp"
+#include "gameCondition.hpp"
 
 using namespace Chaos;
 
 std::unordered_map<std::string, std::shared_ptr<GameCommand>> GameCommand::commands;
-
+std::string unknown_command = "UNKNOWN (Own pointer not found -- something is wrong)";
 /*
  * The constructor for the command binding. The name of the command has already been read and will
  * form the key in the map. Here we set the main binding and any additional conditions.
@@ -55,7 +56,7 @@ GameCommand::GameCommand(toml::table& definition) {
       throw std::runtime_error("'condition' and 'unless' are mutually exclusive options in a command definition");
     }
     cond = definition["unless"].value<std::string>();
-    invertCondition = true;
+    invert_condition = true;
   } 
   
   // Condition/unless should be the name of a defined GameCondition. The constructors for game
@@ -141,15 +142,22 @@ std::shared_ptr<GameCommand> GameCommand::get(const std::string& name) {
   if (iter != commands.end()) {
     return iter->second;
   }
-  return NULL;
+  return nullptr;
 }
 
-GPInput GameCommand::getInput(const std::string& name) {
-  std::shared_ptr<GameCommand> cmd = get(name);
-  if (cmd) {
-    return cmd->getBinding();
+std::shared_ptr<GamepadInput> GameCommand::getRemapped() {
+  GPInput r = binding->getRemap();
+  if ( r == GPInput::NONE || r == GPInput::NOTHING ) {
+    return nullptr;
   }
-  PLOG_WARNING << "In GameCommand::getInput - command '" << name << "' not recognized\n";
-  return GPInput::NONE;
+  return GamepadInput::get(r);
 }
 
+const std::string& GameCommand::getName() {
+  for (auto it = commands.begin(); it != commands.end(); ++it) {
+    if (it->second == getptr()) {
+      return it->first;
+    }
+  }
+  return unknown_command;
+}

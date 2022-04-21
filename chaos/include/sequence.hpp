@@ -40,6 +40,26 @@ namespace Chaos {
     static unsigned int press_time;
     static unsigned int release_time;
     
+    static std::unordered_map<std::string, std::shared_ptr<Sequence>> sequences;
+
+    // to track current stage for sending the sequence in parallel
+    short current_step;
+    // running tracker of elapsed time to wait before sending the next sequence in parallel
+    unsigned int wait_until;
+
+  public:
+    Sequence() {}
+    
+    /**
+     * \brief Factory for pre-defined sequences
+     * 
+     * \param config Fully parsed TOML object of the configuration file.
+     *
+     * Initializing the pre-defined sequences that can be referenced from other sequences and
+     * the global accessor functions, e.g., for menu operations.
+     */
+    static void initialize(toml::table& config);
+
     /**
      * \brief Adds a stack of events to set all the buttons and axes to zero.
      *
@@ -85,24 +105,10 @@ namespace Chaos {
      */
     void addDelay(unsigned int delay);
 
-    static std::unordered_map<std::string, std::shared_ptr<Sequence>> sequences;
+    void addSequence(std::shared_ptr<Sequence> seq);
+    void addSequence(const std::string& name);
 
-  public:
-
-    Sequence() {}
-    Sequence(toml::array& config);
-
-    /**
-     * \brief Main factory
-     * 
-     * \param config Fully parsed TOML object of the configuration file.
-     *
-     * Initializing the pre-defined sequences that can be referenced from other sequences and
-     * the global accessor functions, e.g., for menu operations.
-     */
-    static void initialize(toml::table& config);
-
-    static std::shared_ptr<Sequence> get(std::string& name);
+    static std::shared_ptr<Sequence> get(const std::string& name);
     
     /**
      * Test if the event queue is empty
@@ -113,15 +119,20 @@ namespace Chaos {
      */
     virtual void send();
     /**
-     * Send the sequence of events to the console.
-     */
-    virtual void send_incremental();
-    /**
      * Empty the event queue
      */
     void clear();
 
     std::vector<DeviceEvent>& getEvents() { return events; }
+
+    /**
+     * \brief Return the nth step in the sequence of events
+     * 
+     * \param step 
+     * \return true if sequence is done
+     * \return false if sequence is still in progress
+     */
+    bool sendParallel(double sequenceTime);
 
     static int timePerPress() {
       return press_time;

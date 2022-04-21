@@ -49,7 +49,7 @@ ControllerState* ControllerState::factory(int vendor, int product) {
   } else if (vendor==0x2f24  && product==0x00f8) {	// Magic-S Pro
     return new Dualshock;
   }	
-  return NULL;
+  return nullptr;
 }
 
 short int ControllerState::positionDY( const uint8_t& input ) {

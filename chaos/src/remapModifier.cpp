@@ -43,7 +43,7 @@ RemapModifier::RemapModifier(toml::table& config) {
   for (auto sig : signals) {
     PLOG_DEBUG << GamepadInput::getName(sig->getSignal()) << " ";
   }
-  PLOG_DEBUG << "\n - disableSignals: " << disable_signals ? "true" : "false" << std::endl;
+  PLOG_DEBUG << "\n - disableSignals: " << disable_signals << std::endl;
 #endif
   
   // remap
@@ -58,17 +58,17 @@ RemapModifier::RemapModifier(toml::table& config) {
     for (auto& elem : *remap_list) {
       const toml::table* remapping = elem.as_table();
       TOMLReader::checkValid(*remapping, std::vector<std::string>{
-	  "from", "to", "no_neg", "to_min", "invert", "threshold", "sensitivity"});
+	      "from", "to", "no_neg", "to_min", "invert", "threshold", "sensitivity"});
       if (! remapping) {
-	throw std::runtime_error("Gampad signal remapping must be a table");
+	      throw std::runtime_error("Gampad signal remapping must be a table");
       }      
       GPInput from = TOMLReader::getSignal(*remapping, "from", true);
       GPInput to = TOMLReader::getSignal(*remapping, "to", true);
       GPInput to_neg = TOMLReader::getSignal(*remapping, "to_neg", false);
-      bool to_min = config["to_min"].value_or(false);
-      bool invert = config["invert"].value_or(false);
-      int threshold = config["threshold"].value_or(0);
-      int sensitivity = config["sensitivity"].value_or(1);
+      bool to_min = (*remapping)["to_min"].value_or(false);
+      bool invert = (*remapping)["invert"].value_or(false);
+      int threshold = (*remapping)["threshold"].value_or(0);
+      int sensitivity = (*remapping)["sensitivity"].value_or(1);
       remaps.emplace_back(from, to, to_neg, to_min, invert, threshold, sensitivity);
 #ifndef NDEBUG
       PLOG_DEBUG << " - remap: from " << GamepadInput::getName(from) << " to " << GamepadInput::getName(to)
@@ -114,18 +114,8 @@ RemapModifier::RemapModifier(toml::table& config) {
 }
 
 void RemapModifier::begin() {
-
   apply();
-  
-  // Send a 0 to the inputs in the list
-  if (disable_on_begin) {
-    DeviceEvent event = {};
-    for (auto& s : signals) {
-      event.id = s->getButtonType();
-      event.type = s->getID((ButtonType) event.id);
-      Controller::instance().applyEvent(event);
-    }
-  }
+  sendBeginSequence();
 }
 
 
@@ -144,5 +134,6 @@ void RemapModifier::finish() {
   for (auto& r : remaps) {
     GamepadInput::get(r.from_controller)->setRemap(GPInput::NONE);
   }
+  sendFinishSequence();
 }
 

@@ -29,6 +29,7 @@
 
 #include "gamepadInput.hpp"
 #include "sequence.hpp"
+#include "enumerations.hpp"
 
 namespace Chaos {
 
@@ -133,6 +134,29 @@ namespace Chaos {
     static bool checkValid(const toml::table& config, const std::vector<std::string>& goodKeys,
 			   const std::string& name);
     
+    /**
+     * \brief Get the value of a number
+     * 
+     * \tparam T Type of number
+     * \param config TOML Table to search
+     * \param key Key in the TOML table that has the value we want
+     * \param min_val Minimum allowed value for this parameter
+     * \param max_val Maximum allowed value for this parameter
+     * \param default_val Value to use if the key is not found in the table
+     * \return T 
+     */
+    template<typename T>
+    static T getValue(const toml::table& config, const std::string& key, T min_val, T max_val, T default_val) {
+      T rval = config[key].value_or(default_val);
+      if (rval > max_val) {
+        PLOG_ERROR << "Maximum value for '" << key << "' is " << max_val << std::endl;
+        rval = max_val;
+      } else if (rval < min_val) {
+        PLOG_ERROR << "Minimum value for '" << key << "' is " << min_val << std::endl;
+        rval = min_val;
+      }
+      return rval;
+    }
 
     /**
      * \brief Construct a sequence of events to send as a batch.
@@ -152,7 +176,7 @@ namespace Chaos {
      *
      * If the 
      */
-    static ConditionCheck getConditionTest(toml::table& config, const std::string& key);
+    static ConditionCheck getConditionTest(const toml::table& config, const std::string& key);
 
     /**
      * \brief Adds a list of objects to a map.
@@ -263,6 +287,18 @@ namespace Chaos {
 	      }
       }      
     }
-  };
   
+    template<typename T>
+    static std::shared_ptr<T> getObject(const toml::table& config, const std::string& key, bool required) {
+      std::optional<std::string> obj = config["key"].value<std::string>();
+      if (obj) {
+        return T::get(*obj);
+      } else {
+        if (required) {
+          PLOG_ERROR << "Missing required value for the key '" << key << "'\n";
+        }
+      }
+      return nullptr;
+    }
+  };
 };

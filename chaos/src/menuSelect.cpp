@@ -20,16 +20,16 @@
 #include <toml++/toml.h>
 #include <plog/Log.h>
 
-#include "menuOption.hpp"
+#include "menuSelect.hpp"
 #include "tomlReader.hpp"
 #include "gameMenu.hpp"
 
 using namespace Chaos;
 
-MenuOption::MenuOption(const toml::table& config)  : MenuItem(config) {
+MenuSelect::MenuSelect(const toml::table& config) : MenuItem(config) {
   TOMLReader::checkValid(config, std::vector<std::string>{
-      "name", "type", "parent", "offset", "initialState", "hidden", "confirm", "tab", "guard",
-      "counter", "counterAction"});
+      "name", "type", "parent", "offset", "counter", "counterAction", "guard",
+      "hidden", "confirm", "tab"});
 
   std::optional<std::string> item_name = config["counter"].value<std::string>();
   if (item_name) {
@@ -41,47 +41,41 @@ MenuOption::MenuOption(const toml::table& config)  : MenuItem(config) {
       PLOG_DEBUG << "    counter = " << *item_name << std::endl;
     }
   }
-
- confirm = config["confirm"].value_or(false);
-
+  confirm = config["confirm"].value_or(false);
 }
 
-void MenuOption::setState(Sequence& seq, unsigned int new_val) {
+void MenuSelect::setState(Sequence& seq, unsigned int new_val) {
   PLOG_VERBOSE << "setState ";
-  setMenuOption(seq, new_val);
-  current_state = new_val;
-  // Increment the counter, if set
-  if (sibling_counter) {
-    sibling_counter->incrementCounter();
-    PLOG_VERBOSE << "Incrementing sibling counter\n";
-  }
-  navigateBack(seq);
-}
-
-void MenuOption::restoreState(Sequence& seq) {
-  PLOG_VERBOSE << "restoreState ";
-  setMenuOption(seq, default_state);
-  current_state = default_state;
-  // Decrement the counter, if set
-  if (sibling_counter) {
-    sibling_counter->decrementCounter();
-    PLOG_VERBOSE << "Decrementing sibling counter\n";
-  }
-  navigateBack(seq);
-}
-
-void MenuOption::setMenuOption(Sequence& seq, unsigned int new_val) {
   moveTo(seq);
-  int difference = new_val - current_state;
-  // scroll to the appropriate option
-  PLOG_VERBOSE << " setting option: difference = " << difference << std::endl;
-  for (int i = 0; i < difference; i++) {
-    seq.addSequence(GameMenu::instance().getOptionGreater());
-  }
-  for (int i = 0; i > difference; i--) {
-    seq.addSequence(GameMenu::instance().getOptionLess());
-  }
+  seq.addSequence(GameMenu::instance().getSelect());
   if (confirm) {
     seq.addSequence(GameMenu::instance().getConfirm());
   }
+  // Increment the counter, if set
+  if (sibling_counter) {
+    sibling_counter->incrementCounter();
+    PLOG_VERBOSE << "Incrementing group counter\n";
+  }
+  navigateBack(seq);
 }
+
+// Restore state only makes sense for select options when they are a series. This means that all
+// items that use the same counter should be exclusive options (selecting one automatically
+// deselects another). We don't need to do anything until we remove the final mod that changes
+// something in this group and we need to restore the original state. That original state should be
+// stored as the default_state (initialState in the TOML file) of the counter item.
+void MenuSelect::restoreState(Sequence& seq) {
+  PLOG_VERBOSE << "restoreState ";
+  if (sibling_counter) {
+    sibling_counter->decrementCounter();
+    PLOG_VERBOSE << "Decrementing gorup counter\n";
+    if (sibling_counter->getCounter() == 0) {
+      // select the parent item (a submenu) and move to the initial state setting stored by the
+      // counter item.
+      parent->moveTo(seq);
+      selectItem(seq, sibling_counter->getDefault());
+      navigateBack(seq);
+    }
+  }
+}
+

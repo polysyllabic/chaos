@@ -40,10 +40,13 @@ namespace Chaos {
     int last_child_selected;
 
   public:
-    SubMenu(toml::table& config) : MenuItem(config) {}
+    SubMenu(const toml::table& config);
 
-    void setLastChildSelected(int last);
-    int getLastChildSelected() { return last_child_selected; }
+    void setState(Sequence& seq, unsigned int new_val);
+    void restoreState(Sequence& seq);
+
+    bool isOption() { return false; }
+    bool isSelectable() { return true; }
   };
 
 };

@@ -23,43 +23,11 @@
 #include <string>
 
 #include "tomlReader.hpp"
+#include "enumerations.hpp"
 
 namespace Chaos {
 
   class GameCommand;
-
-  /**
-   * \brief Defines the types of threshold events that will trigger the condition.
-   *
-   * The specific test for the condition is determined by this type, which must be one of the 
-   * following values:
-   *    - GREATER: A signal greater than the threshold triggers the signal. This type looks at the
-   * signal as a signed value.
-   *    - GREATER_EQUAL: A signal greater than or equal to the threshold triggers the signal. This
-   * type looks at the signal as a signed value.
-   *    - LESS: A signal less than the threshold triggers the signal. This type looks at the
-   * signal as a signed value.
-   *    - LESS_EQUAL: A signal less than or equal to the threshold triggers the signal. This
-   * type looks at the signal as a signed value.
-   *    - MAGNITUDE: A signal that is greater than the absolute value of the signal. (Default)
-   *    - DISTANCE: Calculates the Pythagorean distance of the first two signals in the condition
-   * list (this assumes that they are axes). The condition is true if this distance exceeds the
-   * threshold.
-   */
-  enum class ThresholdType { GREATER, GREATER_EQUAL, LESS, LESS_EQUAL, MAGNITUDE, DISTANCE };
-
-  /**
-   * \brief The type of comparison to perform with the vector of game conditions.
-   *
-   * Conditions are stored in vectors to permit testing of more than one input signal
-   * simultaneously. A call to inCondition runts the test specified by ConditionCheck. The
-   * following tests are supported:
-   * - ALL: Every condition in a vector of game conditions must be true for the condition test to
-   * return true. (_Default_)
-   * - ANY: The condition test returns true if any gamestate in the vector is true.
-   * - NONE: The check returns true if _no_ condition in the vector is true.
-   */
-  enum class ConditionCheck { ALL, ANY, NONE };
 
   /**
    * \brief Class to encapsulate a test for a gamepad condition that can be used by a modifier
@@ -195,13 +163,16 @@ namespace Chaos {
     short getSignalThreshold(std::shared_ptr<GameCommand> signal);
 
     /**
-     * \brief Test if 
+     * \brief Test if the signal exceeds the threshold for this type
      * 
      * \param signal 
      * \return true 
      * \return false 
      */
     bool pastThreshold(std::shared_ptr<GameCommand> signal);
+
+    bool testConditions(std::vector<std::shared_ptr<GameCommand>> command_list);
+
 public:
   /**
    * \brief Construct a new GameCondition object

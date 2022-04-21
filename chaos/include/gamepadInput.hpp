@@ -24,7 +24,7 @@
 #include <unordered_map>
 #include <plog/Log.h>
 
-#include "signalTypes.hpp"
+#include "deviceEvent.hpp"
 
 namespace Chaos {
 
@@ -344,7 +344,8 @@ namespace Chaos {
     void setCascadingRemap(const SignalRemap& remapping);
     /**
      * \brief Tests if an event matches this signal
-     * \param The incomming event from the controller
+     * \param event The incomming event from the controller
+     * \param gp The imput signal we're testing for
      * \return Whether event id and type match the definition for this gamepad input.
      *
      * Remapping should be complete before the ordinary (non-remapping) mods see the event, so

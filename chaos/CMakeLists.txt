@@ -81,6 +81,7 @@ FetchContent_Declare(
 	GIT_REPOSITORY https://github.com/blegas78/usb-sniffify.git
 	GIT_TAG	       origin/main
 )
+# Creating a patched fork is easier than re-applying the patch every time
 FetchContent_Declare(
 	raw-gadget
 	GIT_REPOSITORY https://github.com/polysyllabic/raw-gadget.git
@@ -89,8 +90,8 @@ FetchContent_Declare(
 
 # Life would be easier if the Raspberry OS cmake were 3.18 or greater
 if(NOT mogi_POPULATED)
-       FetchContent_Populate(mogi)
-       add_subdirectory(${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi)
+	FetchContent_Populate(mogi)
+  add_subdirectory(${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi)
 endif()
 
 FetchContent_MakeAvailable(tomlplusplus plog zmqpp sniffify raw-gadget)
@@ -100,76 +101,103 @@ find_package (LibJsoncpp REQUIRED)
 find_package (Libusb1 REQUIRED)
 
 add_executable(chaos include/config.hpp
-		     include/chaosEngine.hpp
-		     src/chaosEngine.cpp
-		     include/chaosInterface.hpp
-		     src/chaosInterface.cpp
-		     include/chaosUhid.hpp
-		     src/chaosUhid.cpp
-		     src/commandListener.cpp
-		     src/commandSender.cpp
-		     include/controller.hpp
-		     src/controller.cpp
-		     include/controllerRaw.hpp
-		     src/controllerRaw.cpp
-		     include/controllerState.hpp
-		     src/controllerState.cpp
-		     include/dualshock.hpp
-		     src/dualshock.cpp
-		     include/touchpad.hpp
-		     src/touchpad.cpp
-		     include/deviceTypes.hpp
-		     include/gamepadInput.hpp
-		     src/gamepadInput.cpp
-		     include/gameCommand.hpp
-		     src/gameCommand.cpp
-		     include/gameState.hpp
-		     src/gameState.cpp
-		     include/modifierFactory.hpp
-		     include/modifier.hpp
-		     src/modifier.cpp
-		     include/cooldownModifier.hpp
-		     src/cooldownModifier.cpp
-		     include/delayModifier.hpp
-		     src/delayModifier.cpp
-		     include/disableModifier.hpp
-		     src/disableModifier.cpp
-		     include/formulaModifier.hpp
-		     src/formulaModifier.cpp
-		     include/menuModifier.hpp
-		     src/menuModifier.cpp
-		     include/parentModifier.hpp
-		     src/parentModifier.cpp
-		     include/remapModifier.hpp
-		     src/remapModifier.cpp
-		     include/repeatModifier.hpp
-		     src/repeatModifier.cpp
-		     include/sequenceModifier.hpp
-		     src/sequenceModifier.cpp
-		     include/sequence.hpp
-		     src/sequence.cpp
-		     src/sequenceAbsolute.cpp
-		     src/sequenceRelative.cpp
-		     include/tomlReader.hpp
-		     src/tomlReader.cpp
-		     src/main.cpp)
-
-
-if(USE_DUALSENSE)
-	add_target_sources(chaos PUBLIC include/dualsense.hpp
-				 	src/dualsense.cpp)
-endif()
+  include/enumerations.hpp
+  include/deviceEvent.hpp
+	src/chaosEngine.cpp
+	include/chaosEngine.hpp
+	src/chaosInterface.cpp
+	include/chaosInterface.hpp
+	src/commandListener.cpp
+	src/commandSender.cpp
+	src/chaosUhid.cpp
+	include/chaosUhid.hpp
+	src/controller.cpp
+	include/controller.hpp
+	src/controllerState.cpp
+	include/controllerState.hpp
+	src/dualshock.cpp
+	include/dualshock.hpp
+	include/factory.hpp
+  src/modifier.cpp
+	include/modifier.hpp
+  src/cooldownModifier.cpp
+  include/cooldownModifier.hpp
+  src/delayModifier.cpp
+  include/delayModifier.hpp
+  src/disableModifier.cpp
+  include/disableModifier.hpp
+  src/formulaModifier.cpp
+  include/formulaModifier.hpp
+  src/invertModifier.cpp
+  include/invertModifier.hpp
+  src/menuModifier.cpp
+  include/menuModifier.hpp
+  src/parentModifier.cpp
+  include/parentModifier.hpp
+  src/remapModifier.cpp
+  include/remapModifier.hpp
+  src/repeatModifier.cpp
+  include/repeatModifier.hpp
+  src/sequenceModifier.cpp
+  include/sequenceModifier.hpp
+	src/gameCommand.cpp
+  include/gameCommand.hpp
+  src/gameCondition.cpp
+  include/gameCondition.hpp
+  src/gamepadInput.cpp
+  include/gamepadInput.hpp
+  src/sequence.cpp
+  include/sequence.hpp
+	src/touchpad.cpp
+  include/touchpad.hpp
+	src/tomlReader.cpp
+	include/tomlReader.hpp
+  src/gameMenu.cpp
+  include/gameMenu.hpp
+  src/menuItem.cpp
+  include/menuItem.hpp
+  src/menuOption.cpp
+  include/menuOption.hpp
+  src/menuSelect.cpp
+  include/menuSelect.hpp
+  src/subMenu.cpp
+  include/subMenu.hpp
+	src/main.cpp)
 
 target_compile_features(chaos PRIVATE cxx_std_17)
 
-target_include_directories (chaos PUBLIC include 
-			   	  	 ${tomlplusplus_SOURCE_DIR}/include
-			   	  	 ${plog_SOURCE_DIR}/include
-					 ${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi/include
-					 ${zmqpp_SOURCE_DIR}/src
-					 ${sniffify_SOURCE_DIR}/include
-					 ${LIBJSONCPP_INCLUDE_DIRS}
-					 ${LIBUSB1_INCLUDE_DIRS})
+target_include_directories (chaos PRIVATE include 
+	${tomlplusplus_SOURCE_DIR}/include
+	${plog_SOURCE_DIR}/include
+	${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi/include
+	${zmqpp_SOURCE_DIR}/src
+	${sniffify_SOURCE_DIR}/include
+	${LIBJSONCPP_INCLUDE_DIRS}
+	${LIBUSB1_INCLUDE_DIRS}
+)
 
-target_link_libraries(chaos PUBLIC sniffify mogi zmqpp ${LIBUSB_LIBRARIES})
+#add_subdirectory(src/signals)
+#add_subdirectory(src/controller)
+#add_subdirectory(src/menu)
+#add_subdirectory(src/mods)
+#add_subdirectory(src/engine)
 
+target_link_libraries(chaos	PUBLIC #chaos_controller chaos_engine chaos_menus chaos_mods
+		sniffify 
+		mogi 
+		zmqpp 
+		${LIBUSB_LIBRARIES})
+
+#find_package(Doxygen)
+#if (DOXYGEN_FOUND)
+#	set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in)
+#	set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+#	configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+#	message("Configuring Doxygen")
+#
+#	add_custom_target(doc ALL
+#		COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+#		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+#		COMMENT "Generating HTML documentation"
+#		VERBATIM)
+#endif()

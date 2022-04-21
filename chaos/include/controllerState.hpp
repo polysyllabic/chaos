@@ -21,7 +21,7 @@
 #include <cstdint>
 #include <map>
 
-#include "signalTypes.hpp"
+#include "deviceEvent.hpp"
 
 namespace Chaos {
   

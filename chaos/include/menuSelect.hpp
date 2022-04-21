@@ -23,19 +23,20 @@
 #include <toml++/toml.h>
 
 #include "menuItem.hpp"
-#include "sequence.hpp"
 
 namespace Chaos {
 
   /**
-   * \brief Implements a menu item that sets a specific option.
+   * \brief Implements a menu item that is triggered by selecting.
    * 
-   * The state of an option is stored as an unsigned integer, where 0 is the minimum value (or off),
-   * and the maximum value depends on the number of options available.
+   * Select options are teminal nodes of the menu system, but they do not maintain a multivalued
+   * state. Executing a select option triggers the game to do something, such as restart a
+   * checkpoint. If a select option has an associated counter, it is interpreted as being one
+   * of a set of mutually exclusive options 
    * 
    * \todo Add support for max value checking
    */
-  class MenuOption : public MenuItem {
+  class MenuSelect : public MenuItem {
   protected:
   
     /**
@@ -48,21 +49,20 @@ namespace Chaos {
     /**
      * \brief Pointer to another menu item whose counter is tied to this item
      * 
-     * When non-null, setting this option will increment the sibling's counter and restoring the
-     * state will decrement it.
+     * When non-null, setting this option will increment the sibling's counter and 
      */
     std::shared_ptr<MenuItem> sibling_counter;
 
-    void setMenuOption(Sequence& seq, unsigned int new_val);
 
   public:
-    MenuOption(const toml::table& config);
-    
+    MenuSelect(const toml::table& config);
+
     void setState(Sequence& seq, unsigned int new_state);
+    
     void restoreState(Sequence& seq);
 
     bool isOption() { return true; }
-    bool isSelectable() { return false; }
+    bool isSelectable() { return true; }
   };
 
 };

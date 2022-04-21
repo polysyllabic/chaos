@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdexcept>
+#include <algorithm>
 #include <cmath>
 
 #include <plog/Log.h>
@@ -27,13 +28,15 @@
 
 using namespace Chaos;
 
-std::unordered_map<std::string, std::shared_ptr<GameCondition>> GameCondition::conditions;
+std::unordered_map<std::string, std::shared_ptr<GameCondition>> GameCondition::condition_map;
 
 // Conditions are initialized after those game commands that are defined without conditions, and
 // before those defined with conditions. This has the effect of preventing recursion in the
 // conditions. Attempting to reference a game command with conditions in a condition will
 // result in an error.
 GameCondition::GameCondition(toml::table& config) {
+  assert(config.contains("name"));
+  PLOG_VERBOSE << "Initializing game condition " << config["name"] << std::endl;
 
   TOMLReader::checkValid(config, std::vector<std::string>{
       "name", "persistent", "trueOn", "trueOff", "threshold", "thresholdType", "testType"});
@@ -41,49 +44,49 @@ GameCondition::GameCondition(toml::table& config) {
   TOMLReader::addToVector(config, "trueOn", true_on);
 
   if (true_on.empty()) {
-    throw std::runtime_error("No commands defined for trueOn " + config["name"]);
+    throw std::runtime_error("No commands defined for trueOn");
   }
 
-  persistent = toml::table["persistent"].value_or(false);
+  persistent = config["persistent"].value_or(false);
 
   if (persistent) {
     TOMLReader::addToVector(config, "trueOff", true_off);
     if (true_off.empty()) {
-      PLOG_WARNING << "No trueOff command set for persistent condition " + config["name"]);
+      PLOG_WARNING << "No trueOff command set for persistent condition";
     }
   } else {
-    if config.contains("trueOff") {
+    if (config.contains("trueOff")) {
       PLOG_WARNING << "trueOff commands not supported if persistent = false\n";
     }
   }
 
   threshold = config["threshold"].value_or(0.0);
   if (threshold < 0 || threshold > 1) {
-    throw std::runtime_error("Condition '" + config["name"] + "': Threshold must be between 0 and 1.");
+    throw std::runtime_error("Condition threshold must be between 0 and 1");
   }
 
   std::optional<std::string_view> thtype = config["thresholdType"].value<std::string_view>();
 
   // Default type is magnitude
-  threshold_type = ConditionType::MAGNITUDE;
+  threshold_type = ThresholdType::MAGNITUDE;
   if (thtype) {
     if (*thtype == "greater" || *thtype == ">") {
-      threshold_type = ConditionType::ABOVE;
+      threshold_type = ThresholdType::GREATER;
     } else if (*thtype == "greater_equal" || *thtype == ">=") {
-      threshold_type = ConditionType::ABOVE_EQUAL;
+      threshold_type = ThresholdType::GREATER_EQUAL;
     } else if (*thtype == "less" || *thtype == "<") {
-      threshold_type = ConditionType::BELOW;
+      threshold_type = ThresholdType::LESS;
     } else if (*thtype == "less_equal" || *thtype == "<=") {
-      threshold_type = ConditionType::BELOW_EQUAL;
+      threshold_type = ThresholdType::LESS_EQUAL;
     } else if (*thtype == "distance") {
-    threshold_type = ConditionType::DISTANCE;
+    threshold_type = ThresholdType::DISTANCE;
     } else if (*thtype != "magnitude") {
       PLOG_WARNING << "invalid thresholdType '" << *thtype << std::endl;
     }
   }
   
 #ifndef NDEBUG
-  PLOG_DEBUG << "Condition: " << config["name"] <<  "\n - " << (thtype) ? *thtype : "magnitude" <<
+  PLOG_DEBUG << "Condition: " << config["name"] <<  "\n - " << ((thtype) ? *thtype : "magnitude") <<
     " threshold = " << threshold << std::endl;
 #endif
 }
@@ -103,27 +106,29 @@ void GameCondition::buildConditionList(toml::table& config) {
         continue;
       }
       std::optional<std::string> cond_name = condition->get("name")->value<std::string>();
-      if (conditions.count(*cont_name) == 1) {
+      if (condition_map.count(*cond_name) == 1) {
         PLOG_ERROR << "The condition '" << *cond_name << "' has already been defined.\n";
       }
       try {
         PLOG_VERBOSE << "Adding condition '" << *cond_name << "' to static map.\n";
-  	    conditions.insert({*cond_name, std::make_shared<Condition>(*condition)});
-	  }
-	  catch (const std::runtime_error& e) {
-	    PLOG_ERROR << "In definition for game command '" << cmd_name << "': " << e.what() << std::endl; 
-	  }
+  	    condition_map.insert({*cond_name, std::make_shared<GameCondition>(*condition)});
+	    }
+	    catch (const std::runtime_error& e) {
+	      PLOG_ERROR << "In definition for condition '" << *cond_name << "': " << e.what() << std::endl; 
+	    }
     }
   }
 }
 
-bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> signal) {
+bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> command) {
   // This function tests only one signal at a time. It's a programming error to call us
   // if the type is DISTANCE
   assert(threshold_type != ThresholdType::DISTANCE);
 
-  short int curval = signal->getInput()->getState();
-  short int threshold = getSignalThreshold(signal);
+  // getState looks at the active state of the remapped signal. We also need to check the threshold
+  // for that remapped signal.
+  short curval = command->getState();
+  short threshold = getSignalThreshold(command);
   switch (threshold_type) {
     case ThresholdType::GREATER:
       return curval > threshold;
@@ -134,34 +139,31 @@ bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> signal) {
     case ThresholdType::LESS_EQUAL:
       return curval <= threshold;
   }
-  return std::abs(signal) >= threshold;
+  // default, check absolute value
+  return std::abs(curval) >= threshold;
 }
 
 short int GameCondition::getSignalThreshold(std::shared_ptr<GameCommand> signal) {
-  GPInput remapped = signal->getRemap();
-    // The TYPE_AXIS value to getMax() is ignored unless this is a hybrid signal type. In that case,
-    // we get the maximum for the axis, which is the value we want.
-    short extreme = (threshold_type == ThresholdType::LESS || threshold_type == ThresholdType::LESS_EQUAL) ?
-      GamepadInput::getMin(TYPE_AXIS) : signal->getMax(TYPE_AXIS);
-    double proportion;
-    if (signal->getMax(TYPE_AXIS) == 1) {
-      if  {
-      proportion = (threshold <> 1) ? ;
-      } else {
-        proportion = threshold;
-      }
-    } else {
-      // Signals other than buttons, calculate the proportion of the maximum value
-      threshold = (short) signal->getMax(TYPE_AXIS) * proportion;
-    }
-
+  // Must check the threshold for the remapped control, in case signals are swapped between
+  // signal classes
+  std::shared_ptr<GamepadInput> remapped = signal->getRemapped();
+  short extreme = (threshold_type == ThresholdType::LESS || threshold_type == ThresholdType::LESS_EQUAL) ?
+                  remapped->getMin(TYPE_AXIS) : remapped->getMax(TYPE_AXIS);
+  // Proportions don't make sense for buttons or the dpad, so if we've remapped from an axis to one
+  // of these and have a proportion < 1, we ignore that and just use the extreme value.
+  GPInputType t = remapped->getType();
+  if (t == GPInputType::BUTTON || t == GPInputType::THREE_STATE) {
+    return extreme;
+  }
+  // otherwise we calculate the threshold value as a proportion of the extreme.
+  return (short) extreme * threshold;
 }
 
 void GameCondition::updateState() {
   if (persistent) {
-    if (testCondition(true_on) && !state ) {
+    if (testConditions(true_on) && !state ) {
       state = true;
-    } else if (testCondition(true_off && state) {
+    } else if (testConditions(true_off) && state) {
       state = false;
     }
   }
@@ -170,15 +172,22 @@ void GameCondition::updateState() {
 bool GameCondition::testConditions(std::vector<std::shared_ptr<GameCommand>> command_list) {
   assert(!command_list.empty());
 
+  if (threshold_type == ThresholdType::DISTANCE) {
+    assert(command_list.size() == 2);
+    short x = Controller::instance().getState(command_list[0]);
+    short y = Controller::instance().getState(command_list[1]);
+    return x*x + y*y > std::pow(getSignalThreshold(command_list[0]),2);
+  }
+
   // We can check whether all, any, or none of the gamestates are true
   if (condition_type == ConditionCheck::ANY) {
-    return std::any_of(condition_type.begin(), condition_type.end(), [](std::shared_ptr<GameCommand> c) {
+    return std::any_of(command_list.begin(), command_list.end(), [&](std::shared_ptr<GameCommand> c) {
      return pastThreshold(c); });
-  } else if (type == ConditionCheck::NONE) {
-    return std::none_of(condition_type.begin(), condition_type.end(), [](std::shared_ptr<GameCommand> c) {
+  } else if (condition_type == ConditionCheck::NONE) {
+    return std::none_of(command_list.begin(), command_list.end(), [&](std::shared_ptr<GameCommand> c) {
 	    return pastThreshold(c); });
     }
-  return std::all_of(condition_type.begin(), condition_type.end(), [](std::shared_ptr<GameCommand> c) {
+  return std::all_of(command_list.begin(), command_list.end(), [&](std::shared_ptr<GameCommand> c) {
 	  return pastThreshold(c); });
 }
 
@@ -189,18 +198,13 @@ bool GameCondition::inCondition() {
   if (persistent) {
     return state;
   }
-  if (threshold_type == ThresholdType::DISTANCE) {
-    short x = Controller::instance()->getState(true_on[0]);
-    short y = Controller::instance()->getState(true_on[1]);
-    return x*x + y*y > std::pow(getSignalThreshold(true_on[0]),2);
-  }
   return testConditions(true_on);
 }
 
-std::shared_ptr<GameCondition> GameCondition::get(const std::string name) {
+std::shared_ptr<GameCondition> GameCondition::get(const std::string& name) {
   auto iter = condition_map.find(name);
   if (iter != condition_map.end()) {
-    reutrn condition_map[iter->second];
+    return condition_map[iter->first];
   }
-  return NULL;
+  return nullptr;
 }

@@ -65,13 +65,10 @@ RepeatModifier::RepeatModifier(toml::table& config) {
 }
 
 void RepeatModifier::begin() {
-  if (disable_on_begin) {
-    Controller::instance().setOff(signal);
-  }
   press_time = 0;
   repeat_count = 0;
-  // Additional signals that we set to arbitrary values
-  setBeginSequence();
+  // Signals that we set to arbitrary values
+  sendBeginSequence();
 }
 
 void RepeatModifier::update() {
@@ -110,9 +107,5 @@ bool RepeatModifier::tweak(DeviceEvent& event) {
 }
 
 void RepeatModifier::finish() {
-  if (disable_on_finish) {
-    Controller::instance().setOff(signal);
-  }
-  // Additional signals that we set to arbitrary values
   sendFinishSequence();
 }

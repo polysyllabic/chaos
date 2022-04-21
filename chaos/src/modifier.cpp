@@ -27,6 +27,7 @@
 #include <plog/Log.h>
 
 #include "config.hpp"
+#include "enumerations.hpp"
 #include "modifier.hpp"
 #include "tomlReader.hpp"
 
@@ -48,7 +49,7 @@ void Modifier::initialize(toml::table& config) {
   
   description = config["description"].value_or("Description not available");
   
-  group = config["group"].value_or(name);
+  group = config["group"].value_or("general");
 
 #ifndef NDEBUG
   PLOG_DEBUG << "Common initialization for mod " << config["name"].value_or("NAME NOT FOUND") << std::endl;
@@ -65,7 +66,7 @@ void Modifier::initialize(toml::table& config) {
     PLOG_DEBUG << "ALL" << std::endl;
   } else {
     for (auto& cmd : commands) {
-      PLOG_DEBUG << GamepadInput::getName(cmd->getInput()) << " ";
+      PLOG_DEBUG << cmd->getName() << " ";
     }
     PLOG_DEBUG << std::endl;
   }  
@@ -77,18 +78,18 @@ void Modifier::initialize(toml::table& config) {
 #ifndef NDEBUG
   PLOG_DEBUG << " - condition: ";
   for (auto& cmd : commands) {
-    PLOG_DEBUG << GamepadInput::getName(cmd->getInput()) << " ";
+    PLOG_DEBUG << cmd->getName() << " ";
   }
   // TODO: implement automatic name reflection
   PLOG_DEBUG << " [condition test = ";
   switch (condition_test) {
-    case ConditionType::ALL:
+    case ConditionCheck::ALL:
       PLOG_DEBUG << "ALL";
       break;
-    case ConditionType::ANY:
+    case ConditionCheck::ANY:
       PLOG_DEBUG << "ANY";
       break;
-    case ConditionType::NONE:
+    case ConditionCheck::NONE:
       PLOG_DEBUG << "NONE";
   }
   PLOG_DEBUG << "] " << std::endl;
@@ -100,18 +101,18 @@ void Modifier::initialize(toml::table& config) {
 #ifndef NDEBUG
   PLOG_DEBUG << " - unless condition: ";
   for (auto& cmd : commands) {
-    PLOG_DEBUG << GamepadInput::getName(cmd->getInput()) << " ";
+    PLOG_DEBUG << cmd->getName() << " ";
   }
   // TODO: implement automatic name reflection
   PLOG_DEBUG << " [Condition test = ";
   switch (unless_test) {
-    case ConditionType::ALL:
+    case ConditionCheck::ALL:
       PLOG_DEBUG << "ALL";
       break;
-    case ConditionType::ANY:
+    case ConditionCheck::ANY:
       PLOG_DEBUG << "ANY";
       break;
-    case ConditionType::NONE:
+    case ConditionCheck::NONE:
       PLOG_DEBUG << "NONE";
   }
   PLOG_DEBUG << "] " << std::endl;
@@ -337,7 +338,7 @@ void Modifier::AxisToButtons(DeviceEvent& event, uint8_t positive, uint8_t negat
     new_event.id = negative;
     new_event.value = 0;
     new_event.type = TYPE_BUTTON;
-    Controller::instance().applyState(new_event);
+    Controller::instance().applyEvent(new_event);
   }
 }
 
@@ -359,7 +360,7 @@ void Modifier::disableTPAxis(GPInput tp_axis) {
   assert (tp && tp->getType() == GPInputType::TOUCHPAD);
   if (tp->getRemap() != GPInput::NONE) {
     new_event.id = tp->getRemap();
-    Controller::instance().applyState(new_event);
+    Controller::instance().applyEvent(new_event);
   }
 }
 
@@ -382,8 +383,7 @@ void Modifier::TouchpadToAxis(DeviceEvent& event, uint8_t axis) {
     event.type = TYPE_AXIS; // likely unnecessary
     event.id = axis;
     
-    bool in_condition = Touchpad::instance().getCondition() == NULL ? false :
-      Controller::instance().getState(Touchpad::instance().getCondition());
+    bool in_condition = Touchpad::instance().inCondition();
     event.value = Controller::instance().joystickLimit(Touchpad::instance().toAxis(event, in_condition));
   }
 }

@@ -38,7 +38,7 @@ ChaosEngine::ChaosEngine() : controller{Controller::instance()}, pause(true)
 }
 
 void ChaosEngine::newCommand(const std::string& command) {
-  PLOG_INFO << "Chaos::ChaosEngine::newCommand() received: " << command << std::endl;
+  PLOG_VERBOSE << "Chaos::ChaosEngine::newCommand() received: " << command << std::endl;
 	
   Json::Value root;
   Json::CharReaderBuilder builder;
@@ -52,7 +52,7 @@ void ChaosEngine::newCommand(const std::string& command) {
 	
   if (root.isMember("winner")) {
     std::shared_ptr<Modifier> mod = Modifier::mod_list.at(root["winner"].asString());
-    if (mod != NULL) {
+    if (mod != nullptr) {
       PLOG_DEBUG << "Adding Modifier: " << typeid(*mod).name() << std::endl;
 			
       lock();
@@ -189,7 +189,7 @@ void ChaosEngine::fakePipelinedEvent(DeviceEvent& fakeEvent, std::shared_ptr<Mod
   }
   // unless canceled, send the event out
   if (valid) {
-    controller.applyState(fakeEvent);
+    controller.applyEvent(fakeEvent);
   }
 }
 

@@ -22,6 +22,7 @@
 #include <plog/Log.h>
 
 #include "controller.hpp"
+#include "gameCondition.hpp"
 
 using namespace Chaos;
 
@@ -81,7 +82,7 @@ void Controller::initialize() {
   chaosHid = new ChaosUhid(mControllerState);
   chaosHid->start();
 	
-  if (mControllerState == NULL) {
+  if (mControllerState == nullptr) {
     PLOG_ERROR << "ERROR!  Could not build a ControllerState for vendor=0x"
 	       << std::setfill('0') << std::setw(4) << std::hex << mRawGadgetPassthrough.getVendor()
 	       << " product=0x" << std::setfill('0') << std::setw(4) << std::hex << mRawGadgetPassthrough.getProduct() << std::endl;
@@ -92,14 +93,14 @@ void Controller::initialize() {
 // Events are remapped before the mods see them, but this command looks at the current state of the
 // controller, and since the input parameter is a game command, we need to check the remapped state
 // (the signal we expect from the controller) and not the one the console expects.
-short int Controller::getState(std::shared_ptr<GameCommand> command) {
-  return getState(GamepadInput::get(command->getInput()->getRemap());
+short Controller::getState(std::shared_ptr<GameCommand> command) {
+  return getState(GamepadInput::get(command->getInput()->getRemap()));
 }
 
 // Note: For the hybrid buttons L2 and R2, we handle them as ordinary buttons for the purpose of
 // monitoring state. That is, we return the state of the button event, not the exis event.
-short int Controller::getState(std::shared_ptr<GamepadInput> signal) {
-  return getState(input->getID(), input->getButtonType());
+short Controller::getState(std::shared_ptr<GamepadInput> signal) {
+  return getState(signal->getID(), signal->getButtonType());
 }
 
 void Controller::storeState(const DeviceEvent& event) {
@@ -114,7 +115,7 @@ void Controller::handleNewDeviceEvent(const DeviceEvent& event) {
   // We have an event! Before sending it, allow the mods to play around with the values.
   DeviceEvent updatedEvent;
   bool validEvent = false;
-  if (controllerInjector != NULL) {
+  if (controllerInjector != nullptr) {
     validEvent = controllerInjector->sniffify(event, updatedEvent);
   } else {
     validEvent = true;

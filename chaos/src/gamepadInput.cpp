@@ -20,6 +20,7 @@
 #include <climits>
 #include "config.hpp"
 #include "gamepadInput.hpp"
+#include "controller.hpp"
 
 using namespace Chaos;
 
@@ -151,7 +152,7 @@ std::shared_ptr<GamepadInput> GamepadInput::get(const std::string& name) {
   if (iter != inputNames.end()) {
     return inputs[iter->second];
   }
-  return NULL;
+  return nullptr;
 }
 
 std::string GamepadInput::getName(GPInput signal) {
@@ -256,5 +257,5 @@ short int GamepadInput::getMax(std::shared_ptr<GamepadInput> signal) {
 
 short int GamepadInput::getState() {
   auto& signal = inputs[remap.from_controller];
-  return Controller::instance()->getState(signal);  
+  return Controller::instance().getState(signal);  
 }

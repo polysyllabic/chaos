@@ -23,12 +23,12 @@
 #include <plog/Log.h>
 #include <plog/Initializers/RollingFileInitializer.h>
 
-#include "tomlReader.hpp"
 #include "config.hpp"
+#include "enumerations.hpp"
+#include "tomlReader.hpp"
 #include "gameCommand.hpp"
-#include "gameCondition.hpp"
 #include "modifier.hpp"
-#include "menuAction.hpp"
+#include "gameMenu.hpp"
 
 using namespace Chaos;
 
@@ -72,13 +72,14 @@ TOMLReader::TOMLReader(const std::string& fname) {
   Sequence::initialize(configuration);
 
   // Initialize menu items and global paramerts for the menu system
-  MenuAction::initialize(configuration);
+  GameMenu::instance().initialize(configuration);
 
   // Create the modifiers
   Modifier::buildModList(configuration);
 }
 
 void TOMLReader::buildSequence(toml::table& config, const std::string& key, Sequence& sequence) {
+  PLOG_VERBOSE << "building sequence: " << config << std::endl;
   toml::array* arr = config[key].as_array();
   std::optional<std::string> event, cmd;
   unsigned int repeat, value;
@@ -114,13 +115,6 @@ void TOMLReader::buildSequence(toml::table& config, const std::string& key, Sequ
       std::shared_ptr<MenuItem> menu_command;
 
       cmd = definition["command"].value<std::string>();
-
-      if (*event == "set menu") {
-        
-      } else if (*event == "restore menu") {
-
-      }
-
       if (cmd) {
 	      signal = GamepadInput::get(*cmd);
 	      // If this signal is a hybrid control, this gets the axis max, which is needed for addHold().
@@ -175,20 +169,6 @@ void TOMLReader::buildSequence(toml::table& config, const std::string& key, Sequ
   }
 }
 
-void TOMLReader::buildMenuCommand(toml::table& config, const std::string& key, std::vector<MenuAction>& menu) {
-  toml::array* arr = config[key].as_array();
-  std::optional<std::string> event, cmd;
-  unsigned int repeat, value;
-  int max_val = 1;
-  if (arr) {
-    for (toml::node& elem : *arr) {
-      assert (elem.as_table());
-      toml::table& definition = *elem.as_table();
-
-      menu.push_back(MenuAction(definition));
-    }
-  }
-}
 
 GPInput TOMLReader::getSignal(const toml::table& config, const std::string& key, bool required) {
   if (! config.contains(key)) {
@@ -209,15 +189,16 @@ ConditionCheck TOMLReader::getConditionTest(const toml::table& config, const std
   std::optional<std::string_view> ttype = config[key].value<std::string_view>();
 
   // Default type is magnitude
-  ConditionType rval = ConditionTest::ANY;
+  ConditionCheck rval = ConditionCheck::ANY;
   if (ttype) {
     if (*ttype == "any") {
-      rval = ConditionTest::ANY;
+      rval = ConditionCheck::ANY;
     } else if (*ttype == "none") {
-      rval = ConditionTest::NONE;
+      rval = ConditionCheck::NONE;
     } else if (*ttype != "all") {
-      PLOG_WARNING << "Invalid ConditionTest '" << *ttype << "': using 'all' instead." std::endl;
+      PLOG_WARNING << "Invalid ConditionTest '" << *ttype << "': using 'all' instead." << std::endl;
     }
+  }
   return rval;
 }
 

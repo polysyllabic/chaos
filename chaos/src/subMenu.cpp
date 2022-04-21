@@ -18,10 +18,22 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdexcept>
-#include <toml++/toml.h>
 #include <plog/Log.h>
 
 #include "subMenu.hpp"
-//#include "tomlReader.hpp"
+#include "tomlReader.hpp"
 
 using namespace Chaos;
+
+SubMenu::SubMenu(const toml::table& config) : MenuItem(config) {
+  TOMLReader::checkValid(config, std::vector<std::string>{
+      "name", "type", "parent", "offset", "initialState", "hidden", "confirm", "tab"});
+}
+
+void SubMenu::setState(Sequence& seq, unsigned int new_val) {
+  PLOG_ERROR << "Cannot set the state of a submenu\n";
+}
+
+void SubMenu::restoreState(Sequence& seq) {
+  PLOG_ERROR << "Cannot restore the state of a submenu\n";
+}

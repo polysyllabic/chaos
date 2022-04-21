@@ -28,7 +28,7 @@
 #include "factory.hpp"
 
 #include "controller.hpp"
-#include "signalTypes.hpp"
+#include "deviceEvent.hpp"
 #include "gameCommand.hpp"
 #include "gameCondition.hpp"
 #include "touchpad.hpp"
@@ -65,7 +65,8 @@ namespace Chaos {
    *       - repeat: Repeat a particular command at intervals.
    *       - sequence: Issue an arbitrary sequence of actions.
    *       .
-   * - group: A group (separate from the type) to classify the mod for voting (_Optional_)
+   * - group: A group (separate from the type) to classify the mod for voting by the chatbot. IF
+   * omitted, the mod will be assigned to the default "general" group. (_Optional_)
    *
    * Each type of modifier accepts a different subset of additional parameters. Some parameters,
    * however, are parsed by the general initialization routine called by all child classes and so
@@ -309,12 +310,10 @@ namespace Chaos {
     /**
      * \brief Update the state of any persistent game conditions.
      * 
-     * \param event 
-     *
      * This function should be called from the tweak routines of child modifiers that can track
      * persistent states.
      */
-    void updatePersistent(const DeviceEvent& event);
+    void updatePersistent();
 
     /**
      * \brief Translate an axis event to events for one of a pair of buttons.
@@ -350,6 +349,11 @@ namespace Chaos {
      */
     static void TouchpadToAxis(DeviceEvent& event, uint8_t to_axis);
     
+    /**
+     * \brief The map of all the mods defined through the TOML file
+     */
+    static std::unordered_map<std::string, std::shared_ptr<Modifier>> mod_list;
+
   public:
     /**
      * Name by which this mod type will be identified in the TOML file
@@ -360,11 +364,6 @@ namespace Chaos {
      */
     Modifier(Passkey) {}
     
-    /**
-     * \brief The map of all the mods defined through the TOML file
-     */
-    static std::unordered_map<std::string, std::shared_ptr<Modifier>> mod_list;
-
     /**
      * \brief Create the overall list of mods from the TOML file.
      * \param config The object containing the fully parsed TOML file

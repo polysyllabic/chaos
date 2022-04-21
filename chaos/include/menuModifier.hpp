@@ -17,7 +17,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <unordered_map>
 #include "modifier.hpp"
+#include "menuItem.hpp"
 
 namespace Chaos {
 
@@ -26,12 +28,21 @@ namespace Chaos {
    *
    * Mods of this type are defined in the TOML configuration file with the following keys in
    * adition to the required name and description:
-   *
    */
   class MenuModifier : public Modifier::Registrar<MenuModifier> {
   protected:
-    std::vector<MenuAction> begin_menu;
-    std::vector<MenuAction> finish_menu;
+    /**
+     * \brief Map of menu items and values
+     * 
+     * A mod can perform multiple actions in the menu, so we store the value for each menu item
+     * in a map
+     */
+    std::unordered_map<std::shared_ptr<MenuItem>,int> menu_items;
+
+    /**
+     * \brief Should the menu option be restored to its previous value when the mod finishes?
+     */
+    bool reset_on_finish;
 
   public:
     static const std::string name;

@@ -34,7 +34,7 @@ namespace Chaos {
     zmqpp::socket *socket;
     zmqpp::context context;
 	
-    CommandListenerObserver* observer = NULL;
+    CommandListenerObserver* observer = nullptr;
 	
     void doAction();
 	

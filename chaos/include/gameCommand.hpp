@@ -22,12 +22,12 @@
 #include <unordered_map>
 #include <toml++/toml.h>
 
-#include "signalTypes.hpp"
+#include "deviceEvent.hpp"
 #include "gamepadInput.hpp"
-#include "gameCondition.hpp"
 
 namespace Chaos {
   
+  class GameCondition;
   /**
    * \brief Class to hold a mapping between a command defined for a game and the controller's
    * button/axis presses.
@@ -58,12 +58,12 @@ namespace Chaos {
    *     condition = "aiming"
    *
    */
-  class GameCommand {
+  class GameCommand : std::enable_shared_from_this<GameCommand> {
   private:
     /**
-     * The real button/axis we send to the console for this command.
+     * The binding of the actual button/axis the console expects for this command to the
+     * potentially remapped signal we expect from the controller.
      */
-    //GPInput binding;
     std::shared_ptr<GamepadInput> binding;
 
     /**
@@ -143,7 +143,17 @@ namespace Chaos {
      * should only be used when you really want the signal and don't care about testing for the
      * context of a particular game command.
      */
-    static GPInput getInput(const std::string& name);
+    //static GPInput getInput(const std::string& name);
+
+    /**
+     * \brief Returns #this as a shared pointer
+     * 
+     * \return std::shared_ptr<GameCommand> 
+     *
+     * Since the pointer for this object is managed by std::shared_ptr, using #this
+     * directly is dangerous. Use this function instead.
+     */
+    std::shared_ptr<GameCommand> getptr() { return shared_from_this(); }
 
     /**
      * \brief Accessor for the gamepad input object bound to this command.
@@ -153,6 +163,13 @@ namespace Chaos {
       return binding; 
       }
     
+    /**
+     * \brief Get the pointer to the gamepad input object that is the remapped signal.
+     * 
+     * \return std::shared_ptr<GamepadInput> 
+     */
+    std::shared_ptr<GamepadInput> getRemapped();
+
     /**
      * \brief Accessor for a condition that must also be true for this command to apply.
      * \return The condition 
@@ -167,6 +184,25 @@ namespace Chaos {
     bool conditionInverted() { 
       return invert_condition; 
       }
+
+    /**
+     * \brief Get the current state of the controller for this command
+     * 
+     * \return short 
+     *
+     * When checking the current state, we look at the remapped signal. That is, we case about what
+     * the user is actually doing, not what signal is going to the console.
+     */
+    short int getState() { return binding->getState(); }
+
+    /**
+     * \brief Get the name of the command as defined in the TOML file
+     * 
+     * \return std::string& 
+     *
+     * This command is provided largely for debugging
+     */
+    const std::string& getName();
   };
 };
 

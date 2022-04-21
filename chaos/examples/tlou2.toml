@@ -1,22 +1,7 @@
 #---------------------------------------------------------------------------------------------------
 # Twitch Controls Chaos (TCC)
-# Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at the top-level
-# directory of this distribution for contributor details.
-#
-# This program is free software: you can redistribute it and/or modify it under the terms of the GNU
-# General Public License as published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
-# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-# General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along with this program. If not,
-# see <https://www.gnu.org/licenses/>.
-#---------------------------------------------------------------------------------------------------
-#
 # Configuration file for the TCC engine. It defines the operation for a single game.
-
+#
 # chaos_toml: A version string for the TOML file format. Currently used only to verify that we're
 # reading the right file.
 chaos_toml = "1.0"
@@ -42,13 +27,12 @@ max_log_size = 1000000
 # max_log_files: Maximum number of log files to keep (0 = disable log rolling)
 max_log_files = 8
 
-#---------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------
 # Chaos Engine parameters
 # Lifetime (exclusive of pauses) of an individual modifier, in seconds.
 time_per_modifier = 180.0
 
-
-# The touchpad parameters control the formula to convert from touchpad to axis events based on the
+# The touchpad "parameters" control the formula to convert from touchpad to axis events based on the
 # change in axis value over time (derivative). The formula is scale * derivative + skew. This result
 # is then clipped to the limits of the joystick value.
 [touchpad]
@@ -66,22 +50,7 @@ scale = 0.12
 # is added to the result, and the derivative is negative, the skew is subtractecd.
 skew = 30
 
-# The sequence parameters define default timings for button presses when constructing sequences of
-# commands to pass to the console. All times are in milliseconds and are double values. (The actual
-# events sent to the console use microsecond precision.)
-[sequence]
-# With menu commands, we interrupt all signals from the user before invoking the menu commands. The
-# delay_after_disable time specifies how long to wait after disabling the commands before starting
-# with the menu commands. The default is 1/3 of a second.
-delay_after_disable = 333.333
-# Length of time to hold down a button when issuing a command.
-button_press_time = 62.5
-# Length of time to release a button when before going on to the next command.
-button_release_time = 62.5
-# Delay after entering a menu before issuing the next comand.
-menu_select_delay = 50
-
-#---------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------
 # Command Mapping
 #
 # This section defines the commands that this game supports, or at least the ones that we can
@@ -89,11 +58,12 @@ menu_select_delay = 50
 # should edit this section to reflect the values that the game expects to receive.
 #
 # There are three parts to each command definition: 
-# name:    The label used to refer to the action in the modifiers
 #
-# binding: The controller event (button, axis, etc.) attached to this command.
-#          The following names are defined for the control bindings. Note that thsese cannot be
-#          changed in this file:
+# name: The label used to refer to the action in the elsewhere in this configuration file.
+#
+# binding: The controller event (button, axis, etc.) attached to this command. The following names
+# are defined for the control bindings. Note that these cannot be changed in this file:
+#
 #          Main Buttons: X, CIRCLE, TRIANGLE, SQUARE
 #          Bumper buttons: L1, R1
 #          Hybrid button/axis: L2, R2
@@ -107,10 +77,13 @@ menu_select_delay = 50
 #          Accelerometer: ACCX, ACCY, ACCZ
 #          Gyroscope: GYRX, GYRY, GYRZ
 #         
-# context: A particular game state that must be true for the specific controller event to have the
-# assigned meaning. For example, a particular command may apply only when aiming a weapon. The
-# context is optional, but if used should be the name of another command defined without a context.
+# condition: A particular game state that must be true for the specific controller event to have
+# the assigned meaning. For example, a particular command may apply only when aiming a weapon. The
+# conditional is optional, but if used must be the name of a condition defined below.
 # 
+# Note that command names must be unique, but you can define multiple names to point to the same
+# signal. This allows for aliases, in case you want to use different command names in different
+# contexts.
 [[command]]
 name = "grab/interact"
 binding = "TRIANGLE"
@@ -180,6 +153,28 @@ name = "select consumable"
 binding = "DY"
 
 [[command]]
+name = "menu"
+binding = "OPTIONS"
+
+[[command]]
+name = "menu left/right"
+binding = "DX"
+
+[[command]]
+name = "menu up/down"
+binding = "DY"
+
+# Alias for selecting a menu option
+[[command]]
+name = "select"
+binding = "X"
+
+# Alias for backing out of a menu
+[[command]]
+name = "deselect"
+binding = "CIRCLE"
+
+[[command]]
 name = "scope"
 condition = "aiming"
 binding = "X"
@@ -205,135 +200,695 @@ name = "hold breath"
 condition = "aiming"
 binding = "L3"
 
-#---------------------------------------------------------------------------------------------------
-# Gamestate Conditions
-# These are persistent conditions that are triggered by a transient event, such as selecting a
-# weapon. (Ordinary conditions track the current state of the controller, e.g, a button that is
-# being held down.). All of the following fields are required:
-# name: The name by which the game state is identified in the TOML file.
-# trueOn: The command that sets the gamestate to true.
-# falseOn: The command that sets the gamestate to false.
-[[gamestate]]
+#--------------------------------------------------------------------------------------------------
+# Game Conditions
+#
+# Tests the state of the game for particular conditions. Conditions can be transient, reflecting
+# the real-time state of the controller, or persistent. Persistent conditions remember previous
+# controller actions, such as selecting a weapon, that may not be reflected in the current state of
+# the controller. Because conditions are defined in terms of game commands rather the raw buttons,
+# conditions account for remapping of inputs performed by some mods.
+#
+# The following keys are defined:
+# - name: The name by which the condition is identified in the TOML file. (Required)
+# - persistent: Boolean value to indicate whether the condition's state persists after being
+# triggered. (Optional, default = false)
+# - trueOn: An array of commands that will be tested to determine if the condition is true. The
+# commands must be in an array even if there is only one command. Persistent commands set a game
+# state to true when this command state transitions from false to true. Non-persistent commands
+# test the current state of the controller for this command. (Required)
+# - trueOff: For persistent conditions, an array of commands that will be tested to determine
+# when the condition is reset to false. (Optional)
+# - threshold: The proportion of the maximum value for the particular command being tested.
+# The legal range of values is $0 \le x \le 1$. The sign of the incoming signal is accounted for
+# in the test type. Note that a threshold is really only relevant for signals that are different
+# types of axes. The states of the pure buttons are only 0 or 1.
+# - thresholdType: Defines the test applied to the threshold. The following tests are available:
+#     - greater: A positive signal greater than the threshold triggers the signal. The shortcut ">"
+#       can also be used for this type.
+#     - greater_equal: A positive signal greater than or equal to the threshold triggers the signal.
+#     - less: A negative signal less than the threshold triggers the signal. The shortcut "<" can
+#       also be used for this type.
+#     - less_equal: A negative signal less than or equal to the threshold triggers the signal. The
+#       shortcut "<=" can also be used for this type.
+#     - magnitude: A signal that is greater than the absolute value of the signal triggers the
+#       signal. (Default)
+#     - distance: Calculates the Pythagorean distance of the first two signals in the condition
+#       list (this assumes that they are axes). The condition is true if this distance exceeds the
+#       threshold.
+# - testType: For a thresholdType other than DISTANCE, the logical relationship required for the
+# individual conditions. The possible values are:
+#     - ALL: All commands in the array must be past the threshold simultaneously. (Default)
+#     - ANY: One or more of the commands in the array must be past the threshold.
+#     - NONE: Note of the commands in the array must be past the threshold.
+# 
+# Notes:
+# The default threshold and thresholdType settings have the effect of returning a true condition
+# on any non-zero signal from the specified game commands.
+#
+# The commands used in conditions must be those defined without conditions of their own. This
+# requirement is both for speed of processing the conditions and to avoid the possibility of
+# infinite recursion.
+# 
+[[condition]]
+name = "aiming"
+trueOn = [ "aiming" ]
+
+[[condition]]
+name = "shooting"
+trueOn = [ "shoot/throw" ]
+
+[[condition]]
+name = "movement"
+trueOn = [ "move forward/back", "move sideways" ]	
+threshold = 0.2
+thresholdType = "distance"
+
+[[condition]]
+name = "camera"
+trueOn = [ "horizontal camera", "vertical camera" ]	
+threshold = 0.2
+thresholdType = "distance"
+
+[[condition]]
 name = "gun selected"
-trueOn = "select weapon"
-falseOn = "select consumable"
+persistent = true
+trueOn = [ "select weapon" ]
+falseOn = [ "select consumable" ]
 
-[[gamestate]]
+[[condition]]
 name = "consumable selected"
-trueOn = "select consumable"
-falseOn = "select weapon"
+persistent = true
+trueOn = [ "select consumable" ]
+falseOn = [ "select weapon" ]
 
-#---------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------
+# Sequences
+#
+# A sequence is a precomposed series of button presses intended to accomplish certain tasks.
+# Sequences can be used directly in many mods (see especially sequence modifiers), and indirectly
+# elsewhere. The sequences defined here can be reused as subsequences in other sequences. In other
+# words, if there are sequences of actions that you use repeatedly in different modifiers, you
+# can simplify your task be defining that sequence once here and referencing it in the mod
+# definitions. These sequences are also used to define certain game commands (e.g., involving menu
+# navigation) that the engine always needs to know about.
+#
+# Default time, in seconds, to hold down a button when issuing a command in a sequence.
+button_press_time = 0.0625
+
+# Default time, in seconds, to wait after releasing a button before going on to the next command
+# in the sequence.
+button_release_time = 0.0625
+
+# Defines how to open the main menu
+[[sequence]]
+name = "open main"
+sequence = [ { event="press", command = "menu" },
+             { event="delay", delay= 0.05 } ]
+
+# Defines how to select a single menu item
+[[sequence]]
+name = "select"
+sequence = [ { event="press", command = "select" },
+             { event="delay", delay= 0.05 } ]
+
+# Defines how to select a single menu item
+[[sequence]]
+name = "menu back"
+sequence = [ { event="press", command = "deselect" },
+             { event="delay", delay= 0.05 } ]
+
+# Defines how to navigate upward one item in a list of menu options.
+[[sequence]]
+name = "menu up"
+sequence = [ { event="press", command = "menu up/down", value = -1} ]
+
+# Defines how to navigate down one item in a list of menu options.
+[[sequence]]
+name = "menu down"
+sequence = [ { event="press", command = "menu up/down", value = 1} ]
+
+# Defines how to increase a multi-state option one level
+[[sequence]]
+name = "option right"
+sequence = [ { event="press", command = "menu right/left", value = 1} ]
+
+# Defines how to decrease a multi-state option one level
+[[sequence]]
+name = "option left"
+sequence = [ { event="press", command = "menu right/left", value = -1} ]
+
+# Defines how to confirm an option after selection. In other words, after an option is selected,
+# This sequence is issued to answer a yes/no prompt in the affirmative.
+[[sequence]]
+name = "confirm"
+sequence = [ { event="press", command = "menu left/right", value = -1},
+             { event="press", command = "select"} ]
+
+#--------------------------------------------------------------------------------------------------
+# Menus
+# 
+# This section defines the game's menu system.
+[menu]
+#
+# With menu commands, we interrupt all signals from the user before invoking the menu commands. The
+# delay_after_disable time specifies how long to wait after disabling the commands before starting
+# with the menu commands. The default is 1/3 of a second. The value here must be between 0 and 10
+# seconds.
+disable_delay = 0.333333
+
+# Does the menu system remember the last position in a menu/submenu where the user leaves the
+# cursor? This is a placeholder for future expansion. Setting to false has no effect currently.
+remember_last = true
+
+# Are items protected by a guard option hidden when the guard option is set to off? Note that
+# "hidden" doesn't necessarily mean literally hidden from the user, just that you can't navigate
+# to it and navigating down or up will skip over the option.
+hide_guarded_items = false
+
+# The following parameters define specific events that the engine needs to know in order to open
+# and navigate through the menus. The value for each must be the name of a sequence defined above,
+# and they define the default action that is taken for these events. All of these events can
+# be overridden on a per-item basis if necessary. If you do not need some of these actions for your
+# particular game, you can leave the values as an empty string.
+
+# Actions necessary to open the menu.
+open = "open menu"
+
+# Actions necessary to open go back one level in the menu.
+back = "menu back"
+
+# Actions necessary to move up one item in a list of menu options
+navigate_up = "menu up"
+
+# Actions necessary to move down one item in a list of menu options
+navigate_down = "menu down"
+
+# Actions necessary to move left between menu tabs (i.e., submenus that are selected in a different
+# way than the ordinary submenus are.
+tab_left = ""
+
+# Actions necessary to move rightbetween menu tabs (i.e., submenus that are selected in a different
+# way than the ordinary submenus are).
+tab_right = ""
+
+# Actions necessary to select an individual menu item
+select = "select"
+
+# Actions necessary to scroll through a multi-value menu option to increase its value by one unit
+option_greater = "option right"
+
+# Actions necessary to scroll through a multi-value menu option to decrease its value by one unit
+option_less = "option left"
+
+# Actions necessary to confirm selecting a menu item
+confirm = "confirm"
+
+# === Menu Layout ===
+#
+# A menu is defined as a series of inline tables, each of which describes a single menu item.
+# By defining the complete menu system (or at least that portion which the engine needs to know
+# about for the modifiers), menu modifiers can simply reference the menu option they want to
+# invoke and the engine will calculate the complete series of button presses necessary to get to
+# it automatically.
+# 
+# A menu item has the following parameters defined:
+# name:   A unique name for this menu item (Required)
+# type:   The category of menu item (Required). The available types are:
+#         + option: Item is an option. Options are set to integer values representing their
+#           possible states, e.g., a boolean flag would be 0 = off, 1 = on. 0 always reflects the
+#           minimum value. The maximum value will be item dependent.
+#         + select: Item executes some command (e.g., restart encounter) that does not have an
+#           option value associated with it.
+#         + menu: Item is an ordinary menu that appears in a standard list. Selecting it will
+#           go to that sub menu.
+#         
+# parent:   The parent menu for this item. If omitted, this item belongs to the root (main)
+#           menu. (Optional)
+# offset:   The number of actions required to reach this item from the first item in the list. Must
+#           be an integer. Positive values navigate down, negative values navigate up. If the menu
+#           contains items that are hidden by default, the offsets should reflect the number of
+#           actions required to reach the option with the items in their default state. This means
+#           that a default-hidden entry will share an offset with a default-unhidden one. When the
+#           hidden entry is revealed, the offset will be recalculated. See the main menu below for
+#           an example. (Required)
+# - tab:    An integer indicating a group of items within a parent menu. Items in this group are
+#           displayed together and you must navigate from tab to tab with a different command from
+#           the normal menu up/down items. The value of the integer indicates the number of tab
+#           button presses required to reach this group from the default tab. Positive values mean
+#           tab right, negative values mean tab left. (Optional)
+# - hidden: A boolean value which if true indicates that the menu item is not displayed in the
+#           list currently. Menu items can be hidden or revealed as a result of other actions in
+#           the game. The default value is false. (Optional)
+# - confirm: For options/select items, selecting this option requires a yes/no confirmation.
+# - initialState: For options, the starting value for the menu item, expressed as an integer
+#           indicating the number of button presses away from the minimum value required to reach
+#           this state.
+# - counter: Name of a menu option whose counter is to be incremented when this menu option is set
+#            and decremented when this option is restored.
+# - counterAction: Action to take after this menu option's counter changes. The currently supported
+#            values are:
+#            + reveal: Menu option is shown when the counter is non-zero, hidden when zero
+# - guard:   Reference to another item in the same list that acts as a "guard" for this item. The
+#            referenced option must be enabled before we can set this value.
+#
+# Parent menu items must be declared before the child items that reference those parents, but the
+# definition order is otherwise unconstrained.
+#
+# For illustration, TLOU2 menu options that are unused are listed below and commented out. In
+# practice, you only need to define the menu items that the engine will actually invoke.
+
+layout = [
+      # Main Menu Items
+      {name = "options", type="menu", offset = 0},
+      #{name = "photo mode", type="menu", offset = 1},
+      {name = "audio cues", type="menu", offset = 2, hidden = true, counterAction="reveal"},
+      {name = "extras", type="menu", offset = 2},
+      #{name = "tutorials", type="menu", offset = 3},
+      #{name = "save", type="menu", offset = 4},
+      #{name = "load", type="menu", offset = 5},
+      #{name = "restart 2", type="menu", offset = -3, hidden = true},
+      {name = "restart", type="command", offset = -2, confirm = true },
+      #{name = "quit", type="menu", offset = -1}
+
+      # Options Menu
+      #{name = "difficulty", type="menu", parent="options", offset= 0},
+      {name = "controls", type="menu", parent="options", offset= 1},
+      {name = "HUD", type="menu", parent="options", offset= 2},
+      {name = "subtitles", type="menu", parent="options", offset= 3},
+      {name = "display", type="menu", parent="options", offset= 4},
+      {name = "audio", type="menu", parent="options", offset= 5},
+      #{name = "language", type="menu", parent="options", offset= -2},
+      {name = "accessibility", type="menu", parent="options", offset= -1},
+
+      # Extras Menu
+      # The initialState setting for a submenu refers to which submenu item is selected by default.
+      # That is the state to which the game will return when all mods changing the render mode are
+      # removed.
+      {name = "render", type="menu", parent="extras", offset= 0, initialState=0},
+      {name = "gameplay", type="menu", parent="extras", offset= 1},
+
+      # Options -> Controls 
+      #{name = "view controls", type="menu", parent="controls", offset= 0},
+      #{name = "customize controls", type="menu", parent="controls", offset= 1},
+      {name = "shoulder swap", type="option", parent="controls", offset= 2, initialState=0},
+      #{name = "photo mode shortcut", type="option", parent="controls", offset= 3, initialState=0},
+      {name = "listen mode", type="option", parent="controls", offset= 4, intialState=1},
+      #{name = "look sensitivity X", type="option", parent="controls", offset= 5, initialState=5},
+      #{name = "look sensitivity Y", type="option", parent="controls", offset= 6, initialState=5},
+      #{name = "aim sensitivity X", type="option", parent="controls", offset= 7, initialState=5},
+      #{name = "aim sensitivity Y", type="option", parent="controls", offset= 8, initialState=5},
+      #{name = "aim acceleration", type="option", parent="controls", offset= 9, initialState=10},
+      #{name = "aim ramp power", type="option", parent="controls", offset= 10, initialState=10},
+      #{name = "motion aim", type="option", parent="controls", offset= -9, initialState=0},
+      #{name = "motion sensitivity X", type="option", parent="motion aim", offset= -8, initialState=5},
+      #{name = "motion sensitivity Y", type="option", parent="motion aim", offset= -7, initialState=5},
+      #{name = "motion aim invert Y", type="option", parent="controls", offset= -6, initialState=0},
+      #{name = "motion aim mirror X", type="option", parent="controls", offset= -5, initialState=0},
+      {name = "camera assist", type="option", parent="controls", offset= -4, initialState=0},
+      {name = "aim assist", type="option", parent="camera assist", offset= -3, initialState=10},
+      {name = "lock-on aim", type="option", parent="controls", offset= -2, initialState=0},
+      {name = "lock-on strength", type="option", parent="controls", guard="lock-on aim", offset= -1, initialState=10},
+
+      # Options -> HUD Menu Items
+      # reticle states: 0 = off, 1 = simple, 2 = default
+      {name = "reticle", type="option", parent="HUD", offset=0, initialState=2},
+      {name = "weapon cross", type="option", parent="HUD", offset=1, initialState=1},
+      {name = "damage indicators", type="option", parent="HUD", offset=2, initialState=1},
+      {name = "awareness indicators", type="option", parent="HUD", offset=3, initialState=1},
+      {name = "hit markers", type="option", parent="HUD", offset=4, initialState=1},
+      {name = "arc throw path", type="option", parent="HUD", offset=5, initialState=1},
+      {name = "health and weapon", type="option", parent="HUD", offset=6, initialState=1},
+      {name = "health bar", type="option", parent="HUD", guard="health and weapon", offset=7, initialState=1},
+      {name = "weapon and ammo display", type="option", parent="HUD", guard="health and weapon", offset=8, initialState=1},
+      {name = "status effects", type="option", parent="HUD", guard="health and weapon", offset=9, initialState=1},
+      #{name = "tutorial messages", type="option", parent="HUD", offset=-8, initialState=0},
+      #{name = "hints", type="option", parent="HUD", offset=-7, initialState=0},
+      {name = "pickup notifications", type="option", parent="HUD", offset=-6, initialState=0},
+      #{name = "dodge prompts", type="option", parent="HUD", offset=-5, initialState=0},
+      #{name = "grab/strike prompts", type="option", parent="HUD", offset=-4, initialState=0},
+      #{name = "pickup prompts", type="option", parent="HUD", offset=-3, initialState=1},
+      #{name = "interact prompts", type="option", parent="HUD", offset=-2, initialState=1},
+      #{name = "collectibel tracking", type="option", parent="HUD", offset=-1, initialState=0},
+
+      # Options -> Subtitle Menu
+      # subtitle states: 0 = off, 1 = story, 2 = story + combat
+      {name = "subtitle type", type="option", parent="subtitles", offset=0, initialState=2},
+      # subtitle size: 0 = small, 1 = medium, 2 = large
+      {name = "subtitle size", type="option", parent="subtitles", offset=1, initialState=1},
+      #{name = "subtitle background", type="option", parent="subtitles", offset=2, initialState=0},
+      #{name = "subtitle names", type="option", parent="subtitles", offset=3, initialState=1},
+      #{name = "subtitle name colors", type="option", parent="subtitles", offset=-3, initialState=0},
+      #{name = "subtitle direction", type="option", parent="subtitles", offset=-2, initialState=0},
+      #{name = "subtitle color", type="option", parent="subtitles", offset=-1, initialState=0},
+
+      # Options -> Display Menu
+      #{name = "brightness", type="menu", parent="display", offset=0, initialState=0},
+      #{name = "safezone scale", type="menu", parent="display", offset=1, initialState=0},
+      # framerate: 0 = 30fps, 1 = 60fps
+      {name = "framerate", type="option", parent="display", offset=2, initialState=1},
+      #{name = "motion blur", type="option", parent="display", offset=3, initialState=10},
+      #{name = "camera shake", type="option", parent="display", offset=-2, initialState=10},
+      #{name = "film grain", type="option", parent="display", offset=-1, initialState=10},
+
+      # Options -> Audio Menu
+      {name = "effects", type="option", parent="audio", offset=0, initialState=20},
+      {name = "dialogue", type="option", parent="audio", offset=1, initialState=20},
+      {name = "music", type="option", parent="audio", offset=2, initialState=20},
+      #{name = "cinematics", type="option", parent="audio", offset=3, initialState=20},
+      #{name = "accessibility cue levels", type="option", parent="audio", offset=4, initialState=20},
+      #{name = "text-to-speech levels", type="option", parent="audio", offset=5, initialState=10},
+      #{name = "device", type="option", parent="audio", offset=6, initialState=0},
+      #{name = "channels", type="option", parent="audio", offset=-5, initialState=0},
+      #{name = "center channel", type="option", parent="audio", offset=-4, initialState=0},
+      #{name = "dynamic range", type="option", parent="audio", offset=-5, initialState=0},
+      {name = "mono", type="option", parent="audio", offset=-2, initialState=0},
+      #{name = "front", type="option", parent="audio", offset=-1, initialState=0},
+
+      # Options -> Accessibility Menu
+      {name = "alternate controls", type="menu", parent="accessibility", offset=0},
+      {name = "magnification", type="menu", parent="accessibility", offset = 1},
+      {name = "motion sickness", type="menu", parent="accessibility", offset = 2},
+      {name = "navigation", type="menu", parent="accessibility", offset = 3},
+      {name = "TTS and audio", type="menu", parent="accessibility", offset = -2},
+      {name = "combat accessibility", type="menu", parent="accessibility", offset = -1},
+
+      # Options -> Accessibility -> Alternate Controls
+      {name = "camera assist", type="option", parent="alternate controls", offset=-7, initialState=0},
+      {name = "lock-on aim", type="guard", parent="alternate controls", offset=-6, initialState=0},
+      {name = "lock-on strength", type="option", parent="alternate controls", guard="lock-on aim", offset=-5, initialState=10},
+      {name = "arc-throw lock-on", type="guard", parent="alternate controls", offset=-4, initialState=0},
+      {name = "arc-throw lock-on strength", type="option", parent="alternate controls", guart="arc-throw lock-on", offset=-3, initialState=10},
+      {name = "auto weapon swap", type="option", parent="alternate controls", offset=-2, initialState=0},
+      {name = "auto pick-up", type="option", parent="alternate controls", offset=-1, initialState=0},
+
+      # Options -> Accessibility -> Magnification Menu
+      {name = "HUD scale", type="option", parent="magnification", offset=0, initialState=0},
+      #{name = "HUD background", type="option", parent="magnification", offset=1, initialState=1},
+      #{name = "HUD color", type="option", parent="magnification", offset=2, initialState=0},
+      #{name = "HUD colorblind mode", type="option", parent="magnification", offset=3, initialState=0},
+      {name = "HUD flashing", type="option", parent="magnification", offset=4, initialState=1},
+      {name = "high contrast", type="option", parent="magnification", offset=-3, initialState=0},
+      #{name = "screen magnifier", type="option", parent="magnification", offset=-2, initialState=0},
+      #{name = "translation prompts", type="option", parent="magnification", offset=-1, initialState=0},
+
+      # Options -> Accessibility -> Motion Sickness
+      #{name = "camera shake", type="option", parent="motion sickness", offset=0, initialState=10},
+      #{name = "motion blur", type="option", parent="motion sickness", offset=1, initialState=10},      
+      # For camera distance and field of view, -5 = 0, 0 = 6
+      {name = "camera distance", type="option", parent="motion sickness", offset=2, initialState=6},
+      {name = "field of view", type="option", parent="motion sickness", offset=3, initialState=6},
+      #{name = "dolly zoom", type="option", parent="motion sickness", offset=-3, initialState=1},
+      #{name = "full screen effects", type="option", parent="motion sickness", offset=-2, initialState=1},
+      #{name = "persistent center dot", type="option", parent="motion sickness", offset=-1, initialState=0},
+
+      # Options -> Accessibility -> Navigation and Traversal
+      {name = "navigation assistance", type="option", parent="navigation", offset=0, initialState=0},
+      {name = "traversal assistance", type="option", parent="navigation", offset=1, initialState=0},
+      {name = "ledge guard", type="option", parent="navigation", offset=2, initialState=0},
+      {name = "enhanced listen", type="guard", parent="navigation", offset=3, initialState=0},
+      {name = "scan range", type="option", parent="navigation", guard="enhanced listen", offset=4, initialState=10},
+      {name = "scan time", type="option", parent="navigation", guard="enhanced listen", offset=5, initialState=3},
+      {name = "infinite breath", type="option", parent="navigation", offset=-2, initialState=0},
+      #{name = "skip puzzle", type="option", parent="navigation", offset=-1, initialState=0},
+
+      # Options -> Accessibility -> Text-to-Speech and Audio Cues
+      {name = "text-to-speech", type="option", parent="TTS and audio", offset = 0, initialState=0, counter="audio cues"},
+      {name = "traversal cues", type="option", parent="TTS and audio", offset = 1, initialState=0, counter="audio cues"},
+      {name = "combat cues", type="option", parent="TTS and audio", offset = 2, initialState=0, counter="audio cues"},
+      #{name = "combat vibration", type="option", parent="TTS and audio", offset = 3, initialState=0},
+      #{name = "guitar vibration", type="option", parent="TTS and audio", offset = -3, initialState=0},
+      #{name = "audio volumes", type="menu", parent="TTS and audio", offset = -2, initialState=0},
+      #{name = "cue glossary", type="menu", parent="TTS and audio", offset = -1, initialState=0},
+
+      # Options -> Accessibility -> Combat Accessibility
+      {name = "enable combat accessibility", type="guard", parent="combat accessibility", offset = 0, initialState=0},
+      {name = "hostages don't escape", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 1, initialState=0},
+      {name = "allies don't get grabbed", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 2, initialState=0},
+      {name = "enemies don't flank", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 3, initialState=0},
+      {name = "reduced enemy perception", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 4, initialState=0},
+      {name = "reduced enemy accuracy", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 5, initialState=0},
+      {name = "enhanced dodge", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -4, initialState=0},
+      {name = "invisible while prone", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -3, initialState=0},
+      {name = "weapon sway", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -2, initialState=1},
+      {name = "slow motion", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -1, initialState=0},
+
+      # Extras -> Render Modes Menu
+      {name = "no render", type = "select", parent="render", offset = 0, counter="render"},
+      {name = "graphic", type = "select", parent="render", offset = 1, counter="render"},
+      {name = "headache", type = "select", parent="render", offset = 2, counter="render"},
+      {name = "afterlife", type = "select", parent="render", offset = 3, counter="render"},
+      {name = "eightbit", type = "select", parent="render", offset = 4, counter="render"},
+      {name = "watercolor", type = "select", parent="render", offset = 5, counter="render"},
+      {name = "dungeon", type = "select", parent="render", offset = 6, counter="render"},
+      {name = "void", type = "select", parent="render", offset = 7, counter="render"},
+      {name = "pop poster", type = "select", parent="render", offset = 8, counter="render"},
+      {name = "1960", type = "select", parent="render", offset = 9, counter="render"},
+      {name = "cool", type = "select", parent="render", offset = 10, counter="render"},
+      {name = "warm", type = "select", parent="render", offset = 11, counter="render"},
+      {name = "vibrant", type = "select", parent="render", offset = 12, counter="render"},
+      {name = "noir", type = "select", parent="render", offset = 13, counter="render"},
+      {name = "blorange", type = "select", parent="render", offset = 14, counter="render"},
+      {name = "sepia", type = "select", parent="render", offset = 15, counter="render"},
+      {name = "vintage", type = "select", parent="render", offset = -14, counter="render"},
+      {name = "beasts", type = "select", parent="render", offset = -13, counter="render"},
+      {name = "terminated", type = "select", parent="render", offset = -12, counter="render"},
+      {name = "gridlocked", type = "select", parent="render", offset = -11, counter="render"},
+      {name = "blacklight", type = "select", parent="render", offset = -10, counter="render"},
+      {name = "desert fog", type = "select", parent="render", offset = -9, counter="render"},
+      {name = "blood", type = "select", parent="render", offset = -8, counter="render"},
+      {name = "inferno", type = "select", parent="render", offset = -7, counter="render"},
+      {name = "fire", type = "select", parent="render", offset = -6, counter="render"},
+      {name = "trinity", type = "select", parent="render", offset = -5, counter="render"},
+      {name = "pusher", type = "select", parent="render", offset = -4, counter="render"},
+      {name = "demons", type = "select", parent="render", offset = -3, counter="render"},
+      {name = "drugzone", type = "select", parent="render", offset = -2, counter="render"},
+      {name = "moonlight", type = "select", parent="render", offset = -1, counter="render"},
+
+      # Extras -> Gameplay Menu
+      {name = "mirror", type="option", parent="gameplay", offset = 0, initialState = 0},
+      {name = "mirror on death", type="option", parent="gameplay", offset = 1, initialState = 0},
+      {name = "slow motion", type="option", parent="gameplay", offset = 2, initialState = 0},
+      {name = "bullet speed", type="option", parent="gameplay", offset = 3, initialState = 0},
+      {name = "infinite ammo", type="option", parent="gameplay", offset = 4, initialState = 0},
+      {name = "infinite crafting", type="option", parent="gameplay", offset = 5, initialState = 0},
+      {name = "infinite melee durability", type="option", parent="gameplay", offset = 6, initialState = 0},
+      {name = "infinite listen range", type="option", parent="gameplay", offset = 7, initialState = 0},
+      {name = "one shot", type="option", parent="gameplay", offset = -6, initialState = 0},
+      {name = "touch of death", type="option", parent="gameplay", offset = -5, initialState = 0},
+      {name = "8-bit audio", type="option", parent="gameplay", offset = -4, initialState = 0}, 
+      {name = "4-bit audio", type="option", parent="gameplay", offset = -3, initialState = 0},
+      {name = "helium audio", type="option", parent="gameplay", offset = -2, initialState = 0},
+      {name = "xenon audio", type="option", parent="gameplay", offset = -1, initialState = 0},
+]
+
+#--------------------------------------------------------------------------------------------------
 # Gameplay Modifiers
+#
+# A modifier is a specific alteration of a game's operation, for example disabling a particular
+# control, or inverting the direction of a joystick movement. Specific types of modifiers are
+# available to implement specific kinds of actions.
+#
+# Each modifier is defined in its own table, labeled [[modifier]]. Regardless of type, each
+# modifier must specify values for the following keys:
+#
+# - name: A unique string identifying this mod (Required). This is the name by which the mod is
+#         selected, for example, when a user asks the chatbot to define its functionality, as well
+#         as the name shown in the voting and in-effect overlays.
+# - description: An explanatation of the mod for use by the chat bot (Required)
+# - type: The class of modifier (Required).
+#
+# The following modifier classes are currently implemented:
+# - cooldown: Allow a command for a set time then force a recharge period before it can be used again.
+# - delay: Wait for a set amount of time before sending a command.
+# - disable: Block commands from being sent to the console.
+# - formula: Alter the magnitude and/or offset of the signal through a formula
+# - invert: Invert the sign of the signal.
+# - menu: Apply a setting from the game's menus.
+# - parent: A mod that contains other mods as children.
+# - remap: Change which controls issue which commands.
+# - repeat: Repeat a particular command at intervals.
+# - sequence: Issue an arbitrary sequence of actions.
+#
+# - group: A classification of that can be used by the chat bot for voting (e.g., to ensure that)
+#       only one mod in a category can be voted on at the same time. If omitted, the mod is
+#       assigned to the default "general" group. (Optional)
+# 
+# In this file, modifiers are sorted by type, and documentation for each type appears above the
+# first one. In most cases, however, modifiers can usually be defined in any order you prefer.
+# The one exception is for modifiers of the parent type that reference specific, named modifiers
+# as children. In this case, the child modifiers must be defined earlier in this file than the
+# parent.
+#
+# == Disable Modifiers ==
+# Modifiers of this type block commands from being passed to the controller, either unconditionally
+# or under various conditions. In addition to the keys required for all modifiers, the following
+# keys are defined:
+# - appliesTo: The command or commands affected by the mod. The commands must be in square brackets
+#     even if there is only one. (Required)
+#
+# - filter: Which values to block (Optional). The value must be one of the following:
+#       + all: block all non-zero values (Default if omitted)
+#       + below: Values less than the threshold are blocked. Those above it are passed through
+#       + above: Values  block all values above the threshold
+#
+# - threshold: The threshold state above or below which signals will be filtered. (Optional)
+#   The default if omitted is 0. If more than one command is in the appliesTo list, all commands
+#   are subject to the same filter threshold.
+#
+# - condition: An array of conditions whose total evaluation must be true for filtering to take
+# place. Conditions are separate from the filter threshold test that is performed on the appliesTo
+# commands, and they must be one or more of those defined above. (Optional)
+#
+# - unless: An array of conditions whose total evaluation must be false for filtering to take
+# place. The test of listed commands functions exactly as 'condition', but the commands are
+# disabled only if test of the conditions returns false.
+#
+# Both condition and unless can be defined simultaneously for separate commands, if some sates
+# must be true and others false. In this case, for signal filtering to occur, 
+#
+# - conditionTest: Type of test to perform when more than one game condition is in the array.
+# - unlessTest: Type of test to perform when more than one condition is in the unless array.
+#
+# Both conditionTest and unlessTest accept the following values:
+#       + all: All conditions must be true (for condition) or false (for unless) simultaneously
+#       + any: Any one condition must be true (for condition) or false (for unless) at one time
+#       + none: None of the defined conditions must be true (for condition) or false (for unless)
+#
+# - sequenceBegin:  A sequence of commands to issue when the mod is activated.
+# - sequenceFinish: A sequence of commands to issue when the mod is deactivated.
+#
+# The format for sequences is described with the sequence modifiers below.
+#
 [[modifier]]
 name = "No Melee"
 description = "Disable melee attacks and stealth kills"
 type = "disable"
+groups = [ "combat" ]
 appliesTo = [ "melee" ]
 
 [[modifier]]
 name = "Melee Only"
 description = "No shooting and no throwables"
 type = "disable"
+groups = [ "combat" ]
 appliesTo = [ "reload/toss" ]
 
 [[modifier]]
 name = "Pacifist%"
 description = "No shooting, throwing, or melee. Good luck, NPC friends!"
 type = "disable"
+groups = [ "combat" ]
 appliesTo = [ "melee", "reload/toss" ]
 
 [[modifier]]
 name = "No Climbing/Jumping"
 description = "No climbing or jumping"
 type = "disable"
+groups = [ "movement" ]
 appliesTo = [ "jump/climb" ]
 
 [[modifier]]
 name = "No Grab"
 description = "Swiper no swiping! No looting, stealth grabbing, opening doors. Say goodbye to the everything button."
 type = "disable"
+groups = [ "interact" ]
 appliesTo = [ "grab/interact" ]
 
 [[modifier]]
 name = "No Crouch/Prone"
-description = "Crouching/going prone is disabled"
+description = "And you thought you were going to sneak through this area"
 type = "disable"
+groups = [ "movement" ]
 appliesTo = [ "crouch/prone" ]
-disableOnStart = true
+beginSequence = [ { event = "release", command = "crouch/prone" } ]
 
 [[modifier]]
 name = "No Run/Dodge"
-description = "L1 is disabled"
+description = "Better hope you're not being chased."
 type = "disable"
+groups = [ "movement" ]
 appliesTo = [ "dodge/sprint" ]
+beginSequence = [ { event = "release", command = "dodge/sprint" } ]
 
 [[modifier]]
 name = "No Aiming"
 description = "At least reloading is still possible, along with throwables and melee"
 type = "disable"
+groups = [ "combat" ]
 appliesTo = [ "aiming" ]
+beginSequence = [ { event = "release", command = "aiming" } ]
 
 [[modifier]]
 name = "No Horizontal Aim"
 description = "The horizontal camera is disabled"
 type = "disable"
+groups = [ "view" ]
 appliesTo = [ "horizontal camera" ]
 
 [[modifier]]
 name = "No Scoping"
 description = "No scopes! Aiming is still allowed"
 type = "disable"
+groups = [ "combat" ]
 appliesTo = [ "scope" ]
 
 [[modifier]]
 name = "No Shoulder Swap"
 description = "While aiming, Square is disabled"
 type = "disable"
+groups = [ "combat" ]
 appliesTo = [ "shoulder swap" ]
 
 [[modifier]]
 name = "No Reloading"
 description = "You can still shoot, but you can't reload."
 type = "disable"
+groups = [ "combat" ]
 appliesTo = [ "reload/toss" ]
-gamestate = [ "gun selected" ]
+condition = [ "gun selected" ]
 unless = [ "aiming" ]
 
 [[modifier]]
 name = "Disable Camera"
 description = "Good luck with aiming and looking around!"
 type = "disable"
+groups = [ "view" ]
 appliesTo = [ "vertical camera", "horizontal camera" ]
 
 [[modifier]]
 name = "Disable D-pad"
 description = "Inventory selection is disabled"
 type = "disable"
+groups = [ "combat", "inventory" ]
 appliesTo = [ "select weapon", "select consumable" ]
 
 [[modifier]]
 name = "Moose"
 description = "The moose is dead. The moose does not move. (Disables movement)"
 type = "disable"
+groups = [ "movement" ]
 appliesTo = [ "move forward/back", "move sideways" ]
 
 [[modifier]]
 name = "Only Strafe Movement"
 description = "Side-to-side movement is disabled. Only forward/back motion is allowed."
 type = "disable"
+groups = [ "movement" ]
 appliesTo = [ "move sideways" ]
 
 [[modifier]]
 name = "No Strafing"
 description = "Forwards/back movement is disabled. Only side-to-side motion is allowed."
 type = "disable"
+groups = [ "movement" ]
 appliesTo = [ "move forward/back" ]
 
 [[modifier]]
 name = "Only Aim Movement"
 description = "Movement is disabled if not aiming"
 type = "disable"
+groups = [ "movement" ]
 appliesTo = [ "move forward/back", "move sideways" ]
 unless = [ "aiming" ]
 
@@ -341,6 +896,7 @@ unless = [ "aiming" ]
 name = "No Aim Movement"
 description = "Movement is disabled if aiming"
 type = "disable"
+groups = [ "movement" ]
 appliesTo = [ "move forward/back", "move sideways" ]
 condition = [ "aiming" ]
 
@@ -348,6 +904,7 @@ condition = [ "aiming" ]
 name = "No Aiming Camera"
 description = "Camera is disabled if aiming"
 type = "disable"
+groups = [ "view" ]
 appliesTo = [ "vertical camera", "horizontal camera" ]
 condition = [ "aiming" ]
 
@@ -355,6 +912,7 @@ condition = [ "aiming" ]
 name = "Nascar"
 description = "There is no going right in Nascar. Right movement/camera disabled"
 type = "disable"
+groups = [ "movement", "view" ]
 appliesTo = [ "move sideways", "horizontal camera" ]
 filter = "above"
 
@@ -362,6 +920,7 @@ filter = "above"
 name = "Zoolander"
 description = "We are not an ambiturner, but at least we can look right. Left movement/camera disabled."
 type = "disable"
+groups = [ "movement", "view" ]
 appliesTo = [ "move sideways", "horizontal camera" ]
 filter = "below"
 
@@ -369,6 +928,7 @@ filter = "below"
 name = "No Backward Movement"
 description = "Moving backwards is not allowed"
 type = "disable"
+groups = [ "movement" ]
 appliesTo = [ "move forward/back" ]
 filter = "above"
 
@@ -376,6 +936,7 @@ filter = "above"
 name = "No Forward Movement"
 description = "Moving forward is not allowed"
 type = "disable"
+groups = [ "movement" ]
 appliesTo = [ "move forward/back" ]
 filter = "below"
 
@@ -383,82 +944,126 @@ filter = "below"
 name = "No Gun Selection"
 description = "No picking a new gun"
 type = "disable"
+groups = [ "combat" ]
 appliesTo = [ "select weapon" ]
-disableOnStart = true
-[[modifier.begin]] 
-event= "press"
-command = "select consumable"
-value = 1
-
+beginSequence = [ { event = "release", command = "select weapon" },
+                  { event= "press", command = "select consumable" } ]
 
 [[modifier]]
 name = "No Short Guns"
 description = "D-Pad Right Disabled"
 type = "disable"
+groups = [ "combat" ]
 filter = "positive"
 appliesTo = [ "select weapon" ]
-disableOnStart = true
-[[modifier.begin]]
-event = "press"
-command = "select consumable"
-value = 1
+beginSequence = [ { event = "release", command = "select weapon" },
+                  { event= "press", command = "select consumable" } ]
 
 [[modifier]]
 name = "No Long Guns"
 description = "D-Pad Left Disabled"
 type = "disable"
+groups = [ "combat" ]
 filter = "negative"
 appliesTo = [ "select weapon" ]
-disableOnStart = true
-[[modifier.begin]]
-event = "press"
-command = "select consumable"
-value = 1
+beginSequence = [ { event = "release", command = "select weapon" },
+                  { event= "press", command = "select consumable" } ]
 
 [[modifier]]
 name = "No Consumables"
-description = "Selection of consumables (brick, bottle, med kit, molly, etc.) Disabled"
+description = "Selecting a brick, bottle, med kit, molly, etc. is disabled."
 type = "disable"
+groups = [ "combat", "inventory" ]
 appliesTo = [ "select consumable" ]
-disableOnStart = true
-[[modifier.begin]]
-event = "press"
-command = "select weapon"
-value = 1
+beginSequence = [ { event = "release", command = "select consumable" },
+                  { event= "press", command = "select weapon" } ]
 
+# == Invert Modifiers
+#
 [[modifier]]
 name = "Inverted"
 description = "Inverts the vertical axis for aiming"
 type = "invert"
+groups = [ "view" ]
 appliesTo = [ "vertical camera" ]
 
 [[modifier]]
 name = "Moonwalk"
-description = "Be like Michael Jackson! Trying to walk forward will actually make you go backward"
+description = "Be like Michael Jackson! Trying to walk forward will actually make you go backward."
 type = "invert"
+groups = [ "movement" ]
 appliesTo = [ "move forward/back" ]
 
 [[modifier]]
 name = "Sideways Moonwalk"
 description = "Go left to go right and go right to go left"
 type = "invert"
+groups = [ "movement" ]
 appliesTo = [ "move sideways" ]
 
+# == Cooldown Modifiers ==
+# A cooldown modifier allows an action for a set period of time and then blocks it until a set
+# period has expired.
+#
+# In addition to the general parameters required for all modules, the following parameters are
+# defined:
+# - timeOn: Length of time to allow the command before going into cooldown. (Required)
+# - timeOff: Length of time spent in cooldown, where the command is blocked. (Required)
+#
+# Note: Although the appliesTo key takes an array, this mod type expects only a single
+# command. All but the first will be ignored.
+#
+[[modifier]]
+name = "Bad Stamina"
+description = "Running is disabled after 2 seconds and takes 4 seconds to recharge."
+type = "cooldown"
+groups = [ "movement" ]
+appliesTo = [ "dodge/sprint" ]
+timeOn = 2.0
+timeOff = 4.0
+
+[[modifier]]
+name = "Snapshot"
+description = "You can only aim for 1 second at a time, so take that shot quickly."
+type = "cooldown"
+groups = [ "combat" ]
+appliesTo = [ "aiming" ]
+timeOn = 1.0
+timeOff = 3.0
+
+# == Repeat Modifiers ==
+#
+# Repeat modifiers apply a command in a cycle
+#
+# In addition to the general parameters required for all modules, the following parameters are
+# defined:
+# - timeOn: Length of time to allow the command before going into cooldown. (Required)
+# - timeOff: Length of time spent in cooldown, where the command is blocked. (Required)
+#
+# Note: Although the appliesTo key takes an array, this mod type expects only a single
+# command. All but the first will be ignored.
+#
 [[modifier]]
 name = "Keep Proning"
 description = "Proning at inconvenient times"
 type = "repeat"
+groups = [ "movement" ]
 appliesTo = [ "crouch/prone" ]
 timeOn = 2.0
 timeOff = 2.0
+beginSequence = [{ event = "release", command = "crouch/prone" }]
+finishSequence = [{ event = "release", command = "crouch/prone" }]
 
 [[modifier]]
 name = "Factions Pro"
 description = "Keeping things toxic with teabagging"
 type = "repeat"
+groups = [ "movement" ]
 appliesTo = [ "crouch/prone" ]
 timeOn = 0.1
 timeOff = 0.6
+beginSequence = [{ event = "release", command = "crouch/prone" }]
+finishSequence = [{ event = "release", command = "crouch/prone" }]
 
 [[modifier]]
 name = "Anthony Caliber"
@@ -467,77 +1072,124 @@ type = "repeat"
 appliesTo = [ "flashlight" ]
 timeOn = 0.066667
 timeOff = 0.089583
-cycle = 8
-delay = 4.0
+repeat = 8
+cycleDelay = 4.0
+beginSequence = [{ event = "release", command = "flashlight" }]
+finishSequence = [{ event = "release", command = "flashlight" }]
 
 [[modifier]]
 name = "Keep Jumping"
-description = "Repeated presses of X"
+description = "Repeated presses of jump/climb"
 type = "repeat"
+groups = [ "movement" ]
 appliesTo = [ "jump/climb" ]
 timeOn = 0.1
 timeOff = 2.0
+beginSequence = [{ event = "release", command = "jump/climb" }]
+finishSequence = [{ event = "release", command = "jump/climb" }]
 
 [[modifier]]
 name = "Rachy Flail"
 description = "The only way to melee is to follow the master techniques of RachyMonster"
 type = "repeat"
+groups = [ "combat" ]
 appliesTo = [ "melee" ]
 timeOn = 0.1
 timeOff = 1.1
+beginSequence = [{ event = "release", command = "melee" }]
+finishSequence = [{ event = "release", command = "melee" }]
 
 [[modifier]]
 name = "Keep Dodging"
 description = "Repeaated dodges. Don't stand too near a ledge"
 type = "repeat"
+groups = [ "movement" ]
 appliesTo = [ "dodge/sprint" ]
 timeOn = 0.1
 timeOff = 2.0
+beginSequence = [{ event = "release", command = "dodge/sprint" }]
+finishSequence = [{ event = "release", command = "dodge/sprint" }]
 
 [[modifier]]
 name = "Periodic Listen Mode"
-description = "Repeated holds of R1"
+description = "Stop, look, listen to your heart, hear what it's saying."
 type = "repeat"
+groups = [ "view" ]
 appliesTo = [ "swap/listen" ]
 timeOn = 3.0
 timeOff = 8.0
+beginSequence = [{ event = "release", command = "swap/listen" }]
+finishSequence = [{ event = "release", command = "swap/listen" }]
 
 [[modifier]]
 name = "Force Running"
 description = "To move is to run (mostly)"
 type = "repeat"
+groups = [ "movement" ]
 appliesTo = [ "dodge/sprint" ]
 timeOn = 4.0
 timeOff = 0.1
-forceOn = true # this seems sus for the off period
-
-[[modifier]]
-name = "Bad Stamina"
-description = "Running gets disabled after 2 seconds and takes 4 seconds to recharge"
-type = "cooldown"
-appliesTo = [ "dodge/sprint" ]
-timeOn = 2.0
-timeOff = 4.0
+forceOn = true
+beginSequence = [{ event = "release", command = "dodge/sprint" }]
+finishSequence = [{ event = "release", command = "dodge/sprint" }]
 
 [[modifier]]
 name = "Leeroy Jenkins"
 description = "Alright let's do this! LEEEEROOOOOY NNNJEEEENNKIINNS!!! (Holds forward and sprint)"
 type = "repeat"
-appliesTo = [ "dodge/sprint", "move forward/backwards" ]
+groups = [ "movement" ]
+appliesTo = [ "dodge/sprint" ]
+beginSequence = [ { event="release", command = "dodge/sprint"},
+      { event ="hold", command = "move forward/backwards", value = -128 } ]
+forceOn = true
+blockWhileBusy = [ "move forward/backwards" ]
 timeOn = 4.0
 timeOff = 0.1
-foceOn = true # same question if necessary as above
-axisVal = "MAX"
+finishSequence = [ { event="release", command = "move forward/backwards"},
+       { event="release", command = "dodge/sprint"}  ]
 
 [[modifier]]
 name = "Force Aiming"
 description = "The aiming button is held"
 type = "repeat"
+groups = [ "combat" ]
 appliesTo = [ "aiming" ]
 timeOn = 4.0
 timeOff = 0.1
 forceOn = true
 
+[[modifier]]
+name = "Navigation Assistance"
+description = "Keeps pointing camera in direction of story progression"
+type = "repeat"
+groups =[ "movement" ]
+appliesTo = [ "look" ]
+beginSequence = [
+      { event="menu", command = "navigation assistance", value=1 },
+      { event="release", command="look"} ]
+finishSequence = [
+      { event="menu", command = "navigation assistance", value=0 },
+      { event="release", command="look"} ]
+timeOn = 0.1
+timeOff = 5.0
+
+# == Remap Modifiers ==
+#
+# Remap modifiers swap controller signals. Unlike other types of modifiers, these operate on the
+# signal names (L1, RX, etc.) rather than the defined commands.
+#
+# In addition to the general parameters required for all modules, the following parameters are
+# defined:
+#
+# remap: an array of inline tables defining the remapping. The following keys are defined:
+#   - from: The signal as received from the controller
+#   - to: The signal that will be sent to the console in place of the 'from' signal. If an
+#     axis is being mapped to a button, positive axis signals are mapped to this button.
+#   - to_neg: When an axis is mapped to a button, negative axis values are sent to this signal.
+#   - to_min: Boolean. If true, the 'to' signal will be set to the minimum value when mapping
+#     a button to an axis. If false, the 'to' signal will be set to the maximum value.
+#   - threshold: Proportion of maximum signal of the 'from' value before sending the signal.
+#   - invert: Boolean. If true, the sign of the signal is flipped (e.g., -1 becomes 1, etc.)
 [[modifier]]
 name = "D-pad Rotate"
 description = "Rotates the D-pad inputs clockwise"
@@ -561,7 +1213,7 @@ name = "Swap D-Pad/Left Joystick"
 description = "Retro-style motion and an odd analog inventory selector"
 type = "remap"
 signals = [ "LX", "LY" ]
-disableOnStart = true
+disableSignals = true
 remap = [
       {from = "DX", to = "LX"},
       {from = "DY", to = "LY"},
@@ -573,10 +1225,10 @@ name = "Swap Shapes/Right Joystick"
 description = "Analog actions and digital camera movement"
 type = "remap"
 signals = [ "RX", "RY" ]
-disableOnStart = true
+disableSignals = true
 remap = [
-      {from = "RX", to = "SQUARE", to_neg = "CIRCLE", threshold=64},
-      {from = "RY", to = "X", to_neg = "TRIANGLE", threshold=64},
+      {from = "RX", to = "SQUARE", to_neg = "CIRCLE", threshold=0.5},
+      {from = "RY", to = "X", to_neg = "TRIANGLE", threshold=0.5},
       {from = "SQUARE", to = "RX", to_min = true},
       {from = "CIRCLE", to = "RX"},
       {from = "TRIANGLE", to = "RY", to_min = true},
@@ -673,10 +1325,27 @@ type = "remap"
 random_remap = [ "L1", "L2", "R1", "R2" ]
 
 [[modifier]]
+name = "Max Sensitivity"
+description = "Goodbye precision aiming. Joystick postions multiplied by 5"
+type = "formula"
+groups = [ "movement", "view" ]
+appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
+scaling = 5.0
+
+[[modifier]]
+name = "Min Sensitivity"
+description = "It is like slomo, but not for the enemies. Joystick positions divided by 2.5"
+type = "formula"
+groups = [ "movement", "view" ]
+appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
+scaling = 0.4
+
+[[modifier]]
 name = "Drunk"
 description = "Random joystick motion. Also don't push things too far, or you may stumble (go prone)"
 type = "formula"
 appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
+groups = [ "movement", "view" ]
 offsetMagnitute = 78
 offsetPeriod = 2.0
 onMinMax = [ "crouch/prone" ]
@@ -686,6 +1355,7 @@ minMaxLength = 1.0
 name = "TLOU1 Run Glitch"
 description = "Is this an Any% speedrun of TLOU1? Rapid D-pad circular presses. Try moving while prone."
 type = "formula"
+groups = [ "movement", "inventory" ]
 offsetMagnitute = 1.5
 #appliesTo = [ "DX", "DY" ]
 
@@ -693,122 +1363,90 @@ offsetMagnitute = 1.5
 name = "Mega Scope Sway"
 description = "Good luck landing shots"
 type = "formula"
+groups = [ "combat", "view" ]
 appliesTo = [ "horizontal camera", "vertical camera" ]
-condition = "aiming"
+condition =  [ "aiming" ]
 offsetMagnitude = 4.0 # sin(((t+1.6)*i )*4.0) * JOYSTICK_MAX
 timerAmp = 3.0
 
-[[modifier]]
-name = "Max Sensitivity"
-description = "Goodbye precision aiming. Joystick postions multiplied by 5"
-type = "formula"
-appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
-scaling = 5.0
-
-[[modifier]]
-name = "Min Sensitivity"
-description = "It is like slomo, but not for the enemies. Joystick positions divided by 2.5"
-type = "formula"
-appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
-scaling = 0.4
-
-
-[[modifier]]
-name = "Only Prone Diving"
-description = "RIP elbows and knees. Any movement results in a prone dive."
-type = "sequence"
-blockWhileBusy = [ "dodge/listen", "crouch/prone" ]
-trigger = [ "move forward/back", "move sideways" ]	
-triggerThreshold = 26 # 20% of maximum deflection
-cycleTime = 1.4
-repeatSequence = [
-	{ command = "dodge/listen", applyIf = 0, value = 1, timeToNext = 0.1 },
-	{ command = "crouch/prone", applyIf = 0, value = 1, timeToNext = 0.9 },
-	{ command = "crouch/prone", value = 0, timeToNext = 1.4, ifVal = 1 }
-	]
-
-[[modifier]]
-name = "Rubbernecking"
-description = "Woah! What's behind you? Invokes a periodic, 180-degree quick turn."
-type = "sequence"
-blockWhileBusy = [ "jump/climb", "aiming", "move forward/back", "move sideways" ]
-delaySequence = 6.0
-cycleTime = 6.2
-repeatSequence = [
-	 { event = "release", command = "jump/climb" },
-	 { event = "release", command = "aiming" },
-	 { event = "hold", command = "move forward/back" },
-	 { event = "release", "move sideways" },
-	 { event = "hold", command = "jump/climb", delay = 0.1 },
-	 { event = "release", command = "jump/climb" }
-	 ]
-
+# === Sequence Modifier ===
+#
+# Sequence modifiers execute an arbitrary sequence of commands, either once (at the start or end of
+# the mod's lifetime), or in a cycle.
 [[modifier]]
 name = "Desk Pop"
 description = "We honor the flag, and you crap on it when you don't shoot your gun https://www.youtube.com/watch?v=wWZTTtE5_zQ"
 type = "sequence"
-locked = true
+groups = [ "combat" ]
+blockWhileBusy = "ALL"
 beginSequence = [
-	 { event = "press", command = "select_gun", delay = 1.0 },
-	 { event = "hold", command = "aiming", delay = 1.0 },
-	 { event = "hold", command ="fire/throw", delay = 0.2 },
-	 { event = "release", command ="fire/throw" },
-	 { event = "release", command = "aiming" }
-	 ]
+	{ event = "press", command = "select_gun", delay = 1.0 },
+	{ event = "hold", command = "aiming", delay = 1.0 },
+	{ event = "press", command ="fire/throw" },
+	{ event = "release", command = "aiming" }
+	]
 
 [[modifier]]
 name = "Double Tap"
 description = "It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins."
 type = "sequence"
+groups = [ "combat" ]
 blockWhileBusy = [ "shoot/throw" ]
-trigger = [ "shoot/throw" ]
-startTime = 0.2
+condition = [ "shooting" ]
+startDelay = 0.2
 repeatSequence = [
-	 { event = "release", command = "shoot/throw", delay = 1.0 },
-	 { event = "hold", command = "shoot/throw", delay = 0.2 },
-	 { event = "release", command = "shoot/throw" }
-	 ]
+	{ event = "release", command = "shoot/throw", delay = 1.0 },
+	{ event = "hold", command = "shoot/throw", delay = 0.2 },
+	{ event = "release", command = "shoot/throw" }
+	]
 
 [[modifier]]
 name = "Use Items"
-description = "Shoots or throws 6 of whatever item is currently equipped (will not work on medkits)"
+description = "Shoots or throws 6 of whatever item is currently equipped. No effect for medkits."
 type = "sequence"
+groups = [ "combat", "inventory" ]
+blockWhileBusy = [ "aiming", "shoot/throw" ]
 beginSequence = [
-	 { event="hold", command = "aiming", delay = 1.0 },
-	 { event="press", command = "shoot/throw", repeat = 6, delay = 0.25 },
-	 { event="release", command = "aiming" }
-	 ]
+	{ event="hold", command = "aiming", delay = 1.0 },
+	{ event="press", command = "shoot/throw", repeat = 6, delay = 0.25 },
+	{ event="release", command = "aiming" }
+	]
 
 [[modifier]]
 name = "Toss A Molly/Bomb"
 description = "Time to riot. Chucks a molly (for Ellie) or bomb (for Abby)."
 type = "sequence"
-locked = true
+groups = [ "combat", "inventory" ]
+blockWhileBusy = "ALL"
 beginSequence = [
-	 { event = "disable" },
-	 { event = "press", command = "select consumable", repeat = 2, delay = 3.0 },
-	 { event = "hold", command = "shoot/throw", delay = 0.5 },
-	 { event = "release", command = "shoot/throw" }
-	 ]
+	{ event = "disable" },
+	{ event = "press", command = "select consumable"},
+	{ event = "press", command = "select consumable", delay = 3.0 },
+	{ event = "hold", command = "shoot/throw", delay = 0.5 },
+	{ event = "release", command = "shoot/throw" }
+	]
 	
 [[modifier]]
 name = "CTG Strat"
 description = "Self immolation resulting in death, at least 7/11 times"
 type = "sequence"
-begin_sequence = [
-	 { event = "disable" },
-	 { event = "hold", command = "vertical camera", value = 127 },
-	 { event = "hold", command = "horizontal camera", value = 0 },
-	 { event = "press", command = "select consumable", delay = 3.0, repeat = 2 },
-	 { event = "hold/release", command = "shoot/throw", delay = 0.5 },
-	 { event = "hold", command = "vertical camera", value = 0 }
-	 ]
+groups = [ "combat", "inventory", "debuff" ]
+beginSequence = [
+	{ event = "disable" },
+	{ event = "hold", command = "vertical camera", value = 127 },
+	{ event = "release", command = "horizontal camera"},
+	{ event = "press", command = "select consumable" },
+	{ event = "press", command = "select consumable", delay = 3.0 },
+	{ event = "press", command = "shoot/throw", delay = 0.5 },
+	{ event = "release", command = "vertical camera"}
+      ]
 	
 [[modifier]]
 name = "Pdub It"
 description = "RIP bricks and bottles"
 type = "sequence"
-begin_sequence = [
+groups = [ "inventory" ]
+beginSequence = [
 	{ event = "disable" },
 	{ event = "press", command = "select consumable", delay = 2.5 },
 	{ event = "press", command = "shoot/throw", delay= 0.2 }
@@ -818,626 +1456,663 @@ begin_sequence = [
 name = "Chuck Smoke Bomb"
 description = "It was taking up space anyway. Does nothing when playing Abby"
 type = "sequence"
-begin_sequence = [
-        { event = "disable" },
-       	{ event = "press", command = "select consumable", value = -1, repeat = 2 },
-       	{ event = "delay", value = 3.0 },
-       	{ event = "press", command = "shoot/throw", delay = 0.2 }
-       	]
+groups = [ "inventory" ]
+beginSequence = [
+      { event = "disable" },
+      { event = "press", command = "select consumable", value = -1, repeat = 2 },
+      { event = "delay", delay = 3.0 },
+      { event = "press", command = "shoot/throw", delay = 0.2 }
+      ]
 
 [[modifier]]
+name = "Only Prone Diving"
+description = "RIP elbows and knees. Any movement results in a prone dive."
+type = "sequence"
+groups = [ "movement" ]
+blockWhileBusy = [ "dodge/sprint", "crouch/prone" ]
+condition = [ "movement" ]
+cycleDelay = 1.4
+repeatSequence = [
+	{ press = "dodge/sprint", delay = 0.1 },
+	{ press = "crouch/prone", delay = 0.8 },
+	{ release = "crouch/prone"},
+	{ release = "dodge/sprint"}
+	]
+beginSequence = [ { event = "release", command = "dodge/sprint" },
+                  { event = "release", command = "crouch/prone" }]
+finishSequence = [ { event = "release", command = "dodge/sprint" },
+                  { event = "release", command = "crouch/prone" }]
+
+[[modifier]]
+name = "Rubbernecking"
+description = "Woah! What's behind you? Invokes a periodic, 180-degree quick turn."
+type = "sequence"
+groups = [ "movement" ]
+blockWhileBusy = [ "jump/climb", "aiming", "move forward/back", "move sideways" ]
+startDelay = 6.0
+cycleDelay = 0.1
+repeatSequence = [
+	 { event = "release", command = "jump/climb" },
+	 { event = "release", command = "aiming" },
+	 { event = "hold", command = "move forward/back" },
+	 { event = "release", command = "move sideways" },
+	 { event = "hold", command = "jump/climb", delay = 0.1 },
+	 { event = "release", command = "jump/climb" }
+	 ]
+
+# === Menu Modifiers ===
+#
+# Menu modifiers select an item in the game menu and (if applicable) set it to a particular
+# value for the lifetime of the modifier. When the modifier is removed, the value is restored
+# to its previous state.
+#
+# In addition to the general parameters required for all modules, the following parameters are
+# defined:
+#
+# item:  The menu item to be selected. This must be the name of an item/submenu defined in the menu
+#        layout.
+# value: An integer indicating the value to set the menu item to. Items that are "select" types do
+#        not require a value.
+[[modifier]]
 name = "Restart Checkpoint"
-description = "Best served prior to the end of a long encounter"
+description = "Best served prior to the end of a long encounter."
+groups = [ "debuff" ]
 type = "menu"
-value = "RESTART_CHECKPOINT"
+menu_items = [{entry = "restart checkpoint" }]
+reset_on_finish = false
 
 [[modifier]]
 name = "No Reticle"
-description = "Headshots just got trickier"
+description = "Headshots just got trickier."
 type = "menu"
-group = "UI"
-value = "HUD_RETICLE"
-enable = -2
-disable = 2
+groups = [ "UI" ]
+menu_items = [{entry = "reticle", value = 0 }]
 
 [[modifier]]
 name = "No Inventory HUD"
-description = "Blind weapon and throwable selection"
+description = "Want to know what weapons or throwables you're selecting? Think again."
 type = "menu"
-group = "UI"
-value = "HUD_WEAPON_CROSS"
-enable = -1
-disable = 1
+groups = [ "UI" ]
+menu_items = [{entry = "weapon cross", value = 0 }]
 
 [[modifier]]
 name = "No Damage Indicators"
-description = "Locating the source of damage will be harder"
+description = "Locating the source of damage will be harder."
 type = "menu"
-group = "UI"
-value = "HUD_DAMAGE_INDICATORS"
-enable = -1
-disable = 1
+groups = [ "UI" ]
+menu_items = [{entry = "damage indicators", value = 0 }]
 
 [[modifier]]
 name = "No Awareness Indicators"
 description = "Stealth strats have no visual feedback"
 type = "menu"
-group = "UI"
-value = "HUD_AWARENESS_INDICATORS"
-enable = -2
-disable = 1
+groups = [ "UI" ]
+menu_items = [{entry = "awareness indicators", value = 0 }]
 
 [[modifier]]
 name = "No Hit Markers"
 description = "No feedback on connected shots"
 type = "menu"
-group = "UI"
-value = "HUD_HIT_MARKERS"
-enable = -2
-disable = 2
+groups = [ "UI" ]
+menu_items = [{entry = "hit indicators", value = 0 }]
 
 [[modifier]]
 name = "No Arc Throw Paths"
-description = "The trajectory of your throwable will now be based on feel"
+description = "The trajectory of your throwable will now be based on feel."
 type = "menu"
-group = "UI"
-value = "HUD_ARC_THROW_PATH"
-enable = -1
-disable = 1
+groups = [ "UI" ]
+menu_items = [{entry = "arc throw path", value = 0 }]
 
 [[modifier]]
 name = "No Health HUD"
-description = "The health and weapon HUD int he lower right is disabled"
+description = "The health and weapon HUD is disabled."
 type = "menu"
-group = "UI"
-value = "HUD_HEALTH_AND_WEAPON"
-enable = -1
-disable = 1
+groups = [ "UI" ]
+menu_items = [{entry = "no health hud", value = 0 }]
 
 [[modifier]]
 name = "Show Pickups"
 description = "Enables the HUD that shows notifications on ammo, crafting, and other pickups"
 type = "menu"
-value = "HUD_PICK_UP_NOTIFICATIONS"
-enable = 1
-disable = -1
+groups = [ "UI" ]
+menu_items = [{entry = "show pickups", value = 0 }]
 
 [[modifier]]
 name = "Large Subtitles"
-description = "The ability to read subtitles even at 160p"
+description = "The ability to read subtitles even at 160p."
 type = "menu"
-group = "UI"
-value = "SUBTITLES_SIZE"
-enable = 2
-disable = -1
+groups = [ "UI" ]
+menu_items = [{entry = "subtitle size", value = 2 }]
 
 # Render Modes:
 [[modifier]]
 name = "Graphic"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_GRAPHIC"
+group = [ "render mode" ]
+menu_items = [{entry = "graphic" }]
 
 [[modifier]]
 name = "Headache"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_HEADACHE"
+group = [ "render mode" ]
+menu_items = [{entry = "render" }]
 
 [[modifier]]
 name = "Afterlife"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_AFTERLIFE"
+group = [ "render mode" ]
+menu_items = [{entry = "afterlife" }]
 
 [[modifier]]
 name = "8-Bit"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_EIGHTBIT"
+group = [ "render mode" ]
+menu_items = [{entry = "eightbit" }]
 
 [[modifier]]
 name = "Water Color"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_WATERCOLOR"
+group = [ "render mode" ]
+menu_items = [{entry = "watercolor" }]
 
 [[modifier]]
 name = "Dungeon"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_DUNGEON"
+group = [ "render mode" ]
+menu_items = [{entry = "dungeon" }]
 
 [[modifier]]
 name = "Void"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_VOID"
+group = ["render mode" ]
+menu_items = [{entry = "void" }]
 
 [[modifier]]
 name = "Pop Poster"
 description = "Stream Destroyer.  This kills the bitrate"
 type = "menu"
-group = "render mode"
-value = "RENDER_POPPOSTER"
+group = [ "render mode" ]
+menu_items = [{entry = "pop poster" }]
 
 [[modifier]]
 name = "1960"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_NINETEENSIXTY"
+group = ["render mode" ]
+menu_items = [{entry = "1960" }]
 
 [[modifier]]
 name = "Cool"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_COOL"
+group = ["render mode" ]
+menu_items = [{entry = "cool" }]
 
 [[modifier]]
 name = "Warm"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_WARM"
+group = ["render mode" ]
+menu_items = [{entry = "warm" }]
 
 [[modifier]]
 name = "Vibrant"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_VIBRANT"
+group = ["render mode" ]
+menu_items = [{entry = "vibrant" }]
 
 [[modifier]]
 name = "Noir"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_NOIR"
+group = ["render mode" ]
+menu_items = [{entry = "noir" }]
 
 [[modifier]]
 name = "Blorange"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_BLORANGE"
+group = ["render mode" ]
+menu_items = [{entry = "blorange" }]
 
 [[modifier]]
 name = "Sepia"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_SEPIA"
+group = ["render mode" ]
+menu_items = [{entry = "sepia" }]
 
 [[modifier]]
 name = "Vintage"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_VINTAGE"
+group = [ "render mode" ]
+menu_items = [{entry = "vintage" }]
 
 [[modifier]]
 name = "Beasts"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_BEASTS"
+group = [ "render mode" ]
+menu_items = [{entry = "beasts" }]
 
 [[modifier]]
 name = "Terminated"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_TERMINATED"
+group = ["render mode" ]
+menu_items = [{entry = "terminated" }]
 
 [[modifier]]
 name = "Gridlocked"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_GRIDLOCKED"
+group = ["render mode" ]
+menu_items = [{entry = "gridlocked" }]
 
 [[modifier]]
 name = "Blacklight"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_BLACKLIGHT"
+group = ["render mode" ]
+menu_items = [{entry = "blacklight" }]
 
 [[modifier]]
 name = "Desert Fog"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_DESERT_FOG"
+group = ["render mode" ]
+menu_items = [{entry = "desert fog" }]
 
 [[modifier]]
 name = "Blood"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_BLOOD"
+group = ["render mode" ]
+menu_items = [{entry = "blood" }]
 
 [[modifier]]
 name = "Inferno"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_INFERNO"
+group = ["render mode" ]
+menu_items = [{entry = "inferno" }]
 
 [[modifier]]
 name = "Fire"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_FIRE"
+group = ["render mode" ]
+menu_items = [{entry = "fire" }]
 
 [[modifier]]
 name = "Trinity"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_TRINITY"
+group = ["render mode" ]
+menu_items = [{entry = "trinity" }]
 
 [[modifier]]
 name = "Pusher"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_PUSHER"
+group = ["render mode" ]
+menu_items = [{entry = "pusher" }]
 
 [[modifier]]
 name = "Demons"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_DEMONS"
+group = ["render mode" ]
+menu_items = [{entry = "demons" }]
 
 [[modifier]]
 name = "Drug Zone"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_DRUGZONE"
+group = ["render mode" ]
+menu_items = [{entry = "drugzone" }]
 
 [[modifier]]
 name = "Moonlight"
 description = "Render Mode"
 type = "menu"
-group = "render mode"
-value = "RENDER_MOONLIGHT"
+group = ["render mode" ]
+menu_items = [{entry = "moonlight" }]
 
 [[modifier]]
 name = "Mirror World"
 description = "Wait, where do we go?"
 type = "menu"
-value = "GAMEPLAY_MIRROR"
+groups = [ "view" ]
+menu_items = [{entry = "mirror", value = 1 }]
 
 [[modifier]]
 name = "Mirror On Death"
 description = "Mirror World on Death. Can result in permanent Mirror World."
 type = "menu"
-value = "GAMEPLAY_MIRROR_ON_DEATH"
+groups = [ "view" ]
+menu_items = [{entry = "mirror on death", value = 1 }]
+
+[[modifier]]
+name = "Close POV"
+description = "Objects in mirror are closer than they appear."
+type = "menu"
+groups = [ "view" ]
+menu_items = [{entry = "camera distance", value = 0},
+            {entry = "field of view", value = 0}]
 
 [[modifier]]
 name = "Slow Motion"
-description = "The speed run killer"
+description = "The speed-run killer"
 type = "menu"
-value = "GAMEPLAY_SLOW_MOTION"
+menu_items = [{entry = "slow motion", value = 1 }]
 
 [[modifier]]
 name = "Bullet Speed"
 description = "Slow motion when aiming"
 type = "menu"
-group = "buff"
-value = "GAMEPLAY_BULLET_SPEED"
+group = [ "buff" ]
+menu_items = [{entry = "bullet speed", value = 1 }]
 
 [[modifier]]
 name = "Infinite Ammo"
 description = "The strimmer responds with <3"
 type = "menu"
-group = "buff"
-value = "GAMEPLAY_INFINITE_AMMO"
+group = ["buff"]
+menu_items = [{entry = "infinite ammo", value = 1 }]
 	
 [[modifier]]
 name = "Infinite Crafting"
 description = "Molotovs for everyone!"
 type = "menu"
-group = "buff"
-value = "GAMEPLAY_INFINITE_CRAFT"
+group = [ "buff" ]
+menu_items = [{entry = "infinite crafting", value = 1 }]
 
 [[modifier]]
 name = "Infinite Melee Durability"
-description = "Finally realistic durability"
+description = "Finally, realistic durability."
 type = "menu"
-group = "buff"
-value = "GAMEPLAY_INFINITE_MELEE_DURABILTY"
+group = [ "buff" ]
+menu_items = [{entry = "infinite melee durability", value = 1 }]
 
 [[modifier]]
 name = "Infinite Listen Range"
 description = "There used to be a limit?"
 type = "menu"
-group = "buff"
-value = "GAMEPLAY_INFINITE_LISTEN_RANGE"
+group = [ "buff" ]
+menu_items = [{entry = "infinite listen range",  value = 1 }]
 
 [[modifier]]
 name = "One Shot"
-description = "Golden guns activated"
+description = "Golden guns activated: one-shot kills."
 type = "menu"
-group = "buff"
-value = "GAMEPLAY_ONE_SHOT"
+group = ["buff"]
+menu_items = [{entry = "one shot", value = 1 }]
 	
 [[modifier]]
 name = "Touch Of Death"
-description = "Golden fists activated. One hit enemy deaths"
+description = "Golden fists activated: one-hit enemy deaths"
 type = "menu"
-group = "buff"
-value = "GAMEPLAY_TOUCH_OF_DEATH"
+group = [ "buff" ]
+menu_items = [{entry = "touch of death", value = 1 }]
 
 [[modifier]]
 name = "8-Bit Audio"
 description = "Audio mode. Incompatible with 4-bit"
 type = "menu"
-group = "sound"
-value = "GAMEPLAY_AUDIO_EIGHT_BIT"
+group = [ "sound" ]
+menu_items = [{entry = "8-bit audio", value = 1 }]
 	
 [[modifier]]
 name = "4-Bit Audio"
 description = "Audio mode. Incompatible with 8-bit"
 type = "menu"
-group = "sound"
-value = "GAMEPLAY_AUDIO_FOUR_BIT"
+group = [ "sound"] 
+menu_items = [{entry = "4-bit audio", value = 1 }]
 
 [[modifier]]
 name = "Helium Audio"
 description = "Audio mode.  Incompatible with Xenon"
 type = "menu"
-group = "sound"
-value = "GAMEPLAY_AUDIO_HELIUM"
+group = [ "sound" ]
+menu_items = [{entry = "helium audio", value = 1 }]
 
 [[modifier]]
 name = "Xenon Audio"
 description = "Audio mode.  Incompatible with Helium"
 type = "menu"
-group = "sound"
-value = "GAMEPLAY_AUDIO_XENON"
+group = [ "sound" ]
+menu_items = [{entry = "xenon audio", value = 1 }]
 
 [[modifier]]
 name = "Infinite Hugging"
-description = "Hugging enemies from behind forever <3 Enables option Hostages Do Not Escape"
+description = "Grabbed enemies do not escape"
 type = "menu"
-group = "buff"
-value = "COMBAT_HOSTAGES_DONT_ESCAPE"
-	
+group = [ "buff" ]
+menu_items = [{entry = "hostages don't escape", value = 1 }]
+
 [[modifier]]
 name = "No Plus Signs"
 description = "Speedrunners need this.  Allies do not get grabbed."
 type = "menu"
-group = "buff"
-value = "COMBAT_ALLIES_DONT_GET_GRABBED"
-	
+group = [ "buff" ]
+menu_items = [{entry = "allies don't get grabbed", value = 1 }]
+
 [[modifier]]
 name = "Enemies Do Not Flank"
 description = "Very effective on infected Kappa"
 type = "menu"
-group = "buff"
-value = "COMBAT_ENEMIES_DONT_FLANK"
-	
+group = [ "buff" ]
+menu_items = [{entry = "enemies don't flank", value = 1 }]
+
 [[modifier]]
 name = "Reduced Enemy Perception"
-description = "Finally clickers are truly blind"
+description = "Finally, clickers are truly blind."
 type = "menu"
-group = "buff"
-value = "COMBAT_REDUCED_ENEMY_PERCEPTION"
-	
+group = [ "buff" ]
+menu_items = [{entry = "reduced enemy perception", value = 1 }]
+
 [[modifier]]
 name = "Potato Enemies"
-description = "Does not work on melee. Turns on Reduced Enemy Accuracy"
+description = "Enemies shoot less accurately. Does not work on melee."
 type = "menu"
-group = "buff"
-value = "COMBAT_REDUCED_ENEMY_ACCURACY"
-  
+group = [ "buff" ]
+menu_items = [{entry = "reduced enemy accuracy", value = 1 }]
+
 [[modifier]]
 name = "Enhanced Dodge"
 description = "I wish I knew what this does (built-in option)"
 type = "menu"
-group = "buff"
-value = "COMBAT_ENHANCED_DODGE"
-	
+group = [ "buff" ]
+menu_items = [{entry = "enhanced dodge", value = 1 }]
+
 [[modifier]]
 name = "Invisible While Prone"
 description = "Proning is now even more OP"
 type = "menu"
-group = "buff"
-value = "COMBAT_INVISBLE_WHILE_PRONE"
-	
+group = [ "buff" ]
+menu_items = [{entry = "invisible while prone", value = 1 }]
+
 [[modifier]]
 name = "30 fps"
 description = "Converting a PS5 to play like PS4"
 type = "menu"
-value = "DISPLAY_FRAMERATE"
-	
+menu_items = [{entry = "framerate", value = 0 }]
+
 [[modifier]]
 name = "Camera Assist"
 description = "Automatically reorients the camera in the direction of movement."
 type = "menu"
-value = "ALTERNATE_CAMERA_ASSIST"
+menu_items = [{entry = "camera assist", value = 1 }]
 
 [[modifier]]
 name = "Aimbot"
-description = "Aimbot... but like a detuned aimbot.  Turns on Lock On Aim"
-group = "buff"
+description = "Aimbot... but like a detuned aimbot.  Turns on lock-on aim"
+group = [ "buff" ]
 type = "menu"
-value = "ALTERNATE_LOCK_ON_AIM"
-	
+menu_items = [{entry = "lock-on aim", value = 1 }]
+
 [[modifier]]
 name = "Aimbot Throwables"
-description = "Aimbot for throwables. Turns on Lock On Throwables"
+description = "Aimbot for throwables. Turns on lock-on Throwables"
 type = "menu"
-group = "buff"
-value = "ALTERNATE_ARC_THROW_LOCK_ON"
-	
+group = ["buff"]
+menu_items = [{entry = "arc throw lock-on", value = 1 }]
+
 [[modifier]]
 name = "Kleptomania"
 description = "Picking up items at inconvenient times. Turns on Auto Pick-Up"
 type = "menu"
-value = "ALTERNATE_AUTO_PICK_UP"
-	
+menu_items = [{entry = "auto pick-up", value = 1 }]
+
 [[modifier]]
 name = "Large HUD"
 description = "HUD like in a game from the 1990s"
 type = "menu"
-group = "UI"
-value = "MAGNIFICATION_HUD_SCALE"
+group = ["UI"]
+menu_items = [{entry = "HUD scale", value = 2 }]
 
 [[modifier]]
 name = "High Contrast Display"
 description = "Render mode, but overrides any other render mode"
 type = "menu"
-group = "render"
-value = "MAGNIFICATION_HIGH_CONTRAST"
-	
+group = ["render"]
+menu_items = [{entry = "high contrast", value = 1 }]
+
 [[modifier]]
 name = "Musical Traversal"
 description = "Add some music to climbable objects with Traversal Audio Cues"
 type = "menu"
-group = "sound"
-value = "TTS_TRAVERSAL_CUES"
-	
+group = ["sound"]
+menu_items = [{entry = "traversal cues", value = 1  }]
+
 [[modifier]]
 name = "Musical Combat"
 description = "Add some music to combat prompts with Combat Audio Cues"
 type = "menu"
-group = "sound"
-value = "TTS_COMBAT_CUES"
-
-[[modifier]]
-name = "Navigation Assistance"
-description = "Keeps pointing camera in direction of story progression"
-type = "repeat"
-begin.set_menu = [ "NAVIGATION_ASSISTANCE", 1 ]
-begin.event = [ "BUTTON_L3", 0 ]
-finish.set_menu = [ "NAVIGATION_ASSISTANCE", 0 ]
-finish.event = [ "BUTTON_L3", 0 ]
-update.after = [
-       [ 0.1, "BUTTON_L3", 0 ],
-       [ 5.0, "BUTTON_L3", 1 ] ]
+group = ["sound"]
+menu_items = [{entry = "combat cues", value = 1 }]
 
 [[modifier]]
 name = "Traversal Assistance"
 description = "Climb when you really do not want to"
 type = "menu"
-value = "NAVIGATION_TRAVERSAL_ASSISTANCE"
+groups = [ "movement" ]
+menu_items = [{entry = "traversal assistance", value = 1 }]
 
 [[modifier]]
 name = "Enhanced Listen Mode"
 description = "Press some buttons while in listen mode to find loot"
 type = "menu"
-value = "NAVIGATION_ENHANCED_LISTEN_MODE"
+menu_items = [{entry = "enhanced listen", value = 1 }]
 
 [[modifier]]
 name = "Infinite Breath"
 description = "Yup, very useful and is the most OP perk..."
 type = "menu"
-value = "NAVIGATION_INFINITE_BREATH"
+groups = [ "buff" ]
+menu_items = [{entry = "infinite breath", value = 1 }]
 
 [[modifier]]
 name = "Mute Sound Effects"
 description = "Gunshots hurt our ears :("
 type = "menu"
-group = "sound"
-value = "AUDIO_EFFECTS"
-enable = -20
-disable = 20
-	
+groups = [ "sound" ]
+menu_items = [{entry = "effects", value = 0 }]
+
 [[modifier]]
 name = "Mute Music"
 description = "The music is too intense, let's turn it off!"
 type = "menu"
-group = "sound"
-value = "AUDIO_MUSIC"
-enable = -20
-disable = 20
+groups = [ "sound" ]
+menu_items = [{entry = "music", value = 0 }]
 
 [[modifier]]
 name = "Mute Dialogue"
 description = "Sorry Shannon :("
 type = "menu"
-group = "sound"
-value = "AUDIO_DIALOG"
-enable = -20
-disable = 20
+groups = [ "sound" ]
+menu_items = [{entry = "dialog", value = 0 }]
 
 [[modifier]]
 name = "Mono Audio"
 description = "No more stereo. Where did that gunshot come from?"
 type = "menu"
-group = "sound"
-value = "AUDIO_MONO"
+groups = [ "sound" ]
+menu_items = [{entry = "mono", value = 1 }]
 
 [[modifier]]
 name = "Input Delay"
 description = "Introduces a 0.2 second delay to the controller"
 type = "delay"
-value = 0.2
+groups = [ "debuff", "movement", "view", "inventory", "combat" ]
 appliesTo = "ALL"
+delay = 0.2
 
 [[modifier]]
 name = "Melee Delay"
 description = "Introduces a 0.5 second delay to melee presses"
 type = "delay"
-value = 0.5
+groups = [ "debuff", "combat" ]
 appliesTo = [ "melee" ]
+delay = 0.5
 
 [[modifier]]
 name = "Jump Delay"
 description = "Introduces a 2.0 second delay to jump/climb presses"
 type = "delay"
-value = 2.0
+groups = [ "debuff", "movement" ]
 appliesTo = [ "jump/climb" ]	
+delay = 2.0
 
 [[modifier]]
 name = "Dodge Delay"
 description = "Introduces a 0.5 second delay to dodge/sprint"
 type = "delay"
-value = 0.5
+groups = [ "debuff", "movement" ]
 appliesTo = [ "dodge/sprint" ]	
+delay = 0.5
 
 [[modifier]]
 name = "Aim Delay"
 description = "Introduces a 1 second delay to aiming"
 type = "delay"
-value = 1.0
+groups = [ "debuff", "combat" ]
 appliesTo = [ "aiming" ]	
+delay = 1.0
 
 [[modifier]]
 name = "Shooting Delay"
 description = "Introduces a 0.5 second delay to shooting and throwing"
 type = "delay"
-value = 0.5
+groups = [ "debuff", "combat" ]
 appliesTo = [ "shoot/throw" ]	
+delay = 0.5
 
 [[modifier]]
 name = "Select Delay"
 description = "Introduces a 5 second delay to selecting weapons or consumables"
 type = "delay"
-value = 5.0
+groups = [ "debuff", "inventory" ]
 appliesTo = [ "select weapon", "select consumable" ]
+delay = 5.0
 
 [[modifier]]
 name = "Joystick Delay"
-description = "Introduces a 0.2 second delay to movement and aiming"
+description = "Introduces a 0.2 second delay to movement and aiming."
 type = "delay"
-value = 0.2
-appliesTo = [ "AXIS_RX", "AXIS_RY", "AXIS_LY", "AXIS_LX" ]
+groups = [ "debuff", "movement", "view" ]
+appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
+delay = 0.2
 
 [[modifier]]
 name = "Mystery"
@@ -1452,4 +2127,3 @@ description = "Applies 5 random modifiers"
 type = "parent"
 random = true
 value = 5
-

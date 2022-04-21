@@ -31,7 +31,6 @@
 #include <mogi/thread.h>
 
 #include "controllerState.hpp"
-#include "signalTypes.hpp"
 
 namespace Chaos {
 

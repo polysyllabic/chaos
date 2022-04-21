@@ -17,49 +17,173 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdexcept>
+#include <stack>
 #include <toml++/toml.h>
 #include <plog/Log.h>
 
 #include "menuItem.hpp"
 #include "tomlReader.hpp"
+#include "gameMenu.hpp"
 
 using namespace Chaos;
 
-std::unordered_map<std::string, std::shared_ptr<MenuItem>> MenuItem::menu;
 
-MenuItem::MenuItem(toml::table& config) {
+MenuItem::MenuItem(const toml::table& config) {
   assert(config.contains("name"));
   assert(config.contains("type"));
 
-  TOMLReader::checkValid(config, std::vector<std::string>{
-      "name", "type", "parent", "offset", "initialState", "hidden", "confirm", "tab", "childState"});
+  PLOG_VERBOSE << "Constructing '" << config["name"] << "' menu item\n";
 
-  std::optional<std::string_view> parent_name = config["parent"].value<std::string_view>();
-  if (parent_name) {
-    parent = get(*parent_name);
+  std::optional<std::string> item_name = config["parent"].value<std::string>();
+  if (item_name) {
+    parent = GameMenu::instance().getMenuItem(*item_name);
     if (!parent) {
-      throw std:runtime_error("Unknown parent menu '" + *parent_name + "'. Parents must be declared before children.");
+      throw std::runtime_error("Unknown parent menu. Parents must be declared before children.");
+    }
+  }
+  PLOG_DEBUG << "    parent = " << ((item_name) ? *item_name : "[ROOT]") << std::endl;
+  if (! config.contains("offset")) {
+    PLOG_WARNING << "Menu item '" << *config["name"].value<std::string_view>() << "' missing offset. Set to 0.\n";
+  }
+  offset = config["offset"].value_or(0);
+  tab_group = config["tab"].value_or(0);
+  PLOG_DEBUG << "    offset = " << offset << "; tab_group = " << tab_group << std::endl;
+
+  default_state = config["initialState"].value_or(0);
+  current_state = default_state;
+  PLOG_DEBUG << "    initial_state = " << default_state << std::endl;
+
+  hidden = config["hidden"].value_or(false);
+  PLOG_DEBUG << "    hidden = " << hidden << std::endl;
+
+  item_name = config["guard"].value<std::string_view>();
+  if (item_name) {
+    guard = GameMenu::instance().getMenuItem(*item_name);
+    if (! guard) {
+      PLOG_ERROR << "Unknown guard '" << *item_name << "' for menu item " << config["name"] << std::endl;
+    } else {
+      PLOG_DEBUG << "    guard = " << *item_name << std::endl;
     }
   }
 
-  hidden = config["hidden"].value_or(false);
-
-  tab_group = config["tab"].value_or(0);
-
-  std::optional<int> menu_offset = config["offset"].value<int>();
-  if (menu_offset) {
-    offset = *menu_offset;
-  } else {
-    PLOG_WARNING << "Menu item '" << *config["name"].value<std::string_view>() + "' missing explicit offset. Setting to 0.");
+  counter_action = CounterAction::NONE;
+  item_name = config["counterAction"].value<std::string_view>();
+  if (item_name) {
+    PLOG_DEBUG << "    counterAction: " << *item_name << std::endl;
+    if (*item_name == "reveal") {
+      counter_action = CounterAction::REVEAL;
+    } else if (*item_name == "zeroReset") {
+      counter_action = CounterAction::ZERO_RESET;
+    } else if (*item_name != "none") {
+      PLOG_ERROR << "Unknown counterAction type: " << *item_name << " for menu item " << config["name"] << std::endl;
+    }
   }
-
-  state = config["initialState"].value_or(0);
-
-
-  keep_child_state = config["childState"].value_or(false);
-
-  confirm = config["confirm"].value_or(false);
-  
 }
 
+void MenuItem::incrementCounter() {
+  ++counter;
+  if (counter_action == CounterAction::REVEAL && counter == 1) {
+    hidden = false;
+    GameMenu::instance().correctOffset(getptr());
+  }
+}
+
+void MenuItem::decrementCounter() {
+  if (counter) {
+    --counter;
+    if (counter == 0) {
+      if (counter_action == CounterAction::REVEAL) {
+        hidden = true;
+        GameMenu::instance().correctOffset(getptr());
+      }
+    }
+  }
+}
+
+void MenuItem::moveTo(Sequence& seq) {
+  PLOG_VERBOSE << "moveTo: ";
+
+  // Create a stack of all the parent menus of this option
+  std::stack<std::shared_ptr<MenuItem>> menu_stack;
+  for (auto s =  getptr(); s->parent != nullptr; s = s->parent) {
+    menu_stack.push(s);
+  }
+
+  // Now create the navigation commands. Popping from the top of the stack starts us with the
+  // top-level menu and works down to the terminal leaf.
+  std::shared_ptr<MenuItem> item;
+  while (!menu_stack.empty()) {
+    item = menu_stack.top();
+    item->selectItem(seq, offset);
+    menu_stack.pop();
+  }
+}
+
+void MenuItem::selectItem(Sequence& seq, int delta) {
+    // navigate left or right through tab groups
+    for (int i = 0; i < tab_group; i++) {
+      PLOG_VERBOSE << " tab right,";
+      seq.addSequence(GameMenu::instance().getTabRight());
+    }
+    for (int i = 0; i > tab_group; i++) {
+      PLOG_VERBOSE << " tab left,";
+      seq.addSequence(GameMenu::instance().getTabLeft());
+    }
+
+    // If this item is guarded, make sure the guard is enabled
+    PLOG_VERBOSE << " scroll " << delta << std::endl;
+    if (guard && guard->getState() == 0) {
+      guard->setState(seq, 1);
+      // adjust delta for the steps we've already made to get to the guard
+      delta -= guard->getOffset();
+      PLOG_VERBOSE << " - delta to guard: " << guard->getOffset() << " new delta:: " << delta << std::endl;
+    }
+
+    // navigate down for positive offsets
+    for (int i = 0; i < delta; i++) {
+      PLOG_VERBOSE << " down ";
+      seq.addSequence(GameMenu::instance().getNavDown());
+    }
+
+    // navigate up for negative offsets
+    for (int i = 0; i > delta; i--) {
+      PLOG_VERBOSE << " up ";
+      seq.addSequence(GameMenu::instance().getNavUp());
+    }
+
+    // Submenus and select option items items require a button press
+    if (isSelectable()) {
+      PLOG_VERBOSE << " select ";
+      seq.addSequence(GameMenu::instance().getSelect());
+      seq.addDelay(GameMenu::instance().getSelectDelay());
+    }
+}
+
+void MenuItem::navigateBack(Sequence& seq) {
+  // starting from the selected option, we reverse to navigate to top of each submenu and leave it
+  // in a consistent state for the next time we open the menu
+  PLOG_VERBOSE << "navigateBack: ";
+  std::shared_ptr<MenuItem> item = getptr();
+  do {
+    for (int i = 0; i < item->getOffset(); i++) {
+      PLOG_VERBOSE << " up ";
+      seq.addSequence(GameMenu::instance().getNavUp());
+    }
+    for (int i = 0; i > item->getOffset(); i--) {
+      PLOG_VERBOSE << " down ";
+      seq.addSequence(GameMenu::instance().getNavDown());
+    }
+    for (int i = 0; i < item->getTab(); i++) {
+      PLOG_VERBOSE << " tab-left ";
+      seq.addSequence(GameMenu::instance().getTabLeft());
+    }
+    for (int i = 0; i > item->getTab(); i++) {
+      PLOG_VERBOSE << " tab-right ";
+      seq.addSequence(GameMenu::instance().getTabRight());
+    }
+    seq.addSequence(GameMenu::instance().getBack());
+    item = parent;
+  } while (item != nullptr);
+
+}
 

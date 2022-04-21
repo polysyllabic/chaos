@@ -30,7 +30,7 @@ const std::string DelayModifier::name = "delay";
 DelayModifier::DelayModifier(toml::table& config) {
   
   TOMLReader::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
-							  "appliesTo", "delay"});
+							  "appliesTo", "delay", "beginSequence", "finishSequence"});
   initialize(config);
 
   if (commands.empty() && ! applies_to_all) {
@@ -42,6 +42,10 @@ DelayModifier::DelayModifier(toml::table& config) {
     throw std::runtime_error("Bad or missing delay time. The 'delay' parameter must be positive.");
   }
   PLOG_DEBUG << " - delay: " << delayTime;
+}
+
+void DelayModifier::begin() {
+  sendBeginSequence();
 }
 
 void DelayModifier::update() {
@@ -74,4 +78,8 @@ bool DelayModifier::tweak(DeviceEvent& event) {
     }
   }
   return true;
+}
+
+void DelayModifier::finish() {
+  sendFinishSequence();
 }

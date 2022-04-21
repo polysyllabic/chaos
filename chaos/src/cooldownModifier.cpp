@@ -29,7 +29,7 @@ const std::string CooldownModifier::name = "cooldown";
 
 CooldownModifier::CooldownModifier(toml::table& config) {
   TOMLReader::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
-							  "startSequence", "finishSequence", "appliesTo", "timeOn", "timeOff"});
+							  "beginSequence", "finishSequence", "appliesTo", "timeOn", "timeOff"});
   initialize(config);
   if (commands.empty()) {
     throw std::runtime_error("No command associated with cooldown modifier.");

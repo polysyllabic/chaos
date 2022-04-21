@@ -32,9 +32,10 @@ const std::string DisableModifier::name = "disable";
 
 DisableModifier::DisableModifier(toml::table& config) {
   assert(config.contains("name"));
+  assert(config.contains("type"));
   
   TOMLReader::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "appliesTo", "startSequence", "finishSequence",
+      "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence",
       "filter", "threshold", "condition", "conditionTest", "unless", "unlessTest"});
 
   initialize(config);
@@ -42,16 +43,6 @@ DisableModifier::DisableModifier(toml::table& config) {
   if (commands.empty() && ! applies_to_all) {
     throw std::runtime_error("No command(s) specified with 'appliesTo'");
   }
-
-  if (config.contains("unless")) {
-    // 'condition' and 'unless' are mutually exclusive options.
-    if (cond) {
-      PLOG_ERROR << "Cannot use both 'condition' and 'unless' in one command definition.\n";
-      throw std::runtime_error("Incompatible command options");
-    }
-    cond = config["unless"].value<std::string>();
-    invertCondition = true;
-  } 
 
   // If the filter isn't specified, default to block all values of the signal
   filter = DisableFilter::ALL;
@@ -83,7 +74,6 @@ DisableModifier::DisableModifier(toml::table& config) {
   PLOG_DEBUG << " - filterThreshold: " << filterThreshold << std::endl;
 #endif
 
-  condition = TOMLReader::ReadCondition(config);
 }
 
 void DisableModifier::begin() {

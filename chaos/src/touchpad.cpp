@@ -21,27 +21,16 @@
 
 #include "touchpad.hpp"
 #include "gameCommand.hpp"
+#include "tomlReader.hpp"
 
 using namespace Chaos;
 
 void Touchpad::initialize(const toml::table& config) {
 
   timer.initialize();
-  
-  //  condition = GPInput::NONE;
-  std::optional<std::string> tp_condition = config["touchpad"]["scale_on"].value<std::string>();
-  if (tp_condition) {
-    std::shared_ptr<GameCommand> condition = GameCommand::get(*tp_condition);
-    // condition must be an existing command
-    if (condition) {
-      scale_if = config["touchpad"]["scale_if"].value_or(1.0);      
-    } else {
-      throw std::runtime_error("Touchpad condition '" + *tp_condition + "' does not exist");
-    }
-  }
+  condition = TOMLReader::getObject<GameCondition>(config, "scale_on", false);
   scale = config["touchpad"]["scale"].value_or(1.0);
   skew = config["touchpad"]["skew"].value_or(0);
-
 }
 
 void Touchpad::clearActive() {
@@ -58,40 +47,39 @@ void Touchpad::clearActive() {
 int Touchpad::toAxis(const DeviceEvent& event, bool inCondition) {
   int ret = 0;
   double derivativeValue;
-  DerivData* dd = NULL;
+  DerivData* dd = nullptr;
 
   if (event.type == TYPE_AXIS) {
-      switch (event.id) {
-      case AXIS_TOUCHPAD_X:
-	dd = &dX;
-	break;
-      case AXIS_TOUCHPAD_Y:
-	dd = &dY;
-	break;
-      case AXIS_TOUCHPAD_X_2:
-	dd = &dX_2;
-	break;
-      case AXIS_TOUCHPAD_Y_2:
-	dd = &dY_2;
-      }
+    switch (event.id) {
+    case AXIS_TOUCHPAD_X:
+	    dd = &dX;
+	    break;
+    case AXIS_TOUCHPAD_Y:
+	    dd = &dY;
+	    break;
+    case AXIS_TOUCHPAD_X_2:
+	    dd = &dX_2;
+	    break;
+    case AXIS_TOUCHPAD_Y_2:
+	    dd = &dY_2;
     }
-    if (!dd) {
-      throw std::runtime_error("Touchpad::toAxis: Original event not a TOUCHAPD axis signal");
-    }
+  }
+  if (!dd) {
+    throw std::runtime_error("Touchpad::toAxis: Original event not a TOUCHAPD axis signal");
+  }
     
-    derivativeValue = derivative(dd, event.value, timer.runningTime()) *
-      (condition->getBinding() != GPInput::NONE && inCondition) ? scale_if : scale;
+  derivativeValue = derivative(dd, event.value, timer.runningTime()) *
+      (condition && condition->inCondition()) ? scale_if : scale;
 
-    if (derivativeValue > 0) {
-      ret = (int) derivativeValue + skew;
-    }
-    else if (derivativeValue < 0) {
-      ret = (int) derivativeValue - skew;
-    }
+  if (derivativeValue > 0) {
+    ret = (int) derivativeValue + skew;
+  }
+  else if (derivativeValue < 0) {
+    ret = (int) derivativeValue - skew;
+  }
     
-    PLOG_VERBOSE << "Touchpad-to-axis conversion returning  " << ret << "\n";
-    return ret;
-
+  PLOG_VERBOSE << "Touchpad-to-axis conversion returning  " << ret << "\n";
+  return ret;
 }
 
 double Touchpad::derivative(DerivData* d, short current, double timestamp) {

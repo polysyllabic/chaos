@@ -38,7 +38,7 @@ CommandListener::CommandListener() {
 }
 
 CommandListener::~CommandListener() {
-  if(socket != NULL) {
+  if(socket != nullptr) {
     delete socket;
   }
 }
@@ -59,7 +59,7 @@ void CommandListener::doAction() {
   PLOG_DEBUG << "Received: " << text << std::endl;
   socket->send( reply.c_str() );
 	
-  if (observer != NULL) {
+  if (observer != nullptr) {
     observer->newCommand(text);
   }
 }

@@ -76,6 +76,10 @@ namespace Chaos {
       return ((int) type << 8) + (int) id;
     }
     
+    bool isDelay() const {
+      return (value == 0 && id == 255 && type == 255);
+    }
+
     bool operator==(const DeviceEvent &other) const {
       return type == other.type && id == other.id;
     }

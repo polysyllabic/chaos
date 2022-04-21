@@ -21,37 +21,51 @@
 // TODO: override default menu actions
 
 #include <stdexcept>
+#include <cmath>
 #include <plog/Log.h>
 
 #include "gameMenu.hpp"
-#include "submenu.hpp"
+#include "tomlReader.hpp"
+#include "menuOption.hpp"
+#include "subMenu.hpp"
+#include "menuSelect.hpp"
 
 using namespace Chaos;
 
-void GameMenu::GameMenu(toml::table& config) {
+void GameMenu::initialize(toml::table& config) {
 
-  toml::table* menu = config["menu"].as_table();
+  toml::table* menu_list = config["menu"].as_table();
   if (! config.contains("menu")) {
     throw std::runtime_error("No 'menu' table found in configuration file");
   }
 
-  remember_last = menu["remember_last"].value_or(false);
-
   // timing parameters
-  disable_delay = (unsigned int) menu["disable_delay"].value_or(0.333333) * 1000000;
-  select_delay = (unsigned int) menu["select_delay"].value_or(0.05) * 1000000;
+  // A 10 second delay is absurdly long, but it's unclear to me where to cap it. This mostly
+  // in case a user gets mixed up and tries to enter time in milliseconds or some other unit.
+  double delay = TOMLReader::getValue<double>(*menu_list, "disable_delay", 0, 10, 0.333333);
+  disable_delay = (unsigned int) delay * 1000000;
+  PLOG_DEBUG << "menu disable_delay = " << delay << " seconds (" << disable_delay << " microseconds\n";
+
+  delay = TOMLReader::getValue<double>(*menu_list, "select_delay", 0, 10, 0.05);
+  select_delay = (unsigned int) delay * 1000000;
+  PLOG_DEBUG << "menu select_delay = " << delay << " seconds (" << select_delay << " microseconds\n";
+
+  remember_last = (*menu_list)["remember_last"].value_or(false);
+  PLOG_DEBUG << "menu remember_last = " << remember_last << std::endl;
+
+  hide_guarded = (*menu_list)["hide_guarded"].value_or(false);
 
   // sequences corresponding to basic menu actions
-  open = getDefinedSequence(menu, "open");
-  back = getDefinedSequence(menu, "back");
-  nav_up = getDefinedSequence(menu, "navigate_up");
-  nav_down = getDefinedSequence(menu, "navigate_down");
-  tab_left = getDefinedSequence(menu, "tab_left");
-  tab_right = getDefinedSequence(menu, "tab_right");
-  select = getDefinedSequence(menu, "select");
-  option_greater = getDefinedSequence(menu, "option_greater");
-  option_less = getDefinedSequence(menu, "option_less");
-  confirm = getDefinedSequence(menu, "confirm");
+  open = getDefinedSequence(*menu_list, "open");
+  back = getDefinedSequence(*menu_list, "back");
+  nav_up = getDefinedSequence(*menu_list, "navigate_up");
+  nav_down = getDefinedSequence(*menu_list, "navigate_down");
+  tab_left = getDefinedSequence(*menu_list, "tab_left");
+  tab_right = getDefinedSequence(*menu_list, "tab_right");
+  select = getDefinedSequence(*menu_list, "select");
+  option_greater = getDefinedSequence(*menu_list, "option_greater");
+  option_less = getDefinedSequence(*menu_list, "option_less");
+  confirm = getDefinedSequence(*menu_list, "confirm");
 
   // menu layout
   toml::array* arr = config["layout"].as_array();
@@ -63,7 +77,7 @@ void GameMenu::GameMenu(toml::table& config) {
     if (m) {
       std::optional<std::string> cmd_name = (*m)["name"].value<std::string>();
       if (! cmd_name) {
-        PLOG_ERROR << "Menu item missing required name field: " << *m << std::endl;
+        PLOG_ERROR << "Menu item missing required name field: " << m << std::endl;
         continue;
       }
       // Check for duplicate names
@@ -80,19 +94,15 @@ void GameMenu::GameMenu(toml::table& config) {
         if (*menu_type == "option") {
        	  menu.insert({*cmd_name, std::make_shared<MenuOption>(*m)});
         } else if (*menu_type == "select") {
-       	  menu.insert({*cmd_name, std::make_shared<SelectOption>(*m)});
+       	  menu.insert({*cmd_name, std::make_shared<MenuSelect>(*m)});
         } else if (*menu_type == "menu") {
        	  menu.insert({*cmd_name, std::make_shared<SubMenu>(*m)});
-        } else if (*menu_type == "tab") {
-       	  menu.insert({*cmd_name, std::make_shared<TabMenu>(*m)});
-        } else if (*menu_type == "xgroup") {
-       	  menu.insert({*cmd_name, std::make_shared<XGroupMenu>(*m)});
         } else {
           PLOG_ERROR << "Menu type '" << *menu_type << "' not recognized." << std::endl;
         }
       }
       catch (const std::runtime_error& e) {
-        PLOG_ERROR << "In definition for MenuItem '" << cmd_name << "': " << e.what() << std::endl; 
+        PLOG_ERROR << "In definition for MenuItem '" << *cmd_name << "': " << e.what() << std::endl; 
       }
     } else {
       PLOG_ERROR << "Each menu-item definition must be a table.\n";
@@ -100,19 +110,70 @@ void GameMenu::GameMenu(toml::table& config) {
   }
 }
 
-std::shared_ptr<Sequence> GameMenu::getDefinedSequence(toml::table& config, std::string& name) {
-  std::optional<std::string> seq_name = config[name];
+std::shared_ptr<Sequence> GameMenu::getDefinedSequence(const toml::table& config, const std::string& name) {
+  std::optional<std::string> seq_name = config[name].value<std::string>();
   if (seq_name) {
     return Sequence::get(*seq_name);
   }
-  return NULL;
+  return nullptr;
 }
 
-std::shared_ptr<MenuItem> MenuItem::getMenuItem(const std::string& name) {
+std::shared_ptr<MenuItem> GameMenu::getMenuItem(const std::string& name) {
  auto iter = menu.find(name);
   if (iter != menu.end()) {
     return iter->second;
   }
-  return NULL;
+  return nullptr;
 }
 
+void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val) {
+  PLOG_VERBOSE << "GameMenu::setState: ";
+
+  Sequence seq;
+  // We build a sequence to open the main menu, navigate to the option, and perform the appropriate
+  // action on the item.
+  seq.disableControls();
+  seq.addDelay(disable_delay);
+  seq.addSequence(open);
+
+  item->setState(seq, new_val);
+
+  // TO DO: if the menu system does not remember where we left things, there's likely a faster way to
+  // exit the menu system, but it's pointless to try to implement this at this point.
+  item->navigateBack(seq);
+  seq.addSequence(menu_exit);
+
+  // send the sequence
+  seq.send();
+}
+
+void GameMenu::restoreState(std::shared_ptr<MenuItem> item) {
+  PLOG_VERBOSE << "GameMenu::restoreState: ";
+
+  Sequence seq;
+  seq.disableControls();
+  seq.addDelay(disable_delay);
+  seq.addSequence(open);
+  item->restoreState(seq);
+  item->navigateBack(seq);
+  seq.addSequence(menu_exit);
+  seq.send();
+}
+
+
+void GameMenu::correctOffset(std::shared_ptr<MenuItem> changed) {
+  // direction of the correction depends on whether the changed item is now hidden or revealed, and
+  // on whether the offset is positive or negative
+  int adjustment = (changed->isHidden() ? -1 : 1) * (changed->getOffset() < 0 ? -1 : 1);
+  PLOG_VERBOSE << "Adjusting offset " << changed->getOffset() << " by " << adjustment << std::endl;
+  for (auto& [name, entry] : menu) {
+    // Process all other items sharing the same parent and tab group
+    if (entry->getParent() == changed->getParent() && entry->getptr() != changed->getptr() &&
+        entry->getTab() == changed->getTab()) {
+      if (abs(entry->getOffset()) > abs(changed->getOffset())) {
+        entry->adjustOffset(adjustment);
+        PLOG_VERBOSE << " - adjustOffset: " << adjustment << std::endl;
+      }
+    }
+  }
+}

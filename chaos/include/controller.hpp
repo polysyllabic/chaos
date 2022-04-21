@@ -25,9 +25,9 @@
 
 #include "config.hpp"
 
+#include "deviceEvent.hpp"
 #include "controllerState.hpp"
 #include "chaosUhid.hpp"
-#include "signalTypes.hpp"
 #include "gamepadInput.hpp"
 #include "gameCommand.hpp"
 
@@ -79,7 +79,7 @@ namespace Chaos {
      */
     short controllerState[1024];
 	
-    ControllerInjector* controllerInjector = NULL;
+    ControllerInjector* controllerInjector = nullptr;
 
   public:
     void initialize();
@@ -99,7 +99,7 @@ namespace Chaos {
      * or axis. This is the low-level routine and returns the raw controller state. It does not
      * handle the remapping of signals.
      */
-    inline int getState(uint8_t id, uint8_t type) {
+    inline short getState(uint8_t id, uint8_t type) {
       return controllerState[((int) type << 8) + (int) id];
     }
     /**
@@ -111,15 +111,15 @@ namespace Chaos {
      * mapped to. Note that for the hybrid controls, we only read the button form, since currently
      * we're only interested in whether it is on or off. This may need to change for other games.
      */
-    int getState(std::shared_ptr<GameCommand> command);
-    int getState(std::shared_ptr<GamepadInput> signal);
+    short getState(std::shared_ptr<GameCommand> command);
+    short getState(std::shared_ptr<GamepadInput> signal);
 
     /**
      * \brief Change the controller state
      * 
      * \param event New event to go to the console
      */
-    void applyState(const DeviceEvent& event) { storeState(event); }
+    void applyEvent(const DeviceEvent& event) { storeState(event); }
     
     /**
      * \brief Test if event matches a specific input signal

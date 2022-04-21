@@ -18,38 +18,64 @@
  */
 #include "menuModifier.hpp"
 #include "tomlReader.hpp"
+#include "gameMenu.hpp"
 
 using namespace Chaos;
 
 const std::string MenuModifier::name = "menu";
 
 MenuModifier::MenuModifier(toml::table& config) {
+  
   TOMLReader::checkValid(config, std::vector<std::string>{
-    "name", "description", "type", "groups", "begin", "finish", "beginSequence", "finishSequence"});
+    "name", "description", "type", "groups", "menu_items", "reset_on_finish", "beginSequence", "finishSequence"});
 
   initialize(config);
 
-  TOMLReader::buildMenuCommand(config, "begin", begin_menu);
-  
-  TOMLReader::buildMenuCommand(config, "finish", finish_menu);
+  std::optional<std::string> item = config["item"].value<std::string>();
+  if (!config.contains("menu_items")) {
+    throw std::runtime_error("Missing menu_items for menu modifier");
+  }
+  const toml::array* menu_list = config.get("menu_items")->as_array();
+  if (! menu_list) {
+    throw std::runtime_error("menu_items must be an array of inline tables");
+  }
+  for (auto& elem : *menu_list) {
+    const toml::table* m = elem.as_table();
+    TOMLReader::checkValid(*m, std::vector<std::string>{"entry", "value"},"menu entry");
+    if (! m->contains("entry")) {
+      throw std::runtime_error("Each table within a menu_item array must contain an 'entry' key");
+    }
+    std::optional<std::string> item_name = m->get("entry")->value<std::string>();
+    std::shared_ptr<MenuItem> item = GameMenu::instance().getMenuItem(*item_name);
+    if (! item) {
+      throw std::runtime_error("Menu item '" + *item_name + "' not defined");
+    }
+    int val = (*m)["value"].value_or(0);
+    menu_items[item] = val;
+    PLOG_DEBUG << "   entry = " << *item_name << ", value = " << val << std::endl;
+  }
 
+  reset_on_finish = config["reset_on_finish"].value_or(true);
 }
 
 void MenuModifier::begin() {
   // Perform any non-menu-related actions
   sendBeginSequence();
 
-  // execute all menu commands in the list
-  for (auto& m : begin_menu) {
-    m.doAction();
+  // Execute all menu actions
+  for (auto const& [item, val] : menu_items) {
+    GameMenu::instance().setState(item, val);
   }
+
 }
 
 void MenuModifier::finish() {
   sendFinishSequence();
 
-  for (auto& m : finish_menu) {
-    m.doAction();
+  if (reset_on_finish) {
+    for (auto const& [item, val] : menu_items) {
+      GameMenu::instance().restoreState(item);
+    }
   }
 }
 

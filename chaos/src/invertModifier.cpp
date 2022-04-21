@@ -29,7 +29,7 @@ const std::string InvertModifier::name = "invert";
 
 InvertModifier::InvertModifier(toml::table& config) {
   TOMLReader::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "appliesTo", "disableOnStart", "disableOnFinish"});
+      "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence"});
   initialize(config);
 
   if (commands.empty()) {
@@ -39,19 +39,11 @@ InvertModifier::InvertModifier(toml::table& config) {
 }
 
 void InvertModifier::begin() {  
-  if (disable_on_begin) {
-    for (auto& cmd : commands) {
-      Controller::instance().setOff(cmd);
-    }
-  }
+  sendBeginSequence();
 }
 
 void InvertModifier::finish() {  
-  if (disable_on_finish) {
-    for (auto& cmd : commands) {
-      Controller::instance().setOff(cmd);
-    }
-  }
+  sendFinishSequence();
 }
 
 bool InvertModifier::tweak(DeviceEvent& event) {
