@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,50 +21,17 @@
 #include <queue>
 #include <string>
 #include <mogi/thread.h>
-#include <zmqpp/zmqpp.hpp>
+
+#include "commandListener.hpp"
+#include "commandSender.hpp"
 
 namespace Chaos {
 
-  class CommandListenerObserver {
-  public:
-    virtual void newCommand( const std::string& command ) = 0;
-  };
-
-  class CommandListener : public Mogi::Thread {
-  private:
-    zmqpp::socket *socket;
-    zmqpp::context context;
-	
-    CommandListenerObserver* observer = nullptr;
-	
-    void doAction();
-	
-  public:
-    CommandListener();
-    ~CommandListener();
-	
-    std::string reply;
-	
-    void addObserver( CommandListenerObserver* observer );
-    void setReply(const std::string& reply);
-  };
-
-  class CommandSender { //}: public Mogi::Thread {
-  private:
-    zmqpp::socket *socket;
-    zmqpp::context context;
-	
-    std::string reply;
-	
-    //void doAction();
-	
-  public:
-    CommandSender();
-    ~CommandSender();
-	
-    bool sendMessage(std::string message);
-  };
-
+  /**
+   * \brief Communication interface between the engine and the chatbot
+   * 
+   * Uses the ZeroMQ library for asynchronous messaging.
+   */
   class ChaosInterface : public Mogi::Thread {
   private:
     CommandListener listener;
@@ -76,8 +44,8 @@ namespace Chaos {
   public:
     ChaosInterface();
 	
-    bool sendMessage(std::string message);
-    void addObserver( CommandListenerObserver* observer );
+    bool sendMessage(const std::string& message);
+    void addObserver(CommandObserver* observer);
   };
 
 };

@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,8 +34,8 @@ namespace Chaos {
      * The builder function that creates the child class.
      */
     template <class ... T>
-    static std::unique_ptr<Base> create(const std::string& name, T&&... args) {
-      return factory().at(name)(std::forward<T>(args)...);
+    static std::shared_ptr<Base> create(const std::string& mod_type, T&&... args) {
+      return factory().at(mod_type)(std::forward<T>(args)...);
     }
     static bool hasType(std::string& mod_type) {
       return (factory().count(mod_type) == 1);
@@ -46,9 +47,9 @@ namespace Chaos {
       friend T;
       
       static bool registerType() {
-	const auto name = T::name;
-	Factory::factory()[name] = [](Args... args) -> std::unique_ptr<Base> {
-	  return std::make_unique<T>(std::forward<Args>(args)...);
+	const auto mod_type = T::mod_type;
+	Factory::factory()[mod_type] = [](Args... args) -> std::shared_ptr<Base> {
+	  return std::make_shared<T>(std::forward<Args>(args)...);
 	};
 	return true;
       }
@@ -68,7 +69,7 @@ namespace Chaos {
       template <class T> friend struct Registrar;
     };
     
-    using FuncType = std::unique_ptr<Base> (*)(Args...);
+    using FuncType = std::shared_ptr<Base> (*)(Args...);
     Factory() = default;
     
     static auto& factory() {

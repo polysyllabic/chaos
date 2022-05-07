@@ -25,11 +25,11 @@
 
 using namespace Chaos;
 
-const std::string InvertModifier::name = "invert";
+const std::string InvertModifier::mod_type = "invert";
 
 InvertModifier::InvertModifier(toml::table& config) {
   TOMLReader::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence"});
+      "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence", "unlisted"});
   initialize(config);
 
   if (commands.empty()) {

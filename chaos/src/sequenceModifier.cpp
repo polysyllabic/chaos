@@ -26,7 +26,7 @@
 
 using namespace Chaos;
 
-const std::string SequenceModifier::name = "sequence";
+const std::string SequenceModifier::mod_type = "sequence";
 
 SequenceModifier::SequenceModifier(toml::table& config) {
 
@@ -49,10 +49,8 @@ SequenceModifier::SequenceModifier(toml::table& config) {
   repeat_delay = config["cycleDelay"].value_or(0.0);
 
 #ifndef NDEBUG
-  PLOG_DEBUG << " - startDelay: " << start_delay << std::endl;
-  PLOG_DEBUG << " - cycleDelay: " << repeat_delay << std::endl;
+  PLOG_DEBUG << "- startDelay: " << start_delay << "; cycleDelay: " << repeat_delay;
 #endif
-  
 }
 
 void SequenceModifier::begin() {

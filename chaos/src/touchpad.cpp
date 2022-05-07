@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
- * the top-level directory of this distribution for details of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file at the top-level directory of this distribution for details of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,20 +18,38 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <memory>
+#include <stdexcept>
 #include <plog/Log.h>
 
 #include "touchpad.hpp"
-#include "gameCommand.hpp"
+#include "gameCondition.hpp"
 #include "tomlReader.hpp"
 
 using namespace Chaos;
 
 void Touchpad::initialize(const toml::table& config) {
-
+  scale = config["remapping"]["touchpad_scale"].value_or(1.0);
+  if (scale == 0) {
+    PLOG_ERROR << "Touchpad scale cannot be 0. Setting to 1";
+    scale = 1;
+  }
+  // Condition is optional; Warn if bad condition name but not if missing entirely
+  std::optional<std::string> c = config["remapping"]["touchpad_condition"].value<std::string>();
+  if (c) {
+    condition = GameCondition::get(*c);
+    if (! condition) {
+      PLOG_WARNING << "The condition " << *c << " is not defined";
+    }
+  } 
+  scale_if = config["remapping"]["touchpad_scale_if"].value_or(1.0);
+  if (scale_if == 0) {
+    PLOG_ERROR << "Touchpad scale_if cannot be 0. Setting to 1";
+    scale_if = 1;
+  }
+  skew = config["remapping"]["touchpad_skew"].value_or(0);
   timer.initialize();
-  condition = TOMLReader::getObject<GameCondition>(config, "scale_on", false);
-  scale = config["touchpad"]["scale"].value_or(1.0);
-  skew = config["touchpad"]["skew"].value_or(0);
+  PLOG_DEBUG << "Touchpad scale = " << scale << "; condition = " << condition->getName() <<
+    "; scale_if = " << scale_if << "; skew = " << skew;
 }
 
 void Touchpad::clearActive() {
@@ -44,32 +63,31 @@ void Touchpad::clearActive() {
 // Note: This is NOT clipped to joystick min/max. That must be done by the calling function.
 // This represents a first stab at generalization beyond TLOU2. It will almost certainly need
 // further refinement to handle the requirements of other games.
-int Touchpad::toAxis(const DeviceEvent& event, bool inCondition) {
+short Touchpad::toAxis(ControllerSignal signal, short value) {
   int ret = 0;
   double derivativeValue;
   DerivData* dd = nullptr;
 
-  if (event.type == TYPE_AXIS) {
-    switch (event.id) {
-    case AXIS_TOUCHPAD_X:
-	    dd = &dX;
-	    break;
-    case AXIS_TOUCHPAD_Y:
-	    dd = &dY;
-	    break;
-    case AXIS_TOUCHPAD_X_2:
-	    dd = &dX_2;
-	    break;
-    case AXIS_TOUCHPAD_Y_2:
-	    dd = &dY_2;
-    }
-  }
-  if (!dd) {
+  switch (signal) {
+  case ControllerSignal::TOUCHPAD_X:
+	  dd = &dX;
+	  break;
+  case ControllerSignal::TOUCHPAD_Y:
+	  dd = &dY;
+	  break;
+  case ControllerSignal::TOUCHPAD_X_2:
+	  dd = &dX_2;
+	  break;
+  case ControllerSignal::TOUCHPAD_Y_2:
+	  dd = &dY_2;
+    break;
+  default:
     throw std::runtime_error("Touchpad::toAxis: Original event not a TOUCHAPD axis signal");
   }
-    
-  derivativeValue = derivative(dd, event.value, timer.runningTime()) *
-      (condition && condition->inCondition()) ? scale_if : scale;
+  
+  // Use the touchpad value to update the running derivative count
+  derivativeValue = derivative(dd, value, timer.runningTime()) *
+      (condition->inCondition()) ? scale_if : scale;
 
   if (derivativeValue > 0) {
     ret = (int) derivativeValue + skew;
@@ -78,7 +96,7 @@ int Touchpad::toAxis(const DeviceEvent& event, bool inCondition) {
     ret = (int) derivativeValue - skew;
   }
     
-  PLOG_VERBOSE << "Touchpad-to-axis conversion returning  " << ret << "\n";
+  PLOG_DEBUG << "Derivative: " << derivativeValue << ", skew = " << skew << ", returning " << ret;
   return ret;
 }
 
@@ -104,4 +122,8 @@ double Touchpad::derivative(DerivData* d, short current, double timestamp) {
   d->timestampPrior[3] = d->timestampPrior[4];
   d->timestampPrior[4] = timestamp;
   return ret;
+}
+
+bool Touchpad::inCondition() {
+  return condition->inCondition();  
 }

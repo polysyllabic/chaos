@@ -2,6 +2,10 @@
 # Twitch Controls Chaos (TCC)
 # Configuration file for the TCC engine. It defines the operation for a single game.
 #
+# The settings defined here are those that will remain unchanged while the chaos engine is running.
+# Settings that can be altered during operation are controlled from the chaosface interface and
+# not listed here.
+#
 # chaos_toml: A version string for the TOML file format. Currently used only to verify that we're
 # reading the right file.
 chaos_toml = "1.0"
@@ -9,7 +13,8 @@ chaos_toml = "1.0"
 # game: User-friendly name of the game this configuration file defines.
 game = "The Last of Us Part II"
 
-# log_file: Name of the log file. Default = "chaos.log"
+[logging]
+# log_file: Name of the basic log file. Default = "chaos.log"
 log_file = "chaos.log"
 
 # log_verbosity: Level of message detail sent to the log file. Must be an integer from 0 to 6.
@@ -23,39 +28,57 @@ log_file = "chaos.log"
 # 6 = VERBOSE
 log_verbosity = 5
 # max_log_size: Maximum log-file size in bytes
-max_log_size = 1000000
+max_log_size = 0
 # max_log_files: Maximum number of log files to keep (0 = disable log rolling)
-max_log_files = 8
+max_log_files = 0
+
+# General controller settings
+[controller]
+# Default time, in seconds, to hold down a button when issuing a command in a sequence.
+button_press_time = 0.0625
+
+# Default time, in seconds, to wait after releasing a button before going on to the next command
+# in the sequence.
+button_release_time = 0.0625
 
 #--------------------------------------------------------------------------------------------------
-# Chaos Engine parameters
+# Modifier defaults
+[mod_defaults]
+# Number of modifiers simultaneously in effect
+active_modifiers = 3
 # Lifetime (exclusive of pauses) of an individual modifier, in seconds.
 time_per_modifier = 180.0
 
-# The touchpad "parameters" control the formula to convert from touchpad to axis events based on the
-# change in axis value over time (derivative). The formula is scale * derivative + skew. This result
-# is then clipped to the limits of the joystick value.
-[touchpad]
-# scale_on defines a condition, which must be a command defined in this file. If the condition is
-# defined, the engine will check the state of the controller for this command being pressed. If
-# the controller is in this condition, the derivative will be multiplied by the value of scale_if.
-# If the condition is false, or if scale_on is not defined, then scale is used. The scale_on value
-# must be a defined command. If you want the same scaling to apply to all states, comment out both
-# the scale_on and the scale_if lines.
-scale_on = "aiming"
-scale_if = 0.04
-scale = 0.12
+# This section defines the parameters controlling how controller signals are remapped from one
+# class of signal to another
+[remapping]
+# The touchpad parameters control the formula to convert from touchpad to axis events based on the
+# change in axis value over time (derivative). The formula is scale * derivative + skew. This
+# result is then clipped to the limits of the joystick value.
+# touchpad_scale defines the default scaling applied.
+touchpad_scale = 0.12
+# touchpad_condition specifies a condition for which an alternate scaling is defined. If the
+# condition is defined, the engine will check the if this condition is currently met, and if it is,
+# the derivative will be multiplied by the value of touchpad_scale_if. If the condition is false,
+# or if touchpad_condition is not defined, then touchpad_scale is used. The touchpad_condition
+# value must be a defined command. If you want the same scaling to apply to all states, comment out
+# both the scale_on and the scale_if lines.
+touchpad_condition = "aiming"
+# touchpad_scale_if is the scaling factor used when touchpad_condition is true
+touchpad_scale_if = 0.04
 # An offset to apply to the axis value when the derivative is non-zero. The sign of the skew is
 # the same as the sign of the derivative. In other words, if the derivative is positive, the skew
 # is added to the result, and the derivative is negative, the skew is subtractecd.
-skew = 30
+touchpad_skew = 30
 
 #--------------------------------------------------------------------------------------------------
 # Command Mapping
 #
 # This section defines the commands that this game supports, or at least the ones that we can
 # intercept and modify. If you have remapped the game controls from their default settings, you
-# should edit this section to reflect the values that the game expects to receive.
+# should edit this section to reflect the values that the game expects to receive. Note that
+# if you change the command mappings in-game while the chaos engine is running, you must both edit
+# this file and restart the engine so it can re-read the updated file.
 #
 # There are three parts to each command definition: 
 #
@@ -83,7 +106,7 @@ skew = 30
 # 
 # Note that command names must be unique, but you can define multiple names to point to the same
 # signal. This allows for aliases, in case you want to use different command names in different
-# contexts.
+# contexts. Also, 
 [[command]]
 name = "grab/interact"
 binding = "TRIANGLE"
@@ -157,7 +180,7 @@ name = "menu"
 binding = "OPTIONS"
 
 [[command]]
-name = "menu left/right"
+name = "menu right/left"
 binding = "DX"
 
 [[command]]
@@ -256,7 +279,7 @@ trueOn = [ "aiming" ]
 
 [[condition]]
 name = "shooting"
-trueOn = [ "shoot/throw" ]
+trueOn = [ "aiming", "reload/toss" ]
 
 [[condition]]
 name = "movement"
@@ -291,14 +314,10 @@ falseOn = [ "select weapon" ]
 # words, if there are sequences of actions that you use repeatedly in different modifiers, you
 # can simplify your task be defining that sequence once here and referencing it in the mod
 # definitions. These sequences are also used to define certain game commands (e.g., involving menu
-# navigation) that the engine always needs to know about.
+# navigation) that the engine always needs to know about. Sequences are defined here in terms of
+# the commands defined above but stored as the actual signals (L1, R2, etc.) that the console
+# expects. 
 #
-# Default time, in seconds, to hold down a button when issuing a command in a sequence.
-button_press_time = 0.0625
-
-# Default time, in seconds, to wait after releasing a button before going on to the next command
-# in the sequence.
-button_release_time = 0.0625
 
 # Defines how to open the main menu
 [[sequence]]
@@ -342,7 +361,7 @@ sequence = [ { event="press", command = "menu right/left", value = -1} ]
 # This sequence is issued to answer a yes/no prompt in the affirmative.
 [[sequence]]
 name = "confirm"
-sequence = [ { event="press", command = "menu left/right", value = -1},
+sequence = [ { event="press", command = "menu right/left", value = -1},
              { event="press", command = "select"} ]
 
 #--------------------------------------------------------------------------------------------------
@@ -468,7 +487,7 @@ layout = [
       #{name = "save", type="menu", offset = 4},
       #{name = "load", type="menu", offset = 5},
       #{name = "restart 2", type="menu", offset = -3, hidden = true},
-      {name = "restart", type="command", offset = -2, confirm = true },
+      {name = "restart", type="select", offset = -2, confirm = true },
       #{name = "quit", type="menu", offset = -1}
 
       # Options Menu
@@ -493,7 +512,7 @@ layout = [
       #{name = "customize controls", type="menu", parent="controls", offset= 1},
       {name = "shoulder swap", type="option", parent="controls", offset= 2, initialState=0},
       #{name = "photo mode shortcut", type="option", parent="controls", offset= 3, initialState=0},
-      {name = "listen mode", type="option", parent="controls", offset= 4, intialState=1},
+      {name = "listen mode", type="option", parent="controls", offset= 4, initialState=1},
       #{name = "look sensitivity X", type="option", parent="controls", offset= 5, initialState=5},
       #{name = "look sensitivity Y", type="option", parent="controls", offset= 6, initialState=5},
       #{name = "aim sensitivity X", type="option", parent="controls", offset= 7, initialState=5},
@@ -506,7 +525,7 @@ layout = [
       #{name = "motion aim invert Y", type="option", parent="controls", offset= -6, initialState=0},
       #{name = "motion aim mirror X", type="option", parent="controls", offset= -5, initialState=0},
       {name = "camera assist", type="option", parent="controls", offset= -4, initialState=0},
-      {name = "aim assist", type="option", parent="camera assist", offset= -3, initialState=10},
+      {name = "aim assist", type="option", parent="controls", offset= -3, initialState=10},
       {name = "lock-on aim", type="option", parent="controls", offset= -2, initialState=0},
       {name = "lock-on strength", type="option", parent="controls", guard="lock-on aim", offset= -1, initialState=10},
 
@@ -574,11 +593,12 @@ layout = [
       {name = "combat accessibility", type="menu", parent="accessibility", offset = -1},
 
       # Options -> Accessibility -> Alternate Controls
-      {name = "camera assist", type="option", parent="alternate controls", offset=-7, initialState=0},
-      {name = "lock-on aim", type="guard", parent="alternate controls", offset=-6, initialState=0},
-      {name = "lock-on strength", type="option", parent="alternate controls", guard="lock-on aim", offset=-5, initialState=10},
-      {name = "arc-throw lock-on", type="guard", parent="alternate controls", offset=-4, initialState=0},
-      {name = "arc-throw lock-on strength", type="option", parent="alternate controls", guart="arc-throw lock-on", offset=-3, initialState=10},
+      # The first three commented out here are duplicates of entries in Options -> Controls
+      #{name = "camera assist", type="option", parent="alternate controls", offset=-7, initialState=0},
+      #{name = "lock-on aim", type="option", parent="alternate controls", offset=-6, initialState=0},
+      #{name = "lock-on strength", type="option", parent="alternate controls", guard="lock-on aim", offset=-5, initialState=10},
+      {name = "arc-throw lock-on", type="option", parent="alternate controls", offset=-4, initialState=0},
+      {name = "arc-throw lock-on strength", type="option", parent="alternate controls", guard="arc-throw lock-on", offset=-3, initialState=10},
       {name = "auto weapon swap", type="option", parent="alternate controls", offset=-2, initialState=0},
       {name = "auto pick-up", type="option", parent="alternate controls", offset=-1, initialState=0},
 
@@ -606,7 +626,7 @@ layout = [
       {name = "navigation assistance", type="option", parent="navigation", offset=0, initialState=0},
       {name = "traversal assistance", type="option", parent="navigation", offset=1, initialState=0},
       {name = "ledge guard", type="option", parent="navigation", offset=2, initialState=0},
-      {name = "enhanced listen", type="guard", parent="navigation", offset=3, initialState=0},
+      {name = "enhanced listen", type="option", parent="navigation", offset=3, initialState=0},
       {name = "scan range", type="option", parent="navigation", guard="enhanced listen", offset=4, initialState=10},
       {name = "scan time", type="option", parent="navigation", guard="enhanced listen", offset=5, initialState=3},
       {name = "infinite breath", type="option", parent="navigation", offset=-2, initialState=0},
@@ -622,7 +642,7 @@ layout = [
       #{name = "cue glossary", type="menu", parent="TTS and audio", offset = -1, initialState=0},
 
       # Options -> Accessibility -> Combat Accessibility
-      {name = "enable combat accessibility", type="guard", parent="combat accessibility", offset = 0, initialState=0},
+      {name = "enable combat accessibility", type="option", parent="combat accessibility", offset = 0, initialState=0},
       {name = "hostages don't escape", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 1, initialState=0},
       {name = "allies don't get grabbed", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 2, initialState=0},
       {name = "enemies don't flank", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 3, initialState=0},
@@ -631,7 +651,8 @@ layout = [
       {name = "enhanced dodge", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -4, initialState=0},
       {name = "invisible while prone", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -3, initialState=0},
       {name = "weapon sway", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -2, initialState=1},
-      {name = "slow motion", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -1, initialState=0},
+      # slow motion duplicate of extras option
+      #{name = "slow motion", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -1, initialState=0},
 
       # Extras -> Render Modes Menu
       {name = "no render", type = "select", parent="render", offset = 0, counter="render"},
@@ -954,7 +975,7 @@ name = "No Short Guns"
 description = "D-Pad Right Disabled"
 type = "disable"
 groups = [ "combat" ]
-filter = "positive"
+filter = "above"
 appliesTo = [ "select weapon" ]
 beginSequence = [ { event = "release", command = "select weapon" },
                   { event= "press", command = "select consumable" } ]
@@ -964,7 +985,7 @@ name = "No Long Guns"
 description = "D-Pad Left Disabled"
 type = "disable"
 groups = [ "combat" ]
-filter = "negative"
+filter = "below"
 appliesTo = [ "select weapon" ]
 beginSequence = [ { event = "release", command = "select weapon" },
                   { event= "press", command = "select consumable" } ]
@@ -1140,12 +1161,12 @@ type = "repeat"
 groups = [ "movement" ]
 appliesTo = [ "dodge/sprint" ]
 beginSequence = [ { event="release", command = "dodge/sprint"},
-      { event ="hold", command = "move forward/backwards", value = -128 } ]
+      { event ="hold", command = "move forward/back", value = -128 } ]
 forceOn = true
-blockWhileBusy = [ "move forward/backwards" ]
+blockWhileBusy = [ "move forward/back" ]
 timeOn = 4.0
 timeOff = 0.1
-finishSequence = [ { event="release", command = "move forward/backwards"},
+finishSequence = [ { event="release", command = "move forward/back"},
        { event="release", command = "dodge/sprint"}  ]
 
 [[modifier]]
@@ -1158,20 +1179,15 @@ timeOn = 4.0
 timeOff = 0.1
 forceOn = true
 
+# This is a child-only mod: part of the Navigation Assistance parent mod
 [[modifier]]
-name = "Navigation Assistance"
+name = "Periodic Navigation Assistance"
 description = "Keeps pointing camera in direction of story progression"
 type = "repeat"
-groups =[ "movement" ]
 appliesTo = [ "look" ]
-beginSequence = [
-      { event="menu", command = "navigation assistance", value=1 },
-      { event="release", command="look"} ]
-finishSequence = [
-      { event="menu", command = "navigation assistance", value=0 },
-      { event="release", command="look"} ]
 timeOn = 0.1
 timeOff = 5.0
+unlisted = true
 
 # == Remap Modifiers ==
 #
@@ -1188,8 +1204,9 @@ timeOff = 5.0
 #   - to_neg: When an axis is mapped to a button, negative axis values are sent to this signal.
 #   - to_min: Boolean. If true, the 'to' signal will be set to the minimum value when mapping
 #     a button to an axis. If false, the 'to' signal will be set to the maximum value.
-#   - threshold: Proportion of maximum signal of the 'from' value before sending the signal.
+#   - threshold: Proportion of maximum axis signal before sending the signal to a button.
 #   - invert: Boolean. If true, the sign of the signal is flipped (e.g., -1 becomes 1, etc.)
+#   - sensitivity: A scaling factor. The from signal is divided by this factor during remapping
 [[modifier]]
 name = "D-pad Rotate"
 description = "Rotates the D-pad inputs clockwise"
@@ -1207,6 +1224,16 @@ remap = [
       {from = "RY", to = "LY"},
       {from = "LX", to = "RX"},
       {from = "LY", to = "RY"} ]
+
+[[modifier]]
+name = "Criss-Cross Joysticks"
+description = "Swap vertical and horizontal joystick axes. Up and down are now left and right."
+type = "remap"
+remap = [
+      {from = "RX", to = "RY"},
+      {from = "RY", to = "RX"},
+      {from = "LX", to = "LY"},
+      {from = "LY", to = "RX"} ]
 
 [[modifier]]
 name = "Swap D-Pad/Left Joystick"
@@ -1232,16 +1259,15 @@ remap = [
       {from = "SQUARE", to = "RX", to_min = true},
       {from = "CIRCLE", to = "RX"},
       {from = "TRIANGLE", to = "RY", to_min = true},
-      {from = "X", to = "RY"},
-      ]
+      {from = "X", to = "RY"} ]
 
 [[modifier]]
 name = "Motion Control Movement"
 description = "No more movement with the joystick. Tilt the controller to move instead."
 type = "remap"
 remap = [
-      {from = "ACCX", to = "LX", scale=20},
-      {from = "ACCZ", to = "LY", scale=20},
+      {from = "ACCX", to = "LX", sensitivity=20},
+      {from = "ACCZ", to = "LY", sensitivity=20},
       {from = "LX", to = "NOTHING"},
       {from = "LY", to = "NOTHING"}
       ]
@@ -1251,8 +1277,8 @@ name = "Motion Control Aiming"
 description = "No more aiming with the joystick. Tilt the controller to aim/look instead."
 type = "remap"
 remap = [
-      {from = "ACCX", to = "RX", scale=24},
-      {from = "ACCZ", to = "RY", scale=24},
+      {from = "ACCX", to = "RX", sensitivity=24},
+      {from = "ACCZ", to = "RY", sensitivity=24},
       {from = "RX", to = "NOTHING"},
       {from = "RY", to = "NOTHING"}
       ]
@@ -1288,7 +1314,7 @@ remap = [
       {from = "SQUARE", to = "DX", to_min = true},
       {from = "CIRCLE", to = "DX"},
       {from = "TRIANGLE", to = "DY", to_min = true},
-      {from = "X", toMax = "DY"} ]
+      {from = "X", to = "DY"} ]
 
 [[modifier]]
 name = "Controller Flip"
@@ -1326,7 +1352,7 @@ random_remap = [ "L1", "L2", "R1", "R2" ]
 
 [[modifier]]
 name = "Max Sensitivity"
-description = "Goodbye precision aiming. Joystick postions multiplied by 5"
+description = "Goodbye precision aiming. Joystick postions multiplied by 5."
 type = "formula"
 groups = [ "movement", "view" ]
 appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
@@ -1334,7 +1360,7 @@ scaling = 5.0
 
 [[modifier]]
 name = "Min Sensitivity"
-description = "It is like slomo, but not for the enemies. Joystick positions divided by 2.5"
+description = "It's like slomo, but not for the enemies. Joystick positions divided by 2.5."
 type = "formula"
 groups = [ "movement", "view" ]
 appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
@@ -1380,7 +1406,7 @@ type = "sequence"
 groups = [ "combat" ]
 blockWhileBusy = "ALL"
 beginSequence = [
-	{ event = "press", command = "select_gun", delay = 1.0 },
+	{ event = "press", command = "select weapon", delay = 1.0 },
 	{ event = "hold", command = "aiming", delay = 1.0 },
 	{ event = "press", command ="fire/throw" },
 	{ event = "release", command = "aiming" }
@@ -1473,14 +1499,14 @@ blockWhileBusy = [ "dodge/sprint", "crouch/prone" ]
 condition = [ "movement" ]
 cycleDelay = 1.4
 repeatSequence = [
-	{ press = "dodge/sprint", delay = 0.1 },
-	{ press = "crouch/prone", delay = 0.8 },
-	{ release = "crouch/prone"},
-	{ release = "dodge/sprint"}
+	{ event = "press", command = "dodge/sprint", delay = 0.1 },
+	{ event = "press", command = "crouch/prone", delay = 0.8 },
+	{ event = "release", command = "crouch/prone"},
+	{ event = "release", command = "dodge/sprint"}
 	]
 beginSequence = [ { event = "release", command = "dodge/sprint" },
                   { event = "release", command = "crouch/prone" }]
-finishSequence = [ { event = "release", command = "dodge/sprint" },
+finishSequence = [{ event = "release", command = "dodge/sprint" },
                   { event = "release", command = "crouch/prone" }]
 
 [[modifier]]
@@ -1518,7 +1544,7 @@ name = "Restart Checkpoint"
 description = "Best served prior to the end of a long encounter."
 groups = [ "debuff" ]
 type = "menu"
-menu_items = [{entry = "restart checkpoint" }]
+menu_items = [{entry = "restart" }]
 reset_on_finish = false
 
 [[modifier]]
@@ -1589,203 +1615,203 @@ menu_items = [{entry = "subtitle size", value = 2 }]
 name = "Graphic"
 description = "Render Mode"
 type = "menu"
-group = [ "render mode" ]
+groups = [ "render mode" ]
 menu_items = [{entry = "graphic" }]
 
 [[modifier]]
 name = "Headache"
 description = "Render Mode"
 type = "menu"
-group = [ "render mode" ]
+groups = [ "render mode" ]
 menu_items = [{entry = "render" }]
 
 [[modifier]]
 name = "Afterlife"
 description = "Render Mode"
 type = "menu"
-group = [ "render mode" ]
+groups = [ "render mode" ]
 menu_items = [{entry = "afterlife" }]
 
 [[modifier]]
 name = "8-Bit"
 description = "Render Mode"
 type = "menu"
-group = [ "render mode" ]
+groups = [ "render mode" ]
 menu_items = [{entry = "eightbit" }]
 
 [[modifier]]
 name = "Water Color"
 description = "Render Mode"
 type = "menu"
-group = [ "render mode" ]
+groups = [ "render mode" ]
 menu_items = [{entry = "watercolor" }]
 
 [[modifier]]
 name = "Dungeon"
 description = "Render Mode"
 type = "menu"
-group = [ "render mode" ]
+groups = [ "render mode" ]
 menu_items = [{entry = "dungeon" }]
 
 [[modifier]]
 name = "Void"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "void" }]
 
 [[modifier]]
 name = "Pop Poster"
 description = "Stream Destroyer.  This kills the bitrate"
 type = "menu"
-group = [ "render mode" ]
+groups = [ "render mode" ]
 menu_items = [{entry = "pop poster" }]
 
 [[modifier]]
 name = "1960"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "1960" }]
 
 [[modifier]]
 name = "Cool"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "cool" }]
 
 [[modifier]]
 name = "Warm"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "warm" }]
 
 [[modifier]]
 name = "Vibrant"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "vibrant" }]
 
 [[modifier]]
 name = "Noir"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "noir" }]
 
 [[modifier]]
 name = "Blorange"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "blorange" }]
 
 [[modifier]]
 name = "Sepia"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "sepia" }]
 
 [[modifier]]
 name = "Vintage"
 description = "Render Mode"
 type = "menu"
-group = [ "render mode" ]
+groups = [ "render mode" ]
 menu_items = [{entry = "vintage" }]
 
 [[modifier]]
 name = "Beasts"
 description = "Render Mode"
 type = "menu"
-group = [ "render mode" ]
+groups = [ "render mode" ]
 menu_items = [{entry = "beasts" }]
 
 [[modifier]]
 name = "Terminated"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "terminated" }]
 
 [[modifier]]
 name = "Gridlocked"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "gridlocked" }]
 
 [[modifier]]
 name = "Blacklight"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "blacklight" }]
 
 [[modifier]]
 name = "Desert Fog"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "desert fog" }]
 
 [[modifier]]
 name = "Blood"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "blood" }]
 
 [[modifier]]
 name = "Inferno"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "inferno" }]
 
 [[modifier]]
 name = "Fire"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "fire" }]
 
 [[modifier]]
 name = "Trinity"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "trinity" }]
 
 [[modifier]]
 name = "Pusher"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "pusher" }]
 
 [[modifier]]
 name = "Demons"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "demons" }]
 
 [[modifier]]
 name = "Drug Zone"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "drugzone" }]
 
 [[modifier]]
 name = "Moonlight"
 description = "Render Mode"
 type = "menu"
-group = ["render mode" ]
+groups = ["render mode" ]
 menu_items = [{entry = "moonlight" }]
 
 [[modifier]]
@@ -1820,144 +1846,146 @@ menu_items = [{entry = "slow motion", value = 1 }]
 name = "Bullet Speed"
 description = "Slow motion when aiming"
 type = "menu"
-group = [ "buff" ]
+groups = [ "buff" ]
 menu_items = [{entry = "bullet speed", value = 1 }]
 
 [[modifier]]
 name = "Infinite Ammo"
 description = "The strimmer responds with <3"
 type = "menu"
-group = ["buff"]
+groups = ["buff"]
 menu_items = [{entry = "infinite ammo", value = 1 }]
 	
 [[modifier]]
 name = "Infinite Crafting"
 description = "Molotovs for everyone!"
 type = "menu"
-group = [ "buff" ]
+groups = [ "buff" ]
 menu_items = [{entry = "infinite crafting", value = 1 }]
 
 [[modifier]]
 name = "Infinite Melee Durability"
 description = "Finally, realistic durability."
 type = "menu"
-group = [ "buff" ]
+groups = [ "buff" ]
 menu_items = [{entry = "infinite melee durability", value = 1 }]
 
 [[modifier]]
 name = "Infinite Listen Range"
 description = "There used to be a limit?"
 type = "menu"
-group = [ "buff" ]
+groups = [ "buff" ]
 menu_items = [{entry = "infinite listen range",  value = 1 }]
 
 [[modifier]]
 name = "One Shot"
 description = "Golden guns activated: one-shot kills."
 type = "menu"
-group = ["buff"]
+groups = ["buff"]
 menu_items = [{entry = "one shot", value = 1 }]
 	
 [[modifier]]
 name = "Touch Of Death"
 description = "Golden fists activated: one-hit enemy deaths"
 type = "menu"
-group = [ "buff" ]
+groups = [ "buff" ]
 menu_items = [{entry = "touch of death", value = 1 }]
 
 [[modifier]]
 name = "8-Bit Audio"
 description = "Audio mode. Incompatible with 4-bit"
 type = "menu"
-group = [ "sound" ]
+groups = [ "sound" ]
 menu_items = [{entry = "8-bit audio", value = 1 }]
 	
 [[modifier]]
 name = "4-Bit Audio"
 description = "Audio mode. Incompatible with 8-bit"
 type = "menu"
-group = [ "sound"] 
+groups = [ "sound"] 
 menu_items = [{entry = "4-bit audio", value = 1 }]
 
 [[modifier]]
 name = "Helium Audio"
 description = "Audio mode.  Incompatible with Xenon"
 type = "menu"
-group = [ "sound" ]
+groups = [ "sound" ]
 menu_items = [{entry = "helium audio", value = 1 }]
 
 [[modifier]]
 name = "Xenon Audio"
 description = "Audio mode.  Incompatible with Helium"
 type = "menu"
-group = [ "sound" ]
+groups = [ "sound" ]
 menu_items = [{entry = "xenon audio", value = 1 }]
 
 [[modifier]]
 name = "Infinite Hugging"
 description = "Grabbed enemies do not escape"
 type = "menu"
-group = [ "buff" ]
+groups = [ "buff" ]
 menu_items = [{entry = "hostages don't escape", value = 1 }]
 
 [[modifier]]
 name = "No Plus Signs"
 description = "Speedrunners need this.  Allies do not get grabbed."
 type = "menu"
-group = [ "buff" ]
+groups = [ "buff" ]
 menu_items = [{entry = "allies don't get grabbed", value = 1 }]
 
 [[modifier]]
 name = "Enemies Do Not Flank"
 description = "Very effective on infected Kappa"
 type = "menu"
-group = [ "buff" ]
+groups = [ "buff" ]
 menu_items = [{entry = "enemies don't flank", value = 1 }]
 
 [[modifier]]
 name = "Reduced Enemy Perception"
 description = "Finally, clickers are truly blind."
 type = "menu"
-group = [ "buff" ]
+groups = [ "buff" ]
 menu_items = [{entry = "reduced enemy perception", value = 1 }]
 
 [[modifier]]
 name = "Potato Enemies"
 description = "Enemies shoot less accurately. Does not work on melee."
 type = "menu"
-group = [ "buff" ]
+groups = [ "buff" ]
 menu_items = [{entry = "reduced enemy accuracy", value = 1 }]
 
 [[modifier]]
 name = "Enhanced Dodge"
 description = "I wish I knew what this does (built-in option)"
 type = "menu"
-group = [ "buff" ]
+groups = [ "buff" ]
 menu_items = [{entry = "enhanced dodge", value = 1 }]
 
 [[modifier]]
 name = "Invisible While Prone"
 description = "Proning is now even more OP"
 type = "menu"
-group = [ "buff" ]
+groups = [ "buff" ]
 menu_items = [{entry = "invisible while prone", value = 1 }]
 
 [[modifier]]
 name = "30 fps"
 description = "Converting a PS5 to play like PS4"
 type = "menu"
+groups = [ "display" ]
 menu_items = [{entry = "framerate", value = 0 }]
 
 [[modifier]]
 name = "Camera Assist"
 description = "Automatically reorients the camera in the direction of movement."
 type = "menu"
+groups = [ "navigation" ]
 menu_items = [{entry = "camera assist", value = 1 }]
 
 [[modifier]]
 name = "Aimbot"
 description = "Aimbot... but like a detuned aimbot.  Turns on lock-on aim"
-group = [ "buff" ]
+groups = [ "buff" ]
 type = "menu"
 menu_items = [{entry = "lock-on aim", value = 1 }]
 
@@ -1965,41 +1993,42 @@ menu_items = [{entry = "lock-on aim", value = 1 }]
 name = "Aimbot Throwables"
 description = "Aimbot for throwables. Turns on lock-on Throwables"
 type = "menu"
-group = ["buff"]
+groups = ["buff"]
 menu_items = [{entry = "arc throw lock-on", value = 1 }]
 
 [[modifier]]
 name = "Kleptomania"
 description = "Picking up items at inconvenient times. Turns on Auto Pick-Up"
-type = "menu"
+types = "menu"
+groups = [ "buff" ]
 menu_items = [{entry = "auto pick-up", value = 1 }]
 
 [[modifier]]
 name = "Large HUD"
 description = "HUD like in a game from the 1990s"
 type = "menu"
-group = ["UI"]
+groups = ["UI"]
 menu_items = [{entry = "HUD scale", value = 2 }]
 
 [[modifier]]
 name = "High Contrast Display"
 description = "Render mode, but overrides any other render mode"
 type = "menu"
-group = ["render"]
+groups = ["render"]
 menu_items = [{entry = "high contrast", value = 1 }]
 
 [[modifier]]
 name = "Musical Traversal"
 description = "Add some music to climbable objects with Traversal Audio Cues"
 type = "menu"
-group = ["sound"]
+groups = ["sound", "movement"]
 menu_items = [{entry = "traversal cues", value = 1  }]
 
 [[modifier]]
 name = "Musical Combat"
 description = "Add some music to combat prompts with Combat Audio Cues"
 type = "menu"
-group = ["sound"]
+groups = ["sound"]
 menu_items = [{entry = "combat cues", value = 1 }]
 
 [[modifier]]
@@ -2049,6 +2078,14 @@ description = "No more stereo. Where did that gunshot come from?"
 type = "menu"
 groups = [ "sound" ]
 menu_items = [{entry = "mono", value = 1 }]
+
+# This is a child-only mod: part of the Navigation Assistance parent mod
+[[modifier]]
+name = "Enable Navigation Assistance"
+description = "Turn on navigation assistance"
+type = "menu"
+menu_items = [{entry = "navigation assistance", value=1 }]
+unlisted = true
 
 [[modifier]]
 name = "Input Delay"
@@ -2127,3 +2164,10 @@ description = "Applies 5 random modifiers"
 type = "parent"
 random = true
 value = 5
+
+[[modifier]]
+name = "Navigation Assistance"
+description = "Keeps pointing camera in direction of story progression"
+type = "parent"
+children = [ "Enable Navigation Assistance", "Periodic Navigation Assistance"]
+

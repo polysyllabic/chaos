@@ -45,7 +45,7 @@ namespace Chaos {
     bool reset_on_finish;
 
   public:
-    static const std::string name;
+    static const std::string mod_type;
     
     MenuModifier(toml::table& config);
     

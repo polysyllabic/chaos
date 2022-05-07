@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
- * the top-level directory of this distribution for details of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,7 +45,7 @@ GameCommand::GameCommand(toml::table& definition) {
   if (!bind) {
     throw std::runtime_error("Missing command binding.");
   }
-  binding = GamepadInput::get(*bind);
+  binding = ControllerInput::get(*bind);
   if (! binding) {
     throw std::runtime_error("Specified command binding does not exist.");
   }
@@ -83,26 +84,26 @@ void GameCommand::buildCommandMapDirect(toml::table& config) {
           continue;
         }
 	      if (! command->contains("name")) {
-	        PLOG_ERROR << "Command definition missing required 'name' field: " << *command << "\n";
+	        PLOG_ERROR << "Command definition missing required 'name' field: " << command;
           continue;
         }
         std::string cmd_name = command->get("name")->value_or("");
 	      if (commands.count(cmd_name) == 1) {
-	        PLOG_ERROR << "Duplicate command definition for '" << cmd_name << "'. Later one will be ignored.\n";
+	        PLOG_ERROR << "Duplicate command definition for '" << cmd_name << "'. Later one will be ignored.";
           continue;
 	      }
-	      PLOG_VERBOSE << "Inserting '" << cmd_name << "' into game command list: " << command << "\n";
+	      PLOG_VERBOSE << "Inserting '" << cmd_name << "' into game command list.";
 	      try {
       	  commands.insert({cmd_name, std::make_shared<GameCommand>(*command)});
 	      }
 	      catch (const std::runtime_error& e) {
-	        PLOG_ERROR << "In definition for game command '" << cmd_name << "': " << e.what() << std::endl; 
+	        PLOG_ERROR << "In definition for game command '" << cmd_name << "': " << e.what();
 	      }
 	    }
     }
   }
   if (commands.size() == 0) {
-    PLOG_WARNING << "No unconditional game commands were defined.\n";
+    PLOG_WARNING << "No unconditional game commands were defined.";
   }
 }
 
@@ -122,12 +123,12 @@ void GameCommand::buildCommandMapCondition(toml::table& config) {
     	  if (commands.count(cmd_name) == 1) {
 	        continue;
 	      }
-	      PLOG_VERBOSE << "inserting '" << cmd_name << "': " << command << "\n";
+	      PLOG_VERBOSE << "inserting '" << cmd_name << "': " << command;
 	      try {
     	    commands.insert({cmd_name, std::make_shared<GameCommand>(*command)});
 	      }
 	      catch (const std::runtime_error& e) {
-	        PLOG_ERROR << "In definition for game command '" << cmd_name << "': " << e.what() << std::endl; 
+	        PLOG_ERROR << "In definition for game command '" << cmd_name << "': " << e.what(); 
 	      }
       }
     }
@@ -145,19 +146,18 @@ std::shared_ptr<GameCommand> GameCommand::get(const std::string& name) {
   return nullptr;
 }
 
-std::shared_ptr<GamepadInput> GameCommand::getRemapped() {
-  GPInput r = binding->getRemap();
-  if ( r == GPInput::NONE || r == GPInput::NOTHING ) {
+std::shared_ptr<ControllerInput> GameCommand::getRemapped() {
+  ControllerSignal r = binding->getRemap();
+  // NONE = no remapping, so return the actual signal
+  if (r == ControllerSignal::NONE) {
+    return binding;
+  }
+  if (r == ControllerSignal::NOTHING) {
     return nullptr;
   }
-  return GamepadInput::get(r);
+  return ControllerInput::get(r);
 }
 
-const std::string& GameCommand::getName() {
-  for (auto it = commands.begin(); it != commands.end(); ++it) {
-    if (it->second == getptr()) {
-      return it->first;
-    }
-  }
-  return unknown_command;
+short GameCommand::getState() {
+  return binding->getRemappedState();
 }

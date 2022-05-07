@@ -132,7 +132,7 @@ namespace Chaos {
     void processSequence(Sequence& seq);
     
   public:
-    static const std::string name;
+    static const std::string mod_type;
 
     SequenceModifier(toml::table& config);
     

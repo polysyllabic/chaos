@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +23,9 @@
 #include <list>
 #include <string>
 #include <queue>
+#include <json/json.h>
 
-#include "chaosInterface.hpp"	// for CommandListener
+#include "chaosInterface.hpp"
 #include "controller.hpp"
 #include "modifier.hpp"
 
@@ -36,26 +38,40 @@ namespace Chaos {
    * comes in, chaos engine adds the modifier to list of active modifiers. After a set amount of time,
    * the chaos engine will remove the modifier.
    */
-  class ChaosEngine : public CommandListenerObserver, public ControllerInjector, public Mogi::Thread {
+  class ChaosEngine : public CommandObserver, public ControllerInjector, public Mogi::Thread {
   private:
     ChaosInterface chaosInterface;
 
     Controller& controller;
 	
     Mogi::Math::Time time;
+
+    // Name of the game we're playing
+    std::string game;
+
+    /**
+     * \brief Number of modifiers simultaneously active
+     * 
+     * This count does not include child mods.
+     */
+    int activeModifiers;
+
     /**
     * Time in seconds modifiers last before they are removed from the queue.
     */
     double timePerModifier;
+
     /**
      * The list of currently active modifiers
      */
     std::list<std::shared_ptr<Modifier>> modifiers;
+
     /**
      * List of modifiers that have been selected but not yet initialized.
      */
     std::queue<std::shared_ptr<Modifier>> modifiersThatNeedToStart;
 	
+    bool keep_going = true;
     bool pause = true;
     bool pausePrimer = false;
     bool pausedPrior = false;
@@ -64,6 +80,10 @@ namespace Chaos {
     bool sniffify(const DeviceEvent& input, DeviceEvent& output);
     // overridden from Mogi::Thread
     void doAction();
+
+    Json::CharReaderBuilder jsonReaderBuilder;
+    Json::CharReader* jsonReader;
+    Json::StreamWriterBuilder jsonWriterBuilder;	
 
   protected:	
     ChaosEngine();
@@ -74,16 +94,29 @@ namespace Chaos {
       return engine;
     }
 
-    void setInterfaceReply(const std::string& reply);
+    void sendInterfaceMessage(const std::string& msg);
     
-    inline void setTimePerModifier(double time) { timePerModifier = time; }
+    void setTimePerModifier(double time) {
+      assert(time > 0);  
+      timePerModifier = time; 
+      }
     
+    void setActiveMods(int nmods) {
+      assert(nmods > 0);
+      activeModifiers = nmods;
+    }
+
+    void setGame(const std::string& name) {
+      game = name;
+    } 
+
     void fakePipelinedEvent(DeviceEvent& fakeEvent, std::shared_ptr<Modifier> modifierThatSentTheFakeEvent);
 
     void newCommand(const std::string& command);	// override from CommandListenerObserver
 
-    inline bool isPaused() { return pause; }
+    bool isPaused() { return pause; }
 
+    bool keepGoing() { return keep_going; }
   };
 
 };

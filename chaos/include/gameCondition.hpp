@@ -30,7 +30,7 @@ namespace Chaos {
   class GameCommand;
 
   /**
-   * \brief Class to encapsulate a test for a gamepad condition that can be used by a modifier
+   * \brief Class to encapsulate a test for a controller condition that can be used by a modifier
    * to make a decision.
    * 
    * Conditions can be transient, reflecting the real-time state of the controller, or persistent.
@@ -102,6 +102,7 @@ namespace Chaos {
    */
   class GameCondition {
   protected:
+    std::string name;
     /**
      * \brief Commands to check whether the condition is on.
      *
@@ -215,6 +216,8 @@ public:
    * 
    */
   static std::shared_ptr<GameCondition> get(const std::string& name);
+
+  std::string& getName() { return name; }
   };
 
 };

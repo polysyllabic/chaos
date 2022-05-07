@@ -43,15 +43,15 @@ void GameMenu::initialize(toml::table& config) {
   // A 10 second delay is absurdly long, but it's unclear to me where to cap it. This mostly
   // in case a user gets mixed up and tries to enter time in milliseconds or some other unit.
   double delay = TOMLReader::getValue<double>(*menu_list, "disable_delay", 0, 10, 0.333333);
-  disable_delay = (unsigned int) delay * 1000000;
-  PLOG_DEBUG << "menu disable_delay = " << delay << " seconds (" << disable_delay << " microseconds\n";
+  disable_delay = (unsigned int) (delay * 1000000);
+  PLOG_VERBOSE << "menu disable_delay = " << delay << " seconds (" << disable_delay << " microseconds)";
 
   delay = TOMLReader::getValue<double>(*menu_list, "select_delay", 0, 10, 0.05);
-  select_delay = (unsigned int) delay * 1000000;
-  PLOG_DEBUG << "menu select_delay = " << delay << " seconds (" << select_delay << " microseconds\n";
+  select_delay = (unsigned int) (delay * 1000000);
+  PLOG_VERBOSE << "menu select_delay = " << delay << " seconds (" << select_delay << " microseconds)";
 
   remember_last = (*menu_list)["remember_last"].value_or(false);
-  PLOG_DEBUG << "menu remember_last = " << remember_last << std::endl;
+  PLOG_VERBOSE << "menu remember_last = " << remember_last;
 
   hide_guarded = (*menu_list)["hide_guarded"].value_or(false);
 
@@ -68,7 +68,7 @@ void GameMenu::initialize(toml::table& config) {
   confirm = getDefinedSequence(*menu_list, "confirm");
 
   // menu layout
-  toml::array* arr = config["layout"].as_array();
+  toml::array* arr = (*menu_list)["layout"].as_array();
   if (! arr) {
     throw std::runtime_error("Menu layout must be in an array.");
   }
@@ -77,12 +77,12 @@ void GameMenu::initialize(toml::table& config) {
     if (m) {
       std::optional<std::string> cmd_name = (*m)["name"].value<std::string>();
       if (! cmd_name) {
-        PLOG_ERROR << "Menu item missing required name field: " << m << std::endl;
+        PLOG_ERROR << "Menu item missing required name field: " << m;
         continue;
       }
       // Check for duplicate names
       if (getMenuItem(*cmd_name)) {
-        PLOG_ERROR << "Menu item with duplicate name '" << *cmd_name << "'" << std::endl;
+        PLOG_ERROR << "Menu item with duplicate name: " << *cmd_name;
         continue;
       }
       std::optional<std::string_view> menu_type = (*m)["type"].value<std::string_view>();
@@ -90,7 +90,7 @@ void GameMenu::initialize(toml::table& config) {
         throw std::runtime_error("Menu item definition lacks required 'type' parameter.");
       }
       try {
-        PLOG_VERBOSE << "Adding Menu Item '" << *cmd_name << "'" << std::endl;
+        PLOG_VERBOSE << "Adding Menu Item '" << *cmd_name << "'";
         if (*menu_type == "option") {
        	  menu.insert({*cmd_name, std::make_shared<MenuOption>(*m)});
         } else if (*menu_type == "select") {
@@ -98,14 +98,14 @@ void GameMenu::initialize(toml::table& config) {
         } else if (*menu_type == "menu") {
        	  menu.insert({*cmd_name, std::make_shared<SubMenu>(*m)});
         } else {
-          PLOG_ERROR << "Menu type '" << *menu_type << "' not recognized." << std::endl;
+          PLOG_ERROR << "Menu type '" << *menu_type << "' not recognized.";
         }
       }
       catch (const std::runtime_error& e) {
-        PLOG_ERROR << "In definition for MenuItem '" << *cmd_name << "': " << e.what() << std::endl; 
+        PLOG_ERROR << "In definition for MenuItem '" << *cmd_name << "': " << e.what(); 
       }
     } else {
-      PLOG_ERROR << "Each menu-item definition must be a table.\n";
+      PLOG_ERROR << "Each menu-item definition must be a table.";
     }
   }
 }
@@ -148,8 +148,6 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val) {
 }
 
 void GameMenu::restoreState(std::shared_ptr<MenuItem> item) {
-  PLOG_VERBOSE << "GameMenu::restoreState: ";
-
   Sequence seq;
   seq.disableControls();
   seq.addDelay(disable_delay);
@@ -165,14 +163,14 @@ void GameMenu::correctOffset(std::shared_ptr<MenuItem> changed) {
   // direction of the correction depends on whether the changed item is now hidden or revealed, and
   // on whether the offset is positive or negative
   int adjustment = (changed->isHidden() ? -1 : 1) * (changed->getOffset() < 0 ? -1 : 1);
-  PLOG_VERBOSE << "Adjusting offset " << changed->getOffset() << " by " << adjustment << std::endl;
+  PLOG_VERBOSE << "Adjusting offset " << changed->getOffset() << " by " << adjustment;
   for (auto& [name, entry] : menu) {
     // Process all other items sharing the same parent and tab group
     if (entry->getParent() == changed->getParent() && entry->getptr() != changed->getptr() &&
         entry->getTab() == changed->getTab()) {
       if (abs(entry->getOffset()) > abs(changed->getOffset())) {
         entry->adjustOffset(adjustment);
-        PLOG_VERBOSE << " - adjustOffset: " << adjustment << std::endl;
+        PLOG_VERBOSE << " - adjustOffset: " << adjustment;
       }
     }
   }

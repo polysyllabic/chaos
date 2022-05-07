@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
- * the top-level directory of this distribution for details of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,15 +29,16 @@
 
 using namespace Chaos;
 
-const std::string DisableModifier::name = "disable";
+const std::string DisableModifier::mod_type = "disable";
 
 DisableModifier::DisableModifier(toml::table& config) {
+  PLOG_VERBOSE << "constructing disable modifier";
   assert(config.contains("name"));
   assert(config.contains("type"));
-  
+  PLOG_VERBOSE << "validating table";
   TOMLReader::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence",
-      "filter", "threshold", "condition", "conditionTest", "unless", "unlessTest"});
+      "filter", "threshold", "condition", "conditionTest", "unless", "unlessTest", "unlisted"});
 
   initialize(config);
 
@@ -54,26 +56,24 @@ DisableModifier::DisableModifier(toml::table& config) {
       filter = DisableFilter::BELOW_THRESHOLD;
     } else if (*f != "all") {
       PLOG_WARNING << "Unrecognized filter type: '" << *f << "' in definition for '" << config["name"]
-		   << "' modifier. Using ALL instead.\n";
+		   << "' modifier. Using ALL instead.";
     }
   }
   filterThreshold = config["filterThreshold"].value_or(0);
   
 #ifndef NDEBUG
-  PLOG_DEBUG << " - filter: ";
   switch (filter) {
   case DisableFilter::ALL:
-    PLOG_DEBUG << "ALL\n";
+    PLOG_DEBUG << "Filter: ALL";
     break;
   case DisableFilter::ABOVE_THRESHOLD:
-    PLOG_DEBUG << "ABOVE\n";
+    PLOG_DEBUG << "Filter: ABOVE";
     break;
   case DisableFilter::BELOW_THRESHOLD:
-    PLOG_DEBUG << "BELOW\n";
+    PLOG_DEBUG << "Filter: BELOW";
   }
-  PLOG_DEBUG << " - filterThreshold: " << filterThreshold << std::endl;
+  PLOG_DEBUG << "FilterThreshold: " << filterThreshold;
 #endif
-
 }
 
 void DisableModifier::begin() {
@@ -95,7 +95,7 @@ bool DisableModifier::tweak (DeviceEvent& event) {
   // Traverse the list of affected commands
   for (auto& cmd : commands) {
     if (Controller::instance().matches(event, cmd)) {
-      short min_val = (event.type == TYPE_AXIS && cmd->getInput()->getType() == GPInputType::HYBRID)
+      short min_val = (event.type == TYPE_AXIS && cmd->getInput()->getType() == ControllerSignalType::HYBRID)
         ? JOYSTICK_MIN : 0;
       switch (filter) {
       case DisableFilter::ALL:

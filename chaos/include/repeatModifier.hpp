@@ -88,7 +88,7 @@ namespace Chaos {
     std::vector<std::shared_ptr<GameCommand>> block_while;
     
   public:
-    static const std::string name;
+    static const std::string mod_type;
 
     RepeatModifier(toml::table& config);
     void begin();

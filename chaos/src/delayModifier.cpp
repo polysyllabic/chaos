@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
- * the top-level directory of this distribution for details of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,12 +26,12 @@
 
 using namespace Chaos;
 
-const std::string DelayModifier::name = "delay";
+const std::string DelayModifier::mod_type = "delay";
 
 DelayModifier::DelayModifier(toml::table& config) {
   
   TOMLReader::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
-							  "appliesTo", "delay", "beginSequence", "finishSequence"});
+							  "appliesTo", "delay", "beginSequence", "finishSequence", "unlisted"});
   initialize(config);
 
   if (commands.empty() && ! applies_to_all) {
@@ -52,7 +53,7 @@ void DelayModifier::update() {
   while ( !eventQueue.empty() ) {
     if( (timer.runningTime() - eventQueue.front().time) >= delayTime ) {
       // Reintroduce the event.
-      ChaosEngine::instance().fakePipelinedEvent(eventQueue.front().event, me);
+      ChaosEngine::instance().fakePipelinedEvent(eventQueue.front().event, getptr());
       eventQueue.pop();
     }
     else {

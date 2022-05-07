@@ -33,89 +33,75 @@
 
 using namespace Chaos;
 
-const std::string Modifier::name = "modifier";
-
-//Touchpad* Modifier::touchpad;
+const std::string Modifier::mod_type = "modifier";
 
 std::unordered_map<std::string, std::shared_ptr<Modifier>> Modifier::mod_list;
 
 void Modifier::initialize(toml::table& config) {
-  
   timer.initialize();
-  me = shared_from_this();
+  parent = nullptr;
   pauseTimeAccumulator = 0;
   totalLifespan = -1;    // An erroneous value that if set should be positive
   lock_while_busy = true;
   
   description = config["description"].value_or("Description not available");
-  
-  group = config["group"].value_or("general");
+
+  // The mod always belongs to the group of its type  
+  groups.insert(mod_type);
+  if (config.contains("groups")) {
+    const toml::array* group_list = config.get("groups")->as_array();
+    if (group_list && group_list->is_homogeneous(toml::node_type::string)) {
+      // We insert to an unordered set, so duplicates are automatically filtered
+      for (auto& g : *group_list) {
+        std::optional<std::string> gname = g.value<std::string>();
+        assert(gname);
+        groups.insert(*gname);
+      }
+    } else {
+      PLOG_ERROR << "The group list must be an array of strings";
+    }
+  } 
 
 #ifndef NDEBUG
-  PLOG_DEBUG << "Common initialization for mod " << config["name"].value_or("NAME NOT FOUND") << std::endl;
-  PLOG_DEBUG << " - description: " << description << std::endl;
-  PLOG_DEBUG << " - type: " << config["type"].value_or("TYPE NOT FOUND") << std::endl;
-  PLOG_DEBUG << " - group: " << group << std::endl;
+  PLOG_VERBOSE << "Common initialization for mod " << config["name"].value_or("NAME NOT FOUND");
+  PLOG_VERBOSE << " - description: " << description;
+  PLOG_VERBOSE << " - type: " << config["type"].value_or("TYPE NOT FOUND");
+  PLOG_VERBOSE << " - groups: " << groups;
 #endif
 
   applies_to_all = TOMLReader::addToVectorOrAll<GameCommand>(config, "appliesTo", commands);
 
-#ifndef NDEBUG
-  PLOG_DEBUG << " - appliesTo: ";
-  if (applies_to_all) {
-    PLOG_DEBUG << "ALL" << std::endl;
-  } else {
-    for (auto& cmd : commands) {
-      PLOG_DEBUG << cmd->getName() << " ";
-    }
-    PLOG_DEBUG << std::endl;
-  }  
-#endif
-  
+ 
   TOMLReader::addToVector<GameCondition>(config, "condition", conditions);
   condition_test = TOMLReader::getConditionTest(config, "conditionTest");
 
 #ifndef NDEBUG
-  PLOG_DEBUG << " - condition: ";
-  for (auto& cmd : commands) {
-    PLOG_DEBUG << cmd->getName() << " ";
-  }
-  // TODO: implement automatic name reflection
-  PLOG_DEBUG << " [condition test = ";
   switch (condition_test) {
     case ConditionCheck::ALL:
-      PLOG_DEBUG << "ALL";
+      PLOG_VERBOSE << "Condition test = ALL";
       break;
     case ConditionCheck::ANY:
-      PLOG_DEBUG << "ANY";
+      PLOG_VERBOSE << "Condition test = ANY";
       break;
     case ConditionCheck::NONE:
-      PLOG_DEBUG << "NONE";
+      PLOG_VERBOSE << "Condition test = NONE";
   }
-  PLOG_DEBUG << "] " << std::endl;
 #endif
 
   TOMLReader::addToVector<GameCondition>(config, "unless", unless_conditions);
   unless_test = TOMLReader::getConditionTest(config, "unlessTest");
 
 #ifndef NDEBUG
-  PLOG_DEBUG << " - unless condition: ";
-  for (auto& cmd : commands) {
-    PLOG_DEBUG << cmd->getName() << " ";
-  }
-  // TODO: implement automatic name reflection
-  PLOG_DEBUG << " [Condition test = ";
   switch (unless_test) {
     case ConditionCheck::ALL:
-      PLOG_DEBUG << "ALL";
+      PLOG_VERBOSE << "Condition test = ALL";
       break;
     case ConditionCheck::ANY:
-      PLOG_DEBUG << "ANY";
+      PLOG_VERBOSE << "Condition test = ANY";
       break;
     case ConditionCheck::NONE:
-      PLOG_DEBUG << "NONE";
+      PLOG_VERBOSE << "Condition test = NONE";
   }
-  PLOG_DEBUG << "] " << std::endl;
 #endif
 
   // need a debug trace for these
@@ -138,39 +124,40 @@ void Modifier::buildModList(toml::table& config) {
     for (toml::node& elem : *arr) {
       toml::table* modifier = elem.as_table();
       if (! modifier) {
-	      PLOG_ERROR << "Modifier definition must be a table\n";
+	      PLOG_ERROR << "Modifier definition must be a table";
       	continue;
       }
       if (! modifier->contains("name")) {
-	      PLOG_ERROR << "Modifier missing required 'name' field: " << *modifier << std::endl;
+	      PLOG_ERROR << "Modifier missing required 'name' field: " << modifier;
 	      continue;
       }
       std::optional<std::string> mod_name = modifier->get("name")->value<std::string>();
       if (mod_list.count(*mod_name) == 1) {
-	      PLOG_ERROR << "The modifier '" << *mod_name << " has already been defined\n";
+	      PLOG_ERROR << "The modifier '" << *mod_name << " has already been defined";
 	      continue;
       } 
       if (! modifier->contains("type")) {
-	      PLOG_ERROR << "Modifier '" << *mod_name << " does not specify a type\n";
+	      PLOG_ERROR << "Modifier '" << *mod_name << " does not specify a type";
 	      continue;
       }
       std::optional<std::string> mod_type = modifier->get("type")->value<std::string>();
       if (! hasType(*mod_type)) {
-	      PLOG_ERROR << "Modifier '" << *mod_name << "' has unknown type '" << *mod_type << "'\n";
+	      PLOG_ERROR << "Modifier '" << *mod_name << "' has unknown type '" << *mod_type << "'";
 	      continue;
       }
       // Now we can finally create the mod. The constructors handle the rest of the configuration.
       try {
-	      PLOG_VERBOSE << "Adding modifier '" << *mod_name << "' of type " << *mod_type << std::endl;
-	      mod_list[*mod_name] = Modifier::create(*mod_type, *modifier);
-      }
+	      PLOG_VERBOSE << "Adding modifier '" << *mod_name << "' of type " << *mod_type;
+	      std::shared_ptr<Modifier> m = Modifier::create(*mod_type, *modifier);
+        mod_list.insert({*mod_name, m});
+}
       catch (std::runtime_error e) {
-	      PLOG_ERROR << "Modifier '" << *mod_name << "' not created: " << e.what() << std::endl;
+	      PLOG_ERROR << "Modifier '" << *mod_name << "' not created: " << e.what();
       }
     }
   }
   if (mod_list.size() == 0) {
-    PLOG_FATAL << "No modifiers were defined.\n";
+    PLOG_FATAL << "No modifiers were defined.";
     throw std::runtime_error("No modifiers defined");
   }
 }
@@ -179,187 +166,85 @@ bool Modifier::remapEvent(DeviceEvent& event) {
   DeviceEvent new_event;
 
   // Get the object with information about the incomming signal
-  std::shared_ptr<GamepadInput> from_controller = GamepadInput::get(event);  
+  std::shared_ptr<ControllerInput> from_controller = ControllerInput::get(event);  
   assert (from_controller);
+  ControllerSignal destination = from_controller->getRemap();
 
   // If this signal isn't remapped, we're done
-  if (from_controller->getRemap() == GPInput::NONE) {
+  if (destination == ControllerSignal::NONE) {
     return true;
   }
 
   // Special handling of signals goes here
-  // touchpad active requires special setup and tear-down
-  if (from_controller->getSignal() == GPInput::TOUCHPAD_ACTIVE) {
+  // Touchpad active requires special setup and tear-down
+  if (from_controller->getSignal() == ControllerSignal::TOUCHPAD_ACTIVE) {
     PrepTouchpad(event);
   }
   
-  // After special signals are processed, any remaining remap value of NOTHING mean we should drop
-  // this signal.
-  if (from_controller->getRemap() == GPInput::NOTHING) {
+  // Get the object for the signal we're sending to the console.
+  std::shared_ptr<ControllerInput> to_console = ControllerInput::get(destination);
+  assert (to_console);
+
+  // When mapping from any type of axis to buttons/hybrids and the choice of button is determined
+  // by the sign of the value. If the negative remap is a button, the positive will be a button also,
+  // so it's safe to check that.
+  if (event.value < 0 && event.id == TYPE_AXIS && to_console->getButtonType() == TYPE_BUTTON) {
+    destination = from_controller->getNegRemap();
+    to_console = ControllerInput::get(destination);
+    assert (to_console);
+  }
+
+  // If we are remapping to NOTHING, we drop this signal.
+  if (destination == ControllerSignal::NOTHING) {
+    PLOG_VERBOSE << "dropping remapped event";
     return false;
   }
 
-  // Get the object for the signal we're sending to the console.
-  std::shared_ptr<GamepadInput> to_console = GamepadInput::get(from_controller->getRemap());
-  assert (to_console);
-  
-  if (from_controller->getType() == to_console->getType()) {
-    // If remapping occurs within the same input type, we can change the id without worrying
-    // about the value. If it's inverted, that will be done at the end of the routine.
-    event.id = to_console->getID(event.type);
-  } else {
-    // remapping between input classes
-    switch (from_controller->getType()) {
-      
-    case GPInputType::BUTTON:
-      switch (to_console->getType()) {
-      case GPInputType::AXIS:
-	      ButtonToAxis(event, to_console->getID(), to_console->toMin(), JOYSTICK_MIN, JOYSTICK_MAX);
-        	break;
-      case GPInputType::THREE_STATE:
-      	ButtonToAxis(event, to_console->getID(), to_console->toMin(), -1, 1);
-	        break;
-      case GPInputType::HYBRID:
-      	event.id = to_console->getID(event.type);
-	      // we need to insert a new event for the axis
-      	new_event.id = to_console->getHybridAxis();
-	      new_event.type = TYPE_AXIS;
-      	new_event.value = event.value ? JOYSTICK_MAX : JOYSTICK_MIN;
-	      Controller::instance().applyEvent(new_event);
-	      break;
-      default:
-      	PLOG_WARNING << "Unhandled remap type from BUTTON: index = " << to_console->getIndex() << std::endl;
-      }
-      break;
-    case GPInputType::HYBRID:
-      // going from hybrid to button, we drop the axis component and simply change the button id
-      if (to_console->getType() == GPInputType::BUTTON) {
-	      if (event.type == TYPE_AXIS) {
-      	  return false;
-	      }
-      	event.id = to_console->getID();
-      }
-      break;
-    case GPInputType::THREE_STATE:
-
-      switch (to_console->getType()) {
-	
-      case GPInputType::AXIS:
-	      // Scale the axis value to min/max and change to the real ID
-      	event.value = Controller::instance().joystickLimit(JOYSTICK_MAX*event.value);
-	      event.id = to_console->getID();
-      	break;
-	
-        case GPInputType::BUTTON:
-      	{
-	        event.type = TYPE_BUTTON;
-      	  std::shared_ptr<GamepadInput> negremap = GamepadInput::get(from_controller->getNegRemap());
-	        assert(negremap);
-
-      	  AxisToButtons(event, to_console->getID(), negremap->getID(), 0);	
-	        break;
-      	}
-      default:
-	      PLOG_WARNING << "Unhandled remap type from THREE_STATE: index = " << to_console->getIndex() << std::endl;
-      }
-      break;
-
-    case GPInputType::AXIS:
-      switch (to_console->getType()) {
-	
-      case GPInputType::THREE_STATE:
-      	// Scale the axis value to min/max and change to the real ID
-	      event.id = to_console->getID();
-      	event.value = Controller::instance().joystickLimit(JOYSTICK_MAX*event.value);
-	      break;
-
-      case GPInputType::BUTTON:
-	    {
-    	  std::shared_ptr<GamepadInput> negremap = GamepadInput::get(from_controller->getNegRemap());
-	      assert(negremap);
-    	  AxisToButtons(event, to_console->getID(), negremap->getID(), from_controller->getRemapThreshold());
-	      break;
-    	}
-      default:
-	      PLOG_WARNING << "Unhandled remap type from AXIS: " << to_console->getIndex() << std::endl;
-      }
-      break;
-	
-    case GPInputType::ACCELEROMETER:
-      // In the original version, we injected a fake pipeline event with the axis and left the
-      // accelerometer event unchanged. The means that a later mod that uses motion control will
-      // receive the accelerometer and drop the injected event. Since we're altering the signal
-      // before the mods touch it, that's not necessary. If both mods are active, the one applied
-      // later will overwrite the remap table anyway.
-      if (to_console->getType() == GPInputType::AXIS) {
-	      assert(to_console->getRemapSensitivity());
-      	event.id = to_console->getID();
-	      event.value = Controller::instance().joystickLimit(-event.value/to_console->getRemapSensitivity());
-      } else {
-      	PLOG_WARNING << "Unhandled remap type from ACCELEROMETER: index = " << to_console->getIndex() << std::endl;
-      }
-      break;
-    case GPInputType::GYROSCOPE:
-      PLOG_WARNING << "Remapping the gyroscope is not currently supported\n";
-      break;
-    case GPInputType::TOUCHPAD:
-      if (to_console->getType() == GPInputType::AXIS) {
-	      TouchpadToAxis(event, to_console->getID());
-      } else {
-      	PLOG_WARNING << "Unhandled remap type from TOUCHPAD: index = " << to_console->getIndex() << std::endl;
-      }
-      break;
+  // Now handle cases that require additional actions
+  switch (from_controller->getType()) {
+  case ControllerSignalType::HYBRID:
+    // Going from hybrid to button, we drop the axis component
+    if (to_console->getType() == ControllerSignalType::BUTTON && event.type == TYPE_AXIS) {
+ 	    return false;
+    }
+  case ControllerSignalType::BUTTON:
+    // From button to hybrid, we need to insert a new event for the axis
+    if (to_console->getType() == ControllerSignalType::HYBRID) {
+   	  new_event.id = to_console->getHybridAxis();
+      new_event.type = TYPE_AXIS;
+   	  new_event.value = event.value ? JOYSTICK_MAX : JOYSTICK_MIN;
+      Controller::instance().applyEvent(new_event);
+    }
+    break;
+  case ControllerSignalType::AXIS:
+    // From axis to button, we need a new event to zero out the second button when the value is
+    // below the threshold. The first button will get a 0 value from the changed regular value
+    // At this point, to_console has been set with the negative remap value.
+    if (to_console->getButtonType() == TYPE_BUTTON && abs(event.value) < from_controller->getThreshold()) {
+      new_event.id = to_console->getID();
+      new_event.value = 0;
+      new_event.type = TYPE_BUTTON;
+      Controller::instance().applyEvent(new_event);
     }
   }
-  // Apply any inversion. This step only makes sense for axes.
-  if (event.type == TYPE_AXIS && from_controller->remapInverted()) {
-    event.value = Controller::instance().joystickLimit(-event.value);
-  }
+
+  // Update the event
+  event.type = to_console->getButtonType();
+  event.id = to_console->getID(event.type);
+  event.value = from_controller->remapValue(event.value);
   return true;
 }
 
-void Modifier::AxisToButtons(DeviceEvent& event, uint8_t positive, uint8_t negative, int threshold) {
-  assert(event.type == TYPE_AXIS);
-  DeviceEvent new_event;
-
-  event.type = TYPE_BUTTON;	
-  // Different buttons selected depending on the sign of the value
-  if (event.value > threshold) {
-    event.id = positive;
-    event.value = 1;
-  } else if (event.value < -threshold) {
-    event.id = negative;
-    event.value = 1;
-  } else {
-    // use this event to zero the positive button
-    event.id = positive;
-    event.value = 0;
-    // insert another event to zero the negative button
-    new_event.id = negative;
-    new_event.value = 0;
-    new_event.type = TYPE_BUTTON;
-    Controller::instance().applyEvent(new_event);
-  }
-}
-
-void Modifier::ButtonToAxis(DeviceEvent& event, uint8_t axis, bool to_min, int min_val, int max_val) {
-  assert(event.type == TYPE_BUTTON);
-  
-  event.type = TYPE_AXIS;
-  event.id = axis;
-  if (event.value) {
-    event.value = to_min ? min_val : max_val;
-  }
-}
-
-// If the touchpad axis is currently being remapped, send a 0 signal to the remapped
-// axis
-void Modifier::disableTPAxis(GPInput tp_axis) {
+// If the touchpad axis is currently being remapped, send a 0 signal to the remapped axis
+void Modifier::disableTPAxis(ControllerSignal tp_axis) {
   DeviceEvent new_event{0, 0, TYPE_AXIS, AXIS_RX};
-  std::shared_ptr<GamepadInput> tp = GamepadInput::get(tp_axis);
-  assert (tp && tp->getType() == GPInputType::TOUCHPAD);
-  if (tp->getRemap() != GPInput::NONE) {
-    new_event.id = tp->getRemap();
+  std::shared_ptr<ControllerInput> tp = ControllerInput::get(tp_axis);
+  assert (tp && tp->getType() == ControllerSignalType::TOUCHPAD);
+
+  if (tp->getRemap() != ControllerSignal::NONE) {
+    std::shared_ptr<ControllerInput> r = ControllerInput::get(tp->getRemap());
+    assert(r);
+    new_event.id = r->getID();
     Controller::instance().applyEvent(new_event);
   }
 }
@@ -367,32 +252,23 @@ void Modifier::disableTPAxis(GPInput tp_axis) {
 void Modifier::PrepTouchpad(const DeviceEvent& event) {
   if (! Touchpad::instance().isActive() && event.value == 0) {
     Touchpad::instance().clearActive();
-    PLOG_VERBOSE << "Begin touchpad use\n";
+    PLOG_DEBUG << "Begin touchpad use";
   } else if (Touchpad::instance().isActive() && event.value) {
+    PLOG_DEBUG << "End touchpad use";
     // We're stopping touchpad use. Zero out all remapped axes in use.
-    disableTPAxis(GPInput::TOUCHPAD_X);
-    disableTPAxis(GPInput::TOUCHPAD_Y);
-    disableTPAxis(GPInput::TOUCHPAD_X_2);
-    disableTPAxis(GPInput::TOUCHPAD_Y_2);
+    disableTPAxis(ControllerSignal::TOUCHPAD_X);
+    disableTPAxis(ControllerSignal::TOUCHPAD_Y);
+    disableTPAxis(ControllerSignal::TOUCHPAD_X_2);
+    disableTPAxis(ControllerSignal::TOUCHPAD_Y_2);
   }
   Touchpad::instance().setActive(!event.value);
 }
 
-void Modifier::TouchpadToAxis(DeviceEvent& event, uint8_t axis) {
-  if (Touchpad::instance().isActive()) {
-    event.type = TYPE_AXIS; // likely unnecessary
-    event.id = axis;
-    
-    bool in_condition = Touchpad::instance().inCondition();
-    event.value = Controller::instance().joystickLimit(Touchpad::instance().toAxis(event, in_condition));
-  }
-}
-
 // The chaos engine calls this routine directly, and we dispatch to the appropriate
-// update routine here. update() is virtual.
-void Modifier::_update(bool isPaused) {
+// update routine here.
+void Modifier::_update(bool wasPaused) {
   timer.update();
-  if (isPaused) {
+  if (wasPaused) {
     pauseTimeAccumulator += timer.dTime();
   }
   update();
@@ -473,24 +349,34 @@ bool Modifier::inUnless() {
   return testConditions(unless_conditions, unless_test);
 }
 
-Json::Value Modifier::toJsonObject(const std::string& name) {
+Json::Value Modifier::toJsonObject() {
   Json::Value result;
-  result["name"] = name;
+  result["name"] = getName();
   result["desc"] = getDescription();
+  result["groups"] = getGroups();
   result["lifespan"] = lifespan();
   return result;
+}
+
+Json::Value Modifier::getGroups() {
+  Json::Value group_array;
+  for (auto const& g : groups) {
+    group_array.append(g);
+  }
+  return group_array;
 }
 
 std::string Modifier::getModList() {
   Json::Value root;
   Json::Value& data = root["mods"];
-  int i = 0;
+//  int i = 0;
   for (auto const& [key, val] : mod_list) {
-    data[i++] = val->toJsonObject(key);
+    //data[i++] = val->toJsonObject();
+
+    data.append(val->toJsonObject());
   }
 	
-  Json::StreamWriterBuilder builder;
-	
+  Json::StreamWriterBuilder builder;	
   return Json::writeString(builder, root);
 }
 

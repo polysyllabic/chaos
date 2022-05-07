@@ -44,7 +44,7 @@ ControllerState* ControllerState::factory(int vendor, int product) {
 #ifdef USE_DUALSENSE
     return new Dualsense;
 #else
-    PLOG_ERROR << "The DualSense controller is not currently supported.\n";
+    PLOG_ERROR << "The DualSense controller is not currently supported.";
 #endif    
   } else if (vendor==0x2f24  && product==0x00f8) {	// Magic-S Pro
     return new Dualshock;

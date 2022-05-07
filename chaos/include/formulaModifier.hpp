@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,24 +18,29 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <queue>
+#include <string>
 #include <toml++/toml.h>
 
 #include "modifier.hpp"
 
 namespace Chaos {
 
-  /** Subclass of modifiers that alters the signal by changing it through a
-   * configurable formula.
+  /**
+   * \brief Modifier that alters the signal through a formula.
+   *
+   * Currently, I have not implemented a general-purpose formula parser, so the
+   * available formula types are fixed, with their parameters being set from the
+   * config file.
    */
   class FormulaModifier : public Modifier::Registrar<FormulaModifier> {
 
   protected:
+    std::string type;
     double magnitude;
     double period;
 
   public:
-    static const std::string name;
+    static const std::string mod_type;
 
     FormulaModifier(toml::table& config);
     void begin();

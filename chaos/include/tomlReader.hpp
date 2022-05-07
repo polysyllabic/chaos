@@ -27,7 +27,7 @@
 #include <plog/Log.h>
 #include <toml++/toml.h>
 
-#include "gamepadInput.hpp"
+#include "controllerInput.hpp"
 #include "sequence.hpp"
 #include "enumerations.hpp"
 
@@ -43,23 +43,14 @@ namespace Chaos {
   class TOMLReader {
 
   private:
-    /**
-     * The base table containing the complete, parsed configuration file.
-     */
-    toml::table configuration;
-
-    /**
-     * \brief Version of this TOML file format.
-     *
-     * Currently there is only the basic 1.0 format. This variable is provided for future upward
-     * compatibility.
-     */
-    std::optional<std::string_view> version;
 
     /**
      * \brief The name of the game this TOML file supports.
      */
-    std::optional<std::string_view> game;
+    std::string game;
+
+    int active_modifiers;
+    double time_per_modifier;
 
   public:
     /**
@@ -73,36 +64,26 @@ namespace Chaos {
     TOMLReader(const std::string& fname);
 
     /**
-     * \brief Get the object containing the parsed TOML information.
-     *
-     * \return A reference to the root TOML table.
-     */
-    inline const toml::table& getConfig() { return configuration; }
-
-    /**
      * \brief Get the name of the game defined in the TOML file
      * 
      * \return std::string_view
      *
      * The game name is defined with the "game" key in the TOML configuration file.
      */
-    std::string_view getGameName();
+    const std::string& getGameName() { return game; }
 
-    /**
-     * \brief Get the version of the TOML format used in the configuration file.
-     *
-     * \return std::string_view
-     */
-    std::string_view getVersion();
+    int getNumActiveMods() { return active_modifiers; }
 
+    double getTimePerModifier() { return time_per_modifier; }
+    
     /**
-     * \brief Translate from the name of a controller input (RX, etc) to the GPInput equivalent.
+     * \brief Translate from the name of a controller input (RX, etc) to the ControllerSignal equivalent.
      *
-     * \return GPInput 
+     * \return ControllerSignal 
      *
      * Provides error checking for unknown names
      */
-    static GPInput getSignal(const toml::table& config, const std::string& key, bool required);
+    static ControllerSignal getSignal(const toml::table& config, const std::string& key, bool required);
 
     /**
      * \brief Test if the table contains any keys other than those listed in the vector.
@@ -241,6 +222,7 @@ namespace Chaos {
       std::optional<std::string_view> for_all = config[key].value<std::string_view>();
       if (for_all && *for_all == "ALL") {
         vec.clear();
+        PLOG_VERBOSE << key << ": ALL";
         return true;
       } else {
         addToVector(config, key, vec);
@@ -280,7 +262,7 @@ namespace Chaos {
       	  std::shared_ptr<T> defs = T::get(*cmd);
 	        if (defs) {
 	          vec.push_back(defs);
-	          PLOG_VERBOSE << "Added '" + *cmd + "' to the " + key + " vector." << std::endl;
+	          PLOG_VERBOSE << "Added '" + *cmd + "' to the " + key + " vector.";
 	        } else {
 	          throw std::runtime_error("Unrecognized object '" + *cmd + "' in " + key);
       	  }
@@ -290,7 +272,7 @@ namespace Chaos {
   
     template<typename T>
     static std::shared_ptr<T> getObject(const toml::table& config, const std::string& key, bool required) {
-      std::optional<std::string> obj = config["key"].value<std::string>();
+      std::optional<std::string> obj = config[key].value<std::string>();
       if (obj) {
         return T::get(*obj);
       } else {

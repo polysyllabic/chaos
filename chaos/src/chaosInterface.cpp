@@ -21,7 +21,6 @@
 #include <iostream>
 #include <unistd.h>
 #include <string>
-#include <json/json.h>
 
 using namespace Chaos;
 
@@ -43,7 +42,7 @@ void ChaosInterface::doAction() {
   pause();
 }
 	
-bool ChaosInterface::sendMessage(std::string message) {
+bool ChaosInterface::sendMessage(const std::string& message) {
   lock();
   outgoingQueue.push(message);
   unlock();
@@ -52,6 +51,6 @@ bool ChaosInterface::sendMessage(std::string message) {
   return true;
 }
 
-void ChaosInterface::addObserver( CommandListenerObserver* observer ) {
+void ChaosInterface::addObserver(CommandObserver* observer ) {
   listener.addObserver(observer);
 }

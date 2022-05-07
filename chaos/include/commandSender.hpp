@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,41 +18,23 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <errno.h>
-#include <fcntl.h>
-#include <poll.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <termios.h>
-#include <unistd.h>
-#include <linux/uhid.h>
-
-#include <mogi/thread.h>
-
-#include "controllerState.hpp"
+#include <queue>
+#include <string>
+#include <zmqpp/zmqpp.hpp>
 
 namespace Chaos {
 
-  class ChaosUhid : public Mogi::Thread {
+  class CommandSender {
   private:
-    int fd;
-    const char *path;
-    struct pollfd pfds[2];
-    int ret;
-    struct termios state;
+    zmqpp::socket *socket;
+    zmqpp::context context;	
+    std::string reply;
 	
-    ControllerState* stateToPoll;
+  public:
+    CommandSender();
+    ~CommandSender();
 	
-    void doAction();
-	
-public:
-    ChaosUhid(ControllerState* state);
-    ~ChaosUhid();
-	
-    void sendUpdate(void* data);
+    bool sendMessage(std::string message);
   };
 
 };
-

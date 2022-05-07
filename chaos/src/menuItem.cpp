@@ -32,7 +32,7 @@ MenuItem::MenuItem(const toml::table& config) {
   assert(config.contains("name"));
   assert(config.contains("type"));
 
-  PLOG_VERBOSE << "Constructing '" << config["name"] << "' menu item\n";
+  PLOG_VERBOSE << "Constructing " << config["name"];
 
   std::optional<std::string> item_name = config["parent"].value<std::string>();
   if (item_name) {
@@ -41,41 +41,39 @@ MenuItem::MenuItem(const toml::table& config) {
       throw std::runtime_error("Unknown parent menu. Parents must be declared before children.");
     }
   }
-  PLOG_DEBUG << "    parent = " << ((item_name) ? *item_name : "[ROOT]") << std::endl;
+  PLOG_DEBUG << "- parent = " << ((item_name) ? *item_name : "[ROOT]");
   if (! config.contains("offset")) {
-    PLOG_WARNING << "Menu item '" << *config["name"].value<std::string_view>() << "' missing offset. Set to 0.\n";
+    PLOG_WARNING << "Menu item '" << *config["name"].value<std::string_view>() << "' missing offset. Set to 0.";
   }
   offset = config["offset"].value_or(0);
   tab_group = config["tab"].value_or(0);
-  PLOG_DEBUG << "    offset = " << offset << "; tab_group = " << tab_group << std::endl;
-
   default_state = config["initialState"].value_or(0);
   current_state = default_state;
-  PLOG_DEBUG << "    initial_state = " << default_state << std::endl;
-
   hidden = config["hidden"].value_or(false);
-  PLOG_DEBUG << "    hidden = " << hidden << std::endl;
+  PLOG_DEBUG << "- offset = " << offset << "; tab_group = " << tab_group;
+  PLOG_DEBUG << "- initial_state = " << default_state;
+  PLOG_DEBUG << "- hidden = " << hidden;
 
   item_name = config["guard"].value<std::string_view>();
   if (item_name) {
     guard = GameMenu::instance().getMenuItem(*item_name);
     if (! guard) {
-      PLOG_ERROR << "Unknown guard '" << *item_name << "' for menu item " << config["name"] << std::endl;
+      PLOG_ERROR << "Unknown guard '" << *item_name << "' for menu item " << config["name"];
     } else {
-      PLOG_DEBUG << "    guard = " << *item_name << std::endl;
+      PLOG_DEBUG << "- guard = " << *item_name;
     }
   }
 
   counter_action = CounterAction::NONE;
   item_name = config["counterAction"].value<std::string_view>();
   if (item_name) {
-    PLOG_DEBUG << "    counterAction: " << *item_name << std::endl;
+    PLOG_DEBUG << "- counterAction: " << *item_name;
     if (*item_name == "reveal") {
       counter_action = CounterAction::REVEAL;
     } else if (*item_name == "zeroReset") {
       counter_action = CounterAction::ZERO_RESET;
     } else if (*item_name != "none") {
-      PLOG_ERROR << "Unknown counterAction type: " << *item_name << " for menu item " << config["name"] << std::endl;
+      PLOG_ERROR << "Unknown counterAction type: " << *item_name << " for menu item " << config["name"];
     }
   }
 }
@@ -122,38 +120,38 @@ void MenuItem::moveTo(Sequence& seq) {
 void MenuItem::selectItem(Sequence& seq, int delta) {
     // navigate left or right through tab groups
     for (int i = 0; i < tab_group; i++) {
-      PLOG_VERBOSE << " tab right,";
+      PLOG_VERBOSE << "tab right";
       seq.addSequence(GameMenu::instance().getTabRight());
     }
     for (int i = 0; i > tab_group; i++) {
-      PLOG_VERBOSE << " tab left,";
+      PLOG_VERBOSE << "tab left";
       seq.addSequence(GameMenu::instance().getTabLeft());
     }
 
     // If this item is guarded, make sure the guard is enabled
-    PLOG_VERBOSE << " scroll " << delta << std::endl;
+    PLOG_VERBOSE << "- scroll " << delta;
     if (guard && guard->getState() == 0) {
       guard->setState(seq, 1);
       // adjust delta for the steps we've already made to get to the guard
       delta -= guard->getOffset();
-      PLOG_VERBOSE << " - delta to guard: " << guard->getOffset() << " new delta:: " << delta << std::endl;
+      PLOG_VERBOSE << " - delta to guard: " << guard->getOffset() << " new delta:: " << delta;
     }
 
     // navigate down for positive offsets
     for (int i = 0; i < delta; i++) {
-      PLOG_VERBOSE << " down ";
+      PLOG_VERBOSE << "down";
       seq.addSequence(GameMenu::instance().getNavDown());
     }
 
     // navigate up for negative offsets
     for (int i = 0; i > delta; i--) {
-      PLOG_VERBOSE << " up ";
+      PLOG_VERBOSE << "up ";
       seq.addSequence(GameMenu::instance().getNavUp());
     }
 
     // Submenus and select option items items require a button press
     if (isSelectable()) {
-      PLOG_VERBOSE << " select ";
+      PLOG_VERBOSE << "select";
       seq.addSequence(GameMenu::instance().getSelect());
       seq.addDelay(GameMenu::instance().getSelectDelay());
     }

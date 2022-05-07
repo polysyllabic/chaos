@@ -7,3 +7,6 @@ The following people have contributed code to TCC:
   polysyl
   justsaft
 
+The "unbound" fork of TCC is a complete rewrite of the original code by polysyl
+intended to make the engine more universal and easily adapted to other PS games
+by means of a configuration file.

@@ -21,7 +21,7 @@
 
 using namespace Chaos;
 
-const std::string FormulaModifier::name = "formula";
+const std::string FormulaModifier::mod_type = "formula";
 
 FormulaModifier::FormulaModifier(toml::table& config) {
   initialize(config);

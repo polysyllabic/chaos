@@ -1,4 +1,4 @@
-# Main CMakeLists for chaos project.
+# Main CMakeList for chaos project.
 cmake_minimum_required(VERSION 3.15)
 
 project(chaos VERSION 2.0
@@ -50,7 +50,7 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/include/config.hpp.in ${CMAKE_CURRENT_L
 
 # Standard CMake modules
 #include(CTest)
-include(GNUInstallDirs)
+#include(GNUInstallDirs)
 include(FetchContent)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/")
@@ -78,10 +78,10 @@ FetchContent_Declare(
 )
 FetchContent_Declare(
 	sniffify
-	GIT_REPOSITORY https://github.com/blegas78/usb-sniffify.git
+	GIT_REPOSITORY https://github.com/polysyllabic/usb-sniffify.git
 	GIT_TAG	       origin/main
 )
-# Creating a patched fork is easier than re-applying the patch every time
+# We use a patched fork insttead of re-applying the patch every time
 FetchContent_Declare(
 	raw-gadget
 	GIT_REPOSITORY https://github.com/polysyllabic/raw-gadget.git
@@ -101,67 +101,72 @@ find_package (LibJsoncpp REQUIRED)
 find_package (Libusb1 REQUIRED)
 
 add_executable(chaos include/config.hpp
-  include/enumerations.hpp
-  include/deviceEvent.hpp
-	src/chaosEngine.cpp
 	include/chaosEngine.hpp
-	src/chaosInterface.cpp
 	include/chaosInterface.hpp
+	#include/chaosUhid.hpp
+  include/commandListener.hpp
+  include/commandObserver.hpp
+  include/commandSender.hpp
+	include/controller.hpp
+  include/controllerInput.hpp
+	include/controllerState.hpp
+  include/cooldownModifier.hpp
+  include/delayModifier.hpp
+  include/deviceEvent.hpp
+  include/disableModifier.hpp
+	include/dualshock.hpp
+  include/enumerations.hpp
+	include/factory.hpp
+  include/formulaModifier.hpp
+  include/gameCommand.hpp
+  include/gameCondition.hpp
+  include/gameMenu.hpp
+  include/invertModifier.hpp
+  include/menuItem.hpp
+  include/menuModifier.hpp
+  include/menuOption.hpp
+  include/menuSelect.hpp
+	include/modifier.hpp
+  include/parentModifier.hpp
+  include/remapModifier.hpp
+  include/repeatModifier.hpp
+  include/sequence.hpp
+  include/sequenceModifier.hpp
+  include/signalRemap.hpp
+  include/signals.hpp
+  include/subMenu.hpp
+	include/tomlReader.hpp
+  include/touchpad.hpp
+	src/chaosEngine.cpp
+	src/chaosInterface.cpp
+	#src/chaosUhid.cpp
 	src/commandListener.cpp
 	src/commandSender.cpp
-	src/chaosUhid.cpp
-	include/chaosUhid.hpp
 	src/controller.cpp
-	include/controller.hpp
+  src/controllerInput.cpp
 	src/controllerState.cpp
-	include/controllerState.hpp
-	src/dualshock.cpp
-	include/dualshock.hpp
-	include/factory.hpp
-  src/modifier.cpp
-	include/modifier.hpp
   src/cooldownModifier.cpp
-  include/cooldownModifier.hpp
   src/delayModifier.cpp
-  include/delayModifier.hpp
   src/disableModifier.cpp
-  include/disableModifier.hpp
+	src/dualshock.cpp
   src/formulaModifier.cpp
-  include/formulaModifier.hpp
-  src/invertModifier.cpp
-  include/invertModifier.hpp
-  src/menuModifier.cpp
-  include/menuModifier.hpp
-  src/parentModifier.cpp
-  include/parentModifier.hpp
-  src/remapModifier.cpp
-  include/remapModifier.hpp
-  src/repeatModifier.cpp
-  include/repeatModifier.hpp
-  src/sequenceModifier.cpp
-  include/sequenceModifier.hpp
 	src/gameCommand.cpp
-  include/gameCommand.hpp
   src/gameCondition.cpp
-  include/gameCondition.hpp
-  src/gamepadInput.cpp
-  include/gamepadInput.hpp
-  src/sequence.cpp
-  include/sequence.hpp
-	src/touchpad.cpp
-  include/touchpad.hpp
-	src/tomlReader.cpp
-	include/tomlReader.hpp
   src/gameMenu.cpp
-  include/gameMenu.hpp
+  src/invertModifier.cpp
   src/menuItem.cpp
-  include/menuItem.hpp
+  src/menuModifier.cpp
   src/menuOption.cpp
-  include/menuOption.hpp
   src/menuSelect.cpp
-  include/menuSelect.hpp
+  src/modifier.cpp
+  src/parentModifier.cpp
+  src/remapModifier.cpp
+  src/repeatModifier.cpp
+  src/sequence.cpp
+  src/sequenceModifier.cpp
   src/subMenu.cpp
-  include/subMenu.hpp
+	src/tomlReader.cpp
+	src/touchpad.cpp
 	src/main.cpp)
 
 target_compile_features(chaos PRIVATE cxx_std_17)

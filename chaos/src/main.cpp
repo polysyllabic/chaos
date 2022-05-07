@@ -36,26 +36,29 @@ using namespace Chaos;
 int main(int argc, char** argv) {
   // the name of the configuration file should be the only argument on the command line.
   if (argc == 1) {
-    std::cerr << "usage: chaos input_file\n  input_file: The TOML file for the game you want to make chaotic.\n";
+    std::cerr << "Usage: chaos input_file\n  input_file: The TOML file for the game you want to make chaotic.\n";
     exit (EXIT_FAILURE);
   }
   std::string configfile(argv[1]);
-  
-  // Configure the controller
-  Controller::instance().initialize();
-  Controller::instance().start();
 
   // Process the TOML file. This will initialize all the mods and associated data.
   TOMLReader config(configfile);
 
+  // Configure the controller
+  Controller::instance().initialize();
+  Controller::instance().start();
+
   // Start the engine
   ChaosEngine::instance().start();
 
-  // Announce the mods to the chaos interface
-  std::string reply = Modifier::getModList();
-  while(1) {
-    ChaosEngine::instance().setInterfaceReply( reply );
-    usleep(10000000);
+  // Set the data that the interface will want to query
+  ChaosEngine::instance().setGame(config.getGameName());
+  ChaosEngine::instance().setActiveMods(config.getNumActiveMods());
+  ChaosEngine::instance().setTimePerModifier(config.getTimePerModifier());
+
+  while(ChaosEngine::instance().keepGoing()) {
+    // loop until we get an exit signal
+    usleep(1000000);
   }
   
   return 0;

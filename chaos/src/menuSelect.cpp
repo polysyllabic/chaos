@@ -36,9 +36,9 @@ MenuSelect::MenuSelect(const toml::table& config) : MenuItem(config) {
     sibling_counter = GameMenu::instance().getMenuItem(*item_name);
     if (! sibling_counter) {
       // an error, but not a fatal one, so don't throw
-      PLOG_ERROR << "Unknown counter '" << *item_name << "' for menu item " << config["name"] << std::endl;
+      PLOG_ERROR << "Unknown counter '" << *item_name << "' for menu item " << config["name"];
     } else {
-      PLOG_DEBUG << "    counter = " << *item_name << std::endl;
+      PLOG_DEBUG << "Counter = " << *item_name;
     }
   }
   confirm = config["confirm"].value_or(false);
@@ -54,7 +54,7 @@ void MenuSelect::setState(Sequence& seq, unsigned int new_val) {
   // Increment the counter, if set
   if (sibling_counter) {
     sibling_counter->incrementCounter();
-    PLOG_VERBOSE << "Incrementing group counter\n";
+    PLOG_VERBOSE << "Incrementing group counter";
   }
   navigateBack(seq);
 }
@@ -68,7 +68,7 @@ void MenuSelect::restoreState(Sequence& seq) {
   PLOG_VERBOSE << "restoreState ";
   if (sibling_counter) {
     sibling_counter->decrementCounter();
-    PLOG_VERBOSE << "Decrementing gorup counter\n";
+    PLOG_VERBOSE << "Decrementing gorup counter";
     if (sibling_counter->getCounter() == 0) {
       // select the parent item (a submenu) and move to the initial state setting stored by the
       // counter item.

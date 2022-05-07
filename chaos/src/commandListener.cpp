@@ -19,10 +19,9 @@
 #include <iostream>
 #include <unistd.h>
 #include <string>
-#include <json/json.h>
 #include <plog/Log.h>
 
-#include "chaosInterface.hpp"
+#include "commandListener.hpp"
 
 using namespace Chaos;
 
@@ -43,7 +42,7 @@ CommandListener::~CommandListener() {
   }
 }
 
-void CommandListener::addObserver( CommandListenerObserver* observer ) {
+void CommandListener::addObserver(CommandObserver* observer ) {
   this->observer = observer;
 }
 
@@ -56,8 +55,8 @@ void CommandListener::doAction() {
   message >> text;
 
   //Do some 'work'
-  PLOG_DEBUG << "Received: " << text << std::endl;
-  socket->send( reply.c_str() );
+  PLOG_VERBOSE << "CommandListener received this message: " << text;
+  socket->send(reply.c_str());
 	
   if (observer != nullptr) {
     observer->newCommand(text);

@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,41 +33,65 @@
 
 using namespace Chaos;
 
-// Load the TOML file into memory and do initial setup.
-// Note that the logger should NOT be initialized when this is constructed. We do that
-// based on parameters defined in the TOML file.
+// Parse the TOML file into memory and do initial setup. All initializations done from
+// the configuration file should be dispatched from here.
 TOMLReader::TOMLReader(const std::string& fname) {
+  toml::table configuration;
   try {
     configuration = toml::parse_file(fname);
   }
   catch (const toml::parse_error& err) {
-    // log and re-throw the error
-    std::cerr << "Parsing the configuration file failed:\n" << err << std::endl;
+    std::cerr << "Parsing the configuration file failed:" << err << std::endl;
     throw err;
   }
-  
+  // to do: handle case of non-existent directory
   // Initialize the logger
-  std::string logfile = configuration["log_file"].value_or("chaos.log");
-  plog::Severity maxSeverity = (plog::Severity) configuration["log_verbosity"].value_or(3);
-  size_t max_size = (size_t) configuration["max_log_size"].value_or(0);
-  int max_logs = configuration["max_log_files"].value_or(8);  
+  std::string logfile = configuration["logging"]["log_file"].value_or("chaos.log");  
+  plog::Severity maxSeverity = (plog::Severity) configuration["logging"]["log_verbosity"].value_or(3);
+  size_t max_size = (size_t) configuration["logging"]["max_log_size"].value_or(0);
+  int max_logs = configuration["logging"]["max_log_files"].value_or(8);  
   plog::init(maxSeverity, logfile.c_str(), max_size, max_logs);
   
-  PLOG_NONE << "Welcome to Chaos " << CHAOS_VERSION << std::endl;
+  PLOG_NONE << "Welcome to Chaos " << CHAOS_VERSION;
 
-  version = configuration["chaos_toml"].value<std::string_view>();
+  // Check version tag to make sure we're looking at a chaos TOML file
+  std::optional<std::string_view> version = configuration["chaos_toml"].value<std::string_view>();
   if (!version) {
-    PLOG_FATAL << "Could not find the version id (chaos_toml). Are you sure this is the right TOML file?\n";
+    PLOG_FATAL << "Could not find the version id (chaos_toml). Are you sure this is the right TOML file?";
     throw std::runtime_error("Missing chaos_toml identifier");
   }
   
-  game = configuration["game"].value<std::string_view>();
-  if (!game) {
-    PLOG_NONE << "Playing " << *game << std::endl;
+  // Get the basic game information. We send these to the interface. 
+  game = configuration["game"].value_or<std::string>("Unknown game");
+  PLOG_NONE << "Playing " << game;
+
+  active_modifiers = configuration["mod_defaults"]["active_modifiers"].value_or(3);
+  if (active_modifiers < 1) {
+    PLOG_ERROR << "You asked for " << active_modifiers << ". There must be at least one.";
+    active_modifiers = 1;
+  } else if (active_modifiers > 5) {
+    PLOG_WARNING << "Having too many active modifiers may cause undesirable side-effects.";
   }
-  else {
-    PLOG_WARNING << "No name specified for this game.\n";
+  PLOG_INFO << "Active modifiers: " << active_modifiers;
+
+  time_per_modifier = configuration["mod_defaults"]["time_per_modifier"].value_or(180.0);
+  if (time_per_modifier < 10) {
+    PLOG_ERROR << "Modifiers should be active for at least 10 seconds.";
+    time_per_modifier = 10;
   }
+  PLOG_INFO << "Time per modifier (secs): " << time_per_modifier;
+
+  // Initialize basic controller input signals
+  ControllerInput::initialize(configuration);
+
+  // Process those commands that do not have conditions
+  GameCommand::buildCommandMapDirect(configuration);
+
+  // Process all conditions
+  GameCondition::buildConditionList(configuration);
+
+  // Process those commands that have conditions
+  GameCommand::buildCommandMapCondition(configuration);
 
   // Initialize defined sequences and static parameters for sequences
   Sequence::initialize(configuration);
@@ -79,11 +104,7 @@ TOMLReader::TOMLReader(const std::string& fname) {
 }
 
 void TOMLReader::buildSequence(toml::table& config, const std::string& key, Sequence& sequence) {
-  PLOG_VERBOSE << "building sequence: " << config << std::endl;
   toml::array* arr = config[key].as_array();
-  std::optional<std::string> event, cmd;
-  unsigned int repeat, value;
-  int max_val = 1;
   if (arr) {
     for (toml::node& elem : *arr) {
       assert (elem.as_table());
@@ -91,7 +112,7 @@ void TOMLReader::buildSequence(toml::table& config, const std::string& key, Sequ
 
       checkValid(definition, std::vector<std::string>{"event", "command", "delay", "repeat", "value"}, "buildSequence");
       
-      event = definition["event"].value<std::string>();
+      std::optional<std::string> event = definition["event"].value<std::string>();
       if (! event) {
 	      throw std::runtime_error("Sequence missing required 'event' parameter");
       }
@@ -99,37 +120,32 @@ void TOMLReader::buildSequence(toml::table& config, const std::string& key, Sequ
       double delay = definition["delay"].value_or(0.0);
       if (delay < 0) {
 	      throw std::runtime_error("Delay must be a non-negative number of seconds.");
-      }
-      short delay_time = (short) delay*1000000;
-      
-      repeat = definition["repeat"].value_or(1);
+      }      
+      unsigned int delay_time = (unsigned int) (delay * 1000000);
+      int repeat = definition["repeat"].value_or(1);
       if (repeat < 1) {
 	      PLOG_ERROR << "The value of 'repeat' should be an integer greater than 1. Will ignore.";
 	      repeat = 1;
       }
 
-      // CHECK: should value really be unsigned?
-      value = definition["value"].value_or(max_val);
+      // Sequences are stored in terms of ControllerInput signals, but the TOML file uses command
+      // names. We use the default mapping because signals are always sent out in the form the
+      // console expects.
+      std::optional<std::string> cmd = definition["command"].value<std::string>();
+      std::shared_ptr<GameCommand> command = (cmd) ? GameCommand::get(*cmd) : nullptr;
+      std::shared_ptr<ControllerInput> signal = (command) ? command->getInput() : nullptr;
 
-      std::shared_ptr<GamepadInput> signal;
-      std::shared_ptr<MenuItem> menu_command;
+	    // If this signal is a hybrid control, this gets the axis max, which is needed for addHold().
+	    int max_val = (signal) ? signal->getMax(TYPE_AXIS) : 0;
 
-      cmd = definition["command"].value<std::string>();
-      if (cmd) {
-	      signal = GamepadInput::get(*cmd);
-	      // If this signal is a hybrid control, this gets the axis max, which is needed for addHold().
-        if (signal) {
-	        max_val = GamepadInput::getMax(signal);
-        }
-      }
+      int value = definition["value"].value_or(max_val);
 
-      PLOG_DEBUG << " - sequence event: ";
       if (*event == "delay") {
 	      if (delay_time == 0) {
-	        PLOG_ERROR << "You've tried to add a delay of 0 microseconds. This will be ignored.\n";
+	        PLOG_ERROR << "You've tried to add a delay of 0 microseconds. This will be ignored.";
 	      } else {
 	        sequence.addDelay(delay_time);
-          PLOG_DEBUG << " delay " << delay_time << " microseconds\n";
+          PLOG_VERBOSE << "Delay = " << delay_time << " microseconds";
 	      }
       } else if (*event == "disable") {
 	      sequence.disableControls();
@@ -138,30 +154,30 @@ void TOMLReader::buildSequence(toml::table& config, const std::string& key, Sequ
 	        throw std::runtime_error("A 'hold' event must be associated with a valid command.");
       	}
 	      if (repeat > 1) {
-	        PLOG_WARNING << "Repeat is not supported with 'hold' and will be ignored. (Did you want 'press'?)\n";
+	        PLOG_WARNING << "Repeat is not supported with 'hold' and will be ignored. (Did you want 'press'?)";
       	}
 	      sequence.addHold(signal, value, 0);
-        PLOG_DEBUG << " hold " << signal->getName() << std::endl;
+        PLOG_VERBOSE << "Hold " << signal->getName();
       } else if (*event == "press") {
 	      if (!signal) {
 	        throw std::runtime_error("A 'press' event must be associated with a valid command.");
-	      }
+        }
 	      for (int i = 0; i < repeat; i++) {
 	        sequence.addPress(signal, value);
 	        if (delay_time > 0) {
 	          sequence.addDelay(delay_time);
 	        }
-          PLOG_DEBUG << " press " << signal->getName() << "with delay of " << delay_time << " microseconds." << std::endl;
+          PLOG_VERBOSE << "Press " << signal->getName() << " with delay of " << delay_time << " microseconds.";
 	      }
       } else if (*event == "release") {
 	      if (!signal) {
 	        throw std::runtime_error("A 'release' event must be associated with a valid command.");
 	      }
 	      if (repeat > 1) {
-	        PLOG_WARNING << "Repeat is not supported with 'release' and will be ignored. (Did you want 'press'?)\n";
+	        PLOG_WARNING << "Repeat is not supported with 'release' and will be ignored. (Did you want 'press'?)";
 	      }
 	      sequence.addRelease(signal, delay_time);
-        PLOG_DEBUG << " release " << signal->getName() << "with delay of " << delay_time << " microseconds." << std::endl;
+        PLOG_VERBOSE << "Release " << signal->getName() << " with delay of " << delay_time << " microseconds.";
       } else {
       	throw std::runtime_error("Unrecognized event type.");
       }
@@ -169,18 +185,17 @@ void TOMLReader::buildSequence(toml::table& config, const std::string& key, Sequ
   }
 }
 
-
-GPInput TOMLReader::getSignal(const toml::table& config, const std::string& key, bool required) {
+ControllerSignal TOMLReader::getSignal(const toml::table& config, const std::string& key, bool required) {
   if (! config.contains(key)) {
     if (required) {
       throw std::runtime_error("missing required '" + key + "' field");
     }
-    return GPInput::NONE;
+    return ControllerSignal::NONE;
   }
   std::optional<std::string> signal = config.get(key)->value<std::string>();
-  std::shared_ptr<GamepadInput> inp = GamepadInput::get(*signal);
+  std::shared_ptr<ControllerInput> inp = ControllerInput::get(*signal);
   if (! inp) {
-    throw std::runtime_error("Gamepad signal '" + *signal + "' not defined");
+    throw std::runtime_error("Controller signal '" + *signal + "' not defined");
   }
   return inp->getSignal();
 }
@@ -196,7 +211,7 @@ ConditionCheck TOMLReader::getConditionTest(const toml::table& config, const std
     } else if (*ttype == "none") {
       rval = ConditionCheck::NONE;
     } else if (*ttype != "all") {
-      PLOG_WARNING << "Invalid ConditionTest '" << *ttype << "': using 'all' instead." << std::endl;
+      PLOG_WARNING << "Invalid ConditionTest '" << *ttype << "': using 'all' instead.";
     }
   }
   return rval;
@@ -212,18 +227,11 @@ bool TOMLReader::checkValid(const toml::table& config, const std::vector<std::st
   bool ret = true;
   for (auto&& [k, v] : config) {
     if (std::find(goodKeys.begin(), goodKeys.end(), k) == goodKeys.end()) {
-      PLOG_WARNING << "The key '" << k << "' is unused in " << name << std::endl;
+      PLOG_WARNING << "The key '" << k << "' is unused in " << name;
       ret = false;
     }
   }
   return ret;
 }
 
-std::string_view TOMLReader::getGameName() {
-  return (game) ? *game : "UNKNOWN";
-}
-
-std::string_view TOMLReader::getVersion() {
-  return (version) ? *version : "UNKNOWN";
-}
 

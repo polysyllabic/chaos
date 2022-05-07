@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,17 +22,20 @@
 #include <array>
 #include <memory>
 
+#include <mogi/thread.h>
 #include <raw-gadget.hpp>
 
 #include "config.hpp"
-
 #include "deviceEvent.hpp"
+//#include "chaosUhid.hpp"
 #include "controllerState.hpp"
-#include "chaosUhid.hpp"
-#include "gamepadInput.hpp"
-#include "gameCommand.hpp"
+#include "signals.hpp"
 
 namespace Chaos {
+
+  // Forward references
+  class ControllerInput;
+  class GameCommand;
 
   class ControllerInjector  {
   public:
@@ -44,14 +48,15 @@ namespace Chaos {
   /**
    * Class to manage the gamepad controller.
    *
-   * Since this is a unique hardware device, it's a legit. instance of a singleton.
-   * We use Scott Meyers's technique of creating global objects with local static initialization.
+   * Since this is a unique hardware device, we use Scott Meyers's technique of creating a global
+   * object with local static initialization to ensure it is only created once and is properly
+   * initialized on the first access.
    */
   class Controller : public EndpointObserver, public Mogi::Thread {
   private:
     std::deque<std::array<unsigned char,64>> bufferQueue;
 	
-    ChaosUhid* chaosHid;
+    //ChaosUhid* chaosHid;
 	
     // Main purpose of this Mogi::Thread is to handle DeviceEvent queue
     void doAction();
@@ -102,17 +107,16 @@ namespace Chaos {
     inline short getState(uint8_t id, uint8_t type) {
       return controllerState[((int) type << 8) + (int) id];
     }
+
     /**
-     * \brief Get the current controlller state of a particular gampepad input.
+     * \brief Get the current controlller state of a particular controller input.
      * \param command  The command to check
      *
-     * Read the current controller state for the given command as it is currently mapped. In other
-     * words, this routine returns the state of whatever signal the game command is currently
-     * mapped to. Note that for the hybrid controls, we only read the button form, since currently
-     * we're only interested in whether it is on or off. This may need to change for other games.
+     * Read the current controller state for the actual command (not the remapped state). Note that
+     * for the hybrid controls, we only read the button signal, since currently we're only interested
+     * in whether it is on or off. This may need to change for other games.
      */
-    short getState(std::shared_ptr<GameCommand> command);
-    short getState(std::shared_ptr<GamepadInput> signal);
+    short getState(std::shared_ptr<ControllerInput> signal);
 
     /**
      * \brief Change the controller state
@@ -126,7 +130,7 @@ namespace Chaos {
      * 
      * This tests the signal only, regarless of any condition associated with a game command.
      */
-    bool matches(const DeviceEvent& event, GPInput signal);
+    bool matches(const DeviceEvent& event, ControllerSignal signal);
     /**
      * \brief Is the event an instance of the specified input command?
      * 
@@ -148,9 +152,6 @@ namespace Chaos {
     
     void addInjector(ControllerInjector* injector);
 
-    short joystickLimit(int input) {
-      return fmin(fmax(input, JOYSTICK_MIN), JOYSTICK_MAX);
-    }
     
   };
 

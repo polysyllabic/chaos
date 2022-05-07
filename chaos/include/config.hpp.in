@@ -21,6 +21,8 @@
 #define CHAOS_VERSION_MINOR @CHAOS_MINOR@
 #define CHAOS_VERSION "@CHAOS_VERSION@"
 
+// Comment out this line for testing on a different platform.
+// TODO: Enable keyboard emulation of controller signals when this is false
 #cmakedefine RASPBERRY_PI
 #cmakedefine USE_DUALSENSE
 

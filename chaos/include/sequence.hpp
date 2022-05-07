@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
- * the top-level directory of this distribution for details of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <unordered_map>
 #include <vector>
 #include <toml++/toml.h>
 #include "controller.hpp"
@@ -78,7 +80,7 @@ namespace Chaos {
      * portion is set to 1 regardless. The length of time for the button press and release are set
      * by the default TIME_PER_BUTTON_PRESS and TIME_PER_BUTTON_RELEASE parameters.
      */
-    void addPress(std::shared_ptr<GamepadInput> signal, short value);
+    void addPress(std::shared_ptr<ControllerInput> signal, short value);
     
     /**
      * \brief Emulates holding down the gamapad input signal in the fully on position.
@@ -91,13 +93,13 @@ namespace Chaos {
      * controls L2/R2, a non-zero value is passed to the axis portion of the signal. The button
      * portion is set to 1 regardless.
      */
-    void addHold(std::shared_ptr<GamepadInput> signal, short value, unsigned int hold_time);
+    void addHold(std::shared_ptr<ControllerInput> signal, short value, unsigned int hold_time);
     /**
      * \brief Turns off the gamapad input signal.
      * \param signal The input signal the console expects to receive
      * \param hold_time Time to hold the signal in microseconds.
      */
-    void addRelease(std::shared_ptr<GamepadInput> signal, unsigned int release_time);
+    void addRelease(std::shared_ptr<ControllerInput> signal, unsigned int release_time);
     /**
      * \brief Add a delay
      * \param delay Time to delay in microseconds.

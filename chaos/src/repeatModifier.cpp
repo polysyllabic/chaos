@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
- * the top-level directory of this distribution for details of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,12 +22,12 @@
 
 using namespace Chaos;
 
-const std::string RepeatModifier::name = "repeat";
+const std::string RepeatModifier::mod_type = "repeat";
 
 RepeatModifier::RepeatModifier(toml::table& config) {
   TOMLReader::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "appliesTo", "disableOnStart", "disableOnFinish",
-      "timeOn", "timeOff", "repeat", "cycleDelay", "blockWhileBusy", "startSequence", "finishSequence"});
+      "name", "description", "type", "groups", "appliesTo", "disableOnStart", "disableOnFinish", "forceOn",
+      "timeOn", "timeOff", "repeat", "cycleDelay", "blockWhileBusy", "beginSequence", "finishSequence", "unlisted"});
   initialize(config);
 
   if (commands.empty()) {
@@ -46,20 +47,15 @@ RepeatModifier::RepeatModifier(toml::table& config) {
   TOMLReader::addToVector<GameCommand>(config, "blockWhileBusy", block_while);
 
 #ifdef NDEBUG
-  PLOG_DEBUG << " - timeOn: " << time_on << std::endl;
-  PLOG_DEBUG << " - timeOff: " << time_off << std::endl;
-  PLOG_DEBUG << " - repeat: " << repeat_count << std::endl;
-  PLOG_DEBUG << " - cycleDelay: " << cycleDelay << std::endl;
-  PLOG_DEBUG << " - forceOn: " << force_on ? "true" : "false" << std::endl;
-  PLOG_DEBUG << " - blockWhileBusy: ";
+  PLOG_DEBUG << " - timeOn: " << time_on << "; timeOff: " << time_off << "; cycleDelay: " << cycleDelay;
+  PLOG_DEBUG << " - repeat: " << repeat_count << "; forceOn: " << (force_on ? "true" : "false");
   if (block_while.empty()) {
-    PLOG_DEBUG << "NONE";
+    PLOG_DEBUG << " - blockWhileBusy: NONE";
   } else {
     for (auto& cmd : block_while) {
-      PLOG_DEBUG << GamepadInput::getName(cmd->getBinding()) << " ";
+      PLOG_DEBUG << " - blockWhileBusy:" << cmd->getName();
     }
   }
-  PLOG_DEBUG << std:: endl;  
 #endif
   
 }
@@ -75,11 +71,11 @@ void RepeatModifier::update() {
 
   press_time += timer.dTime();
   if (repeat_count < num_cycles) {
-    if (press_time > time_on && Controller::instance().getState(signal)) {
+    if (press_time > time_on && signal->getState()) {
       Controller::instance().setOff(signal);
       press_time = 0;
       repeat_count++;
-    } else if (press_time > time_off && !Controller::instance().getState(signal)) {
+    } else if (press_time > time_off && ! signal->getState()) {
       Controller::instance().setOn(signal);
       press_time = 0;
     }

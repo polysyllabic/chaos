@@ -27,13 +27,13 @@ using namespace Chaos;
 
 SubMenu::SubMenu(const toml::table& config) : MenuItem(config) {
   TOMLReader::checkValid(config, std::vector<std::string>{
-      "name", "type", "parent", "offset", "initialState", "hidden", "confirm", "tab"});
+      "name", "type", "parent", "offset", "initialState", "hidden", "confirm", "tab", "counterAction"});
 }
 
 void SubMenu::setState(Sequence& seq, unsigned int new_val) {
-  PLOG_ERROR << "Cannot set the state of a submenu\n";
+  PLOG_ERROR << "Cannot set the state of a submenu";
 }
 
 void SubMenu::restoreState(Sequence& seq) {
-  PLOG_ERROR << "Cannot restore the state of a submenu\n";
+  PLOG_ERROR << "Cannot restore the state of a submenu";
 }

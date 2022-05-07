@@ -1,7 +1,7 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
- * the top-level directory of this distribution for details of the contributers.
+ * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
+ * in top-level directory of this distribution for a list of the contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,18 +16,32 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "parentModifier.hpp"
-#include "tomlReader.hpp"
+#pragma once
+#include <string>
+#include <mogi/thread.h>
+#include <zmqpp/zmqpp.hpp>
 
-using namespace Chaos;
+#include "commandObserver.hpp"
 
-const std::string ParentModifier::mod_type = "parent";
+namespace Chaos {
 
-ParentModifier::ParentModifier(toml::table& config) {
-  initialize(config);
- 
-}
+  class CommandListener : public Mogi::Thread {
+  private:
+    zmqpp::socket *socket;
+    zmqpp::context context;
+	
+    CommandObserver* observer = nullptr;
+	
+    void doAction();
+	
+  public:
+    CommandListener();
+    ~CommandListener();
+	
+    std::string reply;
+	
+    void addObserver(CommandObserver* observer);
+    void setReply(const std::string& reply);
+  };
 
-void ParentModifier::begin() {
-}
-
+};

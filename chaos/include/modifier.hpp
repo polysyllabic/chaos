@@ -21,6 +21,8 @@
 #include <string>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
+
 #include <json/json.h>
 #include <mogi/math/systems.h>
 #include <toml++/toml.h>
@@ -147,19 +149,33 @@ namespace Chaos {
   struct Modifier : Factory<Modifier, toml::table&>, public std::enable_shared_from_this<Modifier> {
     friend ChaosEngine;
 
+  private:
+    /**
+     * \brief The parent modifier.
+     */
+    std::shared_ptr<Modifier> parent; 
+
   protected:
+    /**
+     * \brief Name of the mod as defined in the TOML file
+     */
+    std::string name;
+
     /**
      * Description of this mod for the use of the chat bot.
      */
     std::string description;
+
     /**
-     * \brief A group to classify the type of mod.
+     * \brief A list of groups to which the mod belongs.
      *
-     * The default if not specified is the type name. Set it to something different to establish
-     * groupings within or across mod types. For example, render modifiers can be a special group
-     * instead of being lumped in with all the other menu modifiers.
+     * Groups are used by the chaosface user interface to allow for more sophisticated mod
+     * selections, for example to limit the number of mods in a particular group to 1 at a time.
+     * The default, if no groups are specified in the TOML file, is the mod's type. Group names
+     * can be arbitrary, and there is no encapsulation by mod type. In other words, you can
+     * groupings within or across mod types.
      */
-    std::string group;
+    std::unordered_set<std::string> groups;
     
     /**
      * \brief Running count of how long this mod has been active.
@@ -216,6 +232,12 @@ namespace Chaos {
     bool lock_while_busy;
 
     /**
+     * \brief If true, do not list the mod to the chatbot
+     * 
+     * This is used to declare child mods that should not appear independently for voting.
+     */
+    bool unlisted;
+    /**
      * \brief List of game conditions to test
      *
      * The list of conditions is tested according to the rule in condition_test, and mods are expected
@@ -246,11 +268,6 @@ namespace Chaos {
     ConditionCheck unless_test;
 
     /**
-     * \brief Contains "this" except in cases where there is a parent modifier.
-     */
-    std::shared_ptr<Modifier> me; 
-
-    /**
      * \brief Amount of time the engine has been paused.
      */
     double pauseTimeAccumulator;
@@ -260,7 +277,12 @@ namespace Chaos {
      */
     double totalLifespan;
     
-    Json::Value toJsonObject(const std::string& name);
+    /**
+     * \brief Get the metadata about this mod as a Json object
+     * 
+     * \return Json::Value 
+     */
+    Json::Value toJsonObject();
 
     /**
      * \brief Common initialization.
@@ -316,38 +338,14 @@ namespace Chaos {
     void updatePersistent();
 
     /**
-     * \brief Translate an axis event to events for one of a pair of buttons.
-     * \param[in,out] event The event to be modified
-     * \param positive The id of the button for positive values of the axis
-     * \param negative The id of the button for negative values of the axis
-     * \param threshold The absolute value of the threhold the axis must exceed for the button to be
-     * set to on.
-     */
-    static void AxisToButtons(DeviceEvent& event, uint8_t positive, uint8_t negative, int threshold);
-
-    /**
-     * \brief Translate a button event to an axis event
-     * \param[in,out] event The event to be modified
-     * \param axis The id of the axis to be modified
-     * \param to_min If true, a button press sets axis to joystick minimum. Otherwise set to maximum.
-     */   
-    static void ButtonToAxis(DeviceEvent& event, uint8_t axis, bool to_min, int min_val, int max_val);
-
-    /**
      * If the touchpad axis is currently being remapped, send a 0 signal to the remapped axis.
      */
-    static void disableTPAxis(GPInput tp_axis);
+    static void disableTPAxis(ControllerSignal tp_axis);
 
     /**
      * Set up and tear down touchpad state on receiving a new touchpad active signal.
      */
     static void PrepTouchpad(const DeviceEvent& event);
-    
-    /**
-     * \brief Translate a touchpad event to an axis event
-     * \param[in,out] event The event to be modified
-     */
-    static void TouchpadToAxis(DeviceEvent& event, uint8_t to_axis);
     
     /**
      * \brief The map of all the mods defined through the TOML file
@@ -358,7 +356,7 @@ namespace Chaos {
     /**
      * Name by which this mod type will be identified in the TOML file
      */
-    static const std::string name;
+    static const std::string mod_type;
     /**
      * This constructor can only be invoked by the Registrar class
      */
@@ -388,7 +386,16 @@ namespace Chaos {
      */
     static bool remapEvent(DeviceEvent& event);
     
-    inline void setParentModifier(std::shared_ptr<Modifier> parent) { me = parent; }
+    /**
+     * \brief Get the pointer to this mod if it's an ordinary mod, or its parent if it has one
+     * 
+     * \return std::shared_ptr<Modifier> 
+     */
+    std::shared_ptr<Modifier> getptr() {
+      return parent ? parent : shared_from_this();
+    }
+
+    void setParentModifier(std::shared_ptr<Modifier> new_parent) { parent = new_parent; }
     
     /**
      * \brief Get how long the mod has been active.
@@ -398,13 +405,12 @@ namespace Chaos {
     double lifespan() { return totalLifespan; }
     /**
      * \brief Main entry point into the update loop
-     * \param Is the chaos engine currently paused?
+     * \param wasPaused Are we calling update for the first time after a pause?
      *
-     * This function is called directly by the ChaosEngine class. We handle the timer housekeeping and
-     * then call the virtual update function implemented by the concrete child class.
-     * 
+     * This function is called directly by the ChaosEngine class. We handle the timer housekeeping
+     * and then call the virtual update function implemented by the concrete child class.
      */
-    void _update(bool isPaused);
+    void _update(bool wasPaused);
 	
     /**
      * \brief Commands to execute when the mod is first applied. 
@@ -426,19 +432,32 @@ namespace Chaos {
      * more than one active mod is remapping things.
      */ 
     virtual void apply();
+
+    /**
+     * \brief Get the name of this mod as defined in the TOML file
+     * 
+     * \return std::string& 
+     */
+    std::string& getName() { return name; }
+
     /**
      * \brief Get a short description of this mod for the Twitch-bot.
-     * \return The descrition of the mod.
+     * \return The descrition of the mod
      *
      * \todo Internationalize the description strings.
      */
-    inline std::string& getDescription() { return description; }
+    std::string& getDescription() { return description; }
 
-    inline std::string& getGroup() { return group; }
+    /**
+     * \brief Get the list of groups to which this modifier belongs is Json
+     * 
+     * \return Json::Value list of groups as a Json array
+     */
+    Json::Value getGroups();
     
     /**
      * \brief Commands to test (and potentially alter) events as necessary.
-     * \param[in,out] event The event coming from the gamepad to test/alter.
+     * \param[in,out] event The event coming from the controller to test/alter.
      * \return true if the event is valid and should be passed on to other mods and the controller
      * \return false if the event should be dropped and not sent to other mods or the controller
      *

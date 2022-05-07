@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +24,7 @@
 #include <toml++/toml.h>
 
 #include "deviceEvent.hpp"
-#include "gamepadInput.hpp"
+#include "controllerInput.hpp"
 
 namespace Chaos {
   
@@ -39,8 +40,8 @@ namespace Chaos {
    *
    * Accepted TOML entries:
    * - name: A string to refer to this command elsewhere in the TOML file. (_Required_)
-   * - binding: The name of a gamepad input. The legal names are defined in
-   * ControllerCommand::buttonNames. (_Required_)
+   * - binding: The name of a controller input signal. The legal names are defined by
+   * ControllerCommand. (_Required_)
    * - condition: The name of a defined condition whose state must be true for the command to
    * apply. Mutually exclusive with "unless". (_Optional_)
    * - unless: The inverse of "condition": the name of a defined condition whose state must be
@@ -61,10 +62,14 @@ namespace Chaos {
   class GameCommand : std::enable_shared_from_this<GameCommand> {
   private:
     /**
-     * The binding of the actual button/axis the console expects for this command to the
-     * potentially remapped signal we expect from the controller.
+     * \brief The name of the command as used in the TOML file
      */
-    std::shared_ptr<GamepadInput> binding;
+    std::string name;
+
+    /**
+     * \brief The button/axis the game expects for this command.
+     */
+    std::shared_ptr<ControllerInput> binding;
 
     /**
      * \brief Additional condition that must be true for the command to apply.
@@ -76,7 +81,7 @@ namespace Chaos {
 
     /**
      * Reverse the polarity of the condition test. If true, the command is applied *unless* the
-     * gamepad is in the specified condition.
+     * controller is in the specified condition.
      */
     bool invert_condition;
     
@@ -134,18 +139,6 @@ namespace Chaos {
     static std::shared_ptr<GameCommand> get(const std::string& name);
 
     /**
-     * \brief Get the command as an gamepad input enumeration.
-     * \param name The name of the command as defined in the TOML file
-     * \return The GPInput signal associated with this command, or GPInput::NONE if the command
-     * does not exist.
-     *
-     * Note that because of conditions, more than one command can return the same GPInput. This
-     * should only be used when you really want the signal and don't care about testing for the
-     * context of a particular game command.
-     */
-    //static GPInput getInput(const std::string& name);
-
-    /**
      * \brief Returns #this as a shared pointer
      * 
      * \return std::shared_ptr<GameCommand> 
@@ -156,19 +149,17 @@ namespace Chaos {
     std::shared_ptr<GameCommand> getptr() { return shared_from_this(); }
 
     /**
-     * \brief Accessor for the gamepad input object bound to this command.
-     * \return std::shared_ptr to the GamepadInput object.
+     * \brief Accessor for the CongrollerInput object bound to this command.
+     * \return std::shared_ptr to the ControllerInput object.
      */
-    std::shared_ptr<GamepadInput> getInput() { 
-      return binding; 
-      }
+    std::shared_ptr<ControllerInput> getInput() { return binding; }
     
     /**
-     * \brief Get the pointer to the gamepad input object that is the remapped signal.
+     * \brief Get the pointer to the ControllerInput object that is the remapped signal.
      * 
-     * \return std::shared_ptr<GamepadInput> 
+     * \return std::shared_ptr<ControllerInput> 
      */
-    std::shared_ptr<GamepadInput> getRemapped();
+    std::shared_ptr<ControllerInput> getRemapped();
 
     /**
      * \brief Accessor for a condition that must also be true for this command to apply.
@@ -188,12 +179,14 @@ namespace Chaos {
     /**
      * \brief Get the current state of the controller for this command
      * 
-     * \return short 
+     * \return short Current state
      *
      * When checking the current state, we look at the remapped signal. That is, we case about what
-     * the user is actually doing, not what signal is going to the console.
+     * the user is actually doing, not what signal is going to the console. Remapping between axes
+     * and buttons, though creates a problem, since we need to check to two signals simultaneously.
+     * for the purpose of checking thresholds, etc.
      */
-    short int getState() { return binding->getState(); }
+    short getState();
 
     /**
      * \brief Get the name of the command as defined in the TOML file
@@ -202,7 +195,7 @@ namespace Chaos {
      *
      * This command is provided largely for debugging
      */
-    const std::string& getName();
+    const std::string& getName() { return name; }
   };
 };
 

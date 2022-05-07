@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
- * the top-level directory of this distribution for details of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,32 +25,32 @@
 
 using namespace Chaos;
 
-const std::string RemapModifier::name = "remap";
+const std::string RemapModifier::mod_type = "remap";
 
 RemapModifier::RemapModifier(toml::table& config) {
   Mogi::Math::Random rng;
 
   TOMLReader::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "signals", "disableSignals", "remap", "randomRemap"});
+      "name", "description", "type", "groups", "signals", "disableSignals", "remap", "random_remap", "unlisted"});
 
   initialize(config);
   
-  TOMLReader::addToVector<GamepadInput>(config, "signals", signals);
+  TOMLReader::addToVector<ControllerInput>(config, "signals", signals);
 
   disable_signals = config["disableSignals"].value_or(false);
 
 #ifndef NDEBUG
-  PLOG_DEBUG << " - signals: ";
+  PLOG_VERBOSE << " - signals: ";
   for (auto sig : signals) {
-    PLOG_DEBUG << GamepadInput::getName(sig->getSignal()) << " ";
+    PLOG_VERBOSE << sig->getName();
   }
-  PLOG_DEBUG << "\n - disableSignals: " << disable_signals << std::endl;
+  PLOG_VERBOSE << " - disableSignals: " << disable_signals;
 #endif
   
   // remap
   if (config.contains("remap")) {
-    if (config.contains("randomRemap")) {
-      throw std::runtime_error("Use either the 'remap' or 'randomRemap' keys, not both.");
+    if (config.contains("random_remap")) {
+      throw std::runtime_error("Use either the 'remap' or 'random_remap' keys, not both.");
     }
     const toml::array* remap_list = config.get("remap")->as_array();
     if (! remap_list) {
@@ -58,23 +59,52 @@ RemapModifier::RemapModifier(toml::table& config) {
     for (auto& elem : *remap_list) {
       const toml::table* remapping = elem.as_table();
       TOMLReader::checkValid(*remapping, std::vector<std::string>{
-	      "from", "to", "no_neg", "to_min", "invert", "threshold", "sensitivity"});
+	      "from", "to", "to_neg", "to_min", "invert", "threshold", "sensitivity"}, "remap config");
       if (! remapping) {
 	      throw std::runtime_error("Gampad signal remapping must be a table");
       }      
-      GPInput from = TOMLReader::getSignal(*remapping, "from", true);
-      GPInput to = TOMLReader::getSignal(*remapping, "to", true);
-      GPInput to_neg = TOMLReader::getSignal(*remapping, "to_neg", false);
+      ControllerSignal from = TOMLReader::getSignal(*remapping, "from", true);
+      ControllerSignal to = TOMLReader::getSignal(*remapping, "to", true);
+      ControllerSignal to_neg = TOMLReader::getSignal(*remapping, "to_neg", false);
+
+      ControllerSignalType from_type = ControllerInput::get(from)->getType();
+      ControllerSignalType to_type = ControllerInput::get(to)->getType();
+      ControllerSignalType to_neg_type = ControllerInput::get(to_neg)->getType();
+
+      // Check for unsupported remappings
+      if (from_type == ControllerSignalType::DUMMY) {
+        PLOG_ERROR << "Cannot map from NONE or NOTHING";
+      } else if (from_type != to_type) {
+        if (to_type == ControllerSignalType::ACCELEROMETER || to_neg_type == ControllerSignalType::ACCELEROMETER ||
+            to_type == ControllerSignalType::GYROSCOPE || to_neg_type == ControllerSignalType::GYROSCOPE ||
+            to_type == ControllerSignalType::TOUCHPAD || to_neg_type == ControllerSignalType::TOUCHPAD) {
+          PLOG_ERROR << "Cross-type remapping not supported going to the accelerometer, gyroscope, or touchpad.";
+        }
+        if (to_neg_type != ControllerSignalType::DUMMY && to_neg_type != to_type) {
+          PLOG_WARNING << "The 'to' and 'to_neg' signals belong to different classes. Are you sure this is what you want?";
+        }
+      }
       bool to_min = (*remapping)["to_min"].value_or(false);
       bool invert = (*remapping)["invert"].value_or(false);
-      int threshold = (*remapping)["threshold"].value_or(0);
-      int sensitivity = (*remapping)["sensitivity"].value_or(1);
-      remaps.emplace_back(from, to, to_neg, to_min, invert, threshold, sensitivity);
-#ifndef NDEBUG
-      PLOG_DEBUG << " - remap: from " << GamepadInput::getName(from) << " to " << GamepadInput::getName(to)
-		 << " to_neg " << GamepadInput::getName(to_neg) << " to_min: " << to_min << " invert: "
-		 << invert << " threshold: " << threshold << " sensitivity: " << sensitivity << std::endl;
-#endif
+      if (invert && (from_type == ControllerSignalType::BUTTON || from_type == ControllerSignalType::HYBRID)) {
+        PLOG_WARNING << "Inverting the signal only makes sense for axes. Ignored.";
+        invert = false;
+      }
+
+      double thresh_proportion = (*remapping)["threshold"].value_or(0);
+      short threshold = 1;
+      if (thresh_proportion < 0 || thresh_proportion > 1) {
+        PLOG_ERROR << "Threshold proportion = " << thresh_proportion << ": must be between 0 and 1";
+      } else {
+        threshold = (int) (thresh_proportion * JOYSTICK_MAX);
+      }
+
+      double sensitivity = (*remapping)["sensitivity"].value_or(1);
+      if (sensitivity == 0) {
+        PLOG_ERROR << "The sensitivity cannot be 0. Using 1 instead.";
+        sensitivity = 1;
+      }
+      remaps.insert({from, {to, to_neg, to_min, invert, threshold, sensitivity}});
     }
   }
 
@@ -85,30 +115,24 @@ RemapModifier::RemapModifier(toml::table& config) {
     if (! remap_list || !remap_list->is_homogeneous(toml::node_type::string)) {
       throw std::runtime_error("randomRemap must be an array of strings");
     }
-    std::vector<std::shared_ptr<GamepadInput>> buttons;
+    std::vector<std::shared_ptr<ControllerInput>> buttons;
     for (auto& elem : *remap_list) {
       std::optional<std::string> signame = elem.value<std::string>();
       assert(signame);
-      std::shared_ptr<GamepadInput> sig = GamepadInput::get(*signame);
+      std::shared_ptr<ControllerInput> sig = ControllerInput::get(*signame);
       if (! sig) {
-	throw std::runtime_error("signal for random remap '" + *signame + "' not defined");
+	      throw std::runtime_error("signal for random remap '" + *signame + "' not defined");
       }
       buttons.push_back(sig);
-      remaps.emplace_back(sig->getSignal(), GPInput::NONE, GPInput::NONE, false, false, 0, 1);
+      remaps.insert({sig->getSignal(), {ControllerSignal::NONE, ControllerSignal::NONE, false, false, 0, 1}});
     }
-#ifndef NDEBUG
-    PLOG_DEBUG << " - randomRemap:\n";
-#endif    
+
     for (auto& r : remaps) {
       int index = floor(rng.uniform(0, buttons.size()-0.01));
       auto it = buttons.begin();
       std::advance(it, index);
-      r.to_console =  (*it)->getSignal();
+      r.second.to_console =  (*it)->getSignal();
       buttons.erase(it);
-#ifndef NDEBUG
-      PLOG_DEBUG << "    + from " << GamepadInput::getName(r.from_controller) << " to "
-		 << GamepadInput::getName(r.to_console) << std::endl;
-#endif
     }
   }
 }
@@ -124,15 +148,15 @@ void RemapModifier::begin() {
 // without trashing any that may be applied by a mod later in the queue.
 void RemapModifier::apply() {
   // SignalRemap
-  for (auto& remap : remaps) {
-    GamepadInput::get(remap.from_controller)->setCascadingRemap(remap);
+  for (const auto& [from, remap] : remaps) {
+    ControllerInput::get(from)->setCascadingRemap(remap);
   }
 }
 
 // Undo the remapping
 void RemapModifier::finish() {
-  for (auto& r : remaps) {
-    GamepadInput::get(r.from_controller)->setRemap(GPInput::NONE);
+  for (const auto& [from, remap] : remaps) {
+    ControllerInput::get(from)->setRemap(ControllerSignal::NONE);
   }
   sendFinishSequence();
 }

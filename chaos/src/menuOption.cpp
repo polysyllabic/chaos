@@ -36,9 +36,9 @@ MenuOption::MenuOption(const toml::table& config)  : MenuItem(config) {
     sibling_counter = GameMenu::instance().getMenuItem(*item_name);
     if (! sibling_counter) {
       // an error, but not a fatal one, so don't throw
-      PLOG_ERROR << "Unknown counter '" << *item_name << "' for menu item " << config["name"] << std::endl;
+      PLOG_ERROR << "Unknown counter '" << *item_name << "' for menu item " << config["name"];
     } else {
-      PLOG_DEBUG << "    counter = " << *item_name << std::endl;
+      PLOG_DEBUG << "    counter = " << *item_name;
     }
   }
 
@@ -53,7 +53,7 @@ void MenuOption::setState(Sequence& seq, unsigned int new_val) {
   // Increment the counter, if set
   if (sibling_counter) {
     sibling_counter->incrementCounter();
-    PLOG_VERBOSE << "Incrementing sibling counter\n";
+    PLOG_VERBOSE << "Incrementing sibling counter";
   }
   navigateBack(seq);
 }
@@ -65,7 +65,7 @@ void MenuOption::restoreState(Sequence& seq) {
   // Decrement the counter, if set
   if (sibling_counter) {
     sibling_counter->decrementCounter();
-    PLOG_VERBOSE << "Decrementing sibling counter\n";
+    PLOG_VERBOSE << "Decrementing sibling counter";
   }
   navigateBack(seq);
 }
@@ -74,7 +74,7 @@ void MenuOption::setMenuOption(Sequence& seq, unsigned int new_val) {
   moveTo(seq);
   int difference = new_val - current_state;
   // scroll to the appropriate option
-  PLOG_VERBOSE << " setting option: difference = " << difference << std::endl;
+  PLOG_VERBOSE << "Setting option: difference = " << difference;
   for (int i = 0; i < difference; i++) {
     seq.addSequence(GameMenu::instance().getOptionGreater());
   }

@@ -22,12 +22,12 @@
 
 using namespace Chaos;
 
-const std::string MenuModifier::name = "menu";
+const std::string MenuModifier::mod_type = "menu";
 
 MenuModifier::MenuModifier(toml::table& config) {
   
   TOMLReader::checkValid(config, std::vector<std::string>{
-    "name", "description", "type", "groups", "menu_items", "reset_on_finish", "beginSequence", "finishSequence"});
+    "name", "description", "type", "groups", "menu_items", "reset_on_finish", "beginSequence", "finishSequence","unlisted"});
 
   initialize(config);
 
@@ -52,7 +52,7 @@ MenuModifier::MenuModifier(toml::table& config) {
     }
     int val = (*m)["value"].value_or(0);
     menu_items[item] = val;
-    PLOG_DEBUG << "   entry = " << *item_name << ", value = " << val << std::endl;
+    PLOG_DEBUG << "   entry = " << *item_name << ", value = " << val;
   }
 
   reset_on_finish = config["reset_on_finish"].value_or(true);

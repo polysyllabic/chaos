@@ -36,10 +36,12 @@ std::unordered_map<std::string, std::shared_ptr<GameCondition>> GameCondition::c
 // result in an error.
 GameCondition::GameCondition(toml::table& config) {
   assert(config.contains("name"));
-  PLOG_VERBOSE << "Initializing game condition " << config["name"] << std::endl;
+  name = config["name"].value_or("");
 
+  PLOG_VERBOSE << "Initializing game condition " << config["name"];
+  
   TOMLReader::checkValid(config, std::vector<std::string>{
-      "name", "persistent", "trueOn", "trueOff", "threshold", "thresholdType", "testType"});
+      "name", "persistent", "trueOn", "falseOn", "threshold", "thresholdType", "testType"});
   
   TOMLReader::addToVector(config, "trueOn", true_on);
 
@@ -50,13 +52,13 @@ GameCondition::GameCondition(toml::table& config) {
   persistent = config["persistent"].value_or(false);
 
   if (persistent) {
-    TOMLReader::addToVector(config, "trueOff", true_off);
+    TOMLReader::addToVector(config, "falseOn", true_off);
     if (true_off.empty()) {
-      PLOG_WARNING << "No trueOff command set for persistent condition";
+      PLOG_WARNING << "No falseOn command set for persistent condition.";
     }
   } else {
-    if (config.contains("trueOff")) {
-      PLOG_WARNING << "trueOff commands not supported if persistent = false\n";
+    if (config.contains("falseOn")) {
+      PLOG_WARNING << "falseOn commands not supported if persistent = false";
     }
   }
 
@@ -81,13 +83,13 @@ GameCondition::GameCondition(toml::table& config) {
     } else if (*thtype == "distance") {
     threshold_type = ThresholdType::DISTANCE;
     } else if (*thtype != "magnitude") {
-      PLOG_WARNING << "invalid thresholdType '" << *thtype << std::endl;
+      PLOG_WARNING << "Invalid thresholdType '" << *thtype;
     }
   }
   
 #ifndef NDEBUG
-  PLOG_DEBUG << "Condition: " << config["name"] <<  "\n - " << ((thtype) ? *thtype : "magnitude") <<
-    " threshold = " << threshold << std::endl;
+  PLOG_VERBOSE << "Condition: " << config["name"] <<  "; " << ((thtype) ? *thtype : "magnitude") <<
+    " threshold = " << threshold;
 #endif
 }
 
@@ -98,23 +100,23 @@ void GameCondition::buildConditionList(toml::table& config) {
     for (toml::node& elem : *arr) {
       toml::table* condition = elem.as_table();
       if (! condition) {
-        PLOG_ERROR << "Condition definition must be a table\n";
+        PLOG_ERROR << "Condition definition must be a table";
         continue;
       }
       if (!condition->contains("name")) {
-        PLOG_ERROR << "Condition missing required 'name' field: " << *condition << std::endl;
+        PLOG_ERROR << "Condition missing required 'name' field: " << condition;
         continue;
       }
       std::optional<std::string> cond_name = condition->get("name")->value<std::string>();
       if (condition_map.count(*cond_name) == 1) {
-        PLOG_ERROR << "The condition '" << *cond_name << "' has already been defined.\n";
+        PLOG_ERROR << "The condition '" << *cond_name << "' has already been defined.";
       }
       try {
-        PLOG_VERBOSE << "Adding condition '" << *cond_name << "' to static map.\n";
+        PLOG_VERBOSE << "Adding condition '" << *cond_name << "' to static map.";
   	    condition_map.insert({*cond_name, std::make_shared<GameCondition>(*condition)});
 	    }
 	    catch (const std::runtime_error& e) {
-	      PLOG_ERROR << "In definition for condition '" << *cond_name << "': " << e.what() << std::endl; 
+	      PLOG_ERROR << "In definition for condition '" << *cond_name << "': " << e.what(); 
 	    }
     }
   }
@@ -146,13 +148,13 @@ bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> command) {
 short int GameCondition::getSignalThreshold(std::shared_ptr<GameCommand> signal) {
   // Must check the threshold for the remapped control, in case signals are swapped between
   // signal classes
-  std::shared_ptr<GamepadInput> remapped = signal->getRemapped();
+  std::shared_ptr<ControllerInput> remapped = signal->getRemapped();
   short extreme = (threshold_type == ThresholdType::LESS || threshold_type == ThresholdType::LESS_EQUAL) ?
                   remapped->getMin(TYPE_AXIS) : remapped->getMax(TYPE_AXIS);
   // Proportions don't make sense for buttons or the dpad, so if we've remapped from an axis to one
   // of these and have a proportion < 1, we ignore that and just use the extreme value.
-  GPInputType t = remapped->getType();
-  if (t == GPInputType::BUTTON || t == GPInputType::THREE_STATE) {
+  ControllerSignalType t = remapped->getType();
+  if (t == ControllerSignalType::BUTTON || t == ControllerSignalType::THREE_STATE) {
     return extreme;
   }
   // otherwise we calculate the threshold value as a proportion of the extreme.
@@ -174,8 +176,8 @@ bool GameCondition::testConditions(std::vector<std::shared_ptr<GameCommand>> com
 
   if (threshold_type == ThresholdType::DISTANCE) {
     assert(command_list.size() == 2);
-    short x = Controller::instance().getState(command_list[0]);
-    short y = Controller::instance().getState(command_list[1]);
+    short x = command_list[0]->getState();
+    short y = command_list[1]->getState();
     return x*x + y*y > std::pow(getSignalThreshold(command_list[0]),2);
   }
 

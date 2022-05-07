@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
- * the top-level directory of this distribution for details of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,17 +26,17 @@
 
 using namespace Chaos;
 
-const std::string CooldownModifier::name = "cooldown";
+const std::string CooldownModifier::mod_type = "cooldown";
 
 CooldownModifier::CooldownModifier(toml::table& config) {
   TOMLReader::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
-							  "beginSequence", "finishSequence", "appliesTo", "timeOn", "timeOff"});
+							  "beginSequence", "finishSequence", "appliesTo", "timeOn", "timeOff", "unlisted"});
   initialize(config);
   if (commands.empty()) {
     throw std::runtime_error("No command associated with cooldown modifier.");
   }
   if (commands.size() > 1) {
-    PLOG_WARNING << "More than one cooldown command assigned in appliesTo. All but the first ignored\n";
+    PLOG_WARNING << "More than one cooldown command assigned in appliesTo. All but the first will be ignored.";
   }
   // Save the DeviceEvent that we're operating on.
   cooldownCommand.time = 0;
@@ -44,15 +45,15 @@ CooldownModifier::CooldownModifier(toml::table& config) {
   cooldownCommand.id = commands[0]->getInput()->getID(cooldownCommand.type);
   time_on = config["timeOn"].value_or(0.0);
   if (time_on == 0) {
-    PLOG_WARNING << "The timeOn for this cooldown mod is 0 seconds!\n";
+    PLOG_WARNING << "The timeOn for this cooldown mod is 0 seconds!";
   }
-  PLOG_DEBUG << " - timeOn: " << time_on << std::endl;
+  PLOG_VERBOSE << " - timeOn: " << time_on;
   
   time_off = config["timeOff"].value_or(0.0);
   if (time_off == 0) {
-    PLOG_WARNING << "The timeOff for this cooldown mod is 0 seconds!\n";
+    PLOG_WARNING << "The timeOff for this cooldown mod is 0 seconds!";
   }
-  PLOG_DEBUG << " - timeOff: " << time_off << std::endl;
+  PLOG_VERBOSE << " - timeOff: " << time_off;
 }
 
 void CooldownModifier::begin() {
@@ -78,18 +79,18 @@ void CooldownModifier::update() {
       // increment cooldown timer until time_on exceeded
       cooldownTimer += deltaT;
       if (cooldownTimer > time_on) {
-	cooldownTimer = time_off;
-	inCooldown = true;
-	// Disable event
-	// TODO: allow cooldown to do things other than block a signal
-	ChaosEngine::instance().fakePipelinedEvent(cooldownCommand, me);
+	      cooldownTimer = time_off;
+	      inCooldown = true;
+	      // Disable event
+	      // TODO: allow cooldown to do things other than block a signal
+	      ChaosEngine::instance().fakePipelinedEvent(cooldownCommand, getptr());
       }
     }
   }
 }
 
-bool CooldownModifier::tweak(DeviceEvent* event) {
-  if (event->id == cooldownCommand.id && event->type == cooldownCommand.type) {
+bool CooldownModifier::tweak(DeviceEvent& event) {
+  if (event.id == cooldownCommand.id && event.type == cooldownCommand.type) {
     return inCooldown == false;
   }
   return true;

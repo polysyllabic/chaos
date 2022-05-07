@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +23,7 @@
 #include <toml++/toml.h>
 
 #include "modifier.hpp"
-#include "gamepadInput.hpp"
+#include "controllerInput.hpp"
 
 namespace Chaos {
 
@@ -65,7 +66,7 @@ namespace Chaos {
     /**
      * \brief The list of remappings set by this mod.
      */
-    std::vector<SignalRemap> remaps;
+    std::unordered_map<ControllerSignal, SignalRemap> remaps;
 
     /**
      * If true, sends events to zero out the button on initialization.
@@ -77,10 +78,10 @@ namespace Chaos {
      *
      * If set, these signals will be disabled when the mod starts.
      */
-    std::vector<std::shared_ptr<GamepadInput>> signals;
+    std::vector<std::shared_ptr<ControllerInput>> signals;
     
   public:
-    static const std::string name;
+    static const std::string mod_type;
     
     RemapModifier(toml::table& config);
 
