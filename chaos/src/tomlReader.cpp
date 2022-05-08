@@ -63,7 +63,7 @@ TOMLReader::TOMLReader(const std::string& fname) {
   
   // Get the basic game information. We send these to the interface. 
   game = configuration["game"].value_or<std::string>("Unknown game");
-  PLOG_NONE << "Playing " << game;
+  PLOG_INFO << "Playing " << game;
 
   active_modifiers = configuration["mod_defaults"]["active_modifiers"].value_or(3);
   if (active_modifiers < 1) {
@@ -79,7 +79,7 @@ TOMLReader::TOMLReader(const std::string& fname) {
     PLOG_ERROR << "Modifiers should be active for at least 10 seconds.";
     time_per_modifier = 10;
   }
-  PLOG_INFO << "Time per modifier (secs): " << time_per_modifier;
+  PLOG_INFO << "Time per modifier: " << time_per_modifier << " seconds";
 
   // Initialize basic controller input signals
   ControllerInput::initialize(configuration);

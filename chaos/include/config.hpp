@@ -23,7 +23,7 @@
 
 // Comment out this line for testing on a different platform.
 // TODO: Enable keyboard emulation of controller signals when this is false
-#define RASPBERRY_PI
+/* #undef RASPBERRY_PI */
 /* #undef USE_DUALSENSE */
 
 // These values probably should be encapsulated in a class somewhere, at least if they can ever

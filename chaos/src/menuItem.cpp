@@ -41,7 +41,7 @@ MenuItem::MenuItem(const toml::table& config) {
       throw std::runtime_error("Unknown parent menu. Parents must be declared before children.");
     }
   }
-  PLOG_DEBUG << "- parent = " << ((item_name) ? *item_name : "[ROOT]");
+  PLOG_VERBOSE << "- parent = " << ((item_name) ? *item_name : "[ROOT]");
   if (! config.contains("offset")) {
     PLOG_WARNING << "Menu item '" << *config["name"].value<std::string_view>() << "' missing offset. Set to 0.";
   }
@@ -50,9 +50,9 @@ MenuItem::MenuItem(const toml::table& config) {
   default_state = config["initialState"].value_or(0);
   current_state = default_state;
   hidden = config["hidden"].value_or(false);
-  PLOG_DEBUG << "- offset = " << offset << "; tab_group = " << tab_group;
-  PLOG_DEBUG << "- initial_state = " << default_state;
-  PLOG_DEBUG << "- hidden = " << hidden;
+  PLOG_VERBOSE << "- offset = " << offset << "; tab_group = " << tab_group;
+  PLOG_VERBOSE << "- initial_state = " << default_state;
+  PLOG_VERBOSE << "- hidden = " << hidden;
 
   item_name = config["guard"].value<std::string_view>();
   if (item_name) {
@@ -60,14 +60,14 @@ MenuItem::MenuItem(const toml::table& config) {
     if (! guard) {
       PLOG_ERROR << "Unknown guard '" << *item_name << "' for menu item " << config["name"];
     } else {
-      PLOG_DEBUG << "- guard = " << *item_name;
+      PLOG_VERBOSE << "- guard = " << *item_name;
     }
   }
 
   counter_action = CounterAction::NONE;
   item_name = config["counterAction"].value<std::string_view>();
   if (item_name) {
-    PLOG_DEBUG << "- counterAction: " << *item_name;
+    PLOG_VERBOSE << "- counterAction: " << *item_name;
     if (*item_name == "reveal") {
       counter_action = CounterAction::REVEAL;
     } else if (*item_name == "zeroReset") {

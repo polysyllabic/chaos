@@ -10,7 +10,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
 endif()
 
 set(CMAKE_BUILD_TYPE Debug)
-set(RASPBERRY_PI TRUE)
+set(RASPBERRY_PI FALSE)
 set(USE_DUALSENSE FALSE)
 
 # Parse version variables
@@ -81,12 +81,6 @@ FetchContent_Declare(
 	GIT_REPOSITORY https://github.com/polysyllabic/usb-sniffify.git
 	GIT_TAG	       origin/main
 )
-# We use a patched fork insttead of re-applying the patch every time
-FetchContent_Declare(
-	raw-gadget
-	GIT_REPOSITORY https://github.com/polysyllabic/raw-gadget.git
-	GIT_TAG	       origin/master
-)
 
 # Life would be easier if the Raspberry OS cmake were 3.18 or greater
 if(NOT mogi_POPULATED)
@@ -94,7 +88,7 @@ if(NOT mogi_POPULATED)
   add_subdirectory(${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi)
 endif()
 
-FetchContent_MakeAvailable(tomlplusplus plog zmqpp sniffify raw-gadget)
+FetchContent_MakeAvailable(tomlplusplus plog zmqpp sniffify)
 
 find_package (Threads REQUIRED)
 find_package (LibJsoncpp REQUIRED)
@@ -103,7 +97,6 @@ find_package (Libusb1 REQUIRED)
 add_executable(chaos include/config.hpp
 	include/chaosEngine.hpp
 	include/chaosInterface.hpp
-	#include/chaosUhid.hpp
   include/commandListener.hpp
   include/commandObserver.hpp
   include/commandSender.hpp
@@ -139,7 +132,6 @@ add_executable(chaos include/config.hpp
   include/touchpad.hpp
 	src/chaosEngine.cpp
 	src/chaosInterface.cpp
-	#src/chaosUhid.cpp
 	src/commandListener.cpp
 	src/commandSender.cpp
 	src/controller.cpp
@@ -181,6 +173,7 @@ target_include_directories (chaos PRIVATE include
 	${LIBUSB1_INCLUDE_DIRS}
 )
 
+#add_subdirectory(src/sniffify)
 #add_subdirectory(src/signals)
 #add_subdirectory(src/controller)
 #add_subdirectory(src/menu)
@@ -192,6 +185,18 @@ target_link_libraries(chaos	PUBLIC #chaos_controller chaos_engine chaos_menus ch
 		mogi 
 		zmqpp 
 		${LIBUSB_LIBRARIES})
+
+if (RASPBERRY_PI)
+include(ExternalProject)
+# We use a patched fork insttead of re-applying the patch every time
+ExternalProject_Add(raw-gadget
+	GIT_REPOSITORY https://github.com/polysyllabic/raw-gadget.git
+	GIT_TAG	       origin/master
+  UPDATE_DISCONNECTED true
+  CONFIGURE_COMMAND ""  
+  BUILD_COMMAND make -j -C <SOURCE_DIR>/raw_gadget
+)
+endif()
 
 #find_package(Doxygen)
 #if (DOXYGEN_FOUND)
