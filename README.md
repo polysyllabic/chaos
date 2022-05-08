@@ -8,7 +8,7 @@ playing a PlayStation game. It uses a Raspberry Pi to modify controller input ba
 series of gameplay modifiers that chat can select by voting for their favorites.
 
 [Watch a minute long video explanation of how users can interact with a controller.](https://www.twitch.tv/blegas78/clip/SmellyDepressedPancakeKappaPride-llz6ldXSKjSJLs9s)
-![Twitch Clip](https://github.com/polysyl/chaos/blob/main/docs/images/explain.png?raw=true)
+![Twitch Clip](https://github.com/polysyllabic/chaos/blob/main/docs/images/explain.png?raw=true)
 
 The original version of this project was written by [Blegas78](https://www.twitch.tv/blegas78). It
 was inspired after he watched Twitch user [DarkViperAU](https://www.twitch.tv/DarkViperAU) stream
@@ -335,8 +335,7 @@ and closest to circuit board. Then use a USB-C to USB-A cable to connect the Ras
 to your console. Also connect the Raspberry Pi's ethernet port to your router, unless you're using
 WiFi.
 
-![Cabling the Raspbery Pi](https://github.com/polysyl/chaos/blob/main/docs/images/chaos_plugging.png?raw=true)
-
+![Cabling the Raspbery Pi](https://github.com/polysyllabic/chaos/blob/unbound/docs/images/chaos_plugging.jpg)
 2. Turn on your console.  On a PlayStation, pressing the PS button will turn on the console, which
 will then power the Raspberry Pi. During the Pi's boot process, the controller's bluetooth connection
 will let you navigate to your game. At some point, you'll see a USB connectivity notification, meaning
