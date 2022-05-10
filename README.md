@@ -151,6 +151,7 @@ new modifiers (in addition to all those available in the older version of Chaos)
 
 You can configure whether you want the winning mod to be selected proportionally or by majority vote.
 
+Feel free to check out my [YouTube channel](https://www.youtube.com/channel/UCDJVtdkaxW1GHextweQuPug) for videos that showcase Chaos.
 
 
 ## Required Hardware
