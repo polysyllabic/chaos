@@ -85,10 +85,9 @@ namespace Chaos {
     Json::CharReader* jsonReader;
     Json::StreamWriterBuilder jsonWriterBuilder;	
 
-  protected:	
+  public:
     ChaosEngine();
 
-  public:
     static ChaosEngine& instance() {
       static ChaosEngine engine{};
       return engine;
@@ -110,9 +109,19 @@ namespace Chaos {
       game = name;
     } 
 
-    void fakePipelinedEvent(DeviceEvent& fakeEvent, std::shared_ptr<Modifier> modifierThatSentTheFakeEvent);
+    /**
+     * \brief Insert a new event into the event queue
+     * 
+     * \param event The fake event to insert
+     * \param sourceMod The modifier that inserted the event
+     * 
+     * This command is used to insert a new event in the event pipeline so that other mods in the
+     * active list can also act on it.
+     */
+    void fakePipelinedEvent(DeviceEvent& event, std::shared_ptr<Modifier> sourceMod);
 
-    void newCommand(const std::string& command);	// override from CommandListenerObserver
+    // override from CommandListenerObserver
+    void newCommand(const std::string& command);
 
     bool isPaused() { return pause; }
 

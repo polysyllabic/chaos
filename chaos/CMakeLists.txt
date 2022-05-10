@@ -46,7 +46,7 @@ if(${ver} MATCHES "PRERELEASE[ \t]+([^\n]+)")
 endif()
 message(NOTICE "Configuring Chaos engine ${CHAOS_VERSION}")
 
-configure_file(${CMAKE_CURRENT_LIST_DIR}/include/config.hpp.in ${CMAKE_CURRENT_LIST_DIR}/include/config.hpp )
+configure_file(${CMAKE_CURRENT_LIST_DIR}/include/config.in ${CMAKE_CURRENT_LIST_DIR}/include/config.hpp )
 
 # Standard CMake modules
 #include(CTest)
@@ -100,7 +100,8 @@ add_executable(chaos include/config.hpp
   include/commandListener.hpp
   include/commandObserver.hpp
   include/commandSender.hpp
-	include/controller.hpp
+	include/configuration.hpp
+  include/controller.hpp
   include/controllerInput.hpp
 	include/controllerState.hpp
   include/cooldownModifier.hpp
@@ -111,6 +112,7 @@ add_executable(chaos include/config.hpp
   include/enumerations.hpp
 	include/factory.hpp
   include/formulaModifier.hpp
+  include/game.hpp
   include/gameCommand.hpp
   include/gameCondition.hpp
   include/gameMenu.hpp
@@ -128,12 +130,12 @@ add_executable(chaos include/config.hpp
   include/signalRemap.hpp
   include/signals.hpp
   include/subMenu.hpp
-	include/tomlReader.hpp
-  include/touchpad.hpp
+	include/touchpad.hpp
 	src/chaosEngine.cpp
 	src/chaosInterface.cpp
 	src/commandListener.cpp
 	src/commandSender.cpp
+	src/configuration.cpp
 	src/controller.cpp
   src/controllerInput.cpp
 	src/controllerState.cpp
@@ -142,6 +144,7 @@ add_executable(chaos include/config.hpp
   src/disableModifier.cpp
 	src/dualshock.cpp
   src/formulaModifier.cpp
+  src/game.cpp
 	src/gameCommand.cpp
   src/gameCondition.cpp
   src/gameMenu.cpp
@@ -157,7 +160,6 @@ add_executable(chaos include/config.hpp
   src/sequence.cpp
   src/sequenceModifier.cpp
   src/subMenu.cpp
-	src/tomlReader.cpp
 	src/touchpad.cpp
 	src/main.cpp)
 

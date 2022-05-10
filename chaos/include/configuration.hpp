@@ -40,7 +40,7 @@ namespace Chaos {
    * the TOML file. It also provides templated static helper routines to simplify common
    * parsing tasks that the modifiers need to do.
    */
-  class TOMLReader {
+  class Configuration {
 
   private:
 
@@ -61,7 +61,7 @@ namespace Chaos {
      * The constructor performs the basic parsing and creates a toml::table object containing the
      * completely parsed file, which is then available for other initialization routines.
      */
-    TOMLReader(const std::string& fname);
+    Configuration(const std::string& fname);
 
     /**
      * \brief Get the name of the game defined in the TOML file

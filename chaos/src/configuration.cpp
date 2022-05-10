@@ -26,7 +26,7 @@
 
 #include "config.hpp"
 #include "enumerations.hpp"
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 #include "gameCommand.hpp"
 #include "modifier.hpp"
 #include "gameMenu.hpp"
@@ -35,7 +35,7 @@ using namespace Chaos;
 
 // Parse the TOML file into memory and do initial setup. All initializations done from
 // the configuration file should be dispatched from here.
-TOMLReader::TOMLReader(const std::string& fname) {
+Configuration::Configuration(const std::string& fname) {
   toml::table configuration;
   try {
     configuration = toml::parse_file(fname);
@@ -103,7 +103,7 @@ TOMLReader::TOMLReader(const std::string& fname) {
   Modifier::buildModList(configuration);
 }
 
-void TOMLReader::buildSequence(toml::table& config, const std::string& key, Sequence& sequence) {
+void Configuration::buildSequence(toml::table& config, const std::string& key, Sequence& sequence) {
   toml::array* arr = config[key].as_array();
   if (arr) {
     for (toml::node& elem : *arr) {
@@ -185,7 +185,7 @@ void TOMLReader::buildSequence(toml::table& config, const std::string& key, Sequ
   }
 }
 
-ControllerSignal TOMLReader::getSignal(const toml::table& config, const std::string& key, bool required) {
+ControllerSignal Configuration::getSignal(const toml::table& config, const std::string& key, bool required) {
   if (! config.contains(key)) {
     if (required) {
       throw std::runtime_error("missing required '" + key + "' field");
@@ -200,7 +200,7 @@ ControllerSignal TOMLReader::getSignal(const toml::table& config, const std::str
   return inp->getSignal();
 }
 
-ConditionCheck TOMLReader::getConditionTest(const toml::table& config, const std::string& key) {
+ConditionCheck Configuration::getConditionTest(const toml::table& config, const std::string& key) {
   std::optional<std::string_view> ttype = config[key].value<std::string_view>();
 
   // Default type is magnitude
@@ -218,11 +218,11 @@ ConditionCheck TOMLReader::getConditionTest(const toml::table& config, const std
 }
 
 // warn if any keys in the table are unknown
-bool TOMLReader::checkValid(const toml::table& config, const std::vector<std::string>& goodKeys) {
+bool Configuration::checkValid(const toml::table& config, const std::vector<std::string>& goodKeys) {
   return checkValid(config, goodKeys, config["name"].value_or("??"));
 }
 
-bool TOMLReader::checkValid(const toml::table& config, const std::vector<std::string>& goodKeys,
+bool Configuration::checkValid(const toml::table& config, const std::vector<std::string>& goodKeys,
 			    const std::string& name) {
   bool ret = true;
   for (auto&& [k, v] : config) {

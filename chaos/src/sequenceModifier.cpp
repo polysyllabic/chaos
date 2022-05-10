@@ -22,7 +22,7 @@
 #include <plog/Log.h>
 
 #include "sequenceModifier.hpp"
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 
 using namespace Chaos;
 
@@ -30,7 +30,7 @@ const std::string SequenceModifier::mod_type = "sequence";
 
 SequenceModifier::SequenceModifier(toml::table& config) {
 
-  TOMLReader::checkValid(config, std::vector<std::string>{
+  Configuration::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "beginSequence", "finishSequence",
       "blockWhileBusy", "repeatSequence", "condition",
       "startDelay", "cycleDelay"});
@@ -41,9 +41,9 @@ SequenceModifier::SequenceModifier(toml::table& config) {
   // name, description, type, groups, appliesTo, disableOnStart, startSequence,
   // disableOnFinish, finishSequence
   
-  TOMLReader::buildSequence(config, "repeatSequence", on_begin);
+  Configuration::buildSequence(config, "repeatSequence", on_begin);
 
-  lock_while_busy = TOMLReader::addToVectorOrAll<GameCommand>(config, "blockWhileBusy", block_while);
+  lock_while_busy = Configuration::addToVectorOrAll<GameCommand>(config, "blockWhileBusy", block_while);
 
   start_delay = config["startDelay"].value_or(0.0);
   repeat_delay = config["cycleDelay"].value_or(0.0);

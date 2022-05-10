@@ -22,7 +22,7 @@
 #include <vector>
 #include <string>
 
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 #include "enumerations.hpp"
 
 namespace Chaos {

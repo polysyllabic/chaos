@@ -16,7 +16,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-//#include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -27,9 +26,8 @@
 
 #include "config.hpp"
 #include "chaosEngine.hpp"
-#include "modifier.hpp"
 #include "controller.hpp"
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 
 using namespace Chaos;
 
@@ -42,7 +40,7 @@ int main(int argc, char** argv) {
   std::string configfile(argv[1]);
 
   // Process the TOML file. This will initialize all the mods and associated data.
-  TOMLReader config(configfile);
+  Configuration config(configfile);
 
   // Configure the controller
   Controller::instance().initialize();

@@ -18,14 +18,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "repeatModifier.hpp"
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 
 using namespace Chaos;
 
 const std::string RepeatModifier::mod_type = "repeat";
 
 RepeatModifier::RepeatModifier(toml::table& config) {
-  TOMLReader::checkValid(config, std::vector<std::string>{
+  Configuration::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "appliesTo", "disableOnStart", "disableOnFinish", "forceOn",
       "timeOn", "timeOff", "repeat", "cycleDelay", "blockWhileBusy", "beginSequence", "finishSequence", "unlisted"});
   initialize(config);
@@ -44,7 +44,7 @@ RepeatModifier::RepeatModifier(toml::table& config) {
   cycle_delay = config["cycleDelay"].value_or(0.0);
   force_on = config["forceOn"].value_or(false);
 
-  TOMLReader::addToVector<GameCommand>(config, "blockWhileBusy", block_while);
+  Configuration::addToVector<GameCommand>(config, "blockWhileBusy", block_while);
 
 #ifdef NDEBUG
   PLOG_DEBUG << " - timeOn: " << time_on << "; timeOff: " << time_off << "; cycleDelay: " << cycleDelay;

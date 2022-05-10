@@ -21,14 +21,14 @@
 #include <toml++/toml.h>
 
 #include "invertModifier.hpp"
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 
 using namespace Chaos;
 
 const std::string InvertModifier::mod_type = "invert";
 
 InvertModifier::InvertModifier(toml::table& config) {
-  TOMLReader::checkValid(config, std::vector<std::string>{
+  Configuration::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence", "unlisted"});
   initialize(config);
 

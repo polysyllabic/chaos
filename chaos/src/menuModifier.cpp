@@ -17,7 +17,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "menuModifier.hpp"
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 #include "gameMenu.hpp"
 
 using namespace Chaos;
@@ -26,7 +26,7 @@ const std::string MenuModifier::mod_type = "menu";
 
 MenuModifier::MenuModifier(toml::table& config) {
   
-  TOMLReader::checkValid(config, std::vector<std::string>{
+  Configuration::checkValid(config, std::vector<std::string>{
     "name", "description", "type", "groups", "menu_items", "reset_on_finish", "beginSequence", "finishSequence","unlisted"});
 
   initialize(config);
@@ -41,7 +41,7 @@ MenuModifier::MenuModifier(toml::table& config) {
   }
   for (auto& elem : *menu_list) {
     const toml::table* m = elem.as_table();
-    TOMLReader::checkValid(*m, std::vector<std::string>{"entry", "value"},"menu entry");
+    Configuration::checkValid(*m, std::vector<std::string>{"entry", "value"},"menu entry");
     if (! m->contains("entry")) {
       throw std::runtime_error("Each table within a menu_item array must contain an 'entry' key");
     }
