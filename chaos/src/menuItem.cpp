@@ -22,7 +22,7 @@
 #include <plog/Log.h>
 
 #include "menuItem.hpp"
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 #include "gameMenu.hpp"
 
 using namespace Chaos;

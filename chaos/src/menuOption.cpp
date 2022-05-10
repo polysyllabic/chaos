@@ -21,13 +21,13 @@
 #include <plog/Log.h>
 
 #include "menuOption.hpp"
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 #include "gameMenu.hpp"
 
 using namespace Chaos;
 
 MenuOption::MenuOption(const toml::table& config)  : MenuItem(config) {
-  TOMLReader::checkValid(config, std::vector<std::string>{
+  Configuration::checkValid(config, std::vector<std::string>{
       "name", "type", "parent", "offset", "initialState", "hidden", "confirm", "tab", "guard",
       "counter", "counterAction"});
 

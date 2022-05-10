@@ -40,10 +40,10 @@ GameCondition::GameCondition(toml::table& config) {
 
   PLOG_VERBOSE << "Initializing game condition " << config["name"];
   
-  TOMLReader::checkValid(config, std::vector<std::string>{
+  Configuration::checkValid(config, std::vector<std::string>{
       "name", "persistent", "trueOn", "falseOn", "threshold", "thresholdType", "testType"});
   
-  TOMLReader::addToVector(config, "trueOn", true_on);
+  Configuration::addToVector(config, "trueOn", true_on);
 
   if (true_on.empty()) {
     throw std::runtime_error("No commands defined for trueOn");
@@ -52,7 +52,7 @@ GameCondition::GameCondition(toml::table& config) {
   persistent = config["persistent"].value_or(false);
 
   if (persistent) {
-    TOMLReader::addToVector(config, "falseOn", true_off);
+    Configuration::addToVector(config, "falseOn", true_off);
     if (true_off.empty()) {
       PLOG_WARNING << "No falseOn command set for persistent condition.";
     }

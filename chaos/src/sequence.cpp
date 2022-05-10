@@ -21,7 +21,7 @@
 #include <plog/Log.h>
 
 #include "sequence.hpp"
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 #include "menuItem.hpp"
 
 using namespace Chaos;
@@ -59,7 +59,7 @@ void Sequence::initialize(toml::table& config) {
       try {
         PLOG_VERBOSE << "Adding pre-defined sequence '" << *seq_name << "'";
         std::shared_ptr<Sequence> s = std::make_shared<Sequence>();
-        TOMLReader::buildSequence(*seq, "sequence", *s);
+        Configuration::buildSequence(*seq, "sequence", *s);
        	sequences.insert({*seq_name, s});
       }
       catch (const std::runtime_error& e) {

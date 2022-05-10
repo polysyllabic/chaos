@@ -20,6 +20,7 @@
 #pragma once
 #include <string>
 #include <memory>
+#include <cassert>
 #include <unordered_map>
 #include <toml++/toml.h>
 

@@ -17,7 +17,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "formulaModifier.hpp"
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 
 using namespace Chaos;
 

@@ -24,7 +24,7 @@
 #include <plog/Log.h>
 
 #include "disableModifier.hpp"
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 #include "config.hpp"
 
 using namespace Chaos;
@@ -36,7 +36,7 @@ DisableModifier::DisableModifier(toml::table& config) {
   assert(config.contains("name"));
   assert(config.contains("type"));
   PLOG_VERBOSE << "validating table";
-  TOMLReader::checkValid(config, std::vector<std::string>{
+  Configuration::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence",
       "filter", "threshold", "condition", "conditionTest", "unless", "unlessTest", "unlisted"});
 

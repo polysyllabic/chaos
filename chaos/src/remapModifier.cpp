@@ -21,7 +21,7 @@
 #include <plog/Log.h>
 #include <mogi/math/systems.h>
 #include "remapModifier.hpp"
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 
 using namespace Chaos;
 
@@ -30,12 +30,12 @@ const std::string RemapModifier::mod_type = "remap";
 RemapModifier::RemapModifier(toml::table& config) {
   Mogi::Math::Random rng;
 
-  TOMLReader::checkValid(config, std::vector<std::string>{
+  Configuration::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "signals", "disableSignals", "remap", "random_remap", "unlisted"});
 
   initialize(config);
   
-  TOMLReader::addToVector<ControllerInput>(config, "signals", signals);
+  Configuration::addToVector<ControllerInput>(config, "signals", signals);
 
   disable_signals = config["disableSignals"].value_or(false);
 
@@ -58,14 +58,14 @@ RemapModifier::RemapModifier(toml::table& config) {
     }
     for (auto& elem : *remap_list) {
       const toml::table* remapping = elem.as_table();
-      TOMLReader::checkValid(*remapping, std::vector<std::string>{
+      Configuration::checkValid(*remapping, std::vector<std::string>{
 	      "from", "to", "to_neg", "to_min", "invert", "threshold", "sensitivity"}, "remap config");
       if (! remapping) {
 	      throw std::runtime_error("Gampad signal remapping must be a table");
       }      
-      ControllerSignal from = TOMLReader::getSignal(*remapping, "from", true);
-      ControllerSignal to = TOMLReader::getSignal(*remapping, "to", true);
-      ControllerSignal to_neg = TOMLReader::getSignal(*remapping, "to_neg", false);
+      ControllerSignal from = Configuration::getSignal(*remapping, "from", true);
+      ControllerSignal to = Configuration::getSignal(*remapping, "to", true);
+      ControllerSignal to_neg = Configuration::getSignal(*remapping, "to_neg", false);
 
       ControllerSignalType from_type = ControllerInput::get(from)->getType();
       ControllerSignalType to_type = ControllerInput::get(to)->getType();

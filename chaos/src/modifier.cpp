@@ -29,7 +29,7 @@
 #include "config.hpp"
 #include "enumerations.hpp"
 #include "modifier.hpp"
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 
 using namespace Chaos;
 
@@ -69,11 +69,11 @@ void Modifier::initialize(toml::table& config) {
   PLOG_VERBOSE << " - groups: " << groups;
 #endif
 
-  applies_to_all = TOMLReader::addToVectorOrAll<GameCommand>(config, "appliesTo", commands);
+  applies_to_all = Configuration::addToVectorOrAll<GameCommand>(config, "appliesTo", commands);
 
  
-  TOMLReader::addToVector<GameCondition>(config, "condition", conditions);
-  condition_test = TOMLReader::getConditionTest(config, "conditionTest");
+  Configuration::addToVector<GameCondition>(config, "condition", conditions);
+  condition_test = Configuration::getConditionTest(config, "conditionTest");
 
 #ifndef NDEBUG
   switch (condition_test) {
@@ -88,8 +88,8 @@ void Modifier::initialize(toml::table& config) {
   }
 #endif
 
-  TOMLReader::addToVector<GameCondition>(config, "unless", unless_conditions);
-  unless_test = TOMLReader::getConditionTest(config, "unlessTest");
+  Configuration::addToVector<GameCondition>(config, "unless", unless_conditions);
+  unless_test = Configuration::getConditionTest(config, "unlessTest");
 
 #ifndef NDEBUG
   switch (unless_test) {
@@ -105,9 +105,9 @@ void Modifier::initialize(toml::table& config) {
 #endif
 
   // need a debug trace for these
-  TOMLReader::buildSequence(config, "beginSequence", on_begin);
+  Configuration::buildSequence(config, "beginSequence", on_begin);
 
-  TOMLReader::buildSequence(config, "finishSequence", on_finish);
+  Configuration::buildSequence(config, "finishSequence", on_finish);
   
 }
 

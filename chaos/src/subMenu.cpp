@@ -21,12 +21,12 @@
 #include <plog/Log.h>
 
 #include "subMenu.hpp"
-#include "tomlReader.hpp"
+#include "configuration.hpp"
 
 using namespace Chaos;
 
 SubMenu::SubMenu(const toml::table& config) : MenuItem(config) {
-  TOMLReader::checkValid(config, std::vector<std::string>{
+  Configuration::checkValid(config, std::vector<std::string>{
       "name", "type", "parent", "offset", "initialState", "hidden", "confirm", "tab", "counterAction"});
 }
 
