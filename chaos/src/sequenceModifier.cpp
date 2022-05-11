@@ -118,7 +118,7 @@ bool SequenceModifier::tweak(DeviceEvent& event) {
     } else {
       // while in the sequence, block the commands in the while-busy list
       for (auto& cmd : block_while) {
-        if (Controller::instance().matches(event, cmd)) {
+        if (controller.matches(event, cmd)) {
           return false;
         }
       }

@@ -17,9 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <fstream>
+#include <filesystem>
 #include <stdexcept>
-#include <algorithm>
 
 #include <plog/Log.h>
 #include <plog/Initializers/RollingFileInitializer.h>
@@ -33,74 +32,38 @@
 
 using namespace Chaos;
 
-// Parse the TOML file into memory and do initial setup. All initializations done from
-// the configuration file should be dispatched from here.
+// Parse the TOML file into memory and do initial setup.
 Configuration::Configuration(const std::string& fname) {
   toml::table configuration;
   try {
     configuration = toml::parse_file(fname);
   }
   catch (const toml::parse_error& err) {
-    std::cerr << "Parsing the configuration file failed:" << err << std::endl;
+    std::cerr << "Parsing the configuration file failed: " << err << std::endl;
     throw err;
   }
-  // to do: handle case of non-existent directory
+
+  log_path = configuration["log_dir"].value_or(".");
+  if (! std::filesystem::exists(log_path)) {
+    // If this directory doesn't exist, create it
+    std::filesystem::create_directory(log_path);
+  } else {
+    // Verify that this is actually a directory and not a file
+    if (! std::filesystem::is_directory(log_path)) {
+      std::cerr << "Log path '" << log_path.string() << "' is not a directory!";
+    }
+  }
   // Initialize the logger
-  std::string logfile = configuration["logging"]["log_file"].value_or("chaos.log");  
-  plog::Severity maxSeverity = (plog::Severity) configuration["logging"]["log_verbosity"].value_or(3);
-  size_t max_size = (size_t) configuration["logging"]["max_log_size"].value_or(0);
-  int max_logs = configuration["logging"]["max_log_files"].value_or(8);  
+  std::filesystem::path logfile = configuration["log_file"].value_or("chaos.log");  
+  logfile = log_path / logfile;
+  
+  plog::Severity maxSeverity = (plog::Severity) configuration["log_verbosity"].value_or(3);
+  size_t max_size = (size_t) configuration["max_log_size"].value_or(0);
+  int max_logs = configuration["max_log_files"].value_or(8);  
   plog::init(maxSeverity, logfile.c_str(), max_size, max_logs);
   
   PLOG_NONE << "Welcome to Chaos " << CHAOS_VERSION;
 
-  // Check version tag to make sure we're looking at a chaos TOML file
-  std::optional<std::string_view> version = configuration["chaos_toml"].value<std::string_view>();
-  if (!version) {
-    PLOG_FATAL << "Could not find the version id (chaos_toml). Are you sure this is the right TOML file?";
-    throw std::runtime_error("Missing chaos_toml identifier");
-  }
-  
-  // Get the basic game information. We send these to the interface. 
-  game = configuration["game"].value_or<std::string>("Unknown game");
-  PLOG_INFO << "Playing " << game;
-
-  active_modifiers = configuration["mod_defaults"]["active_modifiers"].value_or(3);
-  if (active_modifiers < 1) {
-    PLOG_ERROR << "You asked for " << active_modifiers << ". There must be at least one.";
-    active_modifiers = 1;
-  } else if (active_modifiers > 5) {
-    PLOG_WARNING << "Having too many active modifiers may cause undesirable side-effects.";
-  }
-  PLOG_INFO << "Active modifiers: " << active_modifiers;
-
-  time_per_modifier = configuration["mod_defaults"]["time_per_modifier"].value_or(180.0);
-  if (time_per_modifier < 10) {
-    PLOG_ERROR << "Modifiers should be active for at least 10 seconds.";
-    time_per_modifier = 10;
-  }
-  PLOG_INFO << "Time per modifier: " << time_per_modifier << " seconds";
-
-  // Initialize basic controller input signals
-  ControllerInput::initialize(configuration);
-
-  // Process those commands that do not have conditions
-  GameCommand::buildCommandMapDirect(configuration);
-
-  // Process all conditions
-  GameCondition::buildConditionList(configuration);
-
-  // Process those commands that have conditions
-  GameCommand::buildCommandMapCondition(configuration);
-
-  // Initialize defined sequences and static parameters for sequences
-  Sequence::initialize(configuration);
-
-  // Initialize menu items and global paramerts for the menu system
-  GameMenu::instance().initialize(configuration);
-
-  // Create the modifiers
-  Modifier::buildModList(configuration);
 }
 
 void Configuration::buildSequence(toml::table& config, const std::string& key, Sequence& sequence) {

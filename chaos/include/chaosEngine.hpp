@@ -86,12 +86,9 @@ namespace Chaos {
     Json::StreamWriterBuilder jsonWriterBuilder;	
 
   public:
-    ChaosEngine();
+    ChaosEngine(Controller& c) : controller{c} {}
 
-    static ChaosEngine& instance() {
-      static ChaosEngine engine{};
-      return engine;
-    }
+    //void setController(Controller& c) { controller = c; }
 
     void sendInterfaceMessage(const std::string& msg);
     

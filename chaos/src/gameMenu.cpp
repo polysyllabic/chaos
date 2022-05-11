@@ -32,7 +32,7 @@
 
 using namespace Chaos;
 
-void GameMenu::initialize(toml::table& config) {
+GameMenu::GameMenu(toml::table& config) {
 
   toml::table* menu_list = config["menu"].as_table();
   if (! config.contains("menu")) {

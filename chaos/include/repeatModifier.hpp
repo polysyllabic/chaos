@@ -59,7 +59,6 @@ namespace Chaos {
   class RepeatModifier : public Modifier::Registrar<RepeatModifier> {
 
   protected:
-    std::shared_ptr<GameCommand> signal;
     
     double press_time;
     /**

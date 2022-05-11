@@ -17,6 +17,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <filesystem>
 #include <string>
 #include <optional>
 #include <string_view>
@@ -44,13 +45,9 @@ namespace Chaos {
 
   private:
 
-    /**
-     * \brief The name of the game this TOML file supports.
-     */
-    std::string game;
-
-    int active_modifiers;
-    double time_per_modifier;
+    std::filesystem::path game_config; 
+    std::filesystem::path log_path;
+    unsigned int usleep_interval;
 
   public:
     /**
@@ -64,17 +61,14 @@ namespace Chaos {
     Configuration(const std::string& fname);
 
     /**
-     * \brief Get the name of the game defined in the TOML file
+     * \brief Get the default game configuration file
      * 
-     * \return std::string_view
-     *
-     * The game name is defined with the "game" key in the TOML configuration file.
+     * \return const std::string& 
+     * 
+     * This is the file we try to load if none is specified on the command line
      */
-    const std::string& getGameName() { return game; }
+    const std::string& getGameFile() { return game_config.string(); }
 
-    int getNumActiveMods() { return active_modifiers; }
-
-    double getTimePerModifier() { return time_per_modifier; }
     
     /**
      * \brief Translate from the name of a controller input (RX, etc) to the ControllerSignal equivalent.

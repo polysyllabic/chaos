@@ -31,9 +31,19 @@ namespace Chaos {
    */
   class Game {
   public:
+    Game();
     Game(const std::string& configfile);
 
-    std::string& getName() { return name; }
+    int loadConfigFile(const std::string& configfile);
+
+    /**
+     * \brief Get the name of the game defined in the TOML file
+     * 
+     * \return std::string
+     *
+     * The game name is defined with the "game" key in the TOML configuration file.
+     */
+    const std::string& getName() { return name; }
 
   private:
     // Name of the game we're playing

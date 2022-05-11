@@ -31,6 +31,27 @@ using namespace Chaos;
 
 Controller::Controller() {
   memset(controllerState, 0, sizeof(controllerState));
+  PLOG_DEBUG << "Initializing controller";
+  this->setEndpoint(0x84);	// Works for both dualshock4 and dualsense
+  mRawGadgetPassthrough.addObserver(this);
+	
+  mRawGadgetPassthrough.initialize();
+  mRawGadgetPassthrough.start();
+	
+  while (!mRawGadgetPassthrough.readyProductVendor()) {
+    usleep(10000);
+  }
+	
+  mControllerState = ControllerState::factory(mRawGadgetPassthrough.getVendor(), mRawGadgetPassthrough.getProduct());
+  //chaosHid = new ChaosUhid(mControllerState);
+  //chaosHid->start();
+	
+  if (mControllerState == nullptr) {
+    PLOG_ERROR << "ERROR!  Could not build a ControllerState for vendor=0x"
+	       << std::setfill('0') << std::setw(4) << std::hex << mRawGadgetPassthrough.getVendor()
+	       << " product=0x" << std::setfill('0') << std::setw(4) << std::hex << mRawGadgetPassthrough.getProduct();
+    exit(EXIT_FAILURE);
+  }
 }
 
 void Controller::doAction() {
@@ -69,35 +90,9 @@ void Controller::notification(unsigned char* buffer, int length) {
   mControllerState->applyHackedState(buffer, controllerState);
 }
 
-void Controller::initialize() {
-  PLOG_DEBUG << "Initializing controller";
-  this->setEndpoint(0x84);	// Works for both dualshock4 and dualsense
-  mRawGadgetPassthrough.addObserver(this);
-	
-  mRawGadgetPassthrough.initialize();
-  mRawGadgetPassthrough.start();
-	
-  while (!mRawGadgetPassthrough.readyProductVendor()) {
-    usleep(10000);
-  }
-	
-  mControllerState = ControllerState::factory(mRawGadgetPassthrough.getVendor(), mRawGadgetPassthrough.getProduct());
-  //chaosHid = new ChaosUhid(mControllerState);
-  //chaosHid->start();
-	
-  if (mControllerState == nullptr) {
-    PLOG_ERROR << "ERROR!  Could not build a ControllerState for vendor=0x"
-	       << std::setfill('0') << std::setw(4) << std::hex << mRawGadgetPassthrough.getVendor()
-	       << " product=0x" << std::setfill('0') << std::setw(4) << std::hex << mRawGadgetPassthrough.getProduct();
-    exit(EXIT_FAILURE);
-  }
-}
-
 short Controller::getState(std::shared_ptr<ControllerInput> signal) {
   return getState(signal->getID(), signal->getButtonType());
 }
-
-
 
 void Controller::storeState(const DeviceEvent& event) {
   int location = ((int) event.type << 8) + (int) event.id;

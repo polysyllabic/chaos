@@ -213,7 +213,7 @@ bool Modifier::remapEvent(DeviceEvent& event) {
    	  new_event.id = to_console->getHybridAxis();
       new_event.type = TYPE_AXIS;
    	  new_event.value = event.value ? JOYSTICK_MAX : JOYSTICK_MIN;
-      Controller::instance().applyEvent(new_event);
+      controller.applyEvent(new_event);
     }
     break;
   case ControllerSignalType::AXIS:
@@ -224,7 +224,7 @@ bool Modifier::remapEvent(DeviceEvent& event) {
       new_event.id = to_console->getID();
       new_event.value = 0;
       new_event.type = TYPE_BUTTON;
-      Controller::instance().applyEvent(new_event);
+      controller.applyEvent(new_event);
     }
   }
 
@@ -245,7 +245,7 @@ void Modifier::disableTPAxis(ControllerSignal tp_axis) {
     std::shared_ptr<ControllerInput> r = ControllerInput::get(tp->getRemap());
     assert(r);
     new_event.id = r->getID();
-    Controller::instance().applyEvent(new_event);
+    controller.applyEvent(new_event);
   }
 }
 
