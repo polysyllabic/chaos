@@ -27,7 +27,6 @@
 
 #include "config.hpp"
 #include "deviceEvent.hpp"
-//#include "chaosUhid.hpp"
 #include "controllerState.hpp"
 #include "signals.hpp"
 
@@ -87,13 +86,8 @@ namespace Chaos {
     ControllerInjector* controllerInjector = nullptr;
 
   public:
-    void initialize();
+    Controller();
     
-    static Controller& instance() {
-      static Controller controller{};
-      return controller;
-    }
-
     /**
      * \brief The low-level function to get the current controlller state.
      * \param id The id of the axis/button

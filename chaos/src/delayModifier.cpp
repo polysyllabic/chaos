@@ -53,7 +53,7 @@ void DelayModifier::update() {
   while ( !eventQueue.empty() ) {
     if( (timer.runningTime() - eventQueue.front().time) >= delayTime ) {
       // Reintroduce the event.
-      ChaosEngine::instance().fakePipelinedEvent(eventQueue.front().event, getptr());
+      engine->fakePipelinedEvent(eventQueue.front().event, getptr());
       eventQueue.pop();
     }
     else {
@@ -72,7 +72,7 @@ bool DelayModifier::tweak(DeviceEvent& event) {
   }
   else {
     for (auto cmd : commands) {
-      if (Controller::instance().matches(event, cmd)) {
+      if (controller.matches(event, cmd)) {
 	eventQueue.push ({this->timer.runningTime(), event});
 	return false;
       }

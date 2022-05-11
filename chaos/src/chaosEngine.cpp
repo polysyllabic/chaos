@@ -30,7 +30,7 @@
 
 using namespace Chaos;
 
-ChaosEngine::ChaosEngine() : controller{Controller::instance()}, pause(true)
+ChaosEngine::ChaosEngine(Controller& c) : controller{c}, pause(true)
 {
   controller.addInjector(this);
   time.initialize();

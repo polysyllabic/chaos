@@ -277,6 +277,9 @@ namespace Chaos {
      */
     double totalLifespan;
     
+    static Controller& controller;
+    static std::shared_ptr<ChaosEngine> engine;
+
     /**
      * \brief Get the metadata about this mod as a Json object
      * 
@@ -362,6 +365,9 @@ namespace Chaos {
      */
     Modifier(Passkey) {}
     
+    static void setEngine(std::shared_ptr<ChaosEngine> e) { engine = e; }
+    static void setController(Controller& c) { controller = c; }
+
     /**
      * \brief Create the overall list of mods from the TOML file.
      * \param config The object containing the fully parsed TOML file

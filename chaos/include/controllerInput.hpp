@@ -36,7 +36,7 @@ namespace Chaos {
   /**
    * \brief Defines the nature of a particular signal coming from the controller
    *
-   * Signals are 
+   * This class defines the specifics of the actual signals coming from the controller.
    */
   class ControllerInput {
   private:

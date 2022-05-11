@@ -131,20 +131,8 @@ namespace Chaos {
     std::shared_ptr<Sequence> confirm;
 
   public:
-
     GameMenu() {}
-
-    static GameMenu& instance() {
-      static GameMenu menu{};
-      return menu;
-    }
-
-    /**
-     * \brief Initialize the menu from the TOML file
-     * 
-     * \param config The main table for the complete parsed TOML file
-     */
-    void initialize(toml::table& config);
+    GameMenu(toml::table& config);
 
     /**
      * \brief Get a pre-defined sequence by name

@@ -17,5 +17,54 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <plog/Log.h>
+#include <plog/Initializers/RollingFileInitializer.h>
 
 #include "game.hpp"
+#include "configuration.hpp"
+#include "gameCommand.hpp"
+#include "gameCondition.hpp"
+#include "modifier.hpp"
+#include "gameMenu.hpp"
+
+using namespace Chaos;
+
+Game::Game(const std::string& configfile) {
+  // Initialize logging
+  static plog::RollingFileAppender<plog::TxtFormatter> logger("chaos.log");
+  loadConfigFile(configfile);
+}
+
+int Game::loadConfigFile(const std::string& configfile) {
+  int error_count = 0;
+  toml::table configuration;
+  try {
+    configuration = toml::parse_file(configfile);
+  }
+  catch (const toml::parse_error& err) {
+    PLOG_ERROR << "Parsing the configuration file failed:" << err << std::endl;
+    return 1;
+  }
+
+  // Process the TOML file. This will initialize all the mods and associated data.
+  Configuration configuration(configfile);
+
+  // Process those commands that do not have conditions
+  GameCommand::buildCommandMapDirect(configuration);
+
+  // Process all conditions
+  GameCondition::buildConditionList(configuration);
+
+  // Process those commands that have conditions
+  GameCommand::buildCommandMapCondition(configuration);
+
+  // Initialize defined sequences and static parameters for sequences
+  Sequence::initialize(configuration);
+
+  // Initialize the menu system
+  menu = GameMenu(configuration);
+
+  // Create the modifiers
+  Modifier::buildModList(configuration);
+
+}

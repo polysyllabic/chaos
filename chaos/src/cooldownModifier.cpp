@@ -57,7 +57,7 @@ CooldownModifier::CooldownModifier(toml::table& config) {
 }
 
 void CooldownModifier::begin() {
-  pressedState = Controller::instance().getState(cooldownCommand.id, cooldownCommand.type);
+  pressedState = controller.getState(cooldownCommand.id, cooldownCommand.type);
   cooldownTimer = 0.0;
   inCooldown = false;
   sendBeginSequence();
@@ -75,7 +75,7 @@ void CooldownModifier::update() {
       cooldownTimer = 0.0;
     }
   } else {
-    if (Controller::instance().getState(cooldownCommand.id, cooldownCommand.type)) {
+    if (controller.getState(cooldownCommand.id, cooldownCommand.type)) {
       // increment cooldown timer until time_on exceeded
       cooldownTimer += deltaT;
       if (cooldownTimer > time_on) {
@@ -83,7 +83,7 @@ void CooldownModifier::update() {
 	      inCooldown = true;
 	      // Disable event
 	      // TODO: allow cooldown to do things other than block a signal
-	      ChaosEngine::instance().fakePipelinedEvent(cooldownCommand, getptr());
+	      engine->fakePipelinedEvent(cooldownCommand, getptr());
       }
     }
   }

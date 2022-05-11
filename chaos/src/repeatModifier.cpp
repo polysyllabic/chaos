@@ -36,7 +36,6 @@ RepeatModifier::RepeatModifier(toml::table& config) {
   if (commands.size() > 1) {
     PLOG_WARNING << "More than one command in 'appliesTo' -- extra commands will be ignored.";
   }
-  signal = commands[0];
   
   time_on = config["timeOn"].value_or(0.0);
   time_off = config["timeOff"].value_or(0.0);
@@ -71,12 +70,12 @@ void RepeatModifier::update() {
 
   press_time += timer.dTime();
   if (repeat_count < num_cycles) {
-    if (press_time > time_on && signal->getState()) {
-      Controller::instance().setOff(signal);
+    if (press_time > time_on && commands[0]->getState()) {
+      controller.setOff(commands[0]);
       press_time = 0;
       repeat_count++;
-    } else if (press_time > time_off && ! signal->getState()) {
-      Controller::instance().setOn(signal);
+    } else if (press_time > time_off && ! commands[0]->getState()) {
+      controller.setOn(commands[0]);
       press_time = 0;
     }
   } else if (press_time > cycle_delay) {
@@ -87,14 +86,14 @@ void RepeatModifier::update() {
 
 bool RepeatModifier::tweak(DeviceEvent& event) {
   if (force_on) {
-    if (Controller::instance().matches(event, signal)) {
-      event.value = signal->getInput()->getMax((ButtonType) event.type);
+    if (controller.matches(event, commands[0])) {
+      event.value = commands[0]->getInput()->getMax((ButtonType) event.type);
     }
   }
   // Drop any events in the blockWhile list
   if (! block_while.empty()) {
     for (auto& cmd : block_while) {
-      if (Controller::instance().matches(event, cmd)) {
+      if (controller.matches(event, cmd)) {
 	      return false;
       }
     }

@@ -19,42 +19,49 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
-#include <string_view>
 
 #include <toml++/toml.h>
-#include <fstream>
 
 #include "config.hpp"
 #include "chaosEngine.hpp"
 #include "controller.hpp"
 #include "configuration.hpp"
+#include "game.hpp"
 
 using namespace Chaos;
 
 int main(int argc, char** argv) {
-  // the name of the configuration file should be the only argument on the command line.
+
+  // Process the configuration file for non-gameplay-related information
+  // This will start up the logger and configure other basic settings
+  Configuration chaos_config("chaosconfig.toml");
+
+  // Now process the game-configuration file. If a file is specified on the command line, we use
+  // that. Otherwise we use the default. If no default is set, or the specified file does not exist,
+  // we abort.
   if (argc == 1) {
     std::cerr << "Usage: chaos input_file\n  input_file: The TOML file for the game you want to make chaotic.\n";
     exit (EXIT_FAILURE);
   }
-  std::string configfile(argv[1]);
+  std::string configfile = (argc > 1) ? argv[1] : chaos_config.getGameFile();
 
-  // Process the TOML file. This will initialize all the mods and associated data.
-  Configuration config(configfile);
+  // Parse the game information
+  Game game = Game(configfile);
 
   // Configure the controller
-  Controller::instance().initialize();
-  Controller::instance().start();
+  Controller controller;
+  controller.start();
 
   // Start the engine
-  ChaosEngine::instance().start();
+  std::shared_ptr<ChaosEngine> engine = std::make_shared<ChaosEngine>(controller);
+  engine->start();
 
   // Set the data that the interface will want to query
-  ChaosEngine::instance().setGame(config.getGameName());
-  ChaosEngine::instance().setActiveMods(config.getNumActiveMods());
-  ChaosEngine::instance().setTimePerModifier(config.getTimePerModifier());
+  engine->setGame(game.getName());
+  engine->setActiveMods(game.getNumActiveMods());
+  engine->setTimePerModifier(game.getTimePerModifier());
 
-  while(ChaosEngine::instance().keepGoing()) {
+  while(engine->keepGoing()) {
     // loop until we get an exit signal
     usleep(1000000);
   }
