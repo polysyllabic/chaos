@@ -25,8 +25,8 @@
 #include "config.hpp"
 #include "chaosEngine.hpp"
 #include "controller.hpp"
+#include "controllerInput.hpp"
 #include "configuration.hpp"
-#include "game.hpp"
 
 using namespace Chaos;
 
@@ -36,30 +36,22 @@ int main(int argc, char** argv) {
   // This will start up the logger and configure other basic settings
   Configuration chaos_config("chaosconfig.toml");
 
+  // Initialize the hard-coded controller input signals. These don't rely on anything in a
+  // configuration file.
+  ControllerInput::initialize();
+
   // Now process the game-configuration file. If a file is specified on the command line, we use
   // that. Otherwise we use the default. If no default is set, or the specified file does not exist,
   // we abort.
-  if (argc == 1) {
-    std::cerr << "Usage: chaos input_file\n  input_file: The TOML file for the game you want to make chaotic.\n";
-    exit (EXIT_FAILURE);
-  }
   std::string configfile = (argc > 1) ? argv[1] : chaos_config.getGameFile();
-
-  // Parse the game information
-  Game game = Game(configfile);
 
   // Configure the controller
   Controller controller;
   controller.start();
 
   // Start the engine
-  std::shared_ptr<ChaosEngine> engine = std::make_shared<ChaosEngine>(controller);
+  std::shared_ptr<ChaosEngine> engine = std::make_shared<ChaosEngine>(controller, configfile);
   engine->start();
-
-  // Set the data that the interface will want to query
-  engine->setGame(game.getName());
-  engine->setActiveMods(game.getNumActiveMods());
-  engine->setTimePerModifier(game.getTimePerModifier());
 
   while(engine->keepGoing()) {
     // loop until we get an exit signal

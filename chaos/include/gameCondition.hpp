@@ -149,13 +149,6 @@ namespace Chaos {
     double threshold;
 
     /**
-     * \brief The map from condition name to condition object.
-     * 
-     * The names are used to identify the object within the TOML file.
-     */
-    static std::unordered_map<std::string, std::shared_ptr<GameCondition>> condition_map;
-
-    /**
      * \brief Translates the proportional threshold into an integer based on the type of signal that
      * the game command is currently mapped to and the threshold type.
      * 
@@ -183,13 +176,6 @@ public:
   GameCondition(toml::table& config);
 
   /**
-   * \brief Initializes the static list of conditions from the TOML file.
-   * 
-   * \param config The object holding the parsed TOML file
-   */
-  static void buildConditionList(toml::table& config);
-
-  /**
    * \brief Tests if the current state of the controller meets the defined condition(s)
    */
   bool inCondition();
@@ -203,19 +189,6 @@ public:
    * on what is selected. Persistent conditions are defined 
    */
   void updateState();
-
-  /**
-   * \brief Given the condition name, get the object
-   * 
-   * \param name The name by which this condition is identified in the TOML file
-   * \return std::shared_ptr<GameCondition> Pointer to the game condition object.
-   *
-   * Conditions refer to game commands and game command can, optionally, refer to conditions. To
-   * avoid infinite recursion, we prohibit conditions from referencing game commands that have
-   * conditions themselves.
-   * 
-   */
-  static std::shared_ptr<GameCondition> get(const std::string& name);
 
   std::string& getName() { return name; }
   };

@@ -21,53 +21,91 @@
 #include <plog/Log.h>
 
 #include "sequence.hpp"
-#include "configuration.hpp"
+#include "tomlUtils.hpp"
 #include "menuItem.hpp"
+#include "controllerInput.hpp"
 
 using namespace Chaos;
 
-std::unordered_map<std::string, std::shared_ptr<Sequence>> Sequence::sequences;
-unsigned int Sequence::press_time;
-unsigned int Sequence::release_time;
-
-void Sequence::initialize(toml::table& config) {
-  // global parameters for sequences
-  press_time = (unsigned int) (config["controller"]["button_press_time"].value_or(0.0625) * 1000000);
-  PLOG_VERBOSE << "press_time = " << press_time << " microseconds";
-
-  release_time = (unsigned int) (config["controller"]["button_release_time"].value_or(0.0625) * 1000000);
-  PLOG_VERBOSE << "release_time = " << release_time << " microseconds";
-
-  // initialize pre-defined sequences
-  toml::array* arr = config["sequence"].as_array();
+Sequence::Sequence(toml::table& config, const std::string& key, Game& game) {
+  toml::array* arr = config[key].as_array();
   if (arr) {
     for (toml::node& elem : *arr) {
-      toml::table* seq = elem.as_table();
-      if (!seq) {
-        PLOG_ERROR << "Each sequence definition must be a table";
-        continue;
+      assert (elem.as_table());
+      toml::table& definition = *elem.as_table();
+
+      checkValid(definition, std::vector<std::string>{"event", "command", "delay", "repeat", "value"}, "buildSequence");
+      
+      std::optional<std::string> event = definition["event"].value<std::string>();
+      if (! event) {
+	      throw std::runtime_error("Sequence missing required 'event' parameter");
       }
-      std::optional<std::string> seq_name = (*seq)["name"].value<std::string>();
-      if (! seq_name) {
-        PLOG_ERROR << "Sequence definition missing required name field";
-        continue;
+
+      double delay = definition["delay"].value_or(0.0);
+      if (delay < 0) {
+	      throw std::runtime_error("Delay must be a non-negative number of seconds.");
+      }      
+      unsigned int delay_time = (unsigned int) (delay * 1000000);
+      int repeat = definition["repeat"].value_or(1);
+      if (repeat < 1) {
+	      PLOG_WARNING << "The value of 'repeat' should be an integer greater than 1. Will ignore.";
+	      repeat = 1;
       }
-      if (! seq->contains("sequence")) {
-        PLOG_ERROR << "Sequence definition missing required sequence field";
-        continue;
-      }
-      try {
-        PLOG_VERBOSE << "Adding pre-defined sequence '" << *seq_name << "'";
-        std::shared_ptr<Sequence> s = std::make_shared<Sequence>();
-        Configuration::buildSequence(*seq, "sequence", *s);
-       	sequences.insert({*seq_name, s});
-      }
-      catch (const std::runtime_error& e) {
-        PLOG_ERROR << "In definition for Sequence '" << *seq_name << "': " << e.what(); 
+
+      // Sequences are stored in terms of ControllerInput signals, but the TOML file uses command
+      // names. We use the default mapping because signals are always sent out in the form the
+      // console expects.
+      std::optional<std::string> cmd = definition["command"].value<std::string>();
+      std::shared_ptr<GameCommand> command = (cmd) ? game.getCommand(*cmd) : nullptr;
+      std::shared_ptr<ControllerInput> signal = (command) ? command->getInput() : nullptr;
+
+	    // If this signal is a hybrid control, this gets the axis max, which is needed for addHold().
+	    int max_val = (signal) ? signal->getMax(TYPE_AXIS) : 0;
+
+      int value = definition["value"].value_or(max_val);
+
+      if (*event == "delay") {
+	      if (delay_time == 0) {
+	        PLOG_ERROR << "You've tried to add a delay of 0 microseconds. This will be ignored.";
+	      } else {
+	        addDelay(delay_time);
+          PLOG_VERBOSE << "Delay = " << delay_time << " microseconds";
+	      }
+      } else if (*event == "disable") {
+	      disableControls();
+      } else if (*event == "hold") {
+	      if (!signal) {
+	        throw std::runtime_error("A 'hold' event must be associated with a valid command.");
+      	}
+	      if (repeat > 1) {
+	        PLOG_WARNING << "Repeat is not supported with 'hold' and will be ignored. (Did you want 'press'?)";
+      	}
+	      addHold(signal, value, 0);
+        PLOG_VERBOSE << "Hold " << signal->getName();
+      } else if (*event == "press") {
+	      if (!signal) {
+	        throw std::runtime_error("A 'press' event must be associated with a valid command.");
+        }
+	      for (int i = 0; i < repeat; i++) {
+	        addPress(signal, value);
+	        if (delay_time > 0) {
+	          addDelay(delay_time);
+	        }
+          PLOG_VERBOSE << "Press " << signal->getName() << " with delay of " << delay_time << " microseconds.";
+	      }
+      } else if (*event == "release") {
+	      if (!signal) {
+	        throw std::runtime_error("A 'release' event must be associated with a valid command.");
+	      }
+	      if (repeat > 1) {
+	        PLOG_WARNING << "Repeat is not supported with 'release' and will be ignored. (Did you want 'press'?)";
+	      }
+	      addRelease(signal, delay_time);
+        PLOG_VERBOSE << "Release " << signal->getName() << " with delay of " << delay_time << " microseconds.";
+      } else {
+      	throw std::runtime_error("Unrecognized event type.");
       }
     }
-  } else {
-    PLOG_WARNING << "No pre-defined sequences found.";
   }
 }
 
@@ -131,6 +169,7 @@ void Sequence::addDelay(unsigned int delay) {
   events.push_back( {delay, 0, 255, 255} );
 }
 
+/*
 void Sequence::addSequence(const std::string& name) {
   std::shared_ptr<Sequence> seq = get(name);
   if (seq) {
@@ -139,25 +178,26 @@ void Sequence::addSequence(const std::string& name) {
     PLOG_ERROR << "Attempted to add undefined sequence '" << name;
   }
 }
+*/
 
 void Sequence::addSequence(std::shared_ptr<Sequence> seq) {
   assert (seq);
   events.insert(events.end(), seq->getEvents().begin(), seq->getEvents().end());
 }
 
-void Sequence::send() {
+void Sequence::send(Controller& controller) {
   for (std::vector<DeviceEvent>::iterator it = events.begin(); it != events.end(); it++) {
     DeviceEvent& event = (*it);
     PLOG_VERBOSE << "Sending event for button " << (int) event.type << ": " << (int) event.id
 	       << ":" << (int) event.value << "; sleeping for " << (int) event.time << " microseconds";
-    Controller::instance().applyEvent(event);
+    controller.applyEvent(event);
     if (event.time) {
       usleep(event.time);
     }
   }
 }
 
-bool Sequence::sendParallel(double sequenceTime) {
+bool Sequence::sendParallel(Controller& controller, double sequenceTime) {
   unsigned int elapsed = (unsigned int) sequenceTime * 1000000;
   for (DeviceEvent& e = events[current_step]; current_step <= events.size(); e = events[++current_step]) {
     PLOG_VERBOSE << "parallel sent step " << current_step;
@@ -169,7 +209,7 @@ bool Sequence::sendParallel(double sequenceTime) {
       }
     } else {
       // send out events until we hit the next delay
-      Controller::instance().applyEvent(e);
+      controller.applyEvent(e);
     }
   }
   // We're at the end of the sequence. Reset the steps and time for the next iteration
@@ -186,10 +226,14 @@ bool Sequence::empty() {
   return events.empty();
 }
 
-std::shared_ptr<Sequence> Sequence::get(const std::string& name) {
-  auto iter = sequences.find(name);
-  if (iter != sequences.end()) {
-    return iter->second;
-  }
-  return nullptr;
+void Sequence::setPressTime(double time) {
+  press_time = (unsigned int) (time * 1000000.0);
+  PLOG_VERBOSE << "Press time set to " << time << " seconds (" << press_time << " microseconds)";
 }
+
+void Sequence::setReleaseTime(double time) {
+  release_time = (unsigned int) (time * 1000000.0);
+  PLOG_VERBOSE << "Release time set to " << time << " seconds (" << release_time << " microseconds)";
+}
+
+

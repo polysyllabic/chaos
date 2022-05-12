@@ -22,7 +22,7 @@
 
 #include "delayModifier.hpp"
 #include "chaosEngine.hpp"
-#include "configuration.hpp"
+#include "tomlUtils.hpp"
 
 using namespace Chaos;
 
@@ -30,7 +30,7 @@ const std::string DelayModifier::mod_type = "delay";
 
 DelayModifier::DelayModifier(toml::table& config) {
   
-  Configuration::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
+  checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
 							  "appliesTo", "delay", "beginSequence", "finishSequence", "unlisted"});
   initialize(config);
 

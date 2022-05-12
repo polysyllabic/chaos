@@ -16,44 +16,39 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <stdexcept>
+#include <algorithm>
 #include <plog/Log.h>
-#include <toml++/toml.h>
-
-#include "invertModifier.hpp"
 #include "tomlUtils.hpp"
+#include "controllerInput.hpp"
 
 using namespace Chaos;
 
-const std::string InvertModifier::mod_type = "invert";
-
-InvertModifier::InvertModifier(toml::table& config) {
-  checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence", "unlisted"});
-  initialize(config);
-
-  if (commands.empty()) {
-    throw std::runtime_error("No commands defined in appliesTo");
-  }
-
-}
-
-void InvertModifier::begin() {  
-  sendBeginSequence();
-}
-
-void InvertModifier::finish() {  
-  sendFinishSequence();
-}
-
-bool InvertModifier::tweak(DeviceEvent& event) {
-  // Traverse the list of affected commands
-  for (auto& cmd : commands) {
-    if (controller.matches(event, cmd)) {
-      event.value = -((int)event.value+1);
-      break;
+bool checkValid(const toml::table& config, const std::vector<std::string>& goodKeys,
+          const std::string& name) {
+  bool ret = true;
+  for (auto&& [k, v] : config) {
+    if (std::find(goodKeys.begin(), goodKeys.end(), k) == goodKeys.end()) {
+      PLOG_WARNING << "The key '" << k << "' is unused in " << name;
+      ret = false;
     }
   }
-  return true;
+  return ret;
 }
+
+
+ControllerSignal getSignal(const toml::table& config, const std::string& key, bool required) {
+  if (! config.contains(key)) {
+    if (required) {
+      throw std::runtime_error("missing required '" + key + "' field");
+    }
+    return ControllerSignal::NONE;
+  }
+  std::optional<std::string> signal = config.get(key)->value<std::string>();
+  std::shared_ptr<ControllerInput> inp = ControllerInput::get(*signal);
+  if (! inp) {
+    throw std::runtime_error("Controller signal '" + *signal + "' not defined");
+  }
+  return inp->getSignal();
+}
+
 

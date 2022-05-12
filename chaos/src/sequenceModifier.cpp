@@ -22,7 +22,7 @@
 #include <plog/Log.h>
 
 #include "sequenceModifier.hpp"
-#include "configuration.hpp"
+#include "tomlUtils.hpp"
 
 using namespace Chaos;
 
@@ -30,7 +30,7 @@ const std::string SequenceModifier::mod_type = "sequence";
 
 SequenceModifier::SequenceModifier(toml::table& config) {
 
-  Configuration::checkValid(config, std::vector<std::string>{
+  checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "beginSequence", "finishSequence",
       "blockWhileBusy", "repeatSequence", "condition",
       "startDelay", "cycleDelay"});
@@ -41,7 +41,7 @@ SequenceModifier::SequenceModifier(toml::table& config) {
   // name, description, type, groups, appliesTo, disableOnStart, startSequence,
   // disableOnFinish, finishSequence
   
-  Configuration::buildSequence(config, "repeatSequence", on_begin);
+  repeat_sequence = std::make_shared<Sequence>(config, "repeatSequence");
 
   lock_while_busy = Configuration::addToVectorOrAll<GameCommand>(config, "blockWhileBusy", block_while);
 
@@ -62,7 +62,7 @@ void SequenceModifier::begin() {
 
 void SequenceModifier::update() {
   // Abort if there's no repeated sequence
-  if (repeat_sequence.empty()) {
+  if (repeat_sequence->empty()) {
     return;
   }
   sequence_time += timer.dTime();
@@ -91,7 +91,7 @@ void SequenceModifier::update() {
 case SequenceState::IN_SEQUENCE:
     // The sequence of actions here are not exclusive (other things can be happening while these
     // commands are in train. 
-    if (repeat_sequence.sendParallel(sequence_time)) {
+    if (repeat_sequence->sendParallel(controller, sequence_time)) {
       sequence_state = SequenceState::ENDING;
       sequence_time = 0;
     }

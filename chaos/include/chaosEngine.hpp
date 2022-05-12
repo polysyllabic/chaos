@@ -28,6 +28,7 @@
 #include "chaosInterface.hpp"
 #include "controller.hpp"
 #include "modifier.hpp"
+#include "game.hpp"
 
 namespace Chaos {
 
@@ -46,20 +47,8 @@ namespace Chaos {
 	
     Mogi::Math::Time time;
 
-    // Name of the game we're playing
-    std::string game;
-
-    /**
-     * \brief Number of modifiers simultaneously active
-     * 
-     * This count does not include child mods.
-     */
-    int activeModifiers;
-
-    /**
-    * Time in seconds modifiers last before they are removed from the queue.
-    */
-    double timePerModifier;
+    // Data for the game we're playing
+    Game game;
 
     /**
      * The list of currently active modifiers
@@ -86,24 +75,19 @@ namespace Chaos {
     Json::StreamWriterBuilder jsonWriterBuilder;	
 
   public:
-    ChaosEngine(Controller& c) : controller{c} {}
+    ChaosEngine(Controller& c, const std::string& configfile);
+    
+/*    ChaosEngine(Controller& c, const std::string& gamefile) : controller{c} {
+      game.loadConfigFile(gamefile);
+    }*/
 
     //void setController(Controller& c) { controller = c; }
 
     void sendInterfaceMessage(const std::string& msg);
     
-    void setTimePerModifier(double time) {
-      assert(time > 0);  
-      timePerModifier = time; 
-      }
-    
-    void setActiveMods(int nmods) {
-      assert(nmods > 0);
-      activeModifiers = nmods;
-    }
 
     void setGame(const std::string& name) {
-      game = name;
+      game.loadConfigFile(name);
     } 
 
     /**

@@ -30,12 +30,13 @@
 
 using namespace Chaos;
 
-ChaosEngine::ChaosEngine(Controller& c) : controller{c}, pause(true)
+ChaosEngine::ChaosEngine(Controller& c, const std::string& configfile) : controller{c}, pause(true)
 {
   controller.addInjector(this);
   time.initialize();
   chaosInterface.addObserver(this);
   jsonReader = jsonReaderBuilder.newCharReader();
+  game.loadConfigFile(configfile);
 }
 
 void ChaosEngine::newCommand(const std::string& command) {
@@ -50,10 +51,9 @@ void ChaosEngine::newCommand(const std::string& command) {
   }
 	
   if (root.isMember("winner")) {
-    std::shared_ptr<Modifier> mod = Modifier::mod_list.at(root["winner"].asString());
+    std::shared_ptr<Modifier> mod = game.getModifier(root["winner"].asString());
     if (mod != nullptr) {
       PLOG_INFO << "Adding Modifier: " << typeid(*mod).name();
-			
       lock();
       modifiers.push_back(mod);
       modifiersThatNeedToStart.push(mod);
@@ -65,32 +65,18 @@ void ChaosEngine::newCommand(const std::string& command) {
 
   if (root.isMember("game")) {
     // Tell the interface what game we're playing
-    PLOG_DEBUG << "Sending game to interface: " << game;
+    PLOG_DEBUG << "Sending game information to interface: " << game.getName() << "(parsed with " << game.getParseErrors() << "errors)";
     Json::Value msg;
-    msg["game"] = game;
-    chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
-  }
-
-  if (root.isMember("activeMods")) {
-    // Tell the interface how many active mods we support
-    PLOG_DEBUG << "Sending activeMods to interface: " << activeModifiers;
-    Json::Value msg;
-    msg["activeModifiers"] = activeModifiers;
-    chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
-  }
-
-  // timePerModifier is now fixed by the config file. This command now sends the time to the
-  // interface instead of setting it.
-  if (root.isMember("timePerModifier")) {
-    PLOG_DEBUG << "Sending timePerModifier to interface: " << timePerModifier;
-    Json::Value msg;
-    msg["timePerModifier"] = timePerModifier;
+    msg["game"] = game.getName();
+    msg["errors"] = game.getParseErrors();
+    msg["nmods"] = game.getNumActiveMods();
+    msg["modtime"] = game.getTimePerModifier();
     chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
   }
 
   if (root.isMember("modlist")) {
     // Announce the mods to the chaos interface
-    std::string reply = Modifier::getModList();
+    std::string reply = game.getModList();
     PLOG_DEBUG << "Json mod list = " << reply;
     chaosInterface.sendMessage(reply);
   }
@@ -128,7 +114,7 @@ void ChaosEngine::doAction() {
   if (modifiers.size() > 0) {
     std::shared_ptr<Modifier> front = modifiers.front();
     if ((front->lifespan() >= 0 && front->lifetime() > front->lifespan()) ||
-	      (front->lifespan()  < 0 && front->lifetime() > timePerModifier)) {
+	      (front->lifespan()  < 0 && front->lifetime() > game.getTimePerModifier())) {
       PLOG_INFO << "Removing modifier: " << typeid(*front).name();
       lock();
       // Do cleanup for this mod, if necessary

@@ -22,14 +22,14 @@
 
 #include "cooldownModifier.hpp"
 #include "chaosEngine.hpp"
-#include "configuration.hpp"
+#include "tomlUtils.hpp"
 
 using namespace Chaos;
 
 const std::string CooldownModifier::mod_type = "cooldown";
 
 CooldownModifier::CooldownModifier(toml::table& config) {
-  Configuration::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
+  checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
 							  "beginSequence", "finishSequence", "appliesTo", "timeOn", "timeOff", "unlisted"});
   initialize(config);
   if (commands.empty()) {

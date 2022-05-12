@@ -88,7 +88,7 @@ ControllerInput::ControllerInput(const SignalSettings& settings) :
   }
 }
 
-void ControllerInput::initialize(const toml::table& config) {
+void ControllerInput::initialize() {
   // we use the hard-coded values in signal_settings to initialize our maps
   for (SignalSettings s : signal_settings) {
     PLOG_VERBOSE << "Initializing signal " << s.name;

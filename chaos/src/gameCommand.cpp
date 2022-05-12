@@ -30,8 +30,6 @@
 
 using namespace Chaos;
 
-std::unordered_map<std::string, std::shared_ptr<GameCommand>> GameCommand::commands;
-std::string unknown_command = "UNKNOWN (Own pointer not found -- something is wrong)";
 /*
  * The constructor for the command binding. The name of the command has already been read and will
  * form the key in the map. Here we set the main binding and any additional conditions.
@@ -70,81 +68,6 @@ GameCommand::GameCommand(toml::table& definition) {
   }
 }
 
-void GameCommand::buildCommandMapDirect(toml::table& config) {
-  // This routine should always be called before buildCommandMapCondition (and only once)
-  assert(commands.size() == 0);
-  
-  // We should have an array of tables. Each table defines one command binding.
-  toml::array* arr = config["command"].as_array();
-  if (arr) {
-    for (toml::node& elem : *arr) {
-      if (toml::table* command = elem.as_table()) {
-        // skip command definitions that contain conditions
-        if (command->contains("condition") || command->contains("unless")) {
-          continue;
-        }
-	      if (! command->contains("name")) {
-	        PLOG_ERROR << "Command definition missing required 'name' field: " << command;
-          continue;
-        }
-        std::string cmd_name = command->get("name")->value_or("");
-	      if (commands.count(cmd_name) == 1) {
-	        PLOG_ERROR << "Duplicate command definition for '" << cmd_name << "'. Later one will be ignored.";
-          continue;
-	      }
-	      PLOG_VERBOSE << "Inserting '" << cmd_name << "' into game command list.";
-	      try {
-      	  commands.insert({cmd_name, std::make_shared<GameCommand>(*command)});
-	      }
-	      catch (const std::runtime_error& e) {
-	        PLOG_ERROR << "In definition for game command '" << cmd_name << "': " << e.what();
-	      }
-	    }
-    }
-  }
-  if (commands.size() == 0) {
-    PLOG_WARNING << "No unconditional game commands were defined.";
-  }
-}
-
-void GameCommand::buildCommandMapCondition(toml::table& config) {
-  
-  // We should have an array of tables. Each table defines one command binding.
-  toml::array* arr = config["command"].as_array();
-  if (arr) {
-    for (toml::node& elem : *arr) {
-      if (toml::table* command = elem.as_table()) {
-        // We already logged an error if the command is missing a name field, so just skip here
-      	if (! command->contains("name")) {
-          continue;
-        }
-	      std::string cmd_name = command->get("name")->value_or("");
-        // Skip conditions already defined by call to buldCommandMapDirect
-    	  if (commands.count(cmd_name) == 1) {
-	        continue;
-	      }
-	      PLOG_VERBOSE << "inserting '" << cmd_name << "': " << command;
-	      try {
-    	    commands.insert({cmd_name, std::make_shared<GameCommand>(*command)});
-	      }
-	      catch (const std::runtime_error& e) {
-	        PLOG_ERROR << "In definition for game command '" << cmd_name << "': " << e.what(); 
-	      }
-      }
-    }
-  }
-  if (commands.size() == 0) {
-    throw std::runtime_error("No game commands were defined.");
-  }
-}
-
-std::shared_ptr<GameCommand> GameCommand::get(const std::string& name) {
-  auto iter = commands.find(name);
-  if (iter != commands.end()) {
-    return iter->second;
-  }
-  return nullptr;
-}
 
 std::shared_ptr<ControllerInput> GameCommand::getRemapped() {
   ControllerSignal r = binding->getRemap();

@@ -18,14 +18,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "repeatModifier.hpp"
-#include "configuration.hpp"
+#include "tomlUtils.hpp"
 
 using namespace Chaos;
 
 const std::string RepeatModifier::mod_type = "repeat";
 
 RepeatModifier::RepeatModifier(toml::table& config) {
-  Configuration::checkValid(config, std::vector<std::string>{
+  checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "appliesTo", "disableOnStart", "disableOnFinish", "forceOn",
       "timeOn", "timeOff", "repeat", "cycleDelay", "blockWhileBusy", "beginSequence", "finishSequence", "unlisted"});
   initialize(config);

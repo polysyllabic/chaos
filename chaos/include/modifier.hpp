@@ -210,7 +210,7 @@ namespace Chaos {
      * that certain commands are set to 0. The format for sequences is described in the
      * documentation for the SequenceModifier class.
      */
-    Sequence on_begin;
+    std::shared_ptr<Sequence> on_begin;
     /**
      * \brief A sequence of commands to execute when unloading the mod.
      *
@@ -219,7 +219,7 @@ namespace Chaos {
      * that certain commands are set to 0. The format for sequences is described in the
      * documentation for the SequenceModifier class.
      */
-    Sequence on_finish;
+    std::shared_ptr<Sequence> on_finish;
 
     /**
      * \brief The current state of any begin or finish sequence that is beeing issued
@@ -322,6 +322,16 @@ namespace Chaos {
      */
     void sendFinishSequence();
 
+/**
+     * \brief Get a ConditionTest object corresponding to the type name in the TOML file
+     * 
+     * \param config Table that contains the condition test as a key/value pair
+     * \param key Name of the key within the table
+     * \return ConditionCheck 
+     *
+     */
+    ConditionCheck getConditionTest(const toml::table& config, const std::string& key);
+
     /**
      * \brief Test if the current controller state matches the defined conditions
      * 
@@ -350,10 +360,6 @@ namespace Chaos {
      */
     static void PrepTouchpad(const DeviceEvent& event);
     
-    /**
-     * \brief The map of all the mods defined through the TOML file
-     */
-    static std::unordered_map<std::string, std::shared_ptr<Modifier>> mod_list;
 
   public:
     /**
@@ -367,18 +373,6 @@ namespace Chaos {
     
     static void setEngine(std::shared_ptr<ChaosEngine> e) { engine = e; }
     static void setController(Controller& c) { controller = c; }
-
-    /**
-     * \brief Create the overall list of mods from the TOML file.
-     * \param config The object containing the fully parsed TOML file
-     *
-     */
-    static void buildModList(toml::table& config);
-
-    /**
-     * Return list of modifiers for the chat bot.
-     */
-    static std::string getModList();
 
     /**
      * \brief Alters the incomming event to the value expected by the console

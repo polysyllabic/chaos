@@ -25,7 +25,7 @@
 #include <plog/Log.h>
 
 #include "gameMenu.hpp"
-#include "configuration.hpp"
+#include "tomlUtils.hpp"
 #include "menuOption.hpp"
 #include "subMenu.hpp"
 #include "menuSelect.hpp"
@@ -42,11 +42,11 @@ GameMenu::GameMenu(toml::table& config) {
   // timing parameters
   // A 10 second delay is absurdly long, but it's unclear to me where to cap it. This mostly
   // in case a user gets mixed up and tries to enter time in milliseconds or some other unit.
-  double delay = Configuration::getValue<double>(*menu_list, "disable_delay", 0, 10, 0.333333);
+  double delay = getValue<double>(*menu_list, "disable_delay", 0, 10, 0.333333);
   disable_delay = (unsigned int) (delay * 1000000);
   PLOG_VERBOSE << "menu disable_delay = " << delay << " seconds (" << disable_delay << " microseconds)";
 
-  delay = Configuration::getValue<double>(*menu_list, "select_delay", 0, 10, 0.05);
+  delay = getValue<double>(*menu_list, "select_delay", 0, 10, 0.05);
   select_delay = (unsigned int) (delay * 1000000);
   PLOG_VERBOSE << "menu select_delay = " << delay << " seconds (" << select_delay << " microseconds)";
 

@@ -35,8 +35,6 @@ using namespace Chaos;
 
 const std::string Modifier::mod_type = "modifier";
 
-std::unordered_map<std::string, std::shared_ptr<Modifier>> Modifier::mod_list;
-
 void Modifier::initialize(toml::table& config) {
   timer.initialize();
   parent = nullptr;
@@ -73,7 +71,7 @@ void Modifier::initialize(toml::table& config) {
 
  
   Configuration::addToVector<GameCondition>(config, "condition", conditions);
-  condition_test = Configuration::getConditionTest(config, "conditionTest");
+  condition_test = getConditionTest(config, "conditionTest");
 
 #ifndef NDEBUG
   switch (condition_test) {
@@ -89,7 +87,7 @@ void Modifier::initialize(toml::table& config) {
 #endif
 
   Configuration::addToVector<GameCondition>(config, "unless", unless_conditions);
-  unless_test = Configuration::getConditionTest(config, "unlessTest");
+  unless_test = getConditionTest(config, "unlessTest");
 
 #ifndef NDEBUG
   switch (unless_test) {
@@ -104,63 +102,10 @@ void Modifier::initialize(toml::table& config) {
   }
 #endif
 
-  // need a debug trace for these
-  Configuration::buildSequence(config, "beginSequence", on_begin);
-
-  Configuration::buildSequence(config, "finishSequence", on_finish);
-  
+  on_begin  = std::make_shared<Sequence>(config, "beginSequence");
+  on_finish = std::make_shared<Sequence>(config, "finishSequence");  
 }
 
-// Handles the static initialization. We construct the list of mods from their TOML-file
-// definitions.
-void Modifier::buildModList(toml::table& config) {
-
-  // Should have an array of tables, each one defining an individual modifier.
-  toml::array* arr = config["modifier"].as_array();
-  
-  if (arr) {
-    // Each node in the array should contain the definition for a modifier.
-    // If there's a parsing error at this point, we skip that mod and keep going.
-    for (toml::node& elem : *arr) {
-      toml::table* modifier = elem.as_table();
-      if (! modifier) {
-	      PLOG_ERROR << "Modifier definition must be a table";
-      	continue;
-      }
-      if (! modifier->contains("name")) {
-	      PLOG_ERROR << "Modifier missing required 'name' field: " << modifier;
-	      continue;
-      }
-      std::optional<std::string> mod_name = modifier->get("name")->value<std::string>();
-      if (mod_list.count(*mod_name) == 1) {
-	      PLOG_ERROR << "The modifier '" << *mod_name << " has already been defined";
-	      continue;
-      } 
-      if (! modifier->contains("type")) {
-	      PLOG_ERROR << "Modifier '" << *mod_name << " does not specify a type";
-	      continue;
-      }
-      std::optional<std::string> mod_type = modifier->get("type")->value<std::string>();
-      if (! hasType(*mod_type)) {
-	      PLOG_ERROR << "Modifier '" << *mod_name << "' has unknown type '" << *mod_type << "'";
-	      continue;
-      }
-      // Now we can finally create the mod. The constructors handle the rest of the configuration.
-      try {
-	      PLOG_VERBOSE << "Adding modifier '" << *mod_name << "' of type " << *mod_type;
-	      std::shared_ptr<Modifier> m = Modifier::create(*mod_type, *modifier);
-        mod_list.insert({*mod_name, m});
-}
-      catch (std::runtime_error e) {
-	      PLOG_ERROR << "Modifier '" << *mod_name << "' not created: " << e.what();
-      }
-    }
-  }
-  if (mod_list.size() == 0) {
-    PLOG_FATAL << "No modifiers were defined.";
-    throw std::runtime_error("No modifiers defined");
-  }
-}
 
 bool Modifier::remapEvent(DeviceEvent& event) {
   DeviceEvent new_event;
@@ -288,17 +233,17 @@ bool Modifier::tweak( DeviceEvent& event ) {
 }
 
 void Modifier::sendBeginSequence() { 
-  if (! on_begin.empty()) {
+  if (! on_begin->empty()) {
     in_sequence = lock_while_busy;
-    on_begin.send();
+    on_begin->send();
     in_sequence = false;
   }
 }
 
 void Modifier::sendFinishSequence() { 
-  if (! on_finish.empty()) {
+  if (! on_finish->empty()) {
     in_sequence = lock_while_busy;
-    on_finish.send();
+    on_finish->send();
     in_sequence = false;
   }
 }
@@ -316,6 +261,23 @@ void Modifier::updatePersistent() {
       c->updateState();
     }
   }
+}
+
+ConditionCheck Modifier::getConditionTest(const toml::table& config, const std::string& key) {
+  std::optional<std::string_view> ttype = config[key].value<std::string_view>();
+
+  // Default type is magnitude
+  ConditionCheck rval = ConditionCheck::ANY;
+  if (ttype) {
+    if (*ttype == "any") {
+      rval = ConditionCheck::ANY;
+    } else if (*ttype == "none") {
+      rval = ConditionCheck::NONE;
+    } else if (*ttype != "all") {
+      PLOG_WARNING << "Invalid ConditionTest '" << *ttype << "': using 'all' instead.";
+    }
+  }
+  return rval;
 }
 
 bool Modifier::testConditions(std::vector<std::shared_ptr<GameCondition>> condition_list, ConditionCheck type) {
@@ -364,19 +326,5 @@ Json::Value Modifier::getGroups() {
     group_array.append(g);
   }
   return group_array;
-}
-
-std::string Modifier::getModList() {
-  Json::Value root;
-  Json::Value& data = root["mods"];
-//  int i = 0;
-  for (auto const& [key, val] : mod_list) {
-    //data[i++] = val->toJsonObject();
-
-    data.append(val->toJsonObject());
-  }
-	
-  Json::StreamWriterBuilder builder;	
-  return Json::writeString(builder, root);
 }
 
