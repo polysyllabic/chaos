@@ -21,12 +21,12 @@
 #include <plog/Log.h>
 
 #include "subMenu.hpp"
-#include "configuration.hpp"
+#include "tomlUtils.hpp"
 
 using namespace Chaos;
 
 SubMenu::SubMenu(const toml::table& config) : MenuItem(config) {
-  Configuration::checkValid(config, std::vector<std::string>{
+  checkValid(config, std::vector<std::string>{
       "name", "type", "parent", "offset", "initialState", "hidden", "confirm", "tab", "counterAction"});
 }
 

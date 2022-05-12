@@ -105,7 +105,7 @@ namespace Chaos {
     /**
      * Sequence to execute at intervals throughout the lifetime of the mod.
      */
-    Sequence repeat_sequence;
+    std::shared_ptr<Sequence> repeat_sequence;
 
     /**
      * \brief The state of the repeat sequence

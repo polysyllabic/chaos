@@ -28,8 +28,6 @@
 
 using namespace Chaos;
 
-std::unordered_map<std::string, std::shared_ptr<GameCondition>> GameCondition::condition_map;
-
 // Conditions are initialized after those game commands that are defined without conditions, and
 // before those defined with conditions. This has the effect of preventing recursion in the
 // conditions. Attempting to reference a game command with conditions in a condition will
@@ -86,40 +84,9 @@ GameCondition::GameCondition(toml::table& config) {
       PLOG_WARNING << "Invalid thresholdType '" << *thtype;
     }
   }
-  
-#ifndef NDEBUG
+
   PLOG_VERBOSE << "Condition: " << config["name"] <<  "; " << ((thtype) ? *thtype : "magnitude") <<
     " threshold = " << threshold;
-#endif
-}
-
-void GameCondition::buildConditionList(toml::table& config) {
-  toml::array* arr = config["condition"].as_array();
-  if (arr) {
-    // Each node in the array should contain table defining one condition
-    for (toml::node& elem : *arr) {
-      toml::table* condition = elem.as_table();
-      if (! condition) {
-        PLOG_ERROR << "Condition definition must be a table";
-        continue;
-      }
-      if (!condition->contains("name")) {
-        PLOG_ERROR << "Condition missing required 'name' field: " << condition;
-        continue;
-      }
-      std::optional<std::string> cond_name = condition->get("name")->value<std::string>();
-      if (condition_map.count(*cond_name) == 1) {
-        PLOG_ERROR << "The condition '" << *cond_name << "' has already been defined.";
-      }
-      try {
-        PLOG_VERBOSE << "Adding condition '" << *cond_name << "' to static map.";
-  	    condition_map.insert({*cond_name, std::make_shared<GameCondition>(*condition)});
-	    }
-	    catch (const std::runtime_error& e) {
-	      PLOG_ERROR << "In definition for condition '" << *cond_name << "': " << e.what(); 
-	    }
-    }
-  }
 }
 
 bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> command) {
@@ -201,12 +168,4 @@ bool GameCondition::inCondition() {
     return state;
   }
   return testConditions(true_on);
-}
-
-std::shared_ptr<GameCondition> GameCondition::get(const std::string& name) {
-  auto iter = condition_map.find(name);
-  if (iter != condition_map.end()) {
-    return condition_map[iter->first];
-  }
-  return nullptr;
 }

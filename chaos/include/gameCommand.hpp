@@ -20,7 +20,6 @@
 #pragma once
 #include <string>
 #include <memory>
-#include <unordered_map>
 #include <toml++/toml.h>
 
 #include "deviceEvent.hpp"
@@ -85,10 +84,6 @@ namespace Chaos {
      */
     bool invert_condition;
     
-    /**
-     * \brief Map of defined commands identified by a string name.
-     */
-    static std::unordered_map<std::string, std::shared_ptr<GameCommand>> commands;
     
   public:
     /**
@@ -98,45 +93,6 @@ namespace Chaos {
      * \param config A single table from the TOML file that defines this command.
      */
     GameCommand(toml::table& config);
-
-    /**
-     * \brief Initialize the global map to hold the command definitions without conditions.
-     *
-     * \param config The object containing the complete parsed TOML file
-     *
-     * Because commands can reference conditions and conditions are based on commands, we need some
-     * extra steps to avoid initialization deadlocks and infinite recursion. We therefore use a
-     * two-stage initialization process. First, this routine initializes all "direct" commands
-     * (those without conditions). Next, we initialize all conditions. Finally, we initialize
-     * those commands based on a condition with #buildCommandMapCondition().
-     *
-     * This routine is called once during the start-up phase.
-     */
-    static void buildCommandMapDirect(toml::table& config);
-
-    /**
-     * \brief Initialize the global map to hold the command definitions with conditions.
-     *
-     * \param config The object containing the complete parsed TOML file
-     *
-     * Because commands can reference conditions and conditions are based on commands, we need some
-     * extra steps to avoid initialization deadlocks and infinite recursion. We therefore use a
-     * two-stage initialization process. First, #buildCommandMapDirect() initializes all commands
-     * without conditions. Next, we initialize all conditions. Finally, we initialize those
-     * commands based on a condition in this routine.
-     *
-     * This routine is called once during the start-up phase.
-     */
-    static void buildCommandMapCondition(toml::table& config);
-
-    /**
-     * \brief Accessor to GameCommand pointer by command name.
-     *
-     * \param name Name by which the game command is identified in the TOML file.
-     *
-     * \return The GameCommand pointer for this command, or NULL if not found.
-     */
-    static std::shared_ptr<GameCommand> get(const std::string& name);
 
     /**
      * \brief Returns #this as a shared pointer
@@ -165,16 +121,12 @@ namespace Chaos {
      * \brief Accessor for a condition that must also be true for this command to apply.
      * \return The condition 
      */
-    std::shared_ptr<GameCondition> getCondition() { 
-      return condition; 
-      }
+    std::shared_ptr<GameCondition> getCondition() { return condition; }
 
     /**
      * If true, test for the condition being false rather than true.
      */
-    bool conditionInverted() { 
-      return invert_condition; 
-      }
+    bool conditionInverted() { return invert_condition; }
 
     /**
      * \brief Get the current state of the controller for this command

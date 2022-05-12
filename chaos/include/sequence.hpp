@@ -22,6 +22,7 @@
 #include <vector>
 #include <toml++/toml.h>
 #include "controller.hpp"
+#include "game.hpp"
 
 namespace Chaos {
 
@@ -39,10 +40,16 @@ namespace Chaos {
   protected:
     std::vector<DeviceEvent> events;
 
+    /**
+     * Time in microseconds to hold down a signal for a button press
+     */
     static unsigned int press_time;
+
+    /**
+     * Time in microseconds to release a signal for a button press before going on to the
+     * next command.
+     */
     static unsigned int release_time;
-    
-    static std::unordered_map<std::string, std::shared_ptr<Sequence>> sequences;
 
     // to track current stage for sending the sequence in parallel
     short current_step;
@@ -51,16 +58,15 @@ namespace Chaos {
 
   public:
     Sequence() {}
-    
+
     /**
-     * \brief Factory for pre-defined sequences
-     * 
-     * \param config Fully parsed TOML object of the configuration file.
+     * \brief Construct a sequence of events to send as a batch.
      *
-     * Initializing the pre-defined sequences that can be referenced from other sequences and
-     * the global accessor functions, e.g., for menu operations.
+     * \param config the table to process
+     * \param key the key for the specific sequence
+     * \param game Reference to the game data
      */
-    static void initialize(toml::table& config);
+    Sequence(toml::table& config, const std::string& key, Game& game);
 
     /**
      * \brief Adds a stack of events to set all the buttons and axes to zero.
@@ -108,10 +114,8 @@ namespace Chaos {
     void addDelay(unsigned int delay);
 
     void addSequence(std::shared_ptr<Sequence> seq);
-    void addSequence(const std::string& name);
+    //void addSequence(const std::string& name);
 
-    static std::shared_ptr<Sequence> get(const std::string& name);
-    
     /**
      * Test if the event queue is empty
      */
@@ -119,7 +123,7 @@ namespace Chaos {
     /**
      * Send the precomposed sequence of events to the console.
      */
-    virtual void send();
+    virtual void send(Controller& controller);
     /**
      * Empty the event queue
      */
@@ -134,15 +138,19 @@ namespace Chaos {
      * \return true if sequence is done
      * \return false if sequence is still in progress
      */
-    bool sendParallel(double sequenceTime);
+    bool sendParallel(Controller& controller, double sequenceTime);
 
-    static int timePerPress() {
-      return press_time;
-    }
-    
-    static int timePerRelease() {
-      return release_time;
-    }
+    static int timePerPress() { return press_time; }
+
+    /**
+     * \brief Set the time to hold button down in a press sequence step
+     * 
+     * \param time Press time in seconds
+     */
+    static void setPressTime(double time);
+   
+    static int timePerRelease() { return release_time;     }
+    static void setReleaseTime(double time);
     
   };
 

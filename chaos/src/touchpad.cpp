@@ -23,7 +23,7 @@
 
 #include "touchpad.hpp"
 #include "gameCondition.hpp"
-#include "configuration.hpp"
+//#include "configuration.hpp"
 
 using namespace Chaos;
 

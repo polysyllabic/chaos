@@ -130,6 +130,7 @@ add_executable(chaos include/config.hpp
   include/signalRemap.hpp
   include/signals.hpp
   include/subMenu.hpp
+  include/tomlUtils.hpp
 	include/touchpad.hpp
 	src/chaosEngine.cpp
 	src/chaosInterface.cpp
@@ -161,6 +162,7 @@ add_executable(chaos include/config.hpp
   src/sequenceModifier.cpp
   src/subMenu.cpp
 	src/touchpad.cpp
+  src/tomlUtils.cpp
 	src/main.cpp)
 
 target_compile_features(chaos PRIVATE cxx_std_17)

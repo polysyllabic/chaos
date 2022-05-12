@@ -17,7 +17,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "parentModifier.hpp"
-#include "configuration.hpp"
+#include "tomlUtils.hpp"
 
 using namespace Chaos;
 

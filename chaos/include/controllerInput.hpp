@@ -115,7 +115,7 @@ namespace Chaos {
     /**
      * \brief Initialize the global maps and variables
      */
-    static void initialize(const toml::table& config);
+    static void initialize();
 
     /**
      * \brief Accessor for the class object identified by name.
@@ -230,16 +230,51 @@ namespace Chaos {
       return (input_type == ControllerSignalType::BUTTON || input_type == ControllerSignalType::HYBRID) ? TYPE_BUTTON : TYPE_AXIS;
     }
 
+    /**
+     * \brief Get the button index
+     * 
+     * \return idex
+     * 
+     * This returns the index to the button that we need to look up the position of the data about
+     * this signal in the buffer maintained by ControllerState.
+     */
     int getIndex() { return button_index; }
+
     int getHybridAxisIndex() { return hybrid_index; }
     
+    /**
+     * \brief Get the signal this control is currently remapped to
+     * 
+     * \return ControllerSignal The signal we actually send to the console in place of this signal
+     * 
+     * When an axis is mapped to two buttons, this signal is the one used for positive axis signals.
+     */
     ControllerSignal getRemap() { return remap.to_console; }
+
+    /**
+     * \brief Get the signal this control is currently remapped to for negative axis values
+     * 
+     * \return ControllerSignal The signal we actually send to the console in place of this signal
+     * 
+     * When an axis is mapped to two buttons, this signal is the one used for negative axis signals.
+     */
     ControllerSignal getNegRemap() { return remap.to_negative; }
 
     short getThreshold() { return remap.threshold; }
+
     double getRemapSensitivity() { return remap.scale; }    
+
+
     bool remapInverted() { return remap.invert; }
 
+    /**
+     * \brief Should an incoming signal be remapped to positive or negative maximum
+     * 
+     * \return true Should map to the outgoing signal's negative minimum
+     * \return false Should map to the outgoing signal's positive maximum
+     * 
+     * Used when buttons are remapped to axes.
+     */
     bool toMin() { return remap.to_min;}
 
     /**
