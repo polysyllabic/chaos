@@ -22,6 +22,7 @@
 #include <toml++/toml.h>
 
 #include "modifier.hpp"
+#include "game.hpp"
 
 namespace Chaos {
 
@@ -42,7 +43,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
 
-    FormulaModifier(toml::table& config);
+    FormulaModifier(toml::table& config, Game& game);
     void begin();
     void update();
   };

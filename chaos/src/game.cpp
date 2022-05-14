@@ -20,6 +20,7 @@
 #include <optional>
 #include <string_view>
 
+#include <json/json.h>
 #include <plog/Log.h>
 #include <plog/Initializers/RollingFileInitializer.h>
 
@@ -31,10 +32,6 @@
 #include "gameMenu.hpp"
 
 using namespace Chaos;
-
-Game::Game(const std::string& configfile) {
-  loadConfigFile(configfile);
-}
 
 bool Game::loadConfigFile(const std::string& configfile) {
   parse_errors = 0;
@@ -89,6 +86,8 @@ bool Game::loadConfigFile(const std::string& configfile) {
   buildConditionList(configuration);
 
   // Process those commands that have conditions
+  // Splitting the command-map initialization this way makes it easy to detect commands
+  // that try to reference undefined conditions.
   buildCommandMap(configuration, true);
 
   // Initialize defined sequences and static parameters for sequences
@@ -97,9 +96,12 @@ bool Game::loadConfigFile(const std::string& configfile) {
   // Initialize the menu system
   menu = GameMenu(configuration);
 
+  // Initialize the remapping table
+  initializeRemap(configuration);
+
   // Create the modifiers
   buildModList(configuration);
-
+  return true;
 }
 
 void Game::buildCommandMap(toml::table& config, bool process_conditions) {  
@@ -251,6 +253,7 @@ void Game::buildModList(toml::table& config) {
       }
       std::optional<std::string> mod_type = modifier->get("type")->value<std::string>();
       if (! Modifier::hasType(*mod_type)) {
+        ++parse_errors;
 	      PLOG_ERROR << "Modifier '" << *mod_name << "' has unknown type '" << *mod_type << "'";
 	      continue;
       }
@@ -261,11 +264,13 @@ void Game::buildModList(toml::table& config) {
         mod_map.insert({*mod_name, m});
       }
       catch (std::runtime_error e) {
+        ++parse_errors;
 	      PLOG_ERROR << "Modifier '" << *mod_name << "' not created: " << e.what();
       }
     }
   }
   if (mod_map.size() == 0) {
+    ++parse_errors;
     PLOG_ERROR << "No modifiers were defined.";
     throw std::runtime_error("No modifiers defined");
   }
@@ -275,10 +280,118 @@ std::string Game::getModList() {
   Json::Value root;
   Json::Value& data = root["mods"];
   for (auto const& [key, val] : mod_map) {
-    data.append(val->toJsonObject());
+    // Mods that are marked unlisted are not reported to the chatbot
+    if (! val->isUnlisted()) {
+      data.append(val->toJsonObject());
+    }
   }
 	
   Json::StreamWriterBuilder builder;	
   return Json::writeString(builder, root);
 }
 
+// This is the game-specific initialization
+void Game::initializeRemap(const toml::table& config) {
+  double scale = config["remapping"]["touchpad_scale"].value_or(1.0);
+  if (scale == 0) {
+    PLOG_ERROR << "Touchpad scale cannot be 0. Setting to 1";
+    ++parse_errors;
+    scale = 1;
+  }
+  remap_table.setTouchpadScale(scale);
+
+  // Condition is optional; Flag an error if bad condition name but not if missing entirely
+  std::optional<std::string> c = config["remapping"]["touchpad_condition"].value<std::string>();
+  if (c) {
+    std::shared_ptr<GameCondition> condition = getCondition(*c);
+    if (condition) {
+      remap_table.setTouchpadCondition(condition);
+    } else {
+      ++parse_errors;
+      PLOG_ERROR << "The condition " << *c << " is not defined";
+    }
+  } 
+  double scale_if = config["remapping"]["touchpad_scale_if"].value_or(1.0);
+  if (scale_if == 0) {
+    ++parse_errors;
+    PLOG_ERROR << "Touchpad scale_if cannot be 0. Setting to 1";
+    scale_if = 1;
+  }
+  remap_table.setTouchpadScaleIf(scale_if);
+
+  int skew = config["remapping"]["touchpad_skew"].value_or(0);
+  remap_table.setTouchpadSkew(skew);
+
+  PLOG_DEBUG << "Touchpad scale = " << scale << "; condition = " << 
+                remap_table.getTouchpadCondition()->getName() <<
+                "; scale_if = " << scale_if << "; skew = " << skew;
+}
+
+/*
+bool Game::remapEvent(DeviceEvent& event) {
+  DeviceEvent new_event;
+
+  // Get the object with information about the incomming signal
+  std::shared_ptr<ControllerInput> from_controller = getInput(event);
+  assert (from_controller);
+  std::shared_ptr<ControllerInput> to_console = from_controller->getRemap();
+
+  // If this signal isn't remapped, we're done
+  if (to_console == nullptr) {
+    return true;
+  }
+
+  // Touchpad active requires special setup and tear-down
+  if (from_controller->getSignal() == ControllerSignal::TOUCHPAD_ACTIVE) {
+    prepTouchpad(event);
+  }
+
+  // When mapping from any type of axis to buttons/hybrids and the choice of button is determined
+  // by the sign of the value. If the negative remap is a button, the positive will be a button also,
+  // so it's safe to check that.
+  if (event.value < 0 && event.id == TYPE_AXIS && to_console->getButtonType() == TYPE_BUTTON) {
+    to_console = from_controller->getNegRemap();
+    assert (to_console);
+  }
+
+  // If we are remapping to NOTHING, we drop this signal.
+  if (to_console->getSignal() == ControllerSignal::NOTHING) {
+    PLOG_DEBUG << "dropping remapped event";
+    return false;
+  }
+
+  // Now handle cases that require additional actions
+  switch (from_controller->getType()) {
+  case ControllerSignalType::HYBRID:
+    // Going from hybrid to button, we drop the axis component
+    if (to_console->getType() == ControllerSignalType::BUTTON && event.type == TYPE_AXIS) {
+ 	    return false;
+    }
+  case ControllerSignalType::BUTTON:
+    // From button to hybrid, we need to insert a new event for the axis
+    if (to_console->getType() == ControllerSignalType::HYBRID) {
+   	  new_event.id = to_console->getHybridAxis();
+      new_event.type = TYPE_AXIS;
+   	  new_event.value = event.value ? JOYSTICK_MAX : JOYSTICK_MIN;
+      controller.applyEvent(new_event);
+    }
+    break;
+  case ControllerSignalType::AXIS:
+    // From axis to button, we need a new event to zero out the second button when the value is
+    // below the threshold. The first button will get a 0 value from the changed regular value
+    // At this point, to_console has been set with the negative remap value.
+    if (to_console->getButtonType() == TYPE_BUTTON && abs(event.value) < from_controller->getThreshold()) {
+      new_event.id = to_console->getID();
+      new_event.value = 0;
+      new_event.type = TYPE_BUTTON;
+      controller.applyEvent(new_event);
+    }
+  }
+
+  // Update the event
+  event.type = to_console->getButtonType();
+  event.id = to_console->getID(event.type);
+  event.value = from_controller->remapValue(to_console, event.value);
+  return true;
+}
+*/

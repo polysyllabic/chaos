@@ -28,7 +28,7 @@ using namespace Chaos;
 
 const std::string DelayModifier::mod_type = "delay";
 
-DelayModifier::DelayModifier(toml::table& config) {
+DelayModifier::DelayModifier(toml::table& config, Game& game) {
   
   checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
 							  "appliesTo", "delay", "beginSequence", "finishSequence", "unlisted"});

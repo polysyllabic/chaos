@@ -28,15 +28,18 @@
 #include "config.hpp"
 #include "deviceEvent.hpp"
 #include "signals.hpp"
-#include "signalRemap.hpp"
 #include "touchpad.hpp"
+#include "controller.hpp"
 
 namespace Chaos {
   
   /**
    * \brief Defines the nature of a particular signal coming from the controller
    *
-   * This class defines the specifics of the actual signals coming from the controller.
+   * This class defines the specifics of the actual signals coming from the controller and keeps
+   * track of data such as the current remapping status. In other words, the Controller class
+   * is the object for the physical controller. This one manages the game-specific translation
+   * from the raw signals coming from the controller to the game commands that modifiers act on.
    */
   class ControllerInput {
   private:
@@ -48,6 +51,48 @@ namespace Chaos {
      * game actually expects to see.
      */
     ControllerSignal actual;
+
+    /**
+     * \brief The input type that the controller to which the input will be altered before it is
+     * sent to the console.
+     *
+     * If no remapping is defined, this will be set to nullptr. For remapping of an axis to
+     * multiple buttons, this contains the remap for positive axis values.
+     */
+    std::shared_ptr<ControllerInput> to_console;
+
+    /**
+     * The remapped control used for negative values when mapping one input onto multiple buttons
+     * for output.
+     */
+    std::shared_ptr<ControllerInput> to_negative;
+
+    /**
+     * \brief Size of axis signal required to remap
+     * 
+     * If the signal falls below the threshold proportion, the remapped signal will be 0. This is
+     * intended, for example, to prevent tiny movements (or controller drift) from triggering a
+     * button press.
+     */
+    short remap_threshold;
+
+    /**
+     * If true, button-to-axis remaps go to the joystick minimum. Otherwise they go to the maximum.
+     */
+    bool button_to_min;
+
+    /**
+     * If true, switch the sign of the value while remapping.
+     * 
+     * This inversion applies after any other value scaling has been performed.
+     */
+    bool remap_invert;
+
+    /**
+     * Scaling factor when remapping from accelerometer or touchpad to axis. The incoming signal
+     * value (or touchpad velocity) is divided by this factor.
+     */
+    double remap_scale;
 
     /**
      * \brief Name for this signal in the TOML file
@@ -89,25 +134,7 @@ namespace Chaos {
      */
     int hybrid_index;
 
-    /**
-     * \brief Current remapping state of this input
-     */
-    SignalRemap remap;
-
-    /**
-     * \brief Look up signal by enumeration
-     */
-    static std::unordered_map<ControllerSignal, std::shared_ptr<ControllerInput>> inputs;
-
-    /**
-     * \brief Lookup signal by TOML file name.
-     */
-    static std::unordered_map<std::string, std::shared_ptr<ControllerInput>> by_name;
-
-    /**
-     * \brief Lookup signal by DeviceEvent index.
-     */
-    static std::unordered_map<int, std::shared_ptr<ControllerInput>> by_index;
+    static Controller& controller;
 
   public:
     ControllerInput(const SignalSettings& settings);
@@ -117,26 +144,7 @@ namespace Chaos {
      */
     static void initialize();
 
-    /**
-     * \brief Accessor for the class object identified by name.
-     * \param name Name of the input
-     * \return The ControllerInput object identified by the given string
-     *
-     * Used for processing the TOML file.
-     */
-    static std::shared_ptr<ControllerInput> get(const std::string& name);
-    
-    /**
-     * \brief Get the ControllerInput object
-     * \param signal The enumeration of the controller signal
-     */
-    static std::shared_ptr<ControllerInput> get(ControllerSignal signal);
-    
-    /**
-     * \brief Get the ControllerInput object for the incoming signal from the controller.
-     * \param event The event coming from the controller.
-     */
-    static std::shared_ptr<ControllerInput> get(const DeviceEvent& event);
+    static void setController(Controller& c) { controller = c; }
 
     /**
      * \brief Get the name of a particular signal as defined in the TOML file.
@@ -154,14 +162,6 @@ namespace Chaos {
      * This is the un-remapped signal
      */
     ControllerSignal getSignal() { return actual; }
-
-/*
-    void setID(uint8_t new_id) { button_id = new_id; }
-    
-    void setID(uint8_t new_button, uint8_t new_axis) {
-      button_id = new_button;
-      hybrid_axis = new_axis;
-    } */
 
     /**
      * \brief Get the appropriate ID for button or axis.
@@ -249,7 +249,7 @@ namespace Chaos {
      * 
      * When an axis is mapped to two buttons, this signal is the one used for positive axis signals.
      */
-    ControllerSignal getRemap() { return remap.to_console; }
+    std::shared_ptr<ControllerInput> getRemap() { return to_console; }
 
     /**
      * \brief Get the signal this control is currently remapped to for negative axis values
@@ -258,14 +258,13 @@ namespace Chaos {
      * 
      * When an axis is mapped to two buttons, this signal is the one used for negative axis signals.
      */
-    ControllerSignal getNegRemap() { return remap.to_negative; }
+    std::shared_ptr<ControllerInput> getNegRemap() { return to_negative; }
 
-    short getThreshold() { return remap.threshold; }
+    short getThreshold() { return remap_threshold; }
 
-    double getRemapSensitivity() { return remap.scale; }    
+    double getTouchpadScale() { return remap_scale; }    
 
-
-    bool remapInverted() { return remap.invert; }
+    bool remapInverted() { return remap_invert; }
 
     /**
      * \brief Should an incoming signal be remapped to positive or negative maximum
@@ -275,7 +274,7 @@ namespace Chaos {
      * 
      * Used when buttons are remapped to axes.
      */
-    bool toMin() { return remap.to_min;}
+    bool toMin() { return button_to_min;}
 
     /**
      * \brief Get the minimum value for this signal.
@@ -306,39 +305,10 @@ namespace Chaos {
     }
 
     /**
-     * \brief Directly set the remapping signal only.
-     * \param remapping The signal that should go to the console
-     */
-    void setRemap(ControllerSignal remapping) { remap.to_console = remapping; }
-
-    /**
      * Directly set all remapping information for this signal.
      * \param remapping The complete rmapping information for the signal to the console.
      */
-    void setRemap(const SignalRemap& remapping) { remap = remapping; }
-
-    /**
-     * \brief Set a cascading remap.
-     * \param remapping The complete rmapping information for the signal to the console.
-     *
-     * Before setting the remap, checks to see if the remapping signal is already the to-signal from
-     * some other input. If the to part of the remap from portion of the remapped signal is already
-     * in use, we cascade the remap by changing making the to-signal of the other input the to-signal
-     * for the new one. For example, if a previous mod maps ACCX -> LX, and the new mod maps LX -> RX,
-     * the unified map will be, in effect, ACCX -> LX -> RX, simplified to ACCX -> RX.
-     */
-    void setCascadingRemap(const SignalRemap& remapping);
-
-    /**
-     * \brief Tests if an event matches this signal
-     * \param event The incomming event from the controller
-     * \param gp The imput signal we're testing for
-     * \return Whether event id and type match the definition for this controller input.
-     *
-     * Remapping should be complete before the ordinary (non-remapping) mods see the event, so
-     * it is safe to test for the actual events that the console expects.
-     */
-    static bool matchesID(const DeviceEvent& event, ControllerSignal gp);
+    void setRemap(const SignalRemap& remapping);
 
     /**
      * \brief Get the current state of the controller for this signal
@@ -370,19 +340,8 @@ namespace Chaos {
      *
      * Takes a signal value and scales it, if necessary, to the value specified in the remap table.
      */
-    short remapValue(short value);
+    short remapValue(std::shared_ptr<ControllerInput> to, short value);
 
-    /**
-     * \brief Translate a value for the device event to its remapped value
-     * 
-     * \param signal The remapped signal to check
-     * \param value The value as given by the source signal
-     * \return Remapped value
-     *
-     * Takes a signal value from a specific source signal and scales it, if necessary, to the value
-     * it has when remapped to this signal type.
-     */
-    short remapValue(std::shared_ptr<ControllerInput> source, short value);
   };
 
 };

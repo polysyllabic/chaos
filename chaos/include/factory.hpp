@@ -26,6 +26,9 @@ namespace Chaos {
 
   /**
    * \brief The interface for a self-registering factory for child modifier classes.
+   * 
+   * The configuration here allows you to add new types of modifiers without needing to
+   * edit a factory class. See the #Modifier base class for more information.
    */
   template <class Base, class... Args> class Factory {
     
@@ -47,13 +50,13 @@ namespace Chaos {
       friend T;
       
       static bool registerType() {
-	const auto mod_type = T::mod_type;
-	Factory::factory()[mod_type] = [](Args... args) -> std::shared_ptr<Base> {
-	  return std::make_shared<T>(std::forward<Args>(args)...);
-	};
-	return true;
-      }
-      static bool registered;
+        const auto mod_type = T::mod_type;
+        Factory::factory()[mod_type] = [](Args... args) -> std::shared_ptr<Base> {
+        return std::make_shared<T>(std::forward<Args>(args)...);
+      };
+      return true;
+    }
+    static bool registered;
 
     private:
       Registrar() : Base(Passkey{}) { (void) registered; }

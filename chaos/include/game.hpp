@@ -25,6 +25,8 @@
 #include "gameMenu.hpp"
 #include "gameCommand.hpp"
 #include "gameCondition.hpp"
+#include "modifier.hpp"
+#include "remapTable.hpp"
 
 namespace Chaos {
 
@@ -35,8 +37,7 @@ namespace Chaos {
    */
   class Game {
   public:
-    Game();
-    Game(const std::string& configfile);
+    Game() {}
 
     /**
      * \brief Load game configuration file
@@ -62,7 +63,12 @@ namespace Chaos {
 
     double getTimePerModifier() { return time_per_modifier; }
 
-    int getParseErrors() { return parse_errors; }
+    /**
+     * \brief Get the number of errors encountered loading the game-configuration file
+     * 
+     * \return int Error count
+     */
+    int getErrors() { return parse_errors; }
     
     /**
      * \brief Accessor to GameCommand pointer by command name.
@@ -113,13 +119,47 @@ namespace Chaos {
      */
     std::string getModList();
 
+    Remapping& getRemapTable() { return remap_table; }
+
+    /**
+     * \brief Alters the incomming event to the value expected by the console
+     * \param[in,out] event The signal coming from the controller
+     * \return Validity of the signal. False signals are dropped from processing by the mods and not sent to
+     * the console.
+     *
+     * This remapping is invoked from the chaos engine's sniffify routine before the list of regular
+     * mods is traversed. That means that mods can operate on the signals associated with particular
+     * commands without worrying about the state of the remapping.
+     */
+    //bool remapEvent(DeviceEvent& event) { return remap_table.remapEvent(event); }
+    //bool remapEvent(DeviceEvent& event);
+
+    /**
+     * \brief Tests if an event matches this signal
+     * \param event The incomming event from the controller
+     * \param to_match The input signal we're testing for
+     * \return Whether event id and type match the definition for this controller input.
+     *
+     * Remapping should be complete before the ordinary (non-remapping) mods see the event, so
+     * it is safe to test for the actual events that the console expects.
+     */
+    bool matchesID(const DeviceEvent& event, ControllerSignal to_match);
+
+    GameMenu& getMenu() { return menu; }
 
   private:
-    std::string name;    
+    /**
+     * The name of this game
+     */
+    std::string name;
+
+    /**
+     * Running count of total errors encountered in initializing the configuraiton file
+     */
     int parse_errors;
 
     /**
-     * Description of the game's menu system
+     * Defines the structure of the game's menu system
      */
     GameMenu menu;
     
@@ -155,6 +195,10 @@ namespace Chaos {
     */
     double time_per_modifier;
 
+    /**
+     * Current status of how controller signals are being remapped
+     */
+    Remapping remap_table;
 
     /**
      * \brief Initialize the global map to hold the command definitions without conditions.
@@ -195,8 +239,7 @@ namespace Chaos {
      */
     void buildModList(toml::table& config);
 
-
-
+    void initializeRemap(const toml::table& config);
 
     // Template function to get a pointer from a map by name
     template <typename T>

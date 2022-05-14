@@ -23,10 +23,10 @@
 #include <toml++/toml.h>
 
 #include "config.hpp"
-#include "chaosEngine.hpp"
-#include "controller.hpp"
-#include "controllerInput.hpp"
 #include "configuration.hpp"
+#include "controllerInput.hpp"
+#include "controller.hpp"
+#include "chaosEngine.hpp"
 
 using namespace Chaos;
 

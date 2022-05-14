@@ -22,7 +22,6 @@
 #include <vector>
 #include <string>
 
-#include "configuration.hpp"
 #include "enumerations.hpp"
 
 namespace Chaos {

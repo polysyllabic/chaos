@@ -48,7 +48,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
     
-    InvertModifier(toml::table& config);
+    InvertModifier(toml::table& config, Game& game);
 
     void begin();
     void finish();

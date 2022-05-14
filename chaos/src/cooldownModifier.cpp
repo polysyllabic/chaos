@@ -28,7 +28,7 @@ using namespace Chaos;
 
 const std::string CooldownModifier::mod_type = "cooldown";
 
-CooldownModifier::CooldownModifier(toml::table& config) {
+CooldownModifier::CooldownModifier(toml::table& config, Game& game) {
   checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
 							  "beginSequence", "finishSequence", "appliesTo", "timeOn", "timeOff", "unlisted"});
   initialize(config);
@@ -82,7 +82,6 @@ void CooldownModifier::update() {
 	      cooldownTimer = time_off;
 	      inCooldown = true;
 	      // Disable event
-	      // TODO: allow cooldown to do things other than block a signal
 	      engine->fakePipelinedEvent(cooldownCommand, getptr());
       }
     }

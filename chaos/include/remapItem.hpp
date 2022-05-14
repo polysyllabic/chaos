@@ -18,14 +18,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <memory>
 #include "signals.hpp"
+#include "controllerInput.hpp"
 
 namespace Chaos {
 
   /**
    * Contains the information to remap signals between the controller and the console.
    */  
-  struct SignalRemap {
+  class SignalRemap {
+  private:
     /**
      * \brief The input type that the controller to which the input will be altered before it is
      * sent to the console.
@@ -34,12 +37,14 @@ namespace Chaos {
      * remapping that drops the signal. For remapping of an axis to multiple buttons, this contains
      * the remap for positive axis values.
      */
-    ControllerSignal to_console;
+    std::shared_ptr<ControllerInput> to_console;
+
     /**
      * The remapped control used for negative values when mapping one input onto multiple buttons for
      * output.
      */
-    ControllerSignal to_negative;
+    std::shared_ptr<ControllerInput> to_negative;
+
     /**
      * \brief Proportion of axis signal required to remap
      * 
@@ -62,14 +67,9 @@ namespace Chaos {
      */
     bool invert;
     
+    public:
     // Constructor
-    SignalRemap(ControllerSignal to, ControllerSignal neg_to, bool min, bool inv, short thresh, double sensitivity) :
-      to_console(to),
-      to_negative(neg_to),
-      to_min(min),
-      invert(inv),
-      threshold(thresh),
-      scale(sensitivity) {}
-  };
+      SignalRemap(ControllerSignal to, ControllerSignal neg_to, bool min, bool inv, short thresh, double sensitivity);
+    };
 
 };

@@ -18,11 +18,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <vector>
 #include <string>
 #include <toml++/toml.h>
 
 #include "modifier.hpp"
+#include "game.hpp"
 
 namespace Chaos {
 
@@ -81,7 +81,7 @@ namespace Chaos {
      * \param config A TOML modifier-table object. If the constructor is properly dispatched, this
      * object will contain the key/value pair 'type=disable'.
      */
-    DisableModifier(toml::table& config);
+    DisableModifier(toml::table& config, Game& game);
 
     // virtual routines we need to override
     void begin();
