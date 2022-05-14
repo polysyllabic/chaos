@@ -44,53 +44,169 @@ namespace Chaos {
     return checkValid(config, goodKeys, config["name"].value_or("??"));    
   }
 
-    /**
-     * \brief Test if the table contains any keys other than those listed in the vector.
-     *
-     * \param config TOML table to test
-     * \param goodKeys Vector of strings that are legal keys for this table
-     * \param name Name of the table (for logging warnings)
-     *
-     * \return true if all keys are good
-     * \return false if any keys do not match an entry in the vector
-     *
-     * The identity of unknown keys will also be logged. Call this version if #config does not
-     * contain a "name" field.
-     */
+  /**
+   * \brief Test if the table contains any keys other than those listed in the vector.
+   *
+   * \param config TOML table to test
+   * \param goodKeys Vector of strings that are legal keys for this table
+   * \param name Name of the table (for logging warnings)
+   *
+   * \return true if all keys are good
+   * \return false if any keys do not match an entry in the vector
+   *
+   * The identity of unknown keys will also be logged. Call this version if #config does not
+   * contain a "name" field.
+   */
   bool checkValid(const toml::table& config, const std::vector<std::string>& goodKeys,
                   const std::string& name);
 
+  
   /**
-   * \brief Translate from the name of a controller input (RX, etc) to the ControllerSignal equivalent.
-   *
-   * \return ControllerSignal 
-   *
-   * Provides error checking for unknown names
+   * \brief Get the value of a number
+   * 
+   * \tparam T Type of number
+   * \param config TOML Table to search
+   * \param key Key in the TOML table that has the value we want
+   * \param min_val Minimum allowed value for this parameter
+   * \param max_val Maximum allowed value for this parameter
+   * \param default_val Value to use if the key is not found in the table
+   * \return T 
    */
-  ControllerSignal getSignal(const toml::table& config, const std::string& key, bool required);
-
-    /**
-     * \brief Get the value of a number
-     * 
-     * \tparam T Type of number
-     * \param config TOML Table to search
-     * \param key Key in the TOML table that has the value we want
-     * \param min_val Minimum allowed value for this parameter
-     * \param max_val Maximum allowed value for this parameter
-     * \param default_val Value to use if the key is not found in the table
-     * \return T 
-     */
-    template<typename T>
-    T getValue(const toml::table& config, const std::string& key, T min_val, T max_val, T default_val) {
-      T rval = config[key].value_or(default_val);
-      if (rval > max_val) {
-        PLOG_ERROR << "Maximum value for '" << key << "' is " << max_val << std::endl;
-        rval = max_val;
-      } else if (rval < min_val) {
-        PLOG_ERROR << "Minimum value for '" << key << "' is " << min_val << std::endl;
-        rval = min_val;
-      }
-      return rval;
+  template<typename T>
+  T getValue(const toml::table& config, const std::string& key, T min_val, T max_val, T default_val) {
+    T rval = config[key].value_or(default_val);
+    if (rval > max_val) {
+      PLOG_ERROR << "Maximum value for '" << key << "' is " << max_val << std::endl;
+      rval = max_val;
+    } else if (rval < min_val) {
+      PLOG_ERROR << "Minimum value for '" << key << "' is " << min_val << std::endl;
+      rval = min_val;
     }
+    return rval;
+  }
+
+  /**
+   * \brief Adds a list of objects to a map.
+   *
+   * \param[in] config The table to process.
+   * \param[in] key The key whose presence we're testing for
+   * \param[in,out] map The map that we're building.
+   * \param[in] defs The master list of defined objects
+   *
+   * \throws std::runtime_error Throws an error if the object we're adding has not been defined.
+   */
+  template<typename T>
+  static void addToMap(const toml::table& config,
+	 const std::string& key,
+	 std::unordered_map<std::string, T>& map,
+	 const std::unordered_map<std::string, T>& defs) {
+    
+    // This entity is assumed to be optional, so do nothing if the key isn't present
+    if (config.contains(key)) {
+	    const toml::array* cmd_list = config.get(key)->as_array();
+	    if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
+	      throw std::runtime_error(key + " must be an array of strings");
+	    }
+	    for (auto& elem : *cmd_list) {
+	      std::optional<std::string> cmd = elem.value<std::string>();
+	      // should be impossible to get here with null cmd because of homogeneous test above
+	      assert(cmd);
+
+        // check that the string matches the name of a previously defined object
+     	  if (defs.count(*cmd) == 1) {
+          map[*cmd] = defs[*cmd];
+	        PLOG_VERBOSE << "Added '" + *cmd + "' to the " + key + " map" << std::endl;
+        } else {
+          throw std::runtime_error("unrecognized object '" + *cmd + "' in " + key);
+        }
+      }
+    }      
+  }
+    
+  /**
+   * \brief Adds a list of objects to a vector or accept the 'ALL' keyword.
+   *
+   * \param config The table to process.
+   * \param key The key whose presence we're testing for
+   * \param vec The vector that we're building.
+   *
+   * \return true if the value for the key was the special keyword 'ALL'
+   * \return false if the value for the key was an array
+   *
+   * \throws std::runtime_error Throws an error if the object we're adding has not been defined.
+   *
+   * As an alternative to specifying an array as the value for the key, the user can specify
+   * 'ALL' as a simple string value (not in an array). The return value indicates whether this
+   * shortcut was used. If 'ALL' is detected, the vector will be empty.
+   *
+   * The templated class T must provide an accessor function, <T>::get(const std::string& name),
+   * which returns a shared pointer to the class object, if it is defined for the given string.
+   */
+  template<typename T>
+  static bool addToVectorOrAll(const toml::table& config, const std::string& key,
+                               std::vector<std::shared_ptr<T>>& vec) {
+    std::optional<std::string_view> for_all = config[key].value<std::string_view>();
+    if (for_all && *for_all == "ALL") {
+      vec.clear();
+      PLOG_VERBOSE << key << ": ALL";
+      return true;
+    } else {
+      addToVector(config, key, vec);
+    }
+    return false;
+  }
+
+  /**
+   * \brief Adds a list of objects to a vector.
+   *
+   * \param config The table to process.
+   * \param key The key whose presence we're testing for
+   * \param vec The vector that we're building.
+   *
+   * \throws std::runtime_error Throws an error if the object we're adding has not been defined.
+   *
+   * The templated class T must provide an accessor function, <T>::get(const std::string& name),
+   * which returns a shared pointer to the class object, if it is defined for the given string.
+   */
+  template<typename T>
+  static void addToVector(const toml::table& config, const std::string& key,
+    std::vector<std::shared_ptr<T>>& vec) {
+      
+    // This entity is assumed to be optional, so do nothing if the key isn't present
+    if (config.contains(key)) {
+      const toml::array* cmd_list = config.get(key)->as_array();
+        if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
+          throw std::runtime_error(key + " must be an array of strings");
+       	}
+	
+        for (auto& elem : *cmd_list) {
+          std::optional<std::string> cmd = elem.value<std::string>();
+      	  // should be impossible to get here with null cmd because of homogeneous test above
+          assert(cmd);
+
+          // check that the string matches the name of a previously defined object
+       	  std::shared_ptr<T> defs = T::get(*cmd);
+          if (defs) {
+            vec.push_back(defs);
+            PLOG_VERBOSE << "Added '" + *cmd + "' to the " + key + " vector.";
+          } else {
+            throw std::runtime_error("Unrecognized object '" + *cmd + "' in " + key);
+       	  }
+        }
+      }      
+  }
+  
+  template<typename T>
+  static std::shared_ptr<T> getObject(const toml::table& config, const std::string& key, bool required) {
+    std::optional<std::string> obj = config[key].value<std::string>();
+    if (obj) {
+      return T::get(*obj);
+    } else {
+      if (required) {
+        PLOG_ERROR << "Missing required value for the key '" << key << "'\n";
+      }
+    }
+    return nullptr;
+  }
 
 };

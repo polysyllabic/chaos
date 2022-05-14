@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file at
- * the top-level directory of this distribution for details of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,19 +17,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "formulaModifier.hpp"
-#include "configuration.hpp"
+
+#include "remapItem.hpp"
 
 using namespace Chaos;
 
-const std::string FormulaModifier::mod_type = "formula";
+SignalRemap::SignalRemap(ControllerSignal to, ControllerSignal neg_to, bool min, bool inv, short thresh, double sensitivity) :
+        to_min(min),
+        invert(inv),
+        threshold(thresh),
+        scale(sensitivity) {
 
-FormulaModifier::FormulaModifier(toml::table& config, Game& game) {
-  initialize(config);
-}
 
-void FormulaModifier::begin() {
-}
-
-void FormulaModifier::update() {
 }

@@ -131,27 +131,68 @@ namespace Chaos {
    *          ]
    *
    * Specific types of modifiers are built in a self-registering factory. In order to ensure that
-   * each child class is registered properly, that class cannot inherit directly from this one.
-   * Instead, you must inherit from the Modifier::Registrar, with the name of the child class in
-   * the template.:
+   * each child class is registered properly, the child class is prevented from inherited directly
+   * from this one. Instead, you must inherit from the templated class Modifier::Registrar, putting
+   * the name of the child class in the template.
+   * 
+   * The child class must have a public constructor that takes two parameters:
+   * - A reference to a toml::table containing the TOML table that defines the modifier being
+   * created
+   * - A reference to a #Game object, providing access to game-data objects that have already been
+   * initialized.
+   * 
+   * Modifiers are initialized last, so all general configuration parameters, the GameCommand,
+   * GameCondition, #Sequence, and #Menu items, as well as the data on any modifiers already
+   * initialized, are available to the constructor.
+   * 
+   * A modifier class also must declare a public static string named #mod_type, whose value is
+   * declared in the source module and is unique among the different modifiers. This string will be
+   * used in the value of the type field in TOML modifier definitions.
+   * 
+   * The the #Modifier class provides an #initialize() routine to perform initializaiton tasks from
+   * the TOML configuration file that are used by many mod types. Because of the idiom used to create
+   * the self-registering factory, this routine cannot be evoked with an explicit parent constructor
+   * taking the toml::table object as a parameter. Instead, you should call this routine explicitly
+   * from your constructor.
    *
-   *     class ChildModifier : public Modifier::Registrar<ChildModifier>
+   * The utility function checkValid() can be used to warn a user who uses an invalid key for the
+   * TOML table you are checking. You must provide the calling function the toml table and a vector
+   * of the legal key names for that table. If there are any key names in the table that are not
+   * listed in this vector, a warning will be generated in the log file.
+   * 
+   *     // Sample header file samplemod.hpp for a modifier class
+   *     #pragma once
+   *     #include "modifier.hpp"
+   *     #include "game.hpp"
+   * 
+   *     namespace Chaos {
+   *       class SampleModifier : public Modifier::Registrar<SampleModifier> {
+   *       public:
+   *         static const std::string mod_type;
+   *         SampleModifier(toml::table& config, Game& game);
+   *       };
+   *     };
    *
-   * The child class's public constructor must take a const refernce to a toml table as the
-   * only parameter, and it should pass this to the parent constructor with the same
-   * parameter.
-   *
-   *    ChildModifier::DisableModifier(toml::table& config) : Modifier(config) {
-   *      // Initialization specific to the child modifier here
-   *    }
-   *
+   *     // Sample source module samplemod.cpp for a modifier class 
+   *     #include "samplemod.hpp"
+   *     #include "tomlUtils.hpp"
+   *     using namespace Chaos;
+   * 
+   *     SampleModifier::SampleModifier(toml::table& config, Game& game) {
+   *       checkValid(config, std::vector<std::string>{"name", "description", "type", "other",
+   *                  "keys", "to", "recognize"});
+   *       initialize(config);
+   *       // Initialization specific to this modifier goes here
+   *     }
    */
-  struct Modifier : Factory<Modifier, toml::table&>, public std::enable_shared_from_this<Modifier> {
+  struct Modifier : Factory<Modifier, toml::table&, Game&>, public std::enable_shared_from_this<Modifier> {
     friend ChaosEngine;
 
   private:
     /**
-     * \brief The parent modifier.
+     * \brief The parent modifier, if any
+     * 
+     * \todo Move this to ParentMod and overload getptr()
      */
     std::shared_ptr<Modifier> parent; 
 
@@ -281,13 +322,6 @@ namespace Chaos {
     static std::shared_ptr<ChaosEngine> engine;
 
     /**
-     * \brief Get the metadata about this mod as a Json object
-     * 
-     * \return Json::Value 
-     */
-    Json::Value toJsonObject();
-
-    /**
      * \brief Common initialization.
      *
      * Because the registrar factory method is designed to prevent classes from invoking this
@@ -350,17 +384,6 @@ namespace Chaos {
      */
     void updatePersistent();
 
-    /**
-     * If the touchpad axis is currently being remapped, send a 0 signal to the remapped axis.
-     */
-    static void disableTPAxis(ControllerSignal tp_axis);
-
-    /**
-     * Set up and tear down touchpad state on receiving a new touchpad active signal.
-     */
-    static void PrepTouchpad(const DeviceEvent& event);
-    
-
   public:
     /**
      * Name by which this mod type will be identified in the TOML file
@@ -375,18 +398,6 @@ namespace Chaos {
     static void setController(Controller& c) { controller = c; }
 
     /**
-     * \brief Alters the incomming event to the value expected by the console
-     * \param[in,out] event The signal coming from the controller
-     * \return Validity of the signal. False signals are dropped from processing by the mods and not sent to
-     * the console.
-     *
-     * This remapping is invoked from the chaos engine's sniffify routine before the list of regular
-     * mods is traversed. That means that mods can operate on the signals associated with particular
-     * commands without worrying about the state of the remapping.
-     */
-    static bool remapEvent(DeviceEvent& event);
-    
-    /**
      * \brief Get the pointer to this mod if it's an ordinary mod, or its parent if it has one
      * 
      * \return std::shared_ptr<Modifier> 
@@ -396,6 +407,8 @@ namespace Chaos {
     }
 
     void setParentModifier(std::shared_ptr<Modifier> new_parent) { parent = new_parent; }
+    
+    bool isUnlisted() { return unlisted; }
     
     /**
      * \brief Get how long the mod has been active.
@@ -411,7 +424,7 @@ namespace Chaos {
      * and then call the virtual update function implemented by the concrete child class.
      */
     void _update(bool wasPaused);
-	
+  
     /**
      * \brief Commands to execute when the mod is first applied. 
      */
@@ -424,6 +437,7 @@ namespace Chaos {
      * \brief Commands to execute when removing the mod from the active-mod list.
      */
     virtual void finish();
+
     /**
      * \brief Commands to execute after another mod has executed its finish() routine and been
      * removed from the stack of active mods.
@@ -500,6 +514,13 @@ namespace Chaos {
      */
     bool inUnless();
     
+    /**
+     * \brief Get the metadata about this mod as a Json object
+     * 
+     * \return Json::Value 
+     */
+    Json::Value toJsonObject();
+
   };
 
 };

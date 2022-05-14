@@ -27,29 +27,8 @@
 
 using namespace Chaos;
 
-void Touchpad::initialize(const toml::table& config) {
-  scale = config["remapping"]["touchpad_scale"].value_or(1.0);
-  if (scale == 0) {
-    PLOG_ERROR << "Touchpad scale cannot be 0. Setting to 1";
-    scale = 1;
-  }
-  // Condition is optional; Warn if bad condition name but not if missing entirely
-  std::optional<std::string> c = config["remapping"]["touchpad_condition"].value<std::string>();
-  if (c) {
-    condition = GameCondition::get(*c);
-    if (! condition) {
-      PLOG_WARNING << "The condition " << *c << " is not defined";
-    }
-  } 
-  scale_if = config["remapping"]["touchpad_scale_if"].value_or(1.0);
-  if (scale_if == 0) {
-    PLOG_ERROR << "Touchpad scale_if cannot be 0. Setting to 1";
-    scale_if = 1;
-  }
-  skew = config["remapping"]["touchpad_skew"].value_or(0);
+Touchpad::Touchpad() {
   timer.initialize();
-  PLOG_DEBUG << "Touchpad scale = " << scale << "; condition = " << condition->getName() <<
-    "; scale_if = " << scale_if << "; skew = " << skew;
 }
 
 void Touchpad::clearActive() {
@@ -59,16 +38,12 @@ void Touchpad::clearActive() {
   dY_2.priorActive = false;
 }
 
-// Given a touchpad event, returns an equivalent axis signal
-// Note: This is NOT clipped to joystick min/max. That must be done by the calling function.
-// This represents a first stab at generalization beyond TLOU2. It will almost certainly need
-// further refinement to handle the requirements of other games.
-short Touchpad::toAxis(ControllerSignal signal, short value) {
+short Touchpad::getVelocity(ControllerSignal tp_axis, short value) {
   int ret = 0;
   double derivativeValue;
   DerivData* dd = nullptr;
 
-  switch (signal) {
+  switch (tp_axis) {
   case ControllerSignal::TOUCHPAD_X:
 	  dd = &dX;
 	  break;
@@ -82,22 +57,9 @@ short Touchpad::toAxis(ControllerSignal signal, short value) {
 	  dd = &dY_2;
     break;
   default:
-    throw std::runtime_error("Touchpad::toAxis: Original event not a TOUCHAPD axis signal");
-  }
-  
-  // Use the touchpad value to update the running derivative count
-  derivativeValue = derivative(dd, value, timer.runningTime()) *
-      (condition->inCondition()) ? scale_if : scale;
-
-  if (derivativeValue > 0) {
-    ret = (int) derivativeValue + skew;
-  }
-  else if (derivativeValue < 0) {
-    ret = (int) derivativeValue - skew;
-  }
-    
-  PLOG_DEBUG << "Derivative: " << derivativeValue << ", skew = " << skew << ", returning " << ret;
-  return ret;
+    throw std::runtime_error("Event passed to Touchpad::getVelocity not a TOUCHAPD axis signal");
+  }  
+  return derivative(dd, value, timer.runningTime());
 }
 
 double Touchpad::derivative(DerivData* d, short current, double timestamp) {
@@ -124,6 +86,3 @@ double Touchpad::derivative(DerivData* d, short current, double timestamp) {
   return ret;
 }
 
-bool Touchpad::inCondition() {
-  return condition->inCondition();  
-}

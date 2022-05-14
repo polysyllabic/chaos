@@ -27,15 +27,14 @@ using namespace Chaos;
 
 const std::string RemapModifier::mod_type = "remap";
 
-RemapModifier::RemapModifier(toml::table& config) {
-  Mogi::Math::Random rng;
+RemapModifier::RemapModifier(toml::table& config, Game& game) : remap_table(game.getRemapTable()) {
 
   checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "signals", "disableSignals", "remap", "random_remap", "unlisted"});
 
   initialize(config);
   
-  Configuration::addToVector<ControllerInput>(config, "signals", signals);
+  addToVector<ControllerInput>(config, "signals", signals);
 
   disable_signals = config["disableSignals"].value_or(false);
 
@@ -58,35 +57,32 @@ RemapModifier::RemapModifier(toml::table& config) {
     }
     for (auto& elem : *remap_list) {
       const toml::table* remapping = elem.as_table();
-      checkValid(*remapping, std::vector<std::string>{
-	      "from", "to", "to_neg", "to_min", "invert", "threshold", "sensitivity"}, "remap config");
       if (! remapping) {
-	      throw std::runtime_error("Gampad signal remapping must be a table");
-      }      
-      ControllerSignal from = getSignal(*remapping, "from", true);
-      ControllerSignal to = getSignal(*remapping, "to", true);
-      ControllerSignal to_neg = getSignal(*remapping, "to_neg", false);
-
-      ControllerSignalType from_type = ControllerInput::get(from)->getType();
-      ControllerSignalType to_type = ControllerInput::get(to)->getType();
-      ControllerSignalType to_neg_type = ControllerInput::get(to_neg)->getType();
+	      throw std::runtime_error("Remapping instructions must be formatted as a table");
+      }
+      checkValid(*remapping, std::vector<std::string>{"from", "to", "to_neg", "to_min", "invert",
+                 "threshold", "sensitivity"}, "remap config");
+      
+      std::shared_ptr<ControllerInput> from = lookupInput(*remapping, "from", true);
+      std::shared_ptr<ControllerInput> to = lookupInput(*remapping, "to", true);
+      std::shared_ptr<ControllerInput> to_neg = lookupInput(*remapping, "to_neg", false);
 
       // Check for unsupported remappings
-      if (from_type == ControllerSignalType::DUMMY) {
+      if (from->getType() == ControllerSignalType::DUMMY) {
         PLOG_ERROR << "Cannot map from NONE or NOTHING";
-      } else if (from_type != to_type) {
-        if (to_type == ControllerSignalType::ACCELEROMETER || to_neg_type == ControllerSignalType::ACCELEROMETER ||
-            to_type == ControllerSignalType::GYROSCOPE || to_neg_type == ControllerSignalType::GYROSCOPE ||
-            to_type == ControllerSignalType::TOUCHPAD || to_neg_type == ControllerSignalType::TOUCHPAD) {
+      } else if (from->getType() != to->getType()) {
+        if (to->getType() == ControllerSignalType::ACCELEROMETER || to_neg->getType() == ControllerSignalType::ACCELEROMETER ||
+            to->getType() == ControllerSignalType::GYROSCOPE || to_neg->getType() == ControllerSignalType::GYROSCOPE ||
+            to->getType() == ControllerSignalType::TOUCHPAD || to_neg->getType() == ControllerSignalType::TOUCHPAD) {
           PLOG_ERROR << "Cross-type remapping not supported going to the accelerometer, gyroscope, or touchpad.";
         }
-        if (to_neg_type != ControllerSignalType::DUMMY && to_neg_type != to_type) {
+        if (to_neg->getType() != ControllerSignalType::DUMMY && to_neg->getType() != to->getType()) {
           PLOG_WARNING << "The 'to' and 'to_neg' signals belong to different classes. Are you sure this is what you want?";
         }
       }
       bool to_min = (*remapping)["to_min"].value_or(false);
       bool invert = (*remapping)["invert"].value_or(false);
-      if (invert && (from_type == ControllerSignalType::BUTTON || from_type == ControllerSignalType::HYBRID)) {
+      if (invert && (from->getType() == ControllerSignalType::BUTTON || from->getType() == ControllerSignalType::HYBRID)) {
         PLOG_WARNING << "Inverting the signal only makes sense for axes. Ignored.";
         invert = false;
       }
@@ -108,36 +104,55 @@ RemapModifier::RemapModifier(toml::table& config) {
     }
   }
 
-  // Note: Random remapping will break if axes and buttons are included in the same list.
+  // Note: Random remapping mmay break if axes and buttons are included in the same list.
   // Currently we don't check for this.
   if (config.contains("randomRemap")) {
     const toml::array* remap_list = config.get("randomRemap")-> as_array();
     if (! remap_list || !remap_list->is_homogeneous(toml::node_type::string)) {
       throw std::runtime_error("randomRemap must be an array of strings");
     }
-    std::vector<std::shared_ptr<ControllerInput>> buttons;
     for (auto& elem : *remap_list) {
       std::optional<std::string> signame = elem.value<std::string>();
+      // the is_homogenous test above should ensure that signame always has a value
       assert(signame);
-      std::shared_ptr<ControllerInput> sig = ControllerInput::get(*signame);
+      std::shared_ptr<ControllerInput> sig = remap_table.getInput(*signame);
       if (! sig) {
-	      throw std::runtime_error("signal for random remap '" + *signame + "' not defined");
+	      throw std::runtime_error("Controller input for random remap '" + *signame + "' is not defined");
       }
-      buttons.push_back(sig);
-      remaps.insert({sig->getSignal(), {ControllerSignal::NONE, ControllerSignal::NONE, false, false, 0, 1}});
-    }
-
-    for (auto& r : remaps) {
-      int index = floor(rng.uniform(0, buttons.size()-0.01));
-      auto it = buttons.begin();
-      std::advance(it, index);
-      r.second.to_console =  (*it)->getSignal();
-      buttons.erase(it);
+      remaps.insert({sig, {nullptr, nullptr, false, false, 0, 1}});
     }
   }
 }
 
+std::shared_ptr<ControllerInput> RemapModifier::lookupInput(const toml::table& config, const std::string& key, bool required) {
+  std::optional<std::string> inp = config[key].value<std::string>();
+  std::shared_ptr<ControllerInput> rval = nullptr;
+  if (inp) {
+    rval = remap_table.getInput(*inp);
+    if (!rval) {
+      throw std::runtime_error(*inp + " is not a defined signal");
+    }
+  } else if (required) {
+    throw std::runtime_error("Missing Required '" + key + "' key in remap table");
+  } 
+  return rval;
+}
+
 void RemapModifier::begin() {
+  Mogi::Math::Random rng;
+  std::vector<std::shared_ptr<ControllerInput>> buttons;
+  // Collect a list of the signals that we're going to remap
+  for (auto& [key, value] : remaps) {
+    buttons.push_back(key);
+  }
+  // Iterate through the list of signals we're remapping and assign a random signal to it
+  for (auto& [key, value] : remaps) {
+    int index = floor(rng.uniform(0, buttons.size()-0.01));
+    auto it = buttons.begin();
+    std::advance(it, index);
+    value.to_console =  *it;
+    buttons.erase(it);
+  }
   apply();
   sendBeginSequence();
 }
@@ -147,17 +162,15 @@ void RemapModifier::begin() {
 // another mod is removed from the active list in order to make sure that we can remove our remaps
 // without trashing any that may be applied by a mod later in the queue.
 void RemapModifier::apply() {
-  // SignalRemap
-  for (const auto& [from, remap] : remaps) {
-    ControllerInput::get(from)->setCascadingRemap(remap);
-  }
+  PLOG_DEBUG << "Updating remaps for " << name;
+  remap_table.setCascadingRemap(remaps);
 }
 
 // Undo the remapping
 void RemapModifier::finish() {
-  for (const auto& [from, remap] : remaps) {
-    ControllerInput::get(from)->setRemap(ControllerSignal::NONE);
-  }
+  // When we remove ourselves, we reset the *entire* remap table to nothing. Any remaining remap
+  // mods that are active will then reapply themselves when their apply functions are called.
+  remap_table.clearRemaps();
   sendFinishSequence();
 }
 

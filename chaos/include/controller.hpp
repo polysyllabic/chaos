@@ -29,6 +29,7 @@
 #include "deviceEvent.hpp"
 #include "controllerState.hpp"
 #include "signals.hpp"
+#include "touchpad.hpp"
 
 namespace Chaos {
 
@@ -66,7 +67,6 @@ namespace Chaos {
     RawGadgetPassthrough mRawGadgetPassthrough;
     
   protected:
-    Controller();
     
     ControllerState* mControllerState;
 
@@ -85,6 +85,7 @@ namespace Chaos {
 	
     ControllerInjector* controllerInjector = nullptr;
 
+    Touchpad touchpad;
   public:
     Controller();
     
@@ -125,6 +126,7 @@ namespace Chaos {
      * This tests the signal only, regarless of any condition associated with a game command.
      */
     bool matches(const DeviceEvent& event, ControllerSignal signal);
+
     /**
      * \brief Is the event an instance of the specified input command?
      * 
@@ -138,6 +140,7 @@ namespace Chaos {
      * \param[in] The command that we're disabling.
      */
     void setOff(std::shared_ptr<GameCommand> command);
+
     /**
      * Sets the button/axis associated with a command to its maximum.
      * \param[in] The command that we're turning on.
@@ -146,6 +149,9 @@ namespace Chaos {
     
     void addInjector(ControllerInjector* injector);
 
+    bool touchpadActive() { return touchpad.isActive(); }
+    void touchpadClearActive() { touchpad.clearActive(); }
+    void setTouchpadActive(bool state) { touchpad.setActive(state); }
     
   };
 

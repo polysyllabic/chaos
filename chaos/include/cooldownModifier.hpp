@@ -23,6 +23,7 @@
 #include <toml++/toml.h>
 
 #include "modifier.hpp"
+#include "game.hpp"
 
 namespace Chaos {
 
@@ -52,6 +53,8 @@ namespace Chaos {
    *
    * Note: Although the appliesTo key takes an array, this mod type expects only a single
    * command. All but the first will be ignored.
+   * 
+   * \todo Allow cooldown to do things other than block a signal
    */
   class CooldownModifier : public Modifier::Registrar<CooldownModifier> {
 
@@ -70,7 +73,7 @@ namespace Chaos {
     double time_off;
   public:
     static const std::string mod_type;
-    CooldownModifier(toml::table& config);
+    CooldownModifier(toml::table& config, Game& game);
     
     void begin();
     void update();

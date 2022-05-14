@@ -31,7 +31,7 @@ using namespace Chaos;
 
 const std::string DisableModifier::mod_type = "disable";
 
-DisableModifier::DisableModifier(toml::table& config) {
+DisableModifier::DisableModifier(toml::table& config, Game& game) {
   PLOG_VERBOSE << "constructing disable modifier";
   assert(config.contains("name"));
   assert(config.contains("type"));

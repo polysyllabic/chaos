@@ -22,6 +22,7 @@
 #include <toml++/toml.h>
 
 #include "modifier.hpp"
+#include "game.hpp"
 
 namespace Chaos {
 
@@ -62,7 +63,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
     
-    DelayModifier(toml::table& config);
+    DelayModifier(toml::table& config, Game& game);
     void begin();
     void update();
     bool tweak(DeviceEvent& event);

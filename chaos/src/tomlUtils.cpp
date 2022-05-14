@@ -36,19 +36,8 @@ bool checkValid(const toml::table& config, const std::vector<std::string>& goodK
 }
 
 
-ControllerSignal getSignal(const toml::table& config, const std::string& key, bool required) {
-  if (! config.contains(key)) {
-    if (required) {
-      throw std::runtime_error("missing required '" + key + "' field");
-    }
-    return ControllerSignal::NONE;
-  }
-  std::optional<std::string> signal = config.get(key)->value<std::string>();
-  std::shared_ptr<ControllerInput> inp = ControllerInput::get(*signal);
-  if (! inp) {
-    throw std::runtime_error("Controller signal '" + *signal + "' not defined");
-  }
-  return inp->getSignal();
+ControllerInput lookupInput(const toml::table& config, const std::string& key, bool required) {
+  
 }
 
 

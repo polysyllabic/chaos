@@ -23,6 +23,7 @@
 #include <toml++/toml.h>
 
 #include "modifier.hpp"
+#include "remapTable.hpp"
 #include "controllerInput.hpp"
 
 namespace Chaos {
@@ -57,16 +58,28 @@ namespace Chaos {
    *   - scale (optional): A divisor that scales the incomming accelerometer signal down.
    *   .
    * - random_remap: A list of controls that will be randomly remapped among one another.
+   * 
+   * A remap modifier may specify *either* a fixed list of remaps with the "remap" key *or* a list
+   * of controls that will be randomly scrambled with the "random_remap" key, but not both.
+   * 
+   * When using random_remap, note that you can only scramble signals within the same basic class:
+   * buttons or axes. Trying to scramble across input types will almost certainly break things,
+   * since an axis must map to two buttons and vice versa.
+   * 
    * Note that remapping is done by controller signal, not game command. Setting 'to' or 'to_neg' to
    * NOTHING has the effect of blocking the signal from reaching the console.
+   * 
+   * 
    */
   class RemapModifier : public Modifier::Registrar<RemapModifier> {
 
-  protected:
+  private:
+    Remapping& remap_table;
+
     /**
-     * \brief The list of remappings set by this mod.
+     * The list of remappings set by this mod.
      */
-    std::unordered_map<ControllerSignal, SignalRemap> remaps;
+    std::unordered_map<std::shared_ptr<ControllerInput>, SignalRemap> remaps;
 
     /**
      * If true, sends events to zero out the button on initialization.
@@ -80,10 +93,13 @@ namespace Chaos {
      */
     std::vector<std::shared_ptr<ControllerInput>> signals;
     
+    std::shared_ptr<ControllerInput> lookupInput(const toml::table& config, const std::string& key, bool required);
+
+
   public:
     static const std::string mod_type;
     
-    RemapModifier(toml::table& config);
+    RemapModifier(toml::table& config, Game& game);
 
     void begin();
     void apply();

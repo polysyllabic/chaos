@@ -26,49 +26,14 @@
 
 namespace Chaos {
 
-  class GameCondition;
-
   /**
-   * \brief A class to encapulate the touchpad functionality on the controller.
+   * \brief A class to handle velocity calculations from the touchpad
+   * 
+   * To translate touchpad input into axes in a smooth way, we calculate the velocity with which the
+   * user moves his or her finger over the touchpad. This class encapsulates those calculations.
    */
   class Touchpad {
   private:
-    /**
-     * \brief The default scaling applied to convert touchpad input to axis events.
-     * 
-     * The touchpad parameters control the formula to convert from touchpad to axis events based on
-     * the change in axis value over time (derivative). The formula is scale * derivative + skew.
-     * This result is then clipped to the limits of the joystick value. This is the default scaling
-     * factor applied if there is no touchpad condition or that condition is false.
-     */
-    double scale;
-
-     /**
-      * \brief Condition under which to use an alternate scaling factor
-      *
-      * If the is defined, the engine will check the if this condition is currently met, and if it is,
-      * the derivative will be multiplied by the value of touchpad_scale_if instead of the default.
-      */
-    std::shared_ptr<GameCondition> condition;
-
-    /**
-     * \brief The alternate scaling applied to convert touchpad input to axis events.
-     * 
-     * The touchpad parameters control the formula to convert from touchpad to axis events based on
-     * the change in axis value over time (derivative). The formula is scale * derivative + skew.
-     * This result is then clipped to the limits of the joystick value. This is the alternate scaling
-     * factor applied if the ouchpad condition is true.
-     */
-    double scale_if;
-
-    /**
-     * \brief Offset to apply to the axis value when the derivative is non-zero.
-     * 
-     * The sign of the skew is the same as the sign of the derivative. In other words, if the derivative
-     * is positive, the skew is added to the result, and the derivative is negative, the skew is subtracted.
-     */
-    short skew;
-    
     /**
      * Remembers whether touchpad is currently active
      */
@@ -108,20 +73,20 @@ namespace Chaos {
      */
     DerivData dY_2;
 
+    /**
+     * \brief Update the derivative 
+     * 
+     * \param d 
+     * \param current 
+     * \param timestamp 
+     * \return double 
+     */
     double derivative(DerivData* d, short current, double timestamp);
 
     Mogi::Math::Time timer;
     
   public:
-    /**
-     * Initialize touchpad parameters from the TOML file.
-     */
-    void initialize(const toml::table& config);
-    
-    static Touchpad& instance() {
-      static Touchpad touchpad{};
-      return touchpad;
-    }
+    Touchpad();
 
     /**
      * \brief Reset touchpad's priorActive status 
@@ -138,9 +103,18 @@ namespace Chaos {
      */
     void setActive(bool state) { active = state; }
 
-    bool inCondition();
-
-    short toAxis(ControllerSignal signal, short value);
+    /**
+     * \brief Get the velocity of the touchpad signal change
+     * 
+     * \param tp_axis The touchpad axis to test
+     * \param value The reported event value for this signal
+     * \return short The velocity along this axis
+     * 
+     * The velocity is tracked by taking a running average of the differences in signal value over
+     * the last 5 calls to the function.
+     */
+    short getVelocity(ControllerSignal tp_axis, short value);
+    
   };
   
 };

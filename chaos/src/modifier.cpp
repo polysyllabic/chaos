@@ -106,109 +106,6 @@ void Modifier::initialize(toml::table& config) {
   on_finish = std::make_shared<Sequence>(config, "finishSequence");  
 }
 
-
-bool Modifier::remapEvent(DeviceEvent& event) {
-  DeviceEvent new_event;
-
-  // Get the object with information about the incomming signal
-  std::shared_ptr<ControllerInput> from_controller = ControllerInput::get(event);  
-  assert (from_controller);
-  ControllerSignal destination = from_controller->getRemap();
-
-  // If this signal isn't remapped, we're done
-  if (destination == ControllerSignal::NONE) {
-    return true;
-  }
-
-  // Special handling of signals goes here
-  // Touchpad active requires special setup and tear-down
-  if (from_controller->getSignal() == ControllerSignal::TOUCHPAD_ACTIVE) {
-    PrepTouchpad(event);
-  }
-  
-  // Get the object for the signal we're sending to the console.
-  std::shared_ptr<ControllerInput> to_console = ControllerInput::get(destination);
-  assert (to_console);
-
-  // When mapping from any type of axis to buttons/hybrids and the choice of button is determined
-  // by the sign of the value. If the negative remap is a button, the positive will be a button also,
-  // so it's safe to check that.
-  if (event.value < 0 && event.id == TYPE_AXIS && to_console->getButtonType() == TYPE_BUTTON) {
-    destination = from_controller->getNegRemap();
-    to_console = ControllerInput::get(destination);
-    assert (to_console);
-  }
-
-  // If we are remapping to NOTHING, we drop this signal.
-  if (destination == ControllerSignal::NOTHING) {
-    PLOG_VERBOSE << "dropping remapped event";
-    return false;
-  }
-
-  // Now handle cases that require additional actions
-  switch (from_controller->getType()) {
-  case ControllerSignalType::HYBRID:
-    // Going from hybrid to button, we drop the axis component
-    if (to_console->getType() == ControllerSignalType::BUTTON && event.type == TYPE_AXIS) {
- 	    return false;
-    }
-  case ControllerSignalType::BUTTON:
-    // From button to hybrid, we need to insert a new event for the axis
-    if (to_console->getType() == ControllerSignalType::HYBRID) {
-   	  new_event.id = to_console->getHybridAxis();
-      new_event.type = TYPE_AXIS;
-   	  new_event.value = event.value ? JOYSTICK_MAX : JOYSTICK_MIN;
-      controller.applyEvent(new_event);
-    }
-    break;
-  case ControllerSignalType::AXIS:
-    // From axis to button, we need a new event to zero out the second button when the value is
-    // below the threshold. The first button will get a 0 value from the changed regular value
-    // At this point, to_console has been set with the negative remap value.
-    if (to_console->getButtonType() == TYPE_BUTTON && abs(event.value) < from_controller->getThreshold()) {
-      new_event.id = to_console->getID();
-      new_event.value = 0;
-      new_event.type = TYPE_BUTTON;
-      controller.applyEvent(new_event);
-    }
-  }
-
-  // Update the event
-  event.type = to_console->getButtonType();
-  event.id = to_console->getID(event.type);
-  event.value = from_controller->remapValue(event.value);
-  return true;
-}
-
-// If the touchpad axis is currently being remapped, send a 0 signal to the remapped axis
-void Modifier::disableTPAxis(ControllerSignal tp_axis) {
-  DeviceEvent new_event{0, 0, TYPE_AXIS, AXIS_RX};
-  std::shared_ptr<ControllerInput> tp = ControllerInput::get(tp_axis);
-  assert (tp && tp->getType() == ControllerSignalType::TOUCHPAD);
-
-  if (tp->getRemap() != ControllerSignal::NONE) {
-    std::shared_ptr<ControllerInput> r = ControllerInput::get(tp->getRemap());
-    assert(r);
-    new_event.id = r->getID();
-    controller.applyEvent(new_event);
-  }
-}
-
-void Modifier::PrepTouchpad(const DeviceEvent& event) {
-  if (! Touchpad::instance().isActive() && event.value == 0) {
-    Touchpad::instance().clearActive();
-    PLOG_DEBUG << "Begin touchpad use";
-  } else if (Touchpad::instance().isActive() && event.value) {
-    PLOG_DEBUG << "End touchpad use";
-    // We're stopping touchpad use. Zero out all remapped axes in use.
-    disableTPAxis(ControllerSignal::TOUCHPAD_X);
-    disableTPAxis(ControllerSignal::TOUCHPAD_Y);
-    disableTPAxis(ControllerSignal::TOUCHPAD_X_2);
-    disableTPAxis(ControllerSignal::TOUCHPAD_Y_2);
-  }
-  Touchpad::instance().setActive(!event.value);
-}
-
 // The chaos engine calls this routine directly, and we dispatch to the appropriate
 // update routine here.
 void Modifier::_update(bool wasPaused) {
@@ -235,7 +132,7 @@ bool Modifier::tweak( DeviceEvent& event ) {
 void Modifier::sendBeginSequence() { 
   if (! on_begin->empty()) {
     in_sequence = lock_while_busy;
-    on_begin->send();
+    on_begin->send(controller);
     in_sequence = false;
   }
 }
@@ -243,7 +140,7 @@ void Modifier::sendBeginSequence() {
 void Modifier::sendFinishSequence() { 
   if (! on_finish->empty()) {
     in_sequence = lock_while_busy;
-    on_finish->send();
+    on_finish->send(controller);
     in_sequence = false;
   }
 }

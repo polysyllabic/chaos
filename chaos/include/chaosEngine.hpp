@@ -74,6 +74,17 @@ namespace Chaos {
     Json::CharReader* jsonReader;
     Json::StreamWriterBuilder jsonWriterBuilder;	
 
+    bool remapEvent(DeviceEvent& event);
+    /**
+     * Set up and tear down touchpad state on receiving a new touchpad active signal.
+     */
+    void prepTouchpad(const DeviceEvent& event);
+
+    /**
+     * If the touchpad axis is currently being remapped, send a 0 signal to the remapped axis.
+     */
+    void disableTPAxis(ControllerSignal tp_axis);
+
   public:
     ChaosEngine(Controller& c, const std::string& configfile);
     

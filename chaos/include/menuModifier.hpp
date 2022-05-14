@@ -30,24 +30,28 @@ namespace Chaos {
    * adition to the required name and description:
    */
   class MenuModifier : public Modifier::Registrar<MenuModifier> {
-  protected:
+  private:
     /**
      * \brief Map of menu items and values
      * 
      * A mod can perform multiple actions in the menu, so we store the value for each menu item
-     * in a map
+     * in a map.
      */
     std::unordered_map<std::shared_ptr<MenuItem>,int> menu_items;
 
     /**
-     * \brief Should the menu option be restored to its previous value when the mod finishes?
+     * Should the menu option be restored to its previous value when the mod finishes?
      */
     bool reset_on_finish;
 
+    /**
+     * A local reference to the menu system so we can execute menu actions
+     */
+    GameMenu& menu;
   public:
     static const std::string mod_type;
     
-    MenuModifier(toml::table& config);
+    MenuModifier(toml::table& config, Game& game);
     
     void begin();
     void finish();
