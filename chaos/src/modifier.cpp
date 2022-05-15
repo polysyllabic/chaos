@@ -30,6 +30,8 @@
 #include "enumerations.hpp"
 #include "modifier.hpp"
 #include "configuration.hpp"
+#include "tomlUtils.hpp"
+#include "gameCondition.hpp"
 
 using namespace Chaos;
 
@@ -67,10 +69,10 @@ void Modifier::initialize(toml::table& config) {
   PLOG_VERBOSE << " - groups: " << groups;
 #endif
 
-  applies_to_all = Configuration::addToVectorOrAll<GameCommand>(config, "appliesTo", commands);
+  applies_to_all = TOMLUtils::addToVectorOrAll<GameCommand>(config, "appliesTo", commands);
 
  
-  Configuration::addToVector<GameCondition>(config, "condition", conditions);
+  TOMLUtils::addToVector<GameCondition>(config, "condition", conditions);
   condition_test = getConditionTest(config, "conditionTest");
 
 #ifndef NDEBUG
@@ -86,7 +88,7 @@ void Modifier::initialize(toml::table& config) {
   }
 #endif
 
-  Configuration::addToVector<GameCondition>(config, "unless", unless_conditions);
+  TOMLUtils::addToVector<GameCondition>(config, "unless", unless_conditions);
   unless_test = getConditionTest(config, "unlessTest");
 
 #ifndef NDEBUG

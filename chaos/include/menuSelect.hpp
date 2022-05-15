@@ -45,17 +45,12 @@ namespace Chaos {
      * True if selecting this item requires a confirmation prompt to activate.
      */
     bool confirm;
-    
-    /**
-     * \brief Pointer to another menu item whose counter is tied to this item
-     * 
-     * When non-null, setting this option will increment the sibling's counter and 
-     */
-    std::shared_ptr<MenuItem> sibling_counter;
-
 
   public:
-    MenuSelect(const toml::table& config);
+    MenuSelect(toml::table& config,
+               std::shared_ptr<MenuItem> par,
+               std::shared_ptr<MenuItem> grd,
+               std::shared_ptr<MenuItem> cnt);
 
     void setState(Sequence& seq, unsigned int new_state);
     

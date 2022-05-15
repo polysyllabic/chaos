@@ -24,7 +24,7 @@
 #include "modifier.hpp"
 
 namespace Chaos {
-
+  class Game;
   /**
    * A modifier that enables child modifiers, either from a specific list or randomly selected.
    */

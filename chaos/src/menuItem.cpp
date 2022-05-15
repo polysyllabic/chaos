@@ -27,55 +27,33 @@
 
 using namespace Chaos;
 
+MenuItem::MenuItem(toml::table& config, std::shared_ptr<MenuItem> par,
+                   std::shared_ptr<MenuItem> grd,
+                   std::shared_ptr<MenuItem> cnt) :
+                   parent{par}, guard{grd}, sibling_counter{cnt} {
 
-MenuItem::MenuItem(const toml::table& config) {
-  assert(config.contains("name"));
-  assert(config.contains("type"));
-
-  PLOG_VERBOSE << "Constructing " << config["name"];
-
-  std::optional<std::string> item_name = config["parent"].value<std::string>();
-  if (item_name) {
-    parent = GameMenu::instance().getMenuItem(*item_name);
-    if (!parent) {
-      throw std::runtime_error("Unknown parent menu. Parents must be declared before children.");
-    }
-  }
-  PLOG_VERBOSE << "- parent = " << ((item_name) ? *item_name : "[ROOT]");
   if (! config.contains("offset")) {
-    PLOG_WARNING << "Menu item '" << *config["name"].value<std::string_view>() << "' missing offset. Set to 0.";
+    PLOG_WARNING << "Menu item '" << config["name"] << "' missing offset. Set to 0.";
   }
   offset = config["offset"].value_or(0);
   tab_group = config["tab"].value_or(0);
   default_state = config["initialState"].value_or(0);
   current_state = default_state;
   hidden = config["hidden"].value_or(false);
-  PLOG_VERBOSE << "- offset = " << offset << "; tab_group = " << tab_group;
-  PLOG_VERBOSE << "- initial_state = " << default_state;
-  PLOG_VERBOSE << "- hidden = " << hidden;
-
-  item_name = config["guard"].value<std::string_view>();
-  if (item_name) {
-    guard = GameMenu::instance().getMenuItem(*item_name);
-    if (! guard) {
-      PLOG_ERROR << "Unknown guard '" << *item_name << "' for menu item " << config["name"];
-    } else {
-      PLOG_VERBOSE << "- guard = " << *item_name;
-    }
-  }
 
   counter_action = CounterAction::NONE;
-  item_name = config["counterAction"].value<std::string_view>();
-  if (item_name) {
-    PLOG_VERBOSE << "- counterAction: " << *item_name;
-    if (*item_name == "reveal") {
+  std::optional<std::string> action_name = config["counterAction"].value<std::string>();
+  if (action_name) {
+    if (*action_name == "reveal") {
       counter_action = CounterAction::REVEAL;
-    } else if (*item_name == "zeroReset") {
+    } else if (*action_name == "zeroReset") {
       counter_action = CounterAction::ZERO_RESET;
-    } else if (*item_name != "none") {
-      PLOG_ERROR << "Unknown counterAction type: " << *item_name << " for menu item " << config["name"];
+    } else if (*action_name != "none") {
+      throw std::runtime_error("Unknown counterAction type: " + *action_name);
     }
   }
+  PLOG_VERBOSE << "-- offset = " << offset << "; tab_group = " << tab_group <<
+      "; initial_state = " << default_state << "; hidden = " << hidden;
 }
 
 void MenuItem::incrementCounter() {

@@ -28,17 +28,17 @@
 #include <toml++/toml.h>
 
 #include "factory.hpp"
-
 #include "controller.hpp"
 #include "deviceEvent.hpp"
-#include "gameCommand.hpp"
-#include "gameCondition.hpp"
 #include "touchpad.hpp"
-#include "sequence.hpp"
+#include "enumerations.hpp"
 
 namespace Chaos {
 
   class ChaosEngine;
+  class GameCondition;
+  class GameCommand;
+  class Sequence;
 
   /**
    * \brief Definition of the abstract base Modifier class for TCC.

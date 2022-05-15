@@ -25,7 +25,8 @@
 
 #include "gameCondition.hpp"
 #include "gameCommand.hpp"
-
+#include "controllerInput.hpp"
+#include "tomlUtils.hpp"
 using namespace Chaos;
 
 // Conditions are initialized after those game commands that are defined without conditions, and
@@ -38,10 +39,10 @@ GameCondition::GameCondition(toml::table& config) {
 
   PLOG_VERBOSE << "Initializing game condition " << config["name"];
   
-  Configuration::checkValid(config, std::vector<std::string>{
+  TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "persistent", "trueOn", "falseOn", "threshold", "thresholdType", "testType"});
   
-  Configuration::addToVector(config, "trueOn", true_on);
+  TOMLUtils::addToVector(config, "trueOn", true_on);
 
   if (true_on.empty()) {
     throw std::runtime_error("No commands defined for trueOn");
@@ -50,7 +51,7 @@ GameCondition::GameCondition(toml::table& config) {
   persistent = config["persistent"].value_or(false);
 
   if (persistent) {
-    Configuration::addToVector(config, "falseOn", true_off);
+    TOMLUtils::addToVector(config, "falseOn", true_off);
     if (true_off.empty()) {
       PLOG_WARNING << "No falseOn command set for persistent condition.";
     }
@@ -113,11 +114,11 @@ bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> command) {
 }
 
 short int GameCondition::getSignalThreshold(std::shared_ptr<GameCommand> signal) {
-  // Must check the threshold for the remapped control, in case signals are swapped between
-  // signal classes
-  std::shared_ptr<ControllerInput> remapped = signal->getRemapped();
+  // Check the threshold for the remapped control in case signals are swapped between signal classes
+  std::shared_ptr<ControllerInput> remapped = signal->getRemappedSignal();
   short extreme = (threshold_type == ThresholdType::LESS || threshold_type == ThresholdType::LESS_EQUAL) ?
                   remapped->getMin(TYPE_AXIS) : remapped->getMax(TYPE_AXIS);
+
   // Proportions don't make sense for buttons or the dpad, so if we've remapped from an axis to one
   // of these and have a proportion < 1, we ignore that and just use the extreme value.
   ControllerSignalType t = remapped->getType();

@@ -26,6 +26,8 @@
 #cmakedefine RASPBERRY_PI
 #cmakedefine USE_DUALSENSE
 
+#define SEC_TO_MICROSEC 1000000.0
+
 // These values probably should be encapsulated in a class somewhere, at least if they can ever
 // change between controllers. For now we leave them as global defines.
 #define JOYSTICK_MIN (-128)

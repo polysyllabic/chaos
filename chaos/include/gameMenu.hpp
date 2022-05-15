@@ -28,7 +28,8 @@
 #include "sequence.hpp"
 
 namespace Chaos {
-
+  class Game;
+  class Controller;
   /**
    * \brief Defines the game's menu system.
    * 
@@ -62,86 +63,29 @@ namespace Chaos {
     bool hide_guarded;
 
     /**
-     * \brief Time to wait, in microseconds, after disabling all control inputs
+     * Time to wait, in microseconds, after disabling all control inputs
      */
     unsigned int disable_delay;
 
     /**
-     * \brief Time to wait, in microseconds after selecting a menu item before issuing the next comand
+     * Time to wait, in microseconds after selecting a menu item before issuing the next comand
      */
     unsigned int select_delay;
 
-    /**
-     * \brief Actions necessary to open the menu
-     */
-    std::shared_ptr<Sequence> open;
 
-    /**
-     * \brief Actions necessary to exit the menu immediately
-     */
-    std::shared_ptr<Sequence> menu_exit;
-
-    /**
-     * \brief Actions necessary to open go back one level in the menu
-     */
-    std::shared_ptr<Sequence> back;
-
-    /**
-     * \brief Actions necessary to move up one item in a list of menu options
-     */
-    std::shared_ptr<Sequence> nav_up;
-
-    /**
-     * \brief Actions necessary to move down one item in a list of menu options
-     */
-    std::shared_ptr<Sequence> nav_down;
-
-    /**
-     * \brief Actions necessary to move left between menu tabs (i.e., submenus that are selected in
-     * a different way than the ordinary submenus are.
-     */
-    std::shared_ptr<Sequence> tab_left;
-
-    /**
-     * \brief Actions necessary to move right between menu tabs (i.e., submenus that are selected in
-     * a different way than the ordinary submenus are.
-     */
-    std::shared_ptr<Sequence> tab_right;
-
-    /**
-     * \brief Actions necessary to select an individual menu item
-     */
-    std::shared_ptr<Sequence> select;
-
-    /**
-     * \brief Actions necessary to scroll through a multi-value menu option to increase its value
-     * by one unit
-     */
-    std::shared_ptr<Sequence> option_greater;
-
-    /**
-     * \brief Actions necessary to scroll through a multi-value menu option to increase its value
-     * by one unit
-     */
-    std::shared_ptr<Sequence> option_less;
-
-    /**
-     * \brief Actions necessary to confirm a menu option
-     */
-    std::shared_ptr<Sequence> confirm;
+    int addMenuItem(toml::table& config);
 
   public:
     GameMenu() {}
-    GameMenu(toml::table& config);
 
     /**
-     * \brief Get a pre-defined sequence by name
+     * \brief Initialize the GameMenu from the game's configuration file
      * 
-     * \param config 
-     * \param name 
-     * \return std::shared_ptr<Sequence> 
+     * \param config Parsed TOML configuration file
+     * \param game Pointer to the calling game structure
+     * \return int Number of parsing errors
      */
-    std::shared_ptr<Sequence> getDefinedSequence(const toml::table& config, const std::string& name);
+    int initialize(toml::table& config, Game* game);
 
     /**
      * \brief Look up the defined MenuItem by name
@@ -152,50 +96,14 @@ namespace Chaos {
      */
     std::shared_ptr<MenuItem> getMenuItem(const std::string& name);
 
-    std::shared_ptr<Sequence> getBack() {
-      assert (!back->empty());
-      return back;
-    }
-
-    std::shared_ptr<Sequence> getTabLeft() {
-      assert (!tab_right->empty());
-      return tab_right;
-    }
-
-    std::shared_ptr<Sequence> getTabRight() {
-      assert (!tab_left->empty());
-      return tab_left;
-    }
-
-    std::shared_ptr<Sequence> getNavDown() {
-      assert (!nav_down->empty());
-      return nav_down;
-    }
-
-    std::shared_ptr<Sequence> getNavUp() {
-      assert (!nav_up->empty());
-      return nav_up;
-    }
-
-    std::shared_ptr<Sequence> getOptionGreater() {
-      assert (!option_greater->empty());
-      return option_greater;
-    }
-
-    std::shared_ptr<Sequence> getOptionLess() {
-      assert (!option_less->empty());
-      return option_less;
-    }
-
-    std::shared_ptr<Sequence> getSelect() {
-      assert (!select->empty());
-      return select;
-    }
-
-    std::shared_ptr<Sequence> getConfirm() {
-      assert (!confirm->empty());
-      return confirm;
-    }
+    /**
+     * \brief Look up the defined MenuItem by name
+     * 
+     * \param key Name by which this menu item is referenced in the configuration file
+     * \return std::shared_ptr<MenuItem> 
+     * \return NULL if no item has been defined for this name.
+     */
+    std::shared_ptr<MenuItem> getMenuItem(toml::table& config, const std::string& key, int& errors);
 
     unsigned int getSelectDelay() { return select_delay; }
 
@@ -206,7 +114,7 @@ namespace Chaos {
      *
      * The menu item must be settable (i.e., not a submenu)
      */
-    void setState(std::shared_ptr<MenuItem> item, unsigned int new_val);
+    void setState(std::shared_ptr<MenuItem> item, unsigned int new_val, Controller& controller);
 
     /**
      * \brief Restores a menu to its default state
@@ -214,7 +122,7 @@ namespace Chaos {
      *
      * The menu item must be settable (i.e., not a submenu)
      */
-    void restoreState(std::shared_ptr<MenuItem> item);
+    void restoreState(std::shared_ptr<MenuItem> item, Controller& controller);
 
     /**
      * \brief Update the offset correction when menu items are hidden or revealed

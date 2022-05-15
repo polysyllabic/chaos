@@ -24,7 +24,7 @@
 #include "modifier.hpp"
 
 namespace Chaos {
-
+  class Game;
   /** 
    * \brief A modifier that inverts an axis-based command.
    *

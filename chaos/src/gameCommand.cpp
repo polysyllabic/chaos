@@ -17,68 +17,31 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <iostream>
-#include <memory>
 #include <string>
-#include <map>
-#include <cassert>
 #include <toml++/toml.h>
 #include <plog/Log.h>
 
 #include "gameCommand.hpp"
 #include "gameCondition.hpp"
+#include "controllerInput.hpp"
 
 using namespace Chaos;
 
-/*
- * The constructor for the command binding. The name of the command has already been read and will
- * form the key in the map. Here we set the main binding and any additional conditions.
- */
-GameCommand::GameCommand(toml::table& definition) {
-  std::optional<std::string> name = definition["name"].value<std::string>();
-  assert (name);
-
-  // Binding the command to a specific controller command
-  std::optional<std::string> bind = definition["binding"].value<std::string>();
-  if (!bind) {
-    throw std::runtime_error("Missing command binding.");
-  }
-  binding = ControllerInput::get(*bind);
-  if (! binding) {
-    throw std::runtime_error("Specified command binding does not exist.");
-  }
-  
-  std::optional<std::string> cond = definition["condition"].value<std::string>();
-
-  if (definition.contains("unless")) {
-    if (cond) {
-      throw std::runtime_error("'condition' and 'unless' are mutually exclusive options in a command definition");
-    }
-    cond = definition["unless"].value<std::string>();
-    invert_condition = true;
-  } 
-  
-  // Condition/unless should be the name of a defined GameCondition. The constructors for game
-  // commands with conditions should only be called after those conditions have been initialized.
-  if (cond) {
-    condition = GameCondition::get(*cond);
-    if (!condition) {
-      throw std::runtime_error("Game command '" + *name + "' refers to unknown condition '" + *cond + "'"); 
-    }
-  }
+GameCommand::GameCommand(const std::string& cmd, std::shared_ptr<ControllerInput> bind,
+                         std::shared_ptr<GameCondition> condit, bool invert) :
+                         name{cmd}, binding{bind}, condition{condit}, invert_condition{invert} {
 }
 
-
-std::shared_ptr<ControllerInput> GameCommand::getRemapped() {
-  ControllerSignal r = binding->getRemap();
-  // NONE = no remapping, so return the actual signal
-  if (r == ControllerSignal::NONE) {
+std::shared_ptr<ControllerInput> GameCommand::getRemappedSignal() {
+  // If not remapping, return the actual signal
+  if (binding->getRemap() == nullptr) {
     return binding;
   }
-  if (r == ControllerSignal::NOTHING) {
+  // If remapping to dev/null, return null
+  if (binding->getRemap()->getSignal() == ControllerSignal::NOTHING) {
     return nullptr;
   }
-  return ControllerInput::get(r);
+  return binding->getRemap();
 }
 
 short GameCommand::getState() {

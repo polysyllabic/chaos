@@ -23,11 +23,11 @@
 #include <toml++/toml.h>
 
 #include "modifier.hpp"
-#include "remapTable.hpp"
+#include "signalTable.hpp"
 #include "controllerInput.hpp"
 
 namespace Chaos {
-
+  class Game;
   /** 
    * \brief A modifier that remaps the game commands to different inputs from the controller.
    *
@@ -74,7 +74,7 @@ namespace Chaos {
   class RemapModifier : public Modifier::Registrar<RemapModifier> {
 
   private:
-    Remapping& remap_table;
+    SignalTable& remap_table;
 
     /**
      * The list of remappings set by this mod.

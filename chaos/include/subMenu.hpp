@@ -40,7 +40,10 @@ namespace Chaos {
     int last_child_selected;
 
   public:
-    SubMenu(const toml::table& config);
+    SubMenu(toml::table& config,
+            std::shared_ptr<MenuItem> par,
+            std::shared_ptr<MenuItem> grd,
+            std::shared_ptr<MenuItem> cnt);
 
     void setState(Sequence& seq, unsigned int new_val);
     void restoreState(Sequence& seq);

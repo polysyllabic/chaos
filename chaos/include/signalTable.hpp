@@ -23,18 +23,18 @@
 #include <string>
 
 #include "signals.hpp"
-#include "controllerInput.hpp"
-#include "gameCondition.hpp"
 #include "touchpad.hpp"
+#include "deviceEvent.hpp"
 
 namespace Chaos {
-
+  class ControllerInput;
+  class GameCondition;
   /**
    * \brief Class holding the global table of all controller signal information, including remaps
    * 
    * 
    */
-  class Remapping {
+  class SignalTable {
 
   public:
 
@@ -92,7 +92,7 @@ namespace Chaos {
 
     /**
      * \brief Set a cascading remap.
-     * \param remapping The complete rmapping information for the signal to the console.
+     * \param remaps The complete rmapping information for the signal to the console.
      *
      * Before setting the remap, checks to see if the remapping signal is already the to-signal from
      * some other input. If the to part of the remap from portion of the remapped signal is already

@@ -263,13 +263,13 @@ trueOn = [ "aiming", "reload/toss" ]
 
 [[condition]]
 name = "movement"
-trueOn = [ "move forward/back", "move sideways" ]	
+trueOn = [ "move forward/back", "move sideways" ]  
 threshold = 0.2
 thresholdType = "distance"
 
 [[condition]]
 name = "camera"
-trueOn = [ "horizontal camera", "vertical camera" ]	
+trueOn = [ "horizontal camera", "vertical camera" ]  
 threshold = 0.2
 thresholdType = "distance"
 
@@ -298,47 +298,68 @@ falseOn = [ "select weapon" ]
 # the commands defined above but stored as the actual signals (L1, R2, etc.) that the console
 # expects. 
 #
+# Zero out all relevant controls. This is used to stop users from whatever they are doing while
+# we take control of the controller.
+[[sequence]]
+name = "disable all"
+sequence = [{ event="release", command = "grab/interact" },       # TRIANGLE
+            { event="release", command = "crouch/prone" },        # CIRCLE
+            { event="release", command = "jump/climb" },          # X
+            { event="release", command = "melee" },               # SQUARE
+            { event="release", command = "dodge/sprint" },        # L1
+            { event="release", command = "aiming" },              # L2
+            { event="release", command = "swap/listen" },         # R1
+            { event="release", command = "reload/toss" },         # R2
+            { event="release", command = "look" },                # L3
+            { event="release", command = "flashlight" },          # R3
+            { event="release", command = "move sideways" },       # LX
+            { event="release", command = "move forward/back" },   # LY
+            { event="release", command = "horizontal camera" },   # RX
+            { event="release", command = "vertical camera" },     # RY
+            { event="release", command = "select weapon" },       # DX
+            { event="release", command = "select consumable" }    # DY
+]
 
-# Defines how to open the main menu
+# Open the main menu
 [[sequence]]
 name = "open main"
 sequence = [ { event="press", command = "menu" },
              { event="delay", delay= 0.05 } ]
 
-# Defines how to select a single menu item
+# Select a single menu item
 [[sequence]]
 name = "select"
 sequence = [ { event="press", command = "select" },
              { event="delay", delay= 0.05 } ]
 
-# Defines how to select a single menu item
+# Move to the parent menu
 [[sequence]]
 name = "menu back"
 sequence = [ { event="press", command = "deselect" },
              { event="delay", delay= 0.05 } ]
 
-# Defines how to navigate upward one item in a list of menu options.
+# Navigate upward one item in a list of menu options.
 [[sequence]]
 name = "menu up"
 sequence = [ { event="press", command = "menu up/down", value = -1} ]
 
-# Defines how to navigate down one item in a list of menu options.
+# Navigate down one item in a list of menu options.
 [[sequence]]
 name = "menu down"
 sequence = [ { event="press", command = "menu up/down", value = 1} ]
 
-# Defines how to increase a multi-state option one level
+# Increase a multi-state option one level
 [[sequence]]
 name = "option right"
 sequence = [ { event="press", command = "menu right/left", value = 1} ]
 
-# Defines how to decrease a multi-state option one level
+# Decrease a multi-state option one level
 [[sequence]]
 name = "option left"
 sequence = [ { event="press", command = "menu right/left", value = -1} ]
 
-# Defines how to confirm an option after selection. In other words, after an option is selected,
-# This sequence is issued to answer a yes/no prompt in the affirmative.
+# Confirm an option after selection. In other words, after an option is selected, this sequence is
+# issued to answer a yes/no prompt in the affirmative.
 [[sequence]]
 name = "confirm"
 sequence = [ { event="press", command = "menu right/left", value = -1},
@@ -1299,7 +1320,7 @@ remap = [
 [[modifier]]
 name = "Controller Flip"
 description = "Up is down. Joysticks and D-pad inverted vertially, L1 swapped with L2, Triangle swapped with X, etc."
-type = "remap"	
+type = "remap"  
 remap = [
       {from = "DY", to = "DY", invert = true},
       {from = "LY", to = "LY", invert = true},
@@ -1323,11 +1344,11 @@ name = "Random Remap"
 description = "Randomly remaps buttons (square, circle, triangle, X, L1, R1, L2, R2, L3, R3)"
 type = "remap"
 random_remap = [ "X", "SQUARE", "CIRCLE", "TRIANGLE", "L1", "L2", "L3", "R1", "R2", "R3" ]
-	
+  
 [[modifier]]
 name = "Trigger Remap"
 description = "Randomly remaps trigger/bumper buttons (L1, R1, L2, R2)"
-type = "remap"	
+type = "remap"  
 random_remap = [ "L1", "L2", "R1", "R2" ]
 
 [[modifier]]
@@ -1386,11 +1407,11 @@ type = "sequence"
 groups = [ "combat" ]
 blockWhileBusy = "ALL"
 beginSequence = [
-	{ event = "press", command = "select weapon", delay = 1.0 },
-	{ event = "hold", command = "aiming", delay = 1.0 },
-	{ event = "press", command ="fire/throw" },
-	{ event = "release", command = "aiming" }
-	]
+  { event = "press", command = "select weapon", delay = 1.0 },
+  { event = "hold", command = "aiming", delay = 1.0 },
+  { event = "press", command ="fire/throw" },
+  { event = "release", command = "aiming" }
+  ]
 
 [[modifier]]
 name = "Double Tap"
@@ -1401,10 +1422,10 @@ blockWhileBusy = [ "shoot/throw" ]
 condition = [ "shooting" ]
 startDelay = 0.2
 repeatSequence = [
-	{ event = "release", command = "shoot/throw", delay = 1.0 },
-	{ event = "hold", command = "shoot/throw", delay = 0.2 },
-	{ event = "release", command = "shoot/throw" }
-	]
+  { event = "release", command = "shoot/throw", delay = 1.0 },
+  { event = "hold", command = "shoot/throw", delay = 0.2 },
+  { event = "release", command = "shoot/throw" }
+  ]
 
 [[modifier]]
 name = "Use Items"
@@ -1413,10 +1434,10 @@ type = "sequence"
 groups = [ "combat", "inventory" ]
 blockWhileBusy = [ "aiming", "shoot/throw" ]
 beginSequence = [
-	{ event="hold", command = "aiming", delay = 1.0 },
-	{ event="press", command = "shoot/throw", repeat = 6, delay = 0.25 },
-	{ event="release", command = "aiming" }
-	]
+  { event="hold", command = "aiming", delay = 1.0 },
+  { event="press", command = "shoot/throw", repeat = 6, delay = 0.25 },
+  { event="release", command = "aiming" }
+  ]
 
 [[modifier]]
 name = "Toss A Molly/Bomb"
@@ -1425,38 +1446,38 @@ type = "sequence"
 groups = [ "combat", "inventory" ]
 blockWhileBusy = "ALL"
 beginSequence = [
-	{ event = "disable" },
-	{ event = "press", command = "select consumable"},
-	{ event = "press", command = "select consumable", delay = 3.0 },
-	{ event = "hold", command = "shoot/throw", delay = 0.5 },
-	{ event = "release", command = "shoot/throw" }
-	]
-	
+  { event = "sequence", command = "disable all" },
+  { event = "press", command = "select consumable"},
+  { event = "press", command = "select consumable", delay = 3.0 },
+  { event = "hold", command = "shoot/throw", delay = 0.5 },
+  { event = "release", command = "shoot/throw" }
+  ]
+  
 [[modifier]]
 name = "CTG Strat"
 description = "Self immolation resulting in death, at least 7/11 times"
 type = "sequence"
 groups = [ "combat", "inventory", "debuff" ]
 beginSequence = [
-	{ event = "disable" },
-	{ event = "hold", command = "vertical camera", value = 127 },
-	{ event = "release", command = "horizontal camera"},
-	{ event = "press", command = "select consumable" },
-	{ event = "press", command = "select consumable", delay = 3.0 },
-	{ event = "press", command = "shoot/throw", delay = 0.5 },
-	{ event = "release", command = "vertical camera"}
-      ]
-	
+  { event = "sequence", command = "disable all" },
+  { event = "hold", command = "vertical camera", value = 127 },
+  { event = "release", command = "horizontal camera"},
+  { event = "press", command = "select consumable" },
+  { event = "press", command = "select consumable", delay = 3.0 },
+  { event = "press", command = "shoot/throw", delay = 0.5 },
+  { event = "release", command = "vertical camera"}
+  ]
+  
 [[modifier]]
 name = "Pdub It"
 description = "RIP bricks and bottles"
 type = "sequence"
 groups = [ "inventory" ]
 beginSequence = [
-	{ event = "disable" },
-	{ event = "press", command = "select consumable", delay = 2.5 },
-	{ event = "press", command = "shoot/throw", delay= 0.2 }
-	]
+  { event = "sequence", command = "disable all" },
+  { event = "press", command = "select consumable", delay = 2.5 },
+  { event = "press", command = "shoot/throw", delay= 0.2 }
+]
 
 [[modifier]]
 name = "Chuck Smoke Bomb"
@@ -1464,11 +1485,11 @@ description = "It was taking up space anyway. Does nothing when playing Abby"
 type = "sequence"
 groups = [ "inventory" ]
 beginSequence = [
-      { event = "disable" },
-      { event = "press", command = "select consumable", value = -1, repeat = 2 },
-      { event = "delay", delay = 3.0 },
-      { event = "press", command = "shoot/throw", delay = 0.2 }
-      ]
+  { event = "sequence", command = "disable all" },
+  { event = "press", command = "select consumable", value = -1, repeat = 2 },
+  { event = "delay", delay = 3.0 },
+  { event = "press", command = "shoot/throw", delay = 0.2 }
+]
 
 [[modifier]]
 name = "Only Prone Diving"
@@ -1479,11 +1500,11 @@ blockWhileBusy = [ "dodge/sprint", "crouch/prone" ]
 condition = [ "movement" ]
 cycleDelay = 1.4
 repeatSequence = [
-	{ event = "press", command = "dodge/sprint", delay = 0.1 },
-	{ event = "press", command = "crouch/prone", delay = 0.8 },
-	{ event = "release", command = "crouch/prone"},
-	{ event = "release", command = "dodge/sprint"}
-	]
+  { event = "press", command = "dodge/sprint", delay = 0.1 },
+  { event = "press", command = "crouch/prone", delay = 0.8 },
+  { event = "release", command = "crouch/prone"},
+  { event = "release", command = "dodge/sprint"}
+  ]
 beginSequence = [ { event = "release", command = "dodge/sprint" },
                   { event = "release", command = "crouch/prone" }]
 finishSequence = [{ event = "release", command = "dodge/sprint" },
@@ -1498,13 +1519,13 @@ blockWhileBusy = [ "jump/climb", "aiming", "move forward/back", "move sideways" 
 startDelay = 6.0
 cycleDelay = 0.1
 repeatSequence = [
-	 { event = "release", command = "jump/climb" },
-	 { event = "release", command = "aiming" },
-	 { event = "hold", command = "move forward/back" },
-	 { event = "release", command = "move sideways" },
-	 { event = "hold", command = "jump/climb", delay = 0.1 },
-	 { event = "release", command = "jump/climb" }
-	 ]
+   { event = "release", command = "jump/climb" },
+   { event = "release", command = "aiming" },
+   { event = "hold", command = "move forward/back" },
+   { event = "release", command = "move sideways" },
+   { event = "hold", command = "jump/climb", delay = 0.1 },
+   { event = "release", command = "jump/climb" }
+   ]
 
 # === Menu Modifiers ===
 #
@@ -1835,7 +1856,7 @@ description = "The strimmer responds with <3"
 type = "menu"
 groups = ["buff"]
 menu_items = [{entry = "infinite ammo", value = 1 }]
-	
+  
 [[modifier]]
 name = "Infinite Crafting"
 description = "Molotovs for everyone!"
@@ -1863,7 +1884,7 @@ description = "Golden guns activated: one-shot kills."
 type = "menu"
 groups = ["buff"]
 menu_items = [{entry = "one shot", value = 1 }]
-	
+  
 [[modifier]]
 name = "Touch Of Death"
 description = "Golden fists activated: one-hit enemy deaths"
@@ -1877,7 +1898,7 @@ description = "Audio mode. Incompatible with 4-bit"
 type = "menu"
 groups = [ "sound" ]
 menu_items = [{entry = "8-bit audio", value = 1 }]
-	
+  
 [[modifier]]
 name = "4-Bit Audio"
 description = "Audio mode. Incompatible with 8-bit"
@@ -2088,7 +2109,7 @@ name = "Jump Delay"
 description = "Introduces a 2.0 second delay to jump/climb presses"
 type = "delay"
 groups = [ "debuff", "movement" ]
-appliesTo = [ "jump/climb" ]	
+appliesTo = [ "jump/climb" ]  
 delay = 2.0
 
 [[modifier]]
@@ -2096,7 +2117,7 @@ name = "Dodge Delay"
 description = "Introduces a 0.5 second delay to dodge/sprint"
 type = "delay"
 groups = [ "debuff", "movement" ]
-appliesTo = [ "dodge/sprint" ]	
+appliesTo = [ "dodge/sprint" ]  
 delay = 0.5
 
 [[modifier]]
@@ -2104,7 +2125,7 @@ name = "Aim Delay"
 description = "Introduces a 1 second delay to aiming"
 type = "delay"
 groups = [ "debuff", "combat" ]
-appliesTo = [ "aiming" ]	
+appliesTo = [ "aiming" ]  
 delay = 1.0
 
 [[modifier]]
@@ -2112,7 +2133,7 @@ name = "Shooting Delay"
 description = "Introduces a 0.5 second delay to shooting and throwing"
 type = "delay"
 groups = [ "debuff", "combat" ]
-appliesTo = [ "shoot/throw" ]	
+appliesTo = [ "shoot/throw" ]  
 delay = 0.5
 
 [[modifier]]

@@ -26,28 +26,16 @@
 
 using namespace Chaos;
 
-MenuOption::MenuOption(const toml::table& config)  : MenuItem(config) {
-  checkValid(config, std::vector<std::string>{
-      "name", "type", "parent", "offset", "initialState", "hidden", "confirm", "tab", "guard",
-      "counter", "counterAction"});
-
-  std::optional<std::string> item_name = config["counter"].value<std::string>();
-  if (item_name) {
-    sibling_counter = GameMenu::instance().getMenuItem(*item_name);
-    if (! sibling_counter) {
-      // an error, but not a fatal one, so don't throw
-      PLOG_ERROR << "Unknown counter '" << *item_name << "' for menu item " << config["name"];
-    } else {
-      PLOG_DEBUG << "    counter = " << *item_name;
-    }
-  }
+MenuOption::MenuOption(toml::table& config, std::shared_ptr<MenuItem> par,
+                       std::shared_ptr<MenuItem> grd, std::shared_ptr<MenuItem> cnt) : 
+                       MenuItem(config, par, grd, cnt) {
 
  confirm = config["confirm"].value_or(false);
 
 }
 
 void MenuOption::setState(Sequence& seq, unsigned int new_val) {
-  PLOG_VERBOSE << "setState ";
+  PLOG_VERBOSE << "setState to " << new_val;
   setMenuOption(seq, new_val);
   current_state = new_val;
   // Increment the counter, if set

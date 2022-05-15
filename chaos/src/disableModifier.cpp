@@ -26,6 +26,8 @@
 #include "disableModifier.hpp"
 #include "tomlUtils.hpp"
 #include "config.hpp"
+#include "gameCommand.hpp"
+#include "controllerInput.hpp"
 
 using namespace Chaos;
 
@@ -35,7 +37,7 @@ DisableModifier::DisableModifier(toml::table& config, Game& game) {
   PLOG_VERBOSE << "constructing disable modifier";
   assert(config.contains("name"));
   assert(config.contains("type"));
-  checkValid(config, std::vector<std::string>{
+  TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence",
       "filter", "threshold", "condition", "conditionTest", "unless", "unlessTest", "unlisted"});
 

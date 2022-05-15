@@ -124,10 +124,11 @@ add_executable(chaos include/config.hpp
 	include/modifier.hpp
   include/parentModifier.hpp 
   include/remapModifier.hpp
-  include/remapTable.hpp
+  include/signalTable.hpp
   include/repeatModifier.hpp
   include/sequence.hpp
   include/sequenceModifier.hpp
+  include/sequenceTable.hpp
   include/signals.hpp
   include/subMenu.hpp
   include/tomlUtils.hpp
@@ -157,10 +158,11 @@ add_executable(chaos include/config.hpp
   src/modifier.cpp
   src/parentModifier.cpp
   src/remapModifier.cpp
-  src/remapTable.cpp
+  src/signalTable.cpp
   src/repeatModifier.cpp
   src/sequence.cpp
   src/sequenceModifier.cpp
+  src/sequenceTable.cpp
   src/subMenu.cpp
 	src/touchpad.cpp
   src/tomlUtils.cpp

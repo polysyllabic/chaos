@@ -125,10 +125,11 @@ void Controller::addInjector(ControllerInjector* injector) {
   this->controllerInjector = injector;
 }
 
+/*
 bool Controller::matches(const DeviceEvent& event, ControllerSignal signal) {
   std::shared_ptr<ControllerInput> sig = ControllerInput::get(signal);
   return (event.type == sig->getButtonType() && event.id == sig->getID());
-}
+} */
 
 bool Controller::matches(const DeviceEvent& event, std::shared_ptr<GameCommand> command) {
   if (command->getCondition()->inCondition()) {
