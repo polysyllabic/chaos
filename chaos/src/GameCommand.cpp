@@ -27,9 +27,8 @@
 
 using namespace Chaos;
 
-GameCommand::GameCommand(const std::string& cmd, std::shared_ptr<ControllerInput> bind,
-                         std::shared_ptr<GameCondition> condit, bool invert) :
-                         name{cmd}, binding{bind}, condition{condit}, invert_condition{invert} {
+GameCommand::GameCommand(const std::string& cmd, std::shared_ptr<ControllerInput> bind) :
+                         name{cmd}, binding{bind} {
 }
 
 std::shared_ptr<ControllerInput> GameCommand::getRemappedSignal() {

@@ -25,40 +25,32 @@
 #include "DeviceEvent.hpp"
 
 namespace Chaos {
-  class Game;
-  class GameCondition;
   class ControllerInput;
-  class Game;
 
   /**
    * \brief Class to hold a mapping between a command defined for a game and the controller's
    * button/axis presses.
    *
-   * During initialization, we parse a TOML file to produce a map of these command bindings,
-   * which in turn is used to initialize the individual modifiers. Each command also maintains a
-   * record of the current remapping state, so the inputs for particular commands can be swapped
-   * on a per-command basis.
+   * This gives a game-specific semantic interpretation to the signals that the game expects to
+   * receive. For example, you can associate "interact" with TRIANGLE. During initialization, we
+   * parse a TOML file to produce a map of these command bindings, which in turn is used to
+   * initialize the individual modifiers.
+   * 
+   * Note that these commands are currently always simple. They associate one button press or axis
+   * event with one command. They do not currently support associating simultaneous presses of
+   * controls with one command. Currently, those states are modeled by checking for a condition
+   * when a particular signal comes in. For example, "shoot" in TLOU2 is equivalent to
+   * "reload/toss" with the condition "aiming".
    *
-   * Accepted TOML entries:
-   * - name: A string to refer to this command elsewhere in the TOML file. (_Required_)
-   * - binding: The name of a controller input signal. The legal names are defined by
-   * ControllerCommand. (_Required_)
-   * - condition: The name of a defined condition whose state must be true for the command to
-   * apply. Mutually exclusive with "unless". (_Optional_)
-   * - unless: The inverse of "condition": the name of a defined condition whose state must be
-   * _false_ for the command to apply. Mutually exclusive with "condition".
-   *
-   * Example TOML defintitions:
+   * Example TOML defintition:
    *
    *     [[command]]
    *     name = "aiming"
    *     binding = "L2"
    *
-   *     [[command]]
-   *     name = "shoot/throw"
-   *     binding = "R2"
-   *     condition = "aiming"
-   *
+   * Note that command names must be unique, but you can define multiple names to point to the same
+   * signal. This allows for aliases, in case you want to use different command names in different
+   * contexts.
    */
   class GameCommand : std::enable_shared_from_this<GameCommand> {
   private:
@@ -72,20 +64,6 @@ namespace Chaos {
      */
     std::shared_ptr<ControllerInput> binding;
 
-    /**
-     * \brief Additional condition that must be true for the command to apply.
-     *
-     * This is a single condition (unlike the lists of conditions maintained in the modifiers)
-     * and does not support recursion of conditions.
-     */
-    std::shared_ptr<GameCondition> condition;
-
-    /**
-     * Reverse the polarity of the condition test. If true, the command is applied *unless* the
-     * controller is in the specified condition.
-     */
-    bool invert_condition;
-    
   public:
     /**
      * \brief The public constructor to define the controller input that corresponds
@@ -93,11 +71,8 @@ namespace Chaos {
      *
      * \param cmd The name of the command
      * \param bind The actual signal the command is officially bound to by the game
-     * \param condition A game condition that must be true when the signal comes in for the command to apply
-     * \param invert If true, inverts the polarity of the game condition (= unless condition)
      */
-    GameCommand(const std::string& cmd, std::shared_ptr<ControllerInput> bind,
-                std::shared_ptr<GameCondition> condition, bool invert);
+    GameCommand(const std::string& cmd, std::shared_ptr<ControllerInput> bind);
 
     /**
      * \brief Returns #this as a shared pointer
@@ -121,17 +96,6 @@ namespace Chaos {
      * \return std::shared_ptr<ControllerInput> 
      */
     std::shared_ptr<ControllerInput> getRemappedSignal();
-
-    /**
-     * \brief Accessor for a condition that must also be true for this command to apply.
-     * \return The condition 
-     */
-    std::shared_ptr<GameCondition> getCondition() { return condition; }
-
-    /**
-     * If true, test for the condition being false rather than true.
-     */
-    bool conditionInverted() { return invert_condition; }
 
     /**
      * \brief Get the current state of the controller for this command
