@@ -20,9 +20,9 @@
 #include <list>
 #include <plog/Log.h>
 #include <mogi/math/systems.h>
-#include "remapModifier.hpp"
-#include "tomlUtils.hpp"
-#include "game.hpp"
+#include "RemapModifier.hpp"
+#include "TOMLUtils.hpp"
+#include "Game.hpp"
 
 using namespace Chaos;
 

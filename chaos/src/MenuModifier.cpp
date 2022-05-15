@@ -16,10 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "menuModifier.hpp"
-#include "tomlUtils.hpp"
-#include "gameMenu.hpp"
-#include "game.hpp"
+#include "MenuModifier.hpp"
+#include "TOMLUtils.hpp"
+#include "GameMenu.hpp"
+#include "Game.hpp"
 
 using namespace Chaos;
 

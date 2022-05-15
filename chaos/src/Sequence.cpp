@@ -20,13 +20,13 @@
 #include <unistd.h>
 #include <plog/Log.h>
 
-#include "sequence.hpp"
-#include "tomlUtils.hpp"
-#include "menuItem.hpp"
-#include "controller.hpp"
-#include "controllerInput.hpp"
-#include "gameCommand.hpp"
-#include "game.hpp"
+#include "Sequence.hpp"
+#include "TOMLUtils.hpp"
+#include "MenuItem.hpp"
+#include "Controller.hpp"
+#include "ControllerInput.hpp"
+#include "GameCommand.hpp"
+#include "Game.hpp"
 
 using namespace Chaos;
 

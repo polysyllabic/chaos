@@ -20,9 +20,9 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "delayModifier.hpp"
-#include "chaosEngine.hpp"
-#include "tomlUtils.hpp"
+#include "DelayModifier.hpp"
+#include "ChaosEngine.hpp"
+#include "TOMLUtils.hpp"
 
 using namespace Chaos;
 

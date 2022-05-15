@@ -100,7 +100,7 @@ add_executable(chaos include/config.hpp
   include/CommandListener.hpp
   include/CommandObserver.hpp
   include/CommandSender.hpp
-	include/configuration.hpp
+	include/Configuration.hpp
   include/Controller.hpp
   include/ControllerInput.hpp
   include/ControllerInputTable.hpp

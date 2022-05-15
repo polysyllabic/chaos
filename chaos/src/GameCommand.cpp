@@ -21,9 +21,9 @@
 #include <toml++/toml.h>
 #include <plog/Log.h>
 
-#include "gameCommand.hpp"
-#include "gameCondition.hpp"
-#include "controllerInput.hpp"
+#include "GameCommand.hpp"
+#include "GameCondition.hpp"
+#include "ControllerInput.hpp"
 
 using namespace Chaos;
 

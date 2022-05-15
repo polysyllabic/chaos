@@ -20,8 +20,8 @@
 #include <plog/Log.h>
 #include <toml++/toml.h>
 
-#include "invertModifier.hpp"
-#include "tomlUtils.hpp"
+#include "InvertModifier.hpp"
+#include "TOMLUtils.hpp"
 
 using namespace Chaos;
 

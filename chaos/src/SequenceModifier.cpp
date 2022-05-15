@@ -21,8 +21,8 @@
 #include <vector>
 #include <plog/Log.h>
 
-#include "sequenceModifier.hpp"
-#include "tomlUtils.hpp"
+#include "SequenceModifier.hpp"
+#include "TOMLUtils.hpp"
 
 using namespace Chaos;
 
@@ -91,7 +91,7 @@ void SequenceModifier::update() {
 case SequenceState::IN_SEQUENCE:
     // The sequence of actions here are not exclusive (other things can be happening while these
     // commands are in train. 
-    if (repeat_sequence->sendParallel(controller, sequence_time)) {
+    if (repeat_sequence->sendParallel(sequence_time)) {
       sequence_state = SequenceState::ENDING;
       sequence_time = 0;
     }

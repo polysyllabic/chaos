@@ -25,10 +25,10 @@
 
 #include "config.hpp"
 #include "enumerations.hpp"
-#include "configuration.hpp"
-#include "gameCommand.hpp"
-#include "modifier.hpp"
-#include "gameMenu.hpp"
+#include "Configuration.hpp"
+#include "GameCommand.hpp"
+#include "Modifier.hpp"
+#include "GameMenu.hpp"
 
 using namespace Chaos;
 

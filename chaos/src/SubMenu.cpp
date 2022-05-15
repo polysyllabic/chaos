@@ -20,8 +20,8 @@
 #include <stdexcept>
 #include <plog/Log.h>
 
-#include "subMenu.hpp"
-#include "tomlUtils.hpp"
+#include "SubMenu.hpp"
+#include "TOMLUtils.hpp"
 
 using namespace Chaos;
 

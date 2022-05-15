@@ -21,9 +21,9 @@
 #include <toml++/toml.h>
 #include <plog/Log.h>
 
-#include "menuItem.hpp"
-#include "configuration.hpp"
-#include "gameMenu.hpp"
+#include "MenuItem.hpp"
+#include "Configuration.hpp"
+#include "GameMenu.hpp"
 
 using namespace Chaos;
 

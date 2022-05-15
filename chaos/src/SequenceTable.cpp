@@ -20,10 +20,10 @@
 #include <plog/Log.h>
 
 #include "config.hpp"
-#include "sequenceTable.hpp"
-#include "controllerInput.hpp"
-#include "gameCommand.hpp"
-#include "tomlUtils.hpp"
+#include "SequenceTable.hpp"
+#include "ControllerInput.hpp"
+#include "GameCommand.hpp"
+#include "TOMLUtils.hpp"
 
 using namespace Chaos;
 
