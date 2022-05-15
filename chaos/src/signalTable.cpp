@@ -18,7 +18,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <algorithm>
-#include "remapTable.hpp"
+#include "signalTable.hpp"
+#include "controllerInput.hpp"
+#include "gameCondition.hpp"
 #include "tomlUtils.hpp"
 
 using namespace Chaos;
@@ -67,7 +69,7 @@ std::vector<SignalSettings> signal_settings = {
 };
 
 // The constructor handles the initialization of hard-coded values
-Remapping::Remapping() {
+SignalTable::SignalTable() {
   for (SignalSettings s : signal_settings) {
     PLOG_VERBOSE << "Initializing signal " << s.name;
     std::shared_ptr<ControllerInput> sig = std::make_shared<ControllerInput>(s);
@@ -82,7 +84,7 @@ Remapping::Remapping() {
 
 
 
-std::shared_ptr<ControllerInput> Remapping::getInput(const std::string& name) {
+std::shared_ptr<ControllerInput> SignalTable::getInput(const std::string& name) {
   auto iter = by_name.find(name);
   if (iter != by_name.end()) {
     return iter->second;
@@ -90,11 +92,11 @@ std::shared_ptr<ControllerInput> Remapping::getInput(const std::string& name) {
   return nullptr;
 }
 
-std::shared_ptr<ControllerInput> Remapping::getInput(ControllerSignal signal) { 
+std::shared_ptr<ControllerInput> SignalTable::getInput(ControllerSignal signal) { 
   return inputs[signal];
 }
 
-std::shared_ptr<ControllerInput> Remapping::getInput(const DeviceEvent& event) {  
+std::shared_ptr<ControllerInput> SignalTable::getInput(const DeviceEvent& event) {  
   auto iter = by_index.find(event.index());
   if (iter != by_index.end()) {
     return iter->second;
@@ -103,7 +105,7 @@ std::shared_ptr<ControllerInput> Remapping::getInput(const DeviceEvent& event) {
 }
 
 // Does the event ID match this command?
-bool Remapping::matchesID(const DeviceEvent& event, ControllerSignal to) {
+bool SignalTable::matchesID(const DeviceEvent& event, ControllerSignal to) {
   std::shared_ptr<ControllerInput> to_match = getInput(to);
   assert(to);
   // for L2/R2, we need to check both the button and the axis
@@ -114,7 +116,7 @@ bool Remapping::matchesID(const DeviceEvent& event, ControllerSignal to) {
   return (event.id == to_match->getID() && event.type == to_match->getButtonType());
 }
 
-short Remapping::touchpadToAxis(ControllerSignal tp_axis, short value) {
+short SignalTable::touchpadToAxis(ControllerSignal tp_axis, short value) {
   short ret;
   // Use the touchpad value to update the running derivative count
   short derivativeValue = touchpad.getVelocity(tp_axis, value) *
@@ -131,7 +133,7 @@ short Remapping::touchpadToAxis(ControllerSignal tp_axis, short value) {
   return ret;
 }
 
-std::shared_ptr<ControllerInput> Remapping::getInput(const toml::table& config, const std::string& key) {
+std::shared_ptr<ControllerInput> SignalTable::getInput(const toml::table& config, const std::string& key) {
   std::optional<std::string> signal = config[key].value<std::string>();
   if (!signal) {
     throw std::runtime_error("Remap item Missing '" + key + "' field");
@@ -143,7 +145,7 @@ std::shared_ptr<ControllerInput> Remapping::getInput(const toml::table& config, 
   return inp;
 }
 
-void Remapping::setCascadingRemap(std::unordered_map<std::shared_ptr<ControllerInput>, SignalRemap>& remaps) {
+void SignalTable::setCascadingRemap(std::unordered_map<std::shared_ptr<ControllerInput>, SignalRemap>& remaps) {
   for (auto& r : remaps) {
     // Check if the from signal in the remaps list already appears as a to_console entry in the table
     auto it = std::find_if(inputs.begin(), inputs.end(), [r](const auto &rtable)
@@ -162,7 +164,7 @@ void Remapping::setCascadingRemap(std::unordered_map<std::shared_ptr<ControllerI
   }
 }
 
-void Remapping::clearRemaps() {
+void SignalTable::clearRemaps() {
   for (auto [from, remapping] : inputs) {
     remapping->setRemap({nullptr, nullptr, false, false, 0, 1});
   }

@@ -26,21 +26,10 @@
 
 using namespace Chaos;
 
-MenuSelect::MenuSelect(const toml::table& config) : MenuItem(config) {
-  checkValid(config, std::vector<std::string>{
-      "name", "type", "parent", "offset", "counter", "counterAction", "guard",
-      "hidden", "confirm", "tab"});
+MenuSelect::MenuSelect(toml::table& config, std::shared_ptr<MenuItem> par,
+                       std::shared_ptr<MenuItem> grd, std::shared_ptr<MenuItem> cnt) : 
+                       MenuItem(config, par, grd, cnt) {
 
-  std::optional<std::string> item_name = config["counter"].value<std::string>();
-  if (item_name) {
-    sibling_counter = GameMenu::instance().getMenuItem(*item_name);
-    if (! sibling_counter) {
-      // an error, but not a fatal one, so don't throw
-      PLOG_ERROR << "Unknown counter '" << *item_name << "' for menu item " << config["name"];
-    } else {
-      PLOG_DEBUG << "Counter = " << *item_name;
-    }
-  }
   confirm = config["confirm"].value_or(false);
 }
 

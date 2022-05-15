@@ -22,19 +22,20 @@
 #include <mogi/math/systems.h>
 #include "remapModifier.hpp"
 #include "tomlUtils.hpp"
+#include "game.hpp"
 
 using namespace Chaos;
 
 const std::string RemapModifier::mod_type = "remap";
 
-RemapModifier::RemapModifier(toml::table& config, Game& game) : remap_table(game.getRemapTable()) {
+RemapModifier::RemapModifier(toml::table& config, Game& game) : remap_table(game.getSignalTable()) {
 
-  checkValid(config, std::vector<std::string>{
+  TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "signals", "disableSignals", "remap", "random_remap", "unlisted"});
 
   initialize(config);
   
-  addToVector<ControllerInput>(config, "signals", signals);
+  TOMLUtils::addToVector<ControllerInput>(config, "signals", signals);
 
   disable_signals = config["disableSignals"].value_or(false);
 
@@ -60,7 +61,7 @@ RemapModifier::RemapModifier(toml::table& config, Game& game) : remap_table(game
       if (! remapping) {
 	      throw std::runtime_error("Remapping instructions must be formatted as a table");
       }
-      checkValid(*remapping, std::vector<std::string>{"from", "to", "to_neg", "to_min", "invert",
+      TOMLUtils::checkValid(*remapping, std::vector<std::string>{"from", "to", "to_neg", "to_min", "invert",
                  "threshold", "sensitivity"}, "remap config");
       
       std::shared_ptr<ControllerInput> from = lookupInput(*remapping, "from", true);

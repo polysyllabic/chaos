@@ -21,10 +21,11 @@
 #include <unordered_map>
 #include <vector>
 #include <toml++/toml.h>
-#include "controller.hpp"
-#include "game.hpp"
+#include "deviceEvent.hpp"
 
 namespace Chaos {
+  class Controller;
+  class ControllerInput;
 
   /**
    * \brief Class to hold a sequence of emulated gampepad inputs that are sent as a batch.
@@ -39,17 +40,7 @@ namespace Chaos {
   class Sequence {
   protected:
     std::vector<DeviceEvent> events;
-
-    /**
-     * Time in microseconds to hold down a signal for a button press
-     */
-    static unsigned int press_time;
-
-    /**
-     * Time in microseconds to release a signal for a button press before going on to the
-     * next command.
-     */
-    static unsigned int release_time;
+    Controller& controller;
 
     // to track current stage for sending the sequence in parallel
     short current_step;
@@ -57,7 +48,7 @@ namespace Chaos {
     unsigned int wait_until;
 
   public:
-    Sequence() {}
+    Sequence(Controller& c);
 
     /**
      * \brief Construct a sequence of events to send as a batch.
@@ -66,14 +57,14 @@ namespace Chaos {
      * \param key the key for the specific sequence
      * \param game Reference to the game data
      */
-    Sequence(toml::table& config, const std::string& key, Game& game);
+    Sequence(toml::table& config, const std::string& key);
 
     /**
-     * \brief Adds a stack of events to set all the buttons and axes to zero.
-     *
-     * Needed (probably) to ensure that the user can't interfere with menuing selection.
+     * \brief Directly add an individual event to the sequence stack
+     * 
+     * \param event 
      */
-    void disableControls();
+    void addEvent(DeviceEvent event);
     
     /**
      * \brief Emulates a press-and-release event for a gamapad input signal.
@@ -123,7 +114,7 @@ namespace Chaos {
     /**
      * Send the precomposed sequence of events to the console.
      */
-    virtual void send(Controller& controller);
+    virtual void send();
     /**
      * Empty the event queue
      */
@@ -138,42 +129,9 @@ namespace Chaos {
      * \return true if sequence is done
      * \return false if sequence is still in progress
      */
-    bool sendParallel(Controller& controller, double sequenceTime);
+    bool sendParallel(double sequenceTime);
 
-    static int timePerPress() { return press_time; }
-
-    /**
-     * \brief Set the time to hold button down in a press sequence step
-     * 
-     * \param time Press time in seconds
-     */
-    static void setPressTime(double time);
-   
-    static int timePerRelease() { return release_time;     }
-    static void setReleaseTime(double time);
     
-  };
-
-  class SequenceRelative : public Sequence {
-  private:
-    int tickTime;
-
-  public:
-    SequenceRelative();
-
-    void send();
-    void setMinimumTickInMicroseconds(int minTickTime);
-  };
-
-  class SequenceAbsolute : public Sequence {
-  private:
-    int tickTime;
-
-  public:
-    SequenceAbsolute();
-
-    void send();
-    void setMinimumTickInMicroseconds(int minTickTime);
   };
 
 };

@@ -111,9 +111,13 @@ namespace Chaos {
   class MenuItem : std::enable_shared_from_this<MenuItem> {
   protected:
     /**
-     * \brief Vertical navigation from menu top to reach this item
+     * Vertical navigation from menu top to reach this item
      */
     int offset;
+    /**
+     * Horizontal tab group that this item belongs to
+     */
+    int tab_group;
 
     /**
      * \brief Correction of the offset to account for hidden items
@@ -123,18 +127,6 @@ namespace Chaos {
     int offset_correction;
 
     /**
-     * \brief Horizontal tab group that this item belongs to
-     */
-    int tab_group;
-
-    /**
-     * \brief The current state of the menu item.
-     * 
-     * For options and groups, this value is the 
-     */
-    unsigned int current_state;
-
-    /**
      * \brief The default state of the menu item before any changes
      * 
      * We use this to restore the menu to its original state after any menu modifier
@@ -142,12 +134,12 @@ namespace Chaos {
     int default_state;
 
     /**
-     * \brief Is the menu item currently hidden?
+     * Is the menu item currently hidden?
      */
     bool hidden;
 
     /**
-     * \brief The parent to this menu item
+     * The parent to this menu item
      * 
      * If the #parent is NULL, this item is part of the root (main) menu.
      */
@@ -161,17 +153,48 @@ namespace Chaos {
     std::shared_ptr<MenuItem> guard;
 
     /**
+     * \brief Pointer to another menu item whose counter is tied to this item
+     * 
+     * When non-null, setting this option will increment the sibling's counter and restoring the
+     * state will decrement it.
+     */
+    std::shared_ptr<MenuItem> sibling_counter;
+
+    // Type of action to take when the counter changes value
+    CounterAction counter_action;
+
+    /**
+     * \brief The current state of the menu item.
+     * 
+     * For options and groups, this value is the 
+     */
+    unsigned int current_state;
+
+    /**
      * \brief Internal counter for this item.
      * 
      * Mods can increment or decrement the item to track particular states
      */
     int counter;
 
-    CounterAction counter_action;
 
   public:
-    
-    MenuItem(const toml::table& config);
+    /**
+     * \brief Construct a new Menu Item object
+     * 
+     * \param ofst Vertical navigation from menu top to reach this item
+     * \param tab Horizontal tab group that this item belongs to
+     * \param initial The initial state of the menu item before any changes
+     * \param hide Initialize the menu item as hidden?
+     * \param par The parent menu item to this one
+     * \param grd The guard for this item
+     * \param cnt The subling counter for this item
+     * \param action Type of action to take when the counter changes value
+     */
+    MenuItem(toml::table& config,
+             std::shared_ptr<MenuItem> par,
+             std::shared_ptr<MenuItem> grd,
+             std::shared_ptr<MenuItem> cnt);
 
     /**
      * \brief Returns #this as a shared pointer

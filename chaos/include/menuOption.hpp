@@ -45,18 +45,14 @@ namespace Chaos {
      */
     bool confirm;
     
-    /**
-     * \brief Pointer to another menu item whose counter is tied to this item
-     * 
-     * When non-null, setting this option will increment the sibling's counter and restoring the
-     * state will decrement it.
-     */
-    std::shared_ptr<MenuItem> sibling_counter;
 
     void setMenuOption(Sequence& seq, unsigned int new_val);
 
   public:
-    MenuOption(const toml::table& config);
+    MenuOption(toml::table& config,
+               std::shared_ptr<MenuItem> par,
+               std::shared_ptr<MenuItem> grd,
+               std::shared_ptr<MenuItem> cnt);
     
     void setState(Sequence& seq, unsigned int new_state);
     void restoreState(Sequence& seq);

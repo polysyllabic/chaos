@@ -209,7 +209,7 @@ bool ChaosEngine::remapEvent(DeviceEvent& event) {
   DeviceEvent new_event;
 
   // Get the object with information about the incomming signal
-  std::shared_ptr<ControllerInput> from_controller = game.getRemapTable().getInput(event);
+  std::shared_ptr<ControllerInput> from_controller = game.getSignalTable().getInput(event);
   assert (from_controller);
   std::shared_ptr<ControllerInput> to_console = from_controller->getRemap();
 
@@ -268,7 +268,7 @@ bool ChaosEngine::remapEvent(DeviceEvent& event) {
   // Touchpad-to-axis conversion has to be handled in a different conversion routine
   if (from_controller->getType() == ControllerSignalType::TOUCHPAD && 
       to_console->getType() == ControllerSignalType::AXIS) {
-    event.value = game.getRemapTable().touchpadToAxis(from_controller->getSignal(), event.value);
+    event.value = game.getSignalTable().touchpadToAxis(from_controller->getSignal(), event.value);
   }
   // Update the event
   event.type = to_console->getButtonType();
@@ -278,7 +278,7 @@ bool ChaosEngine::remapEvent(DeviceEvent& event) {
 }
 
 void ChaosEngine::prepTouchpad(const DeviceEvent& event) {
-  Touchpad& touchpad = game.getRemapTable().getTouchpad();
+  Touchpad& touchpad = game.getSignalTable().getTouchpad();
   if (! touchpad.isActive() && event.value == 0) {
     touchpad.clearActive();
     PLOG_DEBUG << "Begin touchpad use";
@@ -296,7 +296,7 @@ void ChaosEngine::prepTouchpad(const DeviceEvent& event) {
 // If the touchpad axis is currently being remapped, send a 0 signal to the remapped axis
 void ChaosEngine::disableTPAxis(ControllerSignal tp_axis) {
   DeviceEvent new_event{0, 0, TYPE_AXIS, AXIS_RX};
-  std::shared_ptr<ControllerInput> tp = game.getRemapTable().getInput(tp_axis);
+  std::shared_ptr<ControllerInput> tp = game.getSignalTable().getInput(tp_axis);
   assert (tp && tp->getType() == ControllerSignalType::TOUCHPAD);
 
   if (tp->getRemap()) {

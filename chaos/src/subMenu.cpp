@@ -25,9 +25,9 @@
 
 using namespace Chaos;
 
-SubMenu::SubMenu(const toml::table& config) : MenuItem(config) {
-  checkValid(config, std::vector<std::string>{
-      "name", "type", "parent", "offset", "initialState", "hidden", "confirm", "tab", "counterAction"});
+SubMenu::SubMenu(toml::table& config, std::shared_ptr<MenuItem> par,
+               std::shared_ptr<MenuItem> grd, std::shared_ptr<MenuItem> cnt) :
+               MenuItem(config, par, grd, cnt) {
 }
 
 void SubMenu::setState(Sequence& seq, unsigned int new_val) {

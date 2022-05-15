@@ -19,11 +19,11 @@
 #include <algorithm>
 #include <plog/Log.h>
 #include "tomlUtils.hpp"
-#include "controllerInput.hpp"
+//#include "controllerInput.hpp"
 
 using namespace Chaos;
 
-bool checkValid(const toml::table& config, const std::vector<std::string>& goodKeys,
+bool TOMLUtils::checkValid(const toml::table& config, const std::vector<std::string>& goodKeys,
           const std::string& name) {
   bool ret = true;
   for (auto&& [k, v] : config) {
@@ -35,9 +35,10 @@ bool checkValid(const toml::table& config, const std::vector<std::string>& goodK
   return ret;
 }
 
-
-ControllerInput lookupInput(const toml::table& config, const std::string& key, bool required) {
-  
+bool TOMLUtils::checkValid(const toml::table& config, const std::vector<std::string>& goodKeys) {
+  std::string cname = config["name"].value_or("??");
+  return checkValid(config, goodKeys, cname);    
 }
+
 
 

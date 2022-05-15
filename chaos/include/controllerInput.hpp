@@ -29,10 +29,12 @@
 #include "deviceEvent.hpp"
 #include "signals.hpp"
 #include "touchpad.hpp"
-#include "controller.hpp"
+//#include "controller.hpp"
 
 namespace Chaos {
   
+  class Controller;
+
   /**
    * \brief Defines the nature of a particular signal coming from the controller
    *

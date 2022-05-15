@@ -23,17 +23,21 @@
 #include <unordered_map>
 
 #include "gameMenu.hpp"
-#include "gameCommand.hpp"
-#include "gameCondition.hpp"
-#include "modifier.hpp"
-#include "remapTable.hpp"
+#include "signalTable.hpp"
+#include "sequenceTable.hpp"
 
 namespace Chaos {
+
+  // Forward references
+  class GameCommand;
+  class GameCondition;
+  class Modifier;
 
   /**
    * \brief Main container for the information needed to run a game
    * 
-   * The game data is constructed by parsing a TOML configuration file
+   * The Game class is the facade for all the various classes containing information we need to
+   * inject chaos into a game.
    */
   class Game {
   public:
@@ -69,16 +73,14 @@ namespace Chaos {
      * \return int Error count
      */
     int getErrors() { return parse_errors; }
-    
+
     /**
      * \brief Accessor to GameCommand pointer by command name.
      *
      * \param name Name by which the game command is identified in the TOML file.
      * \return The GameCommand pointer for this command, or NULL if not found.
      */
-    std::shared_ptr<GameCommand> getCommand(const std::string& name) {
-      return getFromMap<GameCommand>(command_map, name);
-    }
+    std::shared_ptr<GameCommand> getCommand(const std::string& name);
 
     /**
      * \brief Given the GameCondition name, get the object
@@ -90,9 +92,7 @@ namespace Chaos {
      * avoid infinite recursion, we prohibit conditions from referencing game commands that have
      * conditions themselves.
      */
-    std::shared_ptr<GameCondition> getCondition(const std::string& name) {
-      return getFromMap<GameCondition>(condition_map, name);
-    }
+    std::shared_ptr<GameCondition> getCondition(const std::string& name);
 
     /**
      * \brief Given the sequence name, get the object
@@ -100,26 +100,14 @@ namespace Chaos {
      * \param name The name by which this sequence is identified in the TOML file
      * \return std::shared_ptr<Sequence> Pointer to the Sequence object.
      */
-    std::shared_ptr<Sequence> getSequence(const std::string& name) {
-      return getFromMap<Sequence>(sequence_map, name);
-    }
-
-    /**
-     * \brief Given the sequence name, get the object
-     * 
-     * \param name The name by which this sequence is identified in the TOML file
-     * \return std::shared_ptr<Sequence> Pointer to the Sequence object.
-     */
-    std::shared_ptr<Modifier> getModifier(const std::string& name) {
-      return getFromMap<Modifier>(mod_map, name);
-    }
+    std::shared_ptr<Modifier> getModifier(const std::string& name);
 
     /**
      * Return list of modifiers for the chat bot.
      */
     std::string getModList();
 
-    Remapping& getRemapTable() { return remap_table; }
+    SignalTable& getSignalTable() { return signal_table; }
 
     /**
      * \brief Alters the incomming event to the value expected by the console
@@ -131,7 +119,7 @@ namespace Chaos {
      * mods is traversed. That means that mods can operate on the signals associated with particular
      * commands without worrying about the state of the remapping.
      */
-    //bool remapEvent(DeviceEvent& event) { return remap_table.remapEvent(event); }
+    //bool remapEvent(DeviceEvent& event) { return signal_table.remapEvent(event); }
     //bool remapEvent(DeviceEvent& event);
 
     /**
@@ -164,6 +152,11 @@ namespace Chaos {
     GameMenu menu;
     
     /**
+     * Container for defined sequences
+     */
+    SequenceTable sequences;
+
+   /**
      * The map of game commands identified by their names in the TOML file
      */
     std::unordered_map<std::string, std::shared_ptr<GameCommand>> command_map;
@@ -196,9 +189,9 @@ namespace Chaos {
     double time_per_modifier;
 
     /**
-     * Current status of how controller signals are being remapped
+     * Controller signal status, including remapping
      */
-    Remapping remap_table;
+    SignalTable signal_table;
 
     /**
      * \brief Initialize the global map to hold the command definitions without conditions.
@@ -214,7 +207,7 @@ namespace Chaos {
      *
      * This routine is called while parsing the game configuration file.
      */
-    void buildCommandMap(toml::table& config, bool conditions);
+    void buildCommandList(toml::table& config, bool conditions);
 
     /**
      * \brief Initializes the list of conditions from the TOML file.

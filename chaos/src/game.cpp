@@ -78,9 +78,17 @@ bool Game::loadConfigFile(const std::string& configfile) {
     PLOG_VERBOSE << "Clearing existing GameCommand data.";
     command_map.clear();
   }
+  if (condition_map.size() > 0) {
+    PLOG_VERBOSE << "Clearing existing GameCondition data.";
+    condition_map.clear();
+  }
+  if (mod_map.size() > 0) {
+    PLOG_VERBOSE << "Clearing existing Modifier data.";
+    mod_map.clear();
+  }
 
   // Process those commands that do not have conditions
-  buildCommandMap(configuration, false);
+  buildCommandList(configuration, false);
 
   // Process all conditions
   buildConditionList(configuration);
@@ -88,13 +96,18 @@ bool Game::loadConfigFile(const std::string& configfile) {
   // Process those commands that have conditions
   // Splitting the command-map initialization this way makes it easy to detect commands
   // that try to reference undefined conditions.
-  buildCommandMap(configuration, true);
+  buildCommandList(configuration, true);
+
+  if (command_map.size() == 0) {
+    ++parse_errors;
+    PLOG_ERROR << "No game commands were defined";
+  }
 
   // Initialize defined sequences and static parameters for sequences
   buildSequenceList(configuration);
 
   // Initialize the menu system
-  menu = GameMenu(configuration);
+  menu.initialize(configuration, this);
 
   // Initialize the remapping table
   initializeRemap(configuration);
@@ -104,7 +117,8 @@ bool Game::loadConfigFile(const std::string& configfile) {
   return true;
 }
 
-void Game::buildCommandMap(toml::table& config, bool process_conditions) {  
+void Game::buildCommandList(toml::table& config, bool process_conditions) {
+  bool invert;
   // We should have an array of tables. Each table defines one command binding.
   toml::array* arr = config["command"].as_array();
   if (arr) {
@@ -121,14 +135,48 @@ void Game::buildCommandMap(toml::table& config, bool process_conditions) {
           continue;
         }
         std::string cmd_name = command->get("name")->value_or("");
-	      if (command_map.count(cmd_name) == 1) {
+	      if (command_map.count(cmd_name) > 0) {
 	        PLOG_ERROR << "Duplicate command definition for '" << cmd_name << "'. Later one will be ignored.";
           ++parse_errors;
           continue;
 	      }
+        std::optional<std::string> item = config["binding"].value<std::string>();
+        if (!item) {
+          PLOG_ERROR << "Missing command binding.";
+          ++parse_errors;
+          continue;
+        }
+        std::shared_ptr<ControllerInput> bind = signal_table.getInput(*item);
+        if (!bind) {
+          PLOG_ERROR << "Specified command binding does not exist.";
+          ++parse_errors;
+          continue;
+        }
+        invert = false;  
+        std::optional<std::string> cond = config["condition"].value<std::string>();
+
+        if (config.contains("unless")) {
+          if (cond) {
+            PLOG_ERROR << "'condition' and 'unless' are mutually exclusive options in a command definition";
+            ++parse_errors;
+            continue;
+          }
+          cond = config["unless"].value<std::string>();
+          invert = true;
+        }
+        std::shared_ptr<GameCondition> condition = nullptr;
+        if (cond) {
+          condition = getCondition(*cond);
+          if (!condition) {
+            PLOG_ERROR << "Unknown game condition: " << *cond; 
+            ++parse_errors;
+            continue;
+          }
+        }
+
 	      PLOG_VERBOSE << "Inserting '" << cmd_name << "' into game command list.";
 	      try {
-      	  command_map.insert({cmd_name, std::make_shared<GameCommand>(*command)});
+      	  command_map.insert({cmd_name, std::make_shared<GameCommand>(cmd_name, bind, condition, invert)});
 	      }
 	      catch (const std::runtime_error& e) {
           ++parse_errors;
@@ -136,10 +184,9 @@ void Game::buildCommandMap(toml::table& config, bool process_conditions) {
 	      }
 	    }
     }
-  }
-  if (process_conditions && command_map.size() == 0) {
+  } else {
     ++parse_errors;
-    PLOG_ERROR << "No game commands were defined.";
+    PLOG_ERROR << "Command definitions should be an array of tables";
   }
 }
 
@@ -178,10 +225,15 @@ void Game::buildConditionList(toml::table& config) {
 
 void Game::buildSequenceList(toml::table& config) {
   // global parameters for sequences
-  Sequence::setPressTime(config["controller"]["button_press_time"].value_or(0.0625));
-  Sequence::setReleaseTime(config["controller"]["button_release_time"].value_or(0.0625));
+  press_time = config["controller"]["button_press_time"].value_or(0.0625);
+  release_time = config["controller"]["button_release_time"].value_or(0.0625);
 
-  // initialize pre-defined sequences
+  if (sequence_map.size() > 0) {
+    PLOG_VERBOSE << "Clearing existing Sequence data";
+    sequence_map.clear();
+  }
+
+  // Initialize pre-defined sequences defined in the TOML file
   toml::array* arr = config["sequence"].as_array();
   if (arr) {
     for (toml::node& elem : *arr) {
@@ -203,8 +255,8 @@ void Game::buildSequenceList(toml::table& config) {
         continue;
       }
       try {
-        PLOG_VERBOSE << "Adding pre-defined sequence '" << *seq_name << "'";
-        std::shared_ptr<Sequence> s = std::make_shared<Sequence>(*seq, "sequence");
+        PLOG_VERBOSE << "Adding pre-defined sequence: " << *seq_name;
+        std::shared_ptr<Sequence> s = makeSequence(config, "sequence");
        	sequence_map.insert({*seq_name, s});
       }
       catch (const std::runtime_error& e) {
@@ -216,7 +268,6 @@ void Game::buildSequenceList(toml::table& config) {
     PLOG_WARNING << "No pre-defined sequences found.";
   }
 }
-
 
 // Handles the static initialization. We construct the list of mods from their TOML-file
 // definitions.
@@ -298,14 +349,14 @@ void Game::initializeRemap(const toml::table& config) {
     ++parse_errors;
     scale = 1;
   }
-  remap_table.setTouchpadScale(scale);
+  signal_table.setTouchpadScale(scale);
 
   // Condition is optional; Flag an error if bad condition name but not if missing entirely
   std::optional<std::string> c = config["remapping"]["touchpad_condition"].value<std::string>();
   if (c) {
     std::shared_ptr<GameCondition> condition = getCondition(*c);
     if (condition) {
-      remap_table.setTouchpadCondition(condition);
+      signal_table.setTouchpadCondition(condition);
     } else {
       ++parse_errors;
       PLOG_ERROR << "The condition " << *c << " is not defined";
@@ -317,81 +368,24 @@ void Game::initializeRemap(const toml::table& config) {
     PLOG_ERROR << "Touchpad scale_if cannot be 0. Setting to 1";
     scale_if = 1;
   }
-  remap_table.setTouchpadScaleIf(scale_if);
+  signal_table.setTouchpadScaleIf(scale_if);
 
   int skew = config["remapping"]["touchpad_skew"].value_or(0);
-  remap_table.setTouchpadSkew(skew);
+  signal_table.setTouchpadSkew(skew);
 
   PLOG_DEBUG << "Touchpad scale = " << scale << "; condition = " << 
-                remap_table.getTouchpadCondition()->getName() <<
+                signal_table.getTouchpadCondition()->getName() <<
                 "; scale_if = " << scale_if << "; skew = " << skew;
 }
 
-/*
-bool Game::remapEvent(DeviceEvent& event) {
-  DeviceEvent new_event;
-
-  // Get the object with information about the incomming signal
-  std::shared_ptr<ControllerInput> from_controller = getInput(event);
-  assert (from_controller);
-  std::shared_ptr<ControllerInput> to_console = from_controller->getRemap();
-
-  // If this signal isn't remapped, we're done
-  if (to_console == nullptr) {
-    return true;
-  }
-
-  // Touchpad active requires special setup and tear-down
-  if (from_controller->getSignal() == ControllerSignal::TOUCHPAD_ACTIVE) {
-    prepTouchpad(event);
-  }
-
-  // When mapping from any type of axis to buttons/hybrids and the choice of button is determined
-  // by the sign of the value. If the negative remap is a button, the positive will be a button also,
-  // so it's safe to check that.
-  if (event.value < 0 && event.id == TYPE_AXIS && to_console->getButtonType() == TYPE_BUTTON) {
-    to_console = from_controller->getNegRemap();
-    assert (to_console);
-  }
-
-  // If we are remapping to NOTHING, we drop this signal.
-  if (to_console->getSignal() == ControllerSignal::NOTHING) {
-    PLOG_DEBUG << "dropping remapped event";
-    return false;
-  }
-
-  // Now handle cases that require additional actions
-  switch (from_controller->getType()) {
-  case ControllerSignalType::HYBRID:
-    // Going from hybrid to button, we drop the axis component
-    if (to_console->getType() == ControllerSignalType::BUTTON && event.type == TYPE_AXIS) {
- 	    return false;
-    }
-  case ControllerSignalType::BUTTON:
-    // From button to hybrid, we need to insert a new event for the axis
-    if (to_console->getType() == ControllerSignalType::HYBRID) {
-   	  new_event.id = to_console->getHybridAxis();
-      new_event.type = TYPE_AXIS;
-   	  new_event.value = event.value ? JOYSTICK_MAX : JOYSTICK_MIN;
-      controller.applyEvent(new_event);
-    }
-    break;
-  case ControllerSignalType::AXIS:
-    // From axis to button, we need a new event to zero out the second button when the value is
-    // below the threshold. The first button will get a 0 value from the changed regular value
-    // At this point, to_console has been set with the negative remap value.
-    if (to_console->getButtonType() == TYPE_BUTTON && abs(event.value) < from_controller->getThreshold()) {
-      new_event.id = to_console->getID();
-      new_event.value = 0;
-      new_event.type = TYPE_BUTTON;
-      controller.applyEvent(new_event);
-    }
-  }
-
-  // Update the event
-  event.type = to_console->getButtonType();
-  event.id = to_console->getID(event.type);
-  event.value = from_controller->remapValue(to_console, event.value);
-  return true;
+std::shared_ptr<GameCommand> Game::getCommand(const std::string& name) {
+  return getFromMap<GameCommand>(command_map, name);
 }
-*/
+
+std::shared_ptr<GameCondition> Game::getCondition(const std::string& name) {
+  return getFromMap<GameCondition>(condition_map, name);
+}
+
+std::shared_ptr<Modifier> Game::getModifier(const std::string& name) {
+  return getFromMap<Modifier>(mod_map, name);
+}

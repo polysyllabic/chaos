@@ -19,6 +19,7 @@
 #include "menuModifier.hpp"
 #include "tomlUtils.hpp"
 #include "gameMenu.hpp"
+#include "game.hpp"
 
 using namespace Chaos;
 
@@ -26,7 +27,7 @@ const std::string MenuModifier::mod_type = "menu";
 
 MenuModifier::MenuModifier(toml::table& config, Game& game) : menu(game.getMenu()) {
   
-  checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
+  TOMLUtils::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
              "menu_items", "reset_on_finish", "beginSequence",
              "finishSequence","unlisted"});
 
@@ -42,7 +43,7 @@ MenuModifier::MenuModifier(toml::table& config, Game& game) : menu(game.getMenu(
   }
   for (auto& elem : *menu_list) {
     const toml::table* m = elem.as_table();
-    checkValid(*m, std::vector<std::string>{"entry", "value"},"menu entry");
+    TOMLUtils::checkValid(*m, std::vector<std::string>{"entry", "value"},"menu entry");
     if (! m->contains("entry")) {
       throw std::runtime_error("Each table within a menu_item array must contain an 'entry' key");
     }
@@ -53,7 +54,7 @@ MenuModifier::MenuModifier(toml::table& config, Game& game) : menu(game.getMenu(
     }
     int val = (*m)["value"].value_or(0);
     menu_items[item] = val;
-    PLOG_DEBUG << "   entry = " << *item_name << ", value = " << val;
+    PLOG_VERBOSE << "   entry = " << *item_name << ", value = " << val;
   }
 
   reset_on_finish = config["reset_on_finish"].value_or(true);
@@ -65,7 +66,7 @@ void MenuModifier::begin() {
 
   // Execute all menu actions
   for (auto const& [item, val] : menu_items) {
-    menu.setState(item, val);
+    menu.setState(item, val, controller);
   }
 }
 
@@ -74,7 +75,7 @@ void MenuModifier::finish() {
 
   if (reset_on_finish) {
     for (auto const& [item, val] : menu_items) {
-      menu.restoreState(item);
+      menu.restoreState(item, controller);
     }
   }
 }

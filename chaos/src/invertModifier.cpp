@@ -28,7 +28,7 @@ using namespace Chaos;
 const std::string InvertModifier::mod_type = "invert";
 
 InvertModifier::InvertModifier(toml::table& config, Game& game) {
-  checkValid(config, std::vector<std::string>{
+  TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence", "unlisted"});
   initialize(config);
 

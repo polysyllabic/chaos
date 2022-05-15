@@ -85,7 +85,7 @@ namespace Chaos {
 	
     ControllerInjector* controllerInjector = nullptr;
 
-    Touchpad touchpad;
+    //Touchpad touchpad;
   public:
     Controller();
     
@@ -125,7 +125,7 @@ namespace Chaos {
      * 
      * This tests the signal only, regarless of any condition associated with a game command.
      */
-    bool matches(const DeviceEvent& event, ControllerSignal signal);
+    //bool matches(const DeviceEvent& event, ControllerSignal signal);
 
     /**
      * \brief Is the event an instance of the specified input command?
@@ -149,9 +149,9 @@ namespace Chaos {
     
     void addInjector(ControllerInjector* injector);
 
-    bool touchpadActive() { return touchpad.isActive(); }
-    void touchpadClearActive() { touchpad.clearActive(); }
-    void setTouchpadActive(bool state) { touchpad.setActive(state); }
+    //bool touchpadActive() { return touchpad.isActive(); }
+    //void touchpadClearActive() { touchpad.clearActive(); }
+    //void setTouchpadActive(bool state) { touchpad.setActive(state); }
     
   };
 

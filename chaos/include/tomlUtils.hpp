@@ -24,10 +24,13 @@
 #include <plog/Log.h>
 
 #include "signals.hpp"
-#include "sequence.hpp"
+//#include "sequence.hpp"
 
 namespace Chaos {
 
+  class TOMLUtils {
+  public:
+  
   /**
    * \brief Test if the table contains any keys other than those listed in the vector.
 
@@ -40,9 +43,7 @@ namespace Chaos {
    * The identity of unknown keys will also be logged. For reporting errors, this version assumes
    * that the table contains a key 'name' that identifies the table.
    */
-  bool checkValid(const toml::table& config, const std::vector<std::string>& goodKeys) {
-    return checkValid(config, goodKeys, config["name"].value_or("??"));    
-  }
+  static bool checkValid(const toml::table& config, const std::vector<std::string>& goodKeys);
 
   /**
    * \brief Test if the table contains any keys other than those listed in the vector.
@@ -57,7 +58,7 @@ namespace Chaos {
    * The identity of unknown keys will also be logged. Call this version if #config does not
    * contain a "name" field.
    */
-  bool checkValid(const toml::table& config, const std::vector<std::string>& goodKeys,
+  static bool checkValid(const toml::table& config, const std::vector<std::string>& goodKeys,
                   const std::string& name);
 
   
@@ -73,7 +74,7 @@ namespace Chaos {
    * \return T 
    */
   template<typename T>
-  T getValue(const toml::table& config, const std::string& key, T min_val, T max_val, T default_val) {
+  static T getValue(const toml::table& config, const std::string& key, T min_val, T max_val, T default_val) {
     T rval = config[key].value_or(default_val);
     if (rval > max_val) {
       PLOG_ERROR << "Maximum value for '" << key << "' is " << max_val << std::endl;
@@ -208,5 +209,5 @@ namespace Chaos {
     }
     return nullptr;
   }
-
+  };
 };

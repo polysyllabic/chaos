@@ -30,7 +30,7 @@ const std::string SequenceModifier::mod_type = "sequence";
 
 SequenceModifier::SequenceModifier(toml::table& config) {
 
-  checkValid(config, std::vector<std::string>{
+  TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "beginSequence", "finishSequence",
       "blockWhileBusy", "repeatSequence", "condition",
       "startDelay", "cycleDelay"});
@@ -43,7 +43,7 @@ SequenceModifier::SequenceModifier(toml::table& config) {
   
   repeat_sequence = std::make_shared<Sequence>(config, "repeatSequence");
 
-  lock_while_busy = Configuration::addToVectorOrAll<GameCommand>(config, "blockWhileBusy", block_while);
+  lock_while_busy = TOMLUtils::addToVectorOrAll<GameCommand>(config, "blockWhileBusy", block_while);
 
   start_delay = config["startDelay"].value_or(0.0);
   repeat_delay = config["cycleDelay"].value_or(0.0);

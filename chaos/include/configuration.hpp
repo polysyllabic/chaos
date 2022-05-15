@@ -67,7 +67,7 @@ namespace Chaos {
      * 
      * This is the file we try to load if none is specified on the command line
      */
-    const std::string& getGameFile() { return game_config.string(); }
+    std::string getGameFile() { return game_config.string(); }
 
 
     

@@ -23,11 +23,13 @@
 #include <toml++/toml.h>
 
 #include "deviceEvent.hpp"
-#include "controllerInput.hpp"
 
 namespace Chaos {
-  
+  class Game;
   class GameCondition;
+  class ControllerInput;
+  class Game;
+
   /**
    * \brief Class to hold a mapping between a command defined for a game and the controller's
    * button/axis presses.
@@ -84,15 +86,18 @@ namespace Chaos {
      */
     bool invert_condition;
     
-    
   public:
     /**
      * \brief The public constructor to define the controller input that corresponds
      * to a single game command.
      *
-     * \param config A single table from the TOML file that defines this command.
+     * \param cmd The name of the command
+     * \param bind The actual signal the command is officially bound to by the game
+     * \param condition A game condition that must be true when the signal comes in for the command to apply
+     * \param invert If true, inverts the polarity of the game condition (= unless condition)
      */
-    GameCommand(toml::table& config);
+    GameCommand(const std::string& cmd, std::shared_ptr<ControllerInput> bind,
+                std::shared_ptr<GameCondition> condition, bool invert);
 
     /**
      * \brief Returns #this as a shared pointer
@@ -115,7 +120,7 @@ namespace Chaos {
      * 
      * \return std::shared_ptr<ControllerInput> 
      */
-    std::shared_ptr<ControllerInput> getRemapped();
+    std::shared_ptr<ControllerInput> getRemappedSignal();
 
     /**
      * \brief Accessor for a condition that must also be true for this command to apply.
