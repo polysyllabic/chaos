@@ -21,7 +21,7 @@
 #include <string>
 #include <plog/Log.h>
 
-#include "commandListener.hpp"
+#include "CommandListener.hpp"
 
 using namespace Chaos;
 

@@ -20,11 +20,11 @@
 #include <cassert>
 #include <plog/Log.h>
 
-#include "cooldownModifier.hpp"
-#include "chaosEngine.hpp"
-#include "tomlUtils.hpp"
-#include "gameCommand.hpp"
-#include "controllerInput.hpp"
+#include "CooldownModifier.hpp"
+#include "ChaosEngine.hpp"
+#include "TOMLUtils.hpp"
+#include "GameCommand.hpp"
+#include "ControllerInput.hpp"
 
 using namespace Chaos;
 

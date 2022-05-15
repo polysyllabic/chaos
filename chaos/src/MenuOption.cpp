@@ -20,9 +20,9 @@
 #include <toml++/toml.h>
 #include <plog/Log.h>
 
-#include "menuOption.hpp"
-#include "tomlUtils.hpp"
-#include "gameMenu.hpp"
+#include "MenuOption.hpp"
+#include "TOMLUtils.hpp"
+#include "GameMenu.hpp"
 
 using namespace Chaos;
 

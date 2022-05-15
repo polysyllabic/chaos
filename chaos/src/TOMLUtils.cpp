@@ -18,8 +18,7 @@
  */
 #include <algorithm>
 #include <plog/Log.h>
-#include "tomlUtils.hpp"
-//#include "controllerInput.hpp"
+#include "TOMLUtils.hpp"
 
 using namespace Chaos;
 

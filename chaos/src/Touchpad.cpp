@@ -21,9 +21,9 @@
 #include <stdexcept>
 #include <plog/Log.h>
 
-#include "touchpad.hpp"
-#include "gameCondition.hpp"
 #include "signals.hpp"
+#include "Touchpad.hpp"
+#include "GameCondition.hpp"
 
 using namespace Chaos;
 

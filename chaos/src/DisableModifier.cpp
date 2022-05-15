@@ -23,11 +23,11 @@
 #include <toml++/toml.h>
 #include <plog/Log.h>
 
-#include "disableModifier.hpp"
-#include "tomlUtils.hpp"
 #include "config.hpp"
-#include "gameCommand.hpp"
-#include "controllerInput.hpp"
+#include "DisableModifier.hpp"
+#include "TOMLUtils.hpp"
+#include "GameCommand.hpp"
+#include "ControllerInput.hpp"
 
 using namespace Chaos;
 

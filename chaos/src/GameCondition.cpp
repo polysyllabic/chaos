@@ -23,10 +23,11 @@
 
 #include <plog/Log.h>
 
-#include "gameCondition.hpp"
-#include "gameCommand.hpp"
-#include "controllerInput.hpp"
-#include "tomlUtils.hpp"
+#include "GameCondition.hpp"
+#include "GameCommand.hpp"
+#include "ControllerInput.hpp"
+#include "TOMLUtils.hpp"
+
 using namespace Chaos;
 
 // Conditions are initialized after those game commands that are defined without conditions, and

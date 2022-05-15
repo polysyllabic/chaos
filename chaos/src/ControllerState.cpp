@@ -19,12 +19,12 @@
 #include <cstddef>
 #include <plog/Log.h>
 
-#include <config.hpp>
-#include "controllerState.hpp"
-#include "dualshock.hpp"
+#include "config.hpp"
+#include "ControllerState.hpp"
+#include "Dualshock.hpp"
 
 #ifdef USE_DUALSENSE
-#include "dualsense.hpp"
+#include "Dualsense.hpp"
 #endif
 
 using namespace Chaos;

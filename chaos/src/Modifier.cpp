@@ -28,10 +28,10 @@
 
 #include "config.hpp"
 #include "enumerations.hpp"
-#include "modifier.hpp"
-#include "configuration.hpp"
-#include "tomlUtils.hpp"
-#include "gameCondition.hpp"
+#include "Modifier.hpp"
+#include "Configuration.hpp"
+#include "TOMLUtils.hpp"
+#include "GameCondition.hpp"
 
 using namespace Chaos;
 
@@ -134,7 +134,7 @@ bool Modifier::tweak( DeviceEvent& event ) {
 void Modifier::sendBeginSequence() { 
   if (! on_begin->empty()) {
     in_sequence = lock_while_busy;
-    on_begin->send(controller);
+    on_begin->send();
     in_sequence = false;
   }
 }
@@ -142,7 +142,7 @@ void Modifier::sendBeginSequence() {
 void Modifier::sendFinishSequence() { 
   if (! on_finish->empty()) {
     in_sequence = lock_while_busy;
-    on_finish->send(controller);
+    on_finish->send();
     in_sequence = false;
   }
 }

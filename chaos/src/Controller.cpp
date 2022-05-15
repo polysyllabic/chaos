@@ -22,10 +22,10 @@
 #include <iomanip>
 #include <plog/Log.h>
 
-#include "controller.hpp"
-#include "controllerInput.hpp"
-#include "gameCommand.hpp"
-#include "gameCondition.hpp"
+#include "Controller.hpp"
+#include "ControllerInput.hpp"
+#include "GameCommand.hpp"
+#include "GameCondition.hpp"
 
 using namespace Chaos;
 

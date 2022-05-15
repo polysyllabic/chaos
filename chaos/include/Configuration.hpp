@@ -28,8 +28,8 @@
 #include <plog/Log.h>
 #include <toml++/toml.h>
 
-#include "controllerInput.hpp"
-#include "sequence.hpp"
+#include "ControllerInput.hpp"
+#include "Sequence.hpp"
 #include "enumerations.hpp"
 
 namespace Chaos {
