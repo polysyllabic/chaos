@@ -22,13 +22,12 @@
 
 #include "MenuSelect.hpp"
 #include "TOMLUtils.hpp"
-#include "GameMenu.hpp"
+#include "MenuInterface.hpp"
 
 using namespace Chaos;
 
-MenuSelect::MenuSelect(toml::table& config, std::shared_ptr<MenuItem> par,
-                       std::shared_ptr<MenuItem> grd, std::shared_ptr<MenuItem> cnt) : 
-                       MenuItem(config, par, grd, cnt) {
+MenuSelect::MenuSelect(toml::table& config, std::shared_ptr<MenuInterface> menu) : 
+                       MenuItem(config, menu) {
 
   confirm = config["confirm"].value_or(false);
 }
@@ -36,9 +35,9 @@ MenuSelect::MenuSelect(toml::table& config, std::shared_ptr<MenuItem> par,
 void MenuSelect::setState(Sequence& seq, unsigned int new_val) {
   PLOG_VERBOSE << "setState ";
   moveTo(seq);
-  seq.addSequence(GameMenu::instance().getSelect());
+  menu_items->addSequence(seq, "menu select");
   if (confirm) {
-    seq.addSequence(GameMenu::instance().getConfirm());
+    menu_items->addSequence(seq, "confirm");
   }
   // Increment the counter, if set
   if (sibling_counter) {

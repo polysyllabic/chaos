@@ -24,14 +24,15 @@
 
 #include "GameMenu.hpp"
 #include "ControllerInputTable.hpp"
+#include "GameCommandTable.hpp"
+#include "GameConditionTable.hpp"
 #include "SequenceTable.hpp"
+#include "ModifierTable.hpp"
 
 namespace Chaos {
 
   // Some of these may not need to be forward references, but I want to force classes to include
   // the header files explicitly.
-  class GameCommand;
-  class GameCondition;
   class Modifier;
   class Controller;
   /**
@@ -43,7 +44,7 @@ namespace Chaos {
    */
   class Game {
   public:
-    Game() {}
+    Game();
 
     /**
      * \brief Load game configuration file
@@ -76,38 +77,7 @@ namespace Chaos {
      */
     int getErrors() { return parse_errors; }
 
-    /**
-     * \brief Accessor to GameCommand pointer by command name.
-     *
-     * \param name Name by which the game command is identified in the TOML file.
-     * \return The GameCommand pointer for this command, or NULL if not found.
-     */
-    std::shared_ptr<GameCommand> getCommand(const std::string& name);
-
-    /**
-     * \brief Given the GameCondition name, get the object
-     * 
-     * \param name The name by which this GameCondition is identified in the TOML file
-     * \return std::shared_ptr<GameCondition> Pointer to the GameCondition object.
-     *
-     * Conditions refer to game commands and game command can, optionally, refer to conditions. To
-     * avoid infinite recursion, we prohibit conditions from referencing game commands that have
-     * conditions themselves.
-     */
-    std::shared_ptr<GameCondition> getCondition(const std::string& name);
-
-    /**
-     * \brief Given the sequence name, get the object
-     * 
-     * \param name The name by which this sequence is identified in the TOML file
-     * \return std::shared_ptr<Sequence> Pointer to the Sequence object.
-     */
-    std::shared_ptr<Modifier> getModifier(const std::string& name);
-
-    /**
-     * Return list of modifiers for the chat bot.
-     */
-    std::string getModList();
+    std::string getModList() { return modifiers.getModList(); }
 
     ControllerInputTable& getSignalTable() { return signal_table; }
 
@@ -149,6 +119,13 @@ namespace Chaos {
     int parse_errors;
 
     /**
+     * \brief Do we use the game's menu system
+     * 
+     * If false, menu modifiers are disabled
+     */
+    bool use_menu;
+
+    /**
      * Defines the structure of the game's menu system
      */
     GameMenu menu;
@@ -156,22 +133,22 @@ namespace Chaos {
     /**
      * Container for defined sequences
      */
-    SequenceTable sequences;
-
-   /**
-     * The map of game commands identified by their names in the TOML file
-     */
-    std::unordered_map<std::string, std::shared_ptr<GameCommand>> command_map;
+    std::shared_ptr<SequenceTable> sequences;
 
     /**
-     * The map of game conditions identified by their names in the TOML file.
+     * Container for defined game commands
      */
-    std::unordered_map<std::string, std::shared_ptr<GameCondition>> condition_map;
+    GameCommandTable game_commands;
 
     /**
-     * The map of all the mods defined through the TOML file
+     * Container for defined game conditions
      */
-    std::unordered_map<std::string, std::shared_ptr<Modifier>> mod_map;
+    GameConditionTable game_conditions;
+
+    /**
+     * Container for defined modifiers
+     */
+    ModifierTable modifiers;
 
     /**
      * \brief Number of modifiers simultaneously active
@@ -189,37 +166,6 @@ namespace Chaos {
      * Controller signal status, including remapping
      */
     ControllerInputTable signal_table;
-
-    /**
-     * \brief Initialize the global map to hold the command definitions without conditions.
-     *
-     * \param config The object containing the complete parsed TOML file
-     * \param no_conditions If true, only processes commands that have no conditions
-     *
-     * Because commands can reference conditions and conditions are based on commands, we need some
-     * extra steps to avoid initialization deadlocks and infinite recursion. We therefore use a
-     * two-stage initialization process. First, this routine initializes all "direct" commands
-     * (those without conditions). Next, we initialize all conditions. Finally, we initialize
-     * those commands based on a condition with #buildCommandMapCondition().
-     *
-     * This routine is called while parsing the game configuration file.
-     */
-    void buildCommandList(toml::table& config, bool conditions);
-
-    /**
-     * \brief Initializes the list of conditions from the TOML file.
-     * 
-     * \param config The object holding the parsed TOML file
-     */
-    void buildConditionList(toml::table& config);
-
-    /**
-     * \brief Create the overall list of mods from the TOML file.
-     * \param config The object containing the fully parsed TOML file
-     */
-    void buildModList(toml::table& config);
-
-    void initializeRemap(const toml::table& config);
 
     // Template function to get a pointer from a map by name
     template <typename T>

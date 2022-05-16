@@ -29,12 +29,12 @@
 #include "MenuOption.hpp"
 #include "SubMenu.hpp"
 #include "MenuSelect.hpp"
-#include "Game.hpp"
 #include "Controller.hpp"
 
 using namespace Chaos;
 
-int GameMenu::initialize(toml::table& config, Game* game) {
+int GameMenu::initialize(toml::table& config, std::shared_ptr<SequenceTable> sequences) {
+  defined_sequences = sequences;
   int errors = 0;
   toml::table* menu_list = config["menu"].as_table();
   if (! config.contains("menu")) {
@@ -42,7 +42,7 @@ int GameMenu::initialize(toml::table& config, Game* game) {
     PLOG_ERROR << "No 'menu' table found in configuration file";
   }
 
-  // timing parameters
+  // Timing parameters
   // A 10 second delay is absurdly long, but it's unclear to me where to cap it. This mostly
   // in case a user gets mixed up and tries to enter time in milliseconds or some other unit.
   double delay = TOMLUtils::getValue<double>(*menu_list, "disable_delay", 0, 10, 0.333333);
@@ -58,40 +58,6 @@ int GameMenu::initialize(toml::table& config, Game* game) {
 
   hide_guarded = (*menu_list)["hide_guarded"].value_or(false);
   PLOG_VERBOSE << "menu hide_guarded = " << hide_guarded;
-
-  // Sequences for basic actions
-  std::optional<std::string> seq_name = (*menu_list)["disable all"].value<std::string>();
-  disable_all = (seq_name) ?  game->getSequence(*seq_name) : nullptr;
-
-  seq_name = (*menu_list)["open"].value<std::string>();
-  open = (seq_name) ?  game->getSequence(*seq_name) : nullptr;
-
-  seq_name = (*menu_list)["back"].value<std::string>();
-  back = (seq_name) ?  game->getSequence(*seq_name) : nullptr;
-
-  seq_name = (*menu_list)["navigate_up"].value<std::string>();
-  nav_up = (seq_name) ?  game->getSequence(*seq_name) : nullptr;
-
-  seq_name = (*menu_list)["navigate_down"].value<std::string>();
-  nav_down = (seq_name) ?  game->getSequence(*seq_name) : nullptr;
-
-  seq_name = (*menu_list)["tab_left"].value<std::string>();
-  tab_left = (seq_name) ?  game->getSequence(*seq_name) : nullptr;
-
-  seq_name = (*menu_list)["tab_right"].value<std::string>();
-  tab_right = (seq_name) ?  game->getSequence(*seq_name) : nullptr;
-
-  seq_name = (*menu_list)["select"].value<std::string>();
-  select = (seq_name) ?  game->getSequence(*seq_name) : nullptr;
-
-  seq_name = (*menu_list)["option_greater"].value<std::string>();
-  option_greater = (seq_name) ?  game->getSequence(*seq_name) : nullptr;
-
-  seq_name = (*menu_list)["option_less"].value<std::string>();
-  option_less = (seq_name) ?  game->getSequence(*seq_name) : nullptr;
-
-  seq_name = (*menu_list)["confirm"].value<std::string>();
-  confirm = (seq_name) ?  game->getSequence(*seq_name) : nullptr;
 
   // Menu layout
   toml::array* arr = (*menu_list)["layout"].as_array();
@@ -133,24 +99,22 @@ int GameMenu::addMenuItem(toml::table& config) {
     PLOG_ERROR << "Menu item definition lacks required 'type' parameter.";
     return 1;
   }
-
-  std::shared_ptr<MenuItem> parent = getMenuItem(config, {"parent"}, errors);
-  std::shared_ptr<MenuItem> guard = getMenuItem(config, {"guard"}, errors);
-  std::shared_ptr<MenuItem> counter = getMenuItem(config, {"counter"}, errors);
   
-
   PLOG_VERBOSE << "Adding menu item '" << *entry_name << "' of type " << *menu_type;
+  // to do: make this another self-registering factory
   try {
+    std::shared_ptr<MenuItem> m;
     if (*menu_type == "option") {
-   	  menu.insert({*entry_name, std::make_shared<MenuOption>(config, parent, guard, counter)});
+   	  m = std::make_shared<MenuOption>(config, getptr());
     } else if (*menu_type == "select") {
-      menu.insert({*entry_name, std::make_shared<MenuSelect>(config, parent, guard, counter)});
+      m = std::make_shared<MenuSelect>(config, getptr());
     } else if (*menu_type == "menu") {
-      menu.insert({*entry_name, std::make_shared<SubMenu>(config, parent, guard, counter)});
+      m = std::make_shared<SubMenu>(config, getptr());
     } else {
       PLOG_ERROR << "Menu type '" << *menu_type << "' not recognized.";
       return 1;
     }
+ 	  menu.try_emplace(*entry_name, m);
   } catch (const std::runtime_error& e) {
     ++errors;
     PLOG_ERROR << "In definition for MenuItem '" << *entry_name << "': " << e.what(); 
@@ -166,55 +130,32 @@ std::shared_ptr<MenuItem> GameMenu::getMenuItem(const std::string& name) {
   return nullptr;
 }
 
-std::shared_ptr<MenuItem> GameMenu::getMenuItem(toml::table& config, const std::string& key, int& errors) {
-  std::optional<std::string> item_name = config[key].value<std::string>();
-  std::shared_ptr<MenuItem> item = nullptr;
-  if (item_name) {
-    item = getMenuItem(*item_name);
-    if (item) {
-      PLOG_VERBOSE << "-- " << key << " = " << ((item_name) ? *item_name : "[NONE]");
-    } else {
-      ++errors;
-      PLOG_ERROR << "Unknown " << key << " menu item: " << *item_name;
-    }
-  }
-  return item;
-}
-
 void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, Controller& controller) {
-  Sequence seq;
-
   PLOG_VERBOSE << "Creating set menu sequence";
+  Sequence seq{controller};
 
   // We build a sequence to open the main menu, navigate to the option, and perform the appropriate
   // action on the item.
-  seq.addSequence(disable_all);
+  defined_sequences->addSequence(seq, "disable all");
   seq.addDelay(disable_delay);
-  seq.addSequence(open);
-
+  defined_sequences->addSequence(seq, "open menu");
   item->setState(seq, new_val);
-
-  // TO DO: if the menu system does not remember where we left things, there's likely a faster way to
-  // exit the menu system, but it's pointless to try to implement this at this point.
   item->navigateBack(seq);
-  seq.addSequence(menu_exit);
-
-  // send the sequence
-  seq.send(controller);
+  defined_sequences->addSequence(seq, "menu exit");
+  seq.send();
 }
 
 void GameMenu::restoreState(std::shared_ptr<MenuItem> item, Controller& controller) {
-  Sequence seq;
   PLOG_VERBOSE << "Creating restore menu sequence";
-  seq.addSequence(disable_all);
+  Sequence seq(controller);
+  defined_sequences->addSequence(seq, "disable all");
   seq.addDelay(disable_delay);
-  seq.addSequence(open);
+  defined_sequences->addSequence(seq, "open menu");
   item->restoreState(seq);
   item->navigateBack(seq);
-  seq.addSequence(menu_exit);
-  seq.send(controller);
+  defined_sequences->addSequence(seq, "menu exit");
+  seq.send();
 }
-
 
 void GameMenu::correctOffset(std::shared_ptr<MenuItem> changed) {
   // direction of the correction depends on whether the changed item is now hidden or revealed, and
@@ -231,4 +172,12 @@ void GameMenu::correctOffset(std::shared_ptr<MenuItem> changed) {
       }
     }
   }
+}
+
+void GameMenu::addSequence(Sequence& sequence, const std::string& name) {
+  defined_sequences->addSequence(sequence, name);
+}
+
+void GameMenu::addSelectDelay(Sequence& sequence) {
+  defined_sequences->addDelay(sequence, select_delay);
 }

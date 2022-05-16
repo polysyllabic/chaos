@@ -21,6 +21,7 @@
 #include <toml++/toml.h>
 
 #include "Sequence.hpp"
+#include "GameCommandTable.hpp"
 
 namespace Chaos {
   class Controller;
@@ -34,10 +35,12 @@ namespace Chaos {
      */
     std::unordered_map<std::string, std::shared_ptr<Sequence>> sequence_map;
 
-    std::shared_ptr<Sequence> makeSequence(toml::array* event_list, Controller& controller);
+    std::shared_ptr<Sequence> makeSequence(toml::array* event_list, GameCommandTable& commands,
+                                           Controller& controller);
 
   public:
-    int buildSequenceList(toml::table& config, Controller& controller);
+    int buildSequenceList(toml::table& config, GameCommandTable& commands,
+                          Controller& controller);
 
     /**
      * \brief Given the sequence name, get the object
@@ -47,8 +50,15 @@ namespace Chaos {
      */
     std::shared_ptr<Sequence> getSequence(const std::string& name);
 
+    /**
+     * \brief Append sequence to the end of the current one by name
+     * 
+     * \param seq The sequence that is being created
+     * \param name The name of the defined sequence as given in the TOML file
+     */
+    void addSequence(Sequence& seq, const std::string& name);
 
-
+    void addDelay(Sequence& sequence, unsigned int delay);
     
   };
 };

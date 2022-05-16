@@ -25,13 +25,13 @@
 #include "signals.hpp"
 #include "Touchpad.hpp"
 #include "DeviceEvent.hpp"
+#include "ControllerInput.hpp"
+#include "GameConditionTable.hpp"
 
 namespace Chaos {
-  class ControllerInput;
-  class GameCondition;
+
   /**
    * \brief Class holding the global table of all controller signal information, including remaps
-   * 
    * 
    */
   class ControllerInputTable {
@@ -131,6 +131,8 @@ namespace Chaos {
      */
     short touchpadToAxis(ControllerSignal tp_axis, short value);
 
+    int initializeInputs(const toml::table& config, GameConditionTable& conditions);
+
   private:
     /**
      * Look up signal by enumeration
@@ -187,7 +189,6 @@ namespace Chaos {
      * is positive, the skew is added to the result, and the derivative is negative, the skew is subtracted.
      */
     short touchpad_skew;
-
 
   };
 

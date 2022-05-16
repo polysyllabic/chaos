@@ -26,7 +26,7 @@ using namespace Chaos;
 
 int GameCommandTable::buildCommandList(toml::table& config, ControllerInputTable& signals) {
   int parse_errors = 0;
-  
+
   // Wipe everything if we're reloading a file
   if (command_map.size() > 0) {
     PLOG_VERBOSE << "Clearing existing GameCommand data.";
@@ -38,12 +38,13 @@ int GameCommandTable::buildCommandList(toml::table& config, ControllerInputTable
   if (arr) {
     for (toml::node& elem : *arr) {
       if (toml::table* command = elem.as_table()) {
-	      if (! command->contains("name")) {
+        std::optional<std::string> cmd_name = (*command)["name"].value<std::string>();
+	      if (! cmd_name) {
 	        PLOG_ERROR << "Command definition missing required 'name' field: " << command;          
           ++parse_errors;
           continue;
         }
-        std::optional<std::string> item = config["binding"].value<std::string>();
+        std::optional<std::string> item = (*command)["binding"].value<std::string>();
         if (!item) {
           PLOG_ERROR << "Missing command binding.";
           ++parse_errors;
@@ -55,24 +56,17 @@ int GameCommandTable::buildCommandList(toml::table& config, ControllerInputTable
           ++parse_errors;
           continue;
         }
-
-        std::string cmd_name = command->get("name")->value_or("");
-	      if (command_map.count(cmd_name) > 0) {
-	        PLOG_ERROR << "Duplicate command definition for '" << cmd_name << "'. Later one will be ignored.";
-          ++parse_errors;
-          continue;
-	      }
 	      PLOG_VERBOSE << "Inserting '" << cmd_name << "' into game command list.";
 	      try {
-      	  auto [it, result] = command_map.try_emplace(cmd_name, std::make_shared<GameCommand>(cmd_name, bind));
+      	  auto [it, result] = command_map.try_emplace(*cmd_name, std::make_shared<GameCommand>(*cmd_name, bind));
           if (!result) {
             ++parse_errors;
-            PLOG_ERROR << "Duplicate command definition ignored: " << cmd_name;
+            PLOG_ERROR << "Duplicate command definition ignored: " << *cmd_name;
           }
 	      }
 	      catch (const std::runtime_error& e) {
           ++parse_errors;
-	        PLOG_ERROR << "In definition for game command '" << cmd_name << "': " << e.what();
+	        PLOG_ERROR << "In definition for game command '" << *cmd_name << "': " << e.what();
 	      }
 	    }
     }
@@ -80,5 +74,20 @@ int GameCommandTable::buildCommandList(toml::table& config, ControllerInputTable
     ++parse_errors;
     PLOG_ERROR << "Command definitions should be an array of tables";
   }
+
+  if (command_map.size() == 0) {
+    ++parse_errors;
+    PLOG_ERROR << "No game commands were defined";
+  }
+
   return parse_errors;
 }
+
+std::shared_ptr<GameCommand> GameCommandTable::getCommand(const std::string& name) {
+  auto iter = command_map.find(name);
+  if (iter != command_map.end()) {
+    return iter->second;
+  }
+  return nullptr;
+}
+

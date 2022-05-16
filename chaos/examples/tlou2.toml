@@ -5,6 +5,9 @@
 # The settings defined here are those that are required to run a specific game through the Chaos
 # engine. The basic settings for the engine itself are controlled in the chaosconfig.toml file.
 #
+# Note that if you edit this file while the chaos engine is running, you must reload the game
+# so the chaos engine can re-read the updated file.
+#
 # chaos_toml: A version string for the TOML file format. Currently used only to verify that we're
 # reading the right file.
 chaos_toml = "1.0"
@@ -54,13 +57,19 @@ touchpad_skew = 30
 #--------------------------------------------------------------------------------------------------
 # Command Mapping
 #
-# This section defines the commands that this game supports, or at least the ones that we can
-# intercept and modify. If you have remapped the game controls from their default settings, you
-# should edit this section to reflect the values that the game expects to receive. Note that
-# if you change the command mappings in-game while the chaos engine is running, you must both edit
-# this file and restart the engine so it can re-read the updated file.
+# This section defines the simple commands that this game supports, or at least the ones that we
+# can intercept and modify. This gives a game-specific semantic interpretation to the signals
+# that the game expects to receive. For example, you can associate "interact" with TRIANGLE.
+# Note that these commands are currently always simple. They associate one button press or axis
+# event with one command. They do not currently support associating simultaneous presses of
+# controls with one command. Currently, those states are modeled by checking for a condition
+# when a particular signal comes in. For example, "shoot" in TLOU2 is equivalent to "reload/toss"
+# with the condition "aiming".
+# 
+# If you have remapped the game controls from their default settings, you can edit this section to
+# reflect the values that the game expects to receive.
 #
-# There are three parts to each command definition: 
+# There are two parts to each command definition: 
 #
 # name: The label used to refer to the action in the elsewhere in this configuration file.
 #
@@ -80,27 +89,41 @@ touchpad_skew = 30
 #          Accelerometer: ACCX, ACCY, ACCZ
 #          Gyroscope: GYRX, GYRY, GYRZ
 #         
-# condition: A particular game state that must be true for the specific controller event to have
-# the assigned meaning. For example, a particular command may apply only when aiming a weapon. The
-# conditional is optional, but if used must be the name of a condition defined below.
-# 
 # Note that command names must be unique, but you can define multiple names to point to the same
 # signal. This allows for aliases, in case you want to use different command names in different
-# contexts. Also, 
+# contexts.
 [[command]]
-name = "grab/interact"
+name = "interact"
 binding = "TRIANGLE"
 
 [[command]]
 name = "crouch/prone"
 binding = "CIRCLE"
 
+# Alias for backing out of a menu
 [[command]]
-name = "jump/climb"
+name = "deselect"
+binding = "CIRCLE"
+
+[[command]]
+name = "jump"
+binding = "X"
+
+[[command]]
+name = "scope" # while aiming
+binding = "X"
+
+# Alias for selecting a menu option
+[[command]]
+name = "select"
 binding = "X"
 
 [[command]]
 name = "melee"
+binding = "SQUARE"
+
+[[command]]
+name = "shoulder swap" # While aiming
 binding = "SQUARE"
 
 [[command]]
@@ -120,7 +143,15 @@ name = "reload/toss"
 binding = "R2"
 
 [[command]]
+name = "shoot" # While aiming
+binding = "R2"
+
+[[command]]
 name = "look"
+binding = "L3"
+
+[[command]]
+name = "hold breath" # While aiming
 binding = "L3"
 
 [[command]]
@@ -166,42 +197,6 @@ binding = "DX"
 [[command]]
 name = "menu up/down"
 binding = "DY"
-
-# Alias for selecting a menu option
-[[command]]
-name = "select"
-binding = "X"
-
-# Alias for backing out of a menu
-[[command]]
-name = "deselect"
-binding = "CIRCLE"
-
-[[command]]
-name = "scope"
-condition = "aiming"
-binding = "X"
-
-# attach silencer / toggle fire mode / swap ammo
-[[command]]
-name = "weapon feature"
-condition = "aiming"
-binding = "TRIANGLE"
-
-[[command]]
-name = "shoulder swap"
-condition = "aiming"
-binding = "SQUARE"
-
-[[command]]
-name = "shoot/throw"
-condition = "aiming"
-binding = "R2"
-
-[[command]]
-name = "hold breath"
-condition = "aiming"
-binding = "L3"
 
 #--------------------------------------------------------------------------------------------------
 # Game Conditions
@@ -302,9 +297,9 @@ falseOn = [ "select weapon" ]
 # we take control of the controller.
 [[sequence]]
 name = "disable all"
-sequence = [{ event="release", command = "grab/interact" },       # TRIANGLE
+sequence = [{ event="release", command = "interact" },       # TRIANGLE
             { event="release", command = "crouch/prone" },        # CIRCLE
-            { event="release", command = "jump/climb" },          # X
+            { event="release", command = "jump" },          # X
             { event="release", command = "melee" },               # SQUARE
             { event="release", command = "dodge/sprint" },        # L1
             { event="release", command = "aiming" },              # L2
@@ -320,42 +315,59 @@ sequence = [{ event="release", command = "grab/interact" },       # TRIANGLE
             { event="release", command = "select consumable" }    # DY
 ]
 
-# Open the main menu
+# Open the main menu (This sequence must exist with this name if the chaos engine uses the menu.)
 [[sequence]]
-name = "open main"
+name = "open menu"
 sequence = [ { event="press", command = "menu" },
              { event="delay", delay= 0.05 } ]
 
-# Select a single menu item
+# Select a menu item  (This sequence must exist with this name if the chaos engine uses the menu.)
 [[sequence]]
-name = "select"
+name = "menu select"
 sequence = [ { event="press", command = "select" },
              { event="delay", delay= 0.05 } ]
 
-# Move to the parent menu
+# Move to the parent menu. (This sequence must exist with this name if the chaos engine uses the
+# menu.)
 [[sequence]]
-name = "menu back"
+name = "menu exit"
 sequence = [ { event="press", command = "deselect" },
              { event="delay", delay= 0.05 } ]
 
-# Navigate upward one item in a list of menu options.
+# Tab left through sub-menus on the same basic parent menu screen. We don't use this in TLOU 2,
+# so the sequence is left blank. (This sequence must exist with this name if the chaos engine needs
+# to scroll through a set of menu tabs.)
+[[sequence]]
+name = "tab left"
+sequence = [ ]
+
+# Tab right through sub-menus on the same basic parent menu screen. We don't use this in TLOU 2,
+# so the sequence is left blank. (This sequence must exist with this name if the chaos engine needs
+# to scroll through a set of menu tabs.)
+[[sequence]]
+name = "tab right"
+sequence = [ ]
+
+# Navigate upward one item in a list of menu options. (This sequence must exist with this name if
+# the chaos engine uses the menu.)
 [[sequence]]
 name = "menu up"
 sequence = [ { event="press", command = "menu up/down", value = -1} ]
 
-# Navigate down one item in a list of menu options.
+# Navigate down one item in a list of menu options.  (This sequence must exist with this name if
+# the chaos engine uses the menu.)
 [[sequence]]
 name = "menu down"
 sequence = [ { event="press", command = "menu up/down", value = 1} ]
 
 # Increase a multi-state option one level
 [[sequence]]
-name = "option right"
+name = "option greater"
 sequence = [ { event="press", command = "menu right/left", value = 1} ]
 
 # Decrease a multi-state option one level
 [[sequence]]
-name = "option left"
+name = "option less"
 sequence = [ { event="press", command = "menu right/left", value = -1} ]
 
 # Confirm an option after selection. In other words, after an option is selected, this sequence is
@@ -365,12 +377,16 @@ name = "confirm"
 sequence = [ { event="press", command = "menu right/left", value = -1},
              { event="press", command = "select"} ]
 
+
 #--------------------------------------------------------------------------------------------------
 # Menus
 # 
 # This section defines the game's menu system.
 [menu]
-#
+# Should we use the menu system. If this is set to false, you can skip all the menu layout, but menu
+# mods will also 
+use_menu = true
+
 # With menu commands, we interrupt all signals from the user before invoking the menu commands. The
 # delay_after_disable time specifies how long to wait after disabling the commands before starting
 # with the menu commands. The default is 1/3 of a second. The value here must be between 0 and 10
@@ -808,14 +824,14 @@ name = "No Climbing/Jumping"
 description = "No climbing or jumping"
 type = "disable"
 groups = [ "movement" ]
-appliesTo = [ "jump/climb" ]
+appliesTo = [ "jump" ]
 
 [[modifier]]
 name = "No Grab"
 description = "Swiper no swiping! No looting, stealth grabbing, opening doors. Say goodbye to the everything button."
 type = "disable"
 groups = [ "interact" ]
-appliesTo = [ "grab/interact" ]
+appliesTo = [ "interact" ]
 
 [[modifier]]
 name = "No Crouch/Prone"
@@ -854,6 +870,7 @@ description = "No scopes! Aiming is still allowed"
 type = "disable"
 groups = [ "combat" ]
 appliesTo = [ "scope" ]
+condition = [ "aiming" ]
 
 [[modifier]]
 name = "No Shoulder Swap"
@@ -861,6 +878,7 @@ description = "While aiming, Square is disabled"
 type = "disable"
 groups = [ "combat" ]
 appliesTo = [ "shoulder swap" ]
+condition = [ "aiming" ]
 
 [[modifier]]
 name = "No Reloading"
@@ -1101,14 +1119,14 @@ finishSequence = [{ event = "release", command = "flashlight" }]
 
 [[modifier]]
 name = "Keep Jumping"
-description = "Repeated presses of jump/climb"
+description = "Repeated presses of jump"
 type = "repeat"
 groups = [ "movement" ]
-appliesTo = [ "jump/climb" ]
+appliesTo = [ "jump" ]
 timeOn = 0.1
 timeOff = 2.0
-beginSequence = [{ event = "release", command = "jump/climb" }]
-finishSequence = [{ event = "release", command = "jump/climb" }]
+beginSequence = [{ event = "release", command = "jump" }]
+finishSequence = [{ event = "release", command = "jump" }]
 
 [[modifier]]
 name = "Rachy Flail"
@@ -1418,13 +1436,13 @@ name = "Double Tap"
 description = "It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins."
 type = "sequence"
 groups = [ "combat" ]
-blockWhileBusy = [ "shoot/throw" ]
+blockWhileBusy = [ "shoot" ]
 condition = [ "shooting" ]
 startDelay = 0.2
 repeatSequence = [
-  { event = "release", command = "shoot/throw", delay = 1.0 },
-  { event = "hold", command = "shoot/throw", delay = 0.2 },
-  { event = "release", command = "shoot/throw" }
+  { event = "release", command = "shoot", delay = 1.0 },
+  { event = "hold", command = "shoot", delay = 0.2 },
+  { event = "release", command = "shoot" }
   ]
 
 [[modifier]]
@@ -1432,10 +1450,10 @@ name = "Use Items"
 description = "Shoots or throws 6 of whatever item is currently equipped. No effect for medkits."
 type = "sequence"
 groups = [ "combat", "inventory" ]
-blockWhileBusy = [ "aiming", "shoot/throw" ]
+blockWhileBusy = [ "aiming", "reload/toss" ]
 beginSequence = [
   { event="hold", command = "aiming", delay = 1.0 },
-  { event="press", command = "shoot/throw", repeat = 6, delay = 0.25 },
+  { event="press", command = "shoot", repeat = 6, delay = 0.25 },
   { event="release", command = "aiming" }
   ]
 
@@ -1449,8 +1467,8 @@ beginSequence = [
   { event = "sequence", command = "disable all" },
   { event = "press", command = "select consumable"},
   { event = "press", command = "select consumable", delay = 3.0 },
-  { event = "hold", command = "shoot/throw", delay = 0.5 },
-  { event = "release", command = "shoot/throw" }
+  { event = "hold", command = "reload/toss", delay = 0.5 },
+  { event = "release", command = "reload/toss" }
   ]
   
 [[modifier]]
@@ -1464,7 +1482,7 @@ beginSequence = [
   { event = "release", command = "horizontal camera"},
   { event = "press", command = "select consumable" },
   { event = "press", command = "select consumable", delay = 3.0 },
-  { event = "press", command = "shoot/throw", delay = 0.5 },
+  { event = "press", command = "reload/toss", delay = 0.5 },
   { event = "release", command = "vertical camera"}
   ]
   
@@ -1476,7 +1494,7 @@ groups = [ "inventory" ]
 beginSequence = [
   { event = "sequence", command = "disable all" },
   { event = "press", command = "select consumable", delay = 2.5 },
-  { event = "press", command = "shoot/throw", delay= 0.2 }
+  { event = "press", command = "reload/toss", delay= 0.2 }
 ]
 
 [[modifier]]
@@ -1488,7 +1506,7 @@ beginSequence = [
   { event = "sequence", command = "disable all" },
   { event = "press", command = "select consumable", value = -1, repeat = 2 },
   { event = "delay", delay = 3.0 },
-  { event = "press", command = "shoot/throw", delay = 0.2 }
+  { event = "press", command = "reload/toss", delay = 0.2 }
 ]
 
 [[modifier]]
@@ -1515,16 +1533,16 @@ name = "Rubbernecking"
 description = "Woah! What's behind you? Invokes a periodic, 180-degree quick turn."
 type = "sequence"
 groups = [ "movement" ]
-blockWhileBusy = [ "jump/climb", "aiming", "move forward/back", "move sideways" ]
+blockWhileBusy = [ "jump", "aiming", "move forward/back", "move sideways" ]
 startDelay = 6.0
 cycleDelay = 0.1
 repeatSequence = [
-   { event = "release", command = "jump/climb" },
+   { event = "release", command = "jump" },
    { event = "release", command = "aiming" },
    { event = "hold", command = "move forward/back" },
    { event = "release", command = "move sideways" },
-   { event = "hold", command = "jump/climb", delay = 0.1 },
-   { event = "release", command = "jump/climb" }
+   { event = "hold", command = "jump", delay = 0.1 },
+   { event = "release", command = "jump" }
    ]
 
 # === Menu Modifiers ===
@@ -2106,10 +2124,10 @@ delay = 0.5
 
 [[modifier]]
 name = "Jump Delay"
-description = "Introduces a 2.0 second delay to jump/climb presses"
+description = "Introduces a 2.0 second delay to jump presses"
 type = "delay"
 groups = [ "debuff", "movement" ]
-appliesTo = [ "jump/climb" ]  
+appliesTo = [ "jump" ]  
 delay = 2.0
 
 [[modifier]]
@@ -2133,7 +2151,7 @@ name = "Shooting Delay"
 description = "Introduces a 0.5 second delay to shooting and throwing"
 type = "delay"
 groups = [ "debuff", "combat" ]
-appliesTo = [ "shoot/throw" ]  
+appliesTo = [ "shoot" ]  
 delay = 0.5
 
 [[modifier]]

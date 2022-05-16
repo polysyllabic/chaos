@@ -47,10 +47,7 @@ namespace Chaos {
     bool confirm;
 
   public:
-    MenuSelect(toml::table& config,
-               std::shared_ptr<MenuItem> par,
-               std::shared_ptr<MenuItem> grd,
-               std::shared_ptr<MenuItem> cnt);
+    MenuSelect(toml::table& config, std::shared_ptr<MenuInterface> menu);
 
     void setState(Sequence& seq, unsigned int new_state);
     
