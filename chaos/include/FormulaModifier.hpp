@@ -43,7 +43,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
 
-    FormulaModifier(toml::table& config, Game& game);
+    FormulaModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
     void begin();
     void update();
   };

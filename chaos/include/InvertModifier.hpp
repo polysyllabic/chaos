@@ -21,7 +21,9 @@
 #include <string>
 #include <toml++/toml.h>
 
+#include "DeviceEvent.hpp"
 #include "Modifier.hpp"
+#include "EngineInterface.hpp"
 
 namespace Chaos {
   class Game;
@@ -48,7 +50,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
     
-    InvertModifier(toml::table& config, Game& game);
+    InvertModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
 
     void begin();
     void finish();

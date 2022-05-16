@@ -29,15 +29,17 @@
 #include "config.hpp"
 #include "enumerations.hpp"
 #include "Modifier.hpp"
-#include "Configuration.hpp"
 #include "TOMLUtils.hpp"
+#include "EngineInterface.hpp"
 #include "GameCondition.hpp"
+#include "Sequence.hpp"
 
 using namespace Chaos;
 
 const std::string Modifier::mod_type = "modifier";
 
-void Modifier::initialize(toml::table& config) {
+void Modifier::initialize(toml::table& config, std::shared_ptr<EngineInterface> e) {
+  engine = e;
   timer.initialize();
   parent = nullptr;
   pauseTimeAccumulator = 0;
@@ -128,7 +130,7 @@ void Modifier::finish() {}
 void Modifier::apply() {}
 
 bool Modifier::tweak( DeviceEvent& event ) {
-  return true;
+   return true;
 }
 
 void Modifier::sendBeginSequence() { 

@@ -21,16 +21,17 @@
 #include <toml++/toml.h>
 
 #include "InvertModifier.hpp"
+#include "EngineInterface.hpp"
 #include "TOMLUtils.hpp"
 
 using namespace Chaos;
 
 const std::string InvertModifier::mod_type = "invert";
 
-InvertModifier::InvertModifier(toml::table& config, Game& game) {
+InvertModifier::InvertModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence", "unlisted"});
-  initialize(config);
+  initialize(config, e);
 
   if (commands.empty()) {
     throw std::runtime_error("No commands defined in appliesTo");
@@ -49,7 +50,7 @@ void InvertModifier::finish() {
 bool InvertModifier::tweak(DeviceEvent& event) {
   // Traverse the list of affected commands
   for (auto& cmd : commands) {
-    if (controller.matches(event, cmd)) {
+    if (engine->matches(event, cmd)) {
       event.value = -((int)event.value+1);
       break;
     }

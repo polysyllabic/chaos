@@ -23,8 +23,8 @@ using namespace Chaos;
 
 const std::string FormulaModifier::mod_type = "formula";
 
-FormulaModifier::FormulaModifier(toml::table& config, Game& game) {
-  initialize(config);
+FormulaModifier::FormulaModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
+  initialize(config, e);
 }
 
 void FormulaModifier::begin() {

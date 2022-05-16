@@ -21,6 +21,7 @@
 
 #include "Modifier.hpp"
 #include "Sequence.hpp"
+#include "EngineInterface.hpp"
 
 namespace Chaos {
 
@@ -134,7 +135,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
 
-    SequenceModifier(toml::table& config);
+    SequenceModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
     
     void begin();
     void update();

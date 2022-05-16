@@ -73,7 +73,7 @@ namespace Chaos {
     double time_off;
   public:
     static const std::string mod_type;
-    CooldownModifier(toml::table& config, Game& game);
+    CooldownModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
     
     void begin();
     void update();

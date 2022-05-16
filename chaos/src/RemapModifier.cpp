@@ -22,18 +22,18 @@
 #include <mogi/math/systems.h>
 #include "RemapModifier.hpp"
 #include "TOMLUtils.hpp"
-#include "Game.hpp"
+#include "EngineInterface.hpp"
 
 using namespace Chaos;
 
 const std::string RemapModifier::mod_type = "remap";
 
-RemapModifier::RemapModifier(toml::table& config, Game& game) : remap_table(game.getSignalTable()) {
+RemapModifier::RemapModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "signals", "disableSignals", "remap", "random_remap", "unlisted"});
 
-  initialize(config);
+  initialize(config, e);
   
   TOMLUtils::addToVector<ControllerInput>(config, "signals", signals);
 
@@ -116,7 +116,7 @@ RemapModifier::RemapModifier(toml::table& config, Game& game) : remap_table(game
       std::optional<std::string> signame = elem.value<std::string>();
       // the is_homogenous test above should ensure that signame always has a value
       assert(signame);
-      std::shared_ptr<ControllerInput> sig = remap_table.getInput(*signame);
+      std::shared_ptr<ControllerInput> sig = engine->getInput(*signame);
       if (! sig) {
 	      throw std::runtime_error("Controller input for random remap '" + *signame + "' is not defined");
       }
@@ -129,7 +129,7 @@ std::shared_ptr<ControllerInput> RemapModifier::lookupInput(const toml::table& c
   std::optional<std::string> inp = config[key].value<std::string>();
   std::shared_ptr<ControllerInput> rval = nullptr;
   if (inp) {
-    rval = remap_table.getInput(*inp);
+    rval = engine->getInput(*inp);
     if (!rval) {
       throw std::runtime_error(*inp + " is not a defined signal");
     }
@@ -164,14 +164,14 @@ void RemapModifier::begin() {
 // without trashing any that may be applied by a mod later in the queue.
 void RemapModifier::apply() {
   PLOG_DEBUG << "Updating remaps for " << name;
-  remap_table.setCascadingRemap(remaps);
+  engine->setCascadingRemap(remaps);
 }
 
 // Undo the remapping
 void RemapModifier::finish() {
   // When we remove ourselves, we reset the *entire* remap table to nothing. Any remaining remap
   // mods that are active will then reapply themselves when their apply functions are called.
-  remap_table.clearRemaps();
+  engine->clearRemaps();
   sendFinishSequence();
 }
 

@@ -22,20 +22,21 @@
 #include <plog/Log.h>
 
 #include "SequenceModifier.hpp"
+#include "EngineInterface.hpp"
 #include "TOMLUtils.hpp"
 
 using namespace Chaos;
 
 const std::string SequenceModifier::mod_type = "sequence";
 
-SequenceModifier::SequenceModifier(toml::table& config) {
+SequenceModifier::SequenceModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "beginSequence", "finishSequence",
       "blockWhileBusy", "repeatSequence", "condition",
       "startDelay", "cycleDelay"});
 
-  initialize(config);
+  initialize(config, e);
 
   // The following keys are set in initialize() and don't need chcking here:
   // name, description, type, groups, appliesTo, disableOnStart, startSequence,
@@ -118,7 +119,7 @@ bool SequenceModifier::tweak(DeviceEvent& event) {
     } else {
       // while in the sequence, block the commands in the while-busy list
       for (auto& cmd : block_while) {
-        if (controller.matches(event, cmd)) {
+        if (engine->eventMatches(event, cmd)) {
           return false;
         }
       }

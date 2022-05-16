@@ -22,10 +22,8 @@
 
 #include <json/json.h>
 #include <plog/Log.h>
-#include <plog/Initializers/RollingFileInitializer.h>
 
 #include "Game.hpp"
-#include "TOMLUtils.hpp"
 #include "GameCommand.hpp"
 #include "GameCondition.hpp"
 #include "Modifier.hpp"

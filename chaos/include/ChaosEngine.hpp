@@ -39,12 +39,13 @@ namespace Chaos {
    * comes in, chaos engine adds the modifier to list of active modifiers. After a set amount of time,
    * the chaos engine will remove the modifier.
    */
-  class ChaosEngine : public CommandObserver, public ControllerInjector, public Mogi::Thread {
+  class ChaosEngine : public CommandObserver, public ControllerInjector, public Mogi::Thread,
+                      public EngineInterface {
   private:
     ChaosInterface chaosInterface;
 
-    Controller& controller;
-	
+    Controller& controller;	
+
     Mogi::Math::Time time;
 
     // Data for the game we're playing
@@ -74,6 +75,8 @@ namespace Chaos {
     Json::CharReader* jsonReader;
     Json::StreamWriterBuilder jsonWriterBuilder;	
 
+    void reportGameStatus();
+
     bool remapEvent(DeviceEvent& event);
     /**
      * Set up and tear down touchpad state on receiving a new touchpad active signal.
@@ -88,14 +91,10 @@ namespace Chaos {
   public:
     ChaosEngine(Controller& c, const std::string& configfile);
     
-/*    ChaosEngine(Controller& c, const std::string& gamefile) : controller{c} {
-      game.loadConfigFile(gamefile);
-    }*/
 
     //void setController(Controller& c) { controller = c; }
 
     void sendInterfaceMessage(const std::string& msg);
-    
 
     void setGame(const std::string& name, Controller& controller) {
       game.loadConfigFile(name, controller);
@@ -112,6 +111,63 @@ namespace Chaos {
      */
     void fakePipelinedEvent(DeviceEvent& event, std::shared_ptr<Modifier> sourceMod);
 
+    short getState(uint8_t id, uint8_t type) { return controller.getState(id, type); }
+
+    bool eventMatches(const DeviceEvent& event, std::shared_ptr<GameCommand> command) { 
+      return controller.matches(event, command); 
+    }
+
+    void setOff(std::shared_ptr<GameCommand> command) {
+      controller.setOff(command);
+    }
+    
+    void setOn(std::shared_ptr<GameCommand> command) {
+      controller.setOn(command);
+    }
+
+    std::shared_ptr<MenuItem> getMenuItem(const std::string& name) {
+      return game.getMenu().getMenuItem(name);
+    }
+
+        /**
+     * \brief Sets a menu item to the specified value
+     * \param item The menu item to change
+     * \param new_val The new value of the item
+     * 
+     * The menu item must be settable (i.e., not a submenu)
+     */
+    void setMenuState(std::shared_ptr<MenuItem> item, unsigned int new_val) {
+      game.getMenu().setState(item, new_val, controller);
+    }
+
+    /**
+     * \brief Restores a menu to its default state
+     * \param item The menu item to restore
+     *
+     * The menu item must be settable (i.e., not a submenu)
+     */
+    void restoreMenuState(std::shared_ptr<MenuItem> item) {
+      game.getMenu().restoreState(item, controller);
+    }
+
+    std::shared_ptr<ControllerInput> getInput(const std::string& name) {
+      game.getSignalTable().getInput(name);
+    }
+
+    void setCascadingRemap(std::unordered_map<std::shared_ptr<ControllerInput>, SignalRemap>& remaps) {
+      game.getSignalTable().setCascadingRemap(remaps);
+    }
+
+    void clearRemaps() { game.getSignalTable().clearRemaps(); }
+
+    /**
+     * \brief Is the event an instance of the specified input command?
+     * 
+     * This tests both that the event against the defined signal and that any defined condition
+     * is also in effect.
+     */
+    bool matches(const DeviceEvent& event, std::shared_ptr<GameCommand> command);
+ 
     // override from CommandListenerObserver
     void newCommand(const std::string& command);
 

@@ -18,9 +18,11 @@
  */
 #pragma once
 #include <unordered_map>
+
+#include <toml++/toml.h>
+
 #include "Modifier.hpp"
 #include "MenuItem.hpp"
-#include "GameMenu.hpp"
 
 namespace Chaos {
 
@@ -45,14 +47,10 @@ namespace Chaos {
      */
     bool reset_on_finish;
 
-    /**
-     * A local reference to the menu system so we can execute menu actions
-     */
-    GameMenu& menu;
   public:
     static const std::string mod_type;
     
-    MenuModifier(toml::table& config, Game& game);
+    MenuModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
     
     void begin();
     void finish();
