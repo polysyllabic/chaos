@@ -22,6 +22,7 @@
 #include <toml++/toml.h>
 
 #include "Modifier.hpp"
+#include "EngineInterface.hpp"
 
 namespace Chaos {
   class Game;
@@ -35,7 +36,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
     
-    ParentModifier(toml::table& config, Game& game);
+    ParentModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
 
     void begin();
 

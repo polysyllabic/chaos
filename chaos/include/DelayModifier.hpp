@@ -22,7 +22,7 @@
 #include <toml++/toml.h>
 
 #include "Modifier.hpp"
-#include "Game.hpp"
+#include "EngineInterface.hpp"
 
 namespace Chaos {
 
@@ -63,7 +63,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
     
-    DelayModifier(toml::table& config, Game& game);
+    DelayModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
     void begin();
     void update();
     bool tweak(DeviceEvent& event);

@@ -21,7 +21,7 @@
 #include <plog/Log.h>
 
 #include "CooldownModifier.hpp"
-#include "ChaosEngine.hpp"
+#include "EngineInterface.hpp"
 #include "TOMLUtils.hpp"
 #include "GameCommand.hpp"
 #include "ControllerInput.hpp"
@@ -30,10 +30,10 @@ using namespace Chaos;
 
 const std::string CooldownModifier::mod_type = "cooldown";
 
-CooldownModifier::CooldownModifier(toml::table& config, Game& game) {
+CooldownModifier::CooldownModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
   TOMLUtils::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
 							  "beginSequence", "finishSequence", "appliesTo", "timeOn", "timeOff", "unlisted"});
-  initialize(config);
+  initialize(config, e);
   if (commands.empty()) {
     throw std::runtime_error("No command associated with cooldown modifier.");
   }
@@ -59,7 +59,7 @@ CooldownModifier::CooldownModifier(toml::table& config, Game& game) {
 }
 
 void CooldownModifier::begin() {
-  pressedState = controller.getState(cooldownCommand.id, cooldownCommand.type);
+  pressedState = engine->getState(cooldownCommand.id, cooldownCommand.type);
   cooldownTimer = 0.0;
   inCooldown = false;
   sendBeginSequence();
@@ -77,7 +77,7 @@ void CooldownModifier::update() {
       cooldownTimer = 0.0;
     }
   } else {
-    if (controller.getState(cooldownCommand.id, cooldownCommand.type)) {
+    if (engine->getState(cooldownCommand.id, cooldownCommand.type)) {
       // increment cooldown timer until time_on exceeded
       cooldownTimer += deltaT;
       if (cooldownTimer > time_on) {

@@ -77,6 +77,14 @@ namespace Chaos {
      */
     int getErrors() { return parse_errors; }
 
+    /**
+     * \brief Given the sequence name, get the object
+     * 
+     * \param name The name by which this sequence is identified in the TOML file
+     * \return std::shared_ptr<Sequence> Pointer to the Sequence object.
+     */
+    std::shared_ptr<Modifier> getModifier(const std::string& name) { return modifiers.getModifier(name); }
+
     std::string getModList() { return modifiers.getModList(); }
 
     ControllerInputTable& getSignalTable() { return signal_table; }
@@ -166,17 +174,6 @@ namespace Chaos {
      * Controller signal status, including remapping
      */
     ControllerInputTable signal_table;
-
-    // Template function to get a pointer from a map by name
-    template <typename T>
-    std::shared_ptr<T> getFromMap(std::unordered_map<std::string,std::shared_ptr<T>>& map,
-                                  const std::string& name) {
-      auto iter = command_map.find(name);
-      if (iter != command_map.end()) {
-        return iter->second;
-      }
-      return nullptr;
-    }
 
   };
 

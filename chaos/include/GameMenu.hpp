@@ -115,7 +115,8 @@ namespace Chaos {
      * \brief Sets a menu item to the specified value
      * \param item The menu item to change
      * \param new_val The new value of the item
-     *
+     * \param controller Reference to the Controller object
+     * 
      * The menu item must be settable (i.e., not a submenu)
      */
     void setState(std::shared_ptr<MenuItem> item, unsigned int new_val, Controller& controller);
@@ -123,6 +124,7 @@ namespace Chaos {
     /**
      * \brief Restores a menu to its default state
      * \param item The menu item to restore
+     * \param controller Reference to the Controller object
      *
      * The menu item must be settable (i.e., not a submenu)
      */

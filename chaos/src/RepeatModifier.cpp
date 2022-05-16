@@ -26,11 +26,11 @@ using namespace Chaos;
 
 const std::string RepeatModifier::mod_type = "repeat";
 
-RepeatModifier::RepeatModifier(toml::table& config) {
+RepeatModifier::RepeatModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "appliesTo", "disableOnStart", "disableOnFinish", "forceOn",
       "timeOn", "timeOff", "repeat", "cycleDelay", "blockWhileBusy", "beginSequence", "finishSequence", "unlisted"});
-  initialize(config);
+  initialize(config, e);
 
   if (commands.empty()) {
     throw std::runtime_error("No command(s) specified with 'appliesTo'");
@@ -47,8 +47,7 @@ RepeatModifier::RepeatModifier(toml::table& config) {
 
   TOMLUtils::addToVector<GameCommand>(config, "blockWhileBusy", block_while);
 
-#ifdef NDEBUG
-  PLOG_DEBUG << " - timeOn: " << time_on << "; timeOff: " << time_off << "; cycleDelay: " << cycleDelay;
+  PLOG_DEBUG << " - timeOn: " << time_on << "; timeOff: " << time_off << "; cycleDelay: " << cycle_delay;
   PLOG_DEBUG << " - repeat: " << repeat_count << "; forceOn: " << (force_on ? "true" : "false");
   if (block_while.empty()) {
     PLOG_DEBUG << " - blockWhileBusy: NONE";
@@ -57,7 +56,6 @@ RepeatModifier::RepeatModifier(toml::table& config) {
       PLOG_DEBUG << " - blockWhileBusy:" << cmd->getName();
     }
   }
-#endif
   
 }
 
@@ -73,11 +71,11 @@ void RepeatModifier::update() {
   press_time += timer.dTime();
   if (repeat_count < num_cycles) {
     if (press_time > time_on && commands[0]->getState()) {
-      controller.setOff(commands[0]);
+      engine->setOff(commands[0]);
       press_time = 0;
       repeat_count++;
     } else if (press_time > time_off && ! commands[0]->getState()) {
-      controller.setOn(commands[0]);
+      engine->setOn(commands[0]);
       press_time = 0;
     }
   } else if (press_time > cycle_delay) {
@@ -88,14 +86,14 @@ void RepeatModifier::update() {
 
 bool RepeatModifier::tweak(DeviceEvent& event) {
   if (force_on) {
-    if (controller.matches(event, commands[0])) {
+    if (engine->eventMatches(event, commands[0])) {
       event.value = commands[0]->getInput()->getMax((ButtonType) event.type);
     }
   }
   // Drop any events in the blockWhile list
   if (! block_while.empty()) {
     for (auto& cmd : block_while) {
-      if (controller.matches(event, cmd)) {
+      if (engine->eventMatches(event, cmd)) {
 	      return false;
       }
     }

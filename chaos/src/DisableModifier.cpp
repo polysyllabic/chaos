@@ -33,7 +33,7 @@ using namespace Chaos;
 
 const std::string DisableModifier::mod_type = "disable";
 
-DisableModifier::DisableModifier(toml::table& config, Game& game) {
+DisableModifier::DisableModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
   PLOG_VERBOSE << "constructing disable modifier";
   assert(config.contains("name"));
   assert(config.contains("type"));
@@ -41,7 +41,7 @@ DisableModifier::DisableModifier(toml::table& config, Game& game) {
       "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence",
       "filter", "threshold", "condition", "conditionTest", "unless", "unlessTest", "unlisted"});
 
-  initialize(config);
+  initialize(config, e);
 
   if (commands.empty() && ! applies_to_all) {
     throw std::runtime_error("No command(s) specified with 'appliesTo'");
@@ -95,7 +95,7 @@ bool DisableModifier::tweak (DeviceEvent& event) {
   
   // Traverse the list of affected commands
   for (auto& cmd : commands) {
-    if (controller.matches(event, cmd)) {
+    if (engine->matches(event, cmd)) {
       short min_val = (event.type == TYPE_AXIS && cmd->getInput()->getType() == ControllerSignalType::HYBRID)
         ? JOYSTICK_MIN : 0;
       switch (filter) {

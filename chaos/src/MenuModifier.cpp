@@ -25,13 +25,13 @@ using namespace Chaos;
 
 const std::string MenuModifier::mod_type = "menu";
 
-MenuModifier::MenuModifier(toml::table& config, Game& game) : menu(game.getMenu()) {
+MenuModifier::MenuModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
   
   TOMLUtils::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
              "menu_items", "reset_on_finish", "beginSequence",
              "finishSequence","unlisted"});
 
-  initialize(config);
+  initialize(config, e);
 
   std::optional<std::string> item = config["item"].value<std::string>();
   if (!config.contains("menu_items")) {
@@ -48,7 +48,7 @@ MenuModifier::MenuModifier(toml::table& config, Game& game) : menu(game.getMenu(
       throw std::runtime_error("Each table within a menu_item array must contain an 'entry' key");
     }
     std::optional<std::string> item_name = m->get("entry")->value<std::string>();
-    std::shared_ptr<MenuItem> item = menu.getMenuItem(*item_name);
+    std::shared_ptr<MenuItem> item = engine->getMenuItem(*item_name);
     if (! item) {
       throw std::runtime_error("Menu item '" + *item_name + "' not defined");
     }
@@ -66,7 +66,7 @@ void MenuModifier::begin() {
 
   // Execute all menu actions
   for (auto const& [item, val] : menu_items) {
-    menu.setState(item, val, controller);
+    engine->setMenuState(item, val);
   }
 }
 
@@ -75,7 +75,7 @@ void MenuModifier::finish() {
 
   if (reset_on_finish) {
     for (auto const& [item, val] : menu_items) {
-      menu.restoreState(item, controller);
+      engine->restoreMenuState(item);
     }
   }
 }

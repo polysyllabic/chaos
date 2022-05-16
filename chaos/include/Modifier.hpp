@@ -28,17 +28,16 @@
 #include <toml++/toml.h>
 
 #include "factory.hpp"
-#include "Controller.hpp"
-#include "DeviceEvent.hpp"
-#include "Touchpad.hpp"
 #include "enumerations.hpp"
+#include "DeviceEvent.hpp"
+#include "EngineInterface.hpp"
+#include "Touchpad.hpp"
+#include "GameCommand.hpp"
+#include "GameCondition.hpp"
+#include "Sequence.hpp"
 
 namespace Chaos {
 
-  class ChaosEngine;
-  class GameCondition;
-  class GameCommand;
-  class Sequence;
 
   /**
    * \brief Definition of the abstract base Modifier class for TCC.
@@ -185,8 +184,7 @@ namespace Chaos {
    *       // Initialization specific to this modifier goes here
    *     }
    */
-  struct Modifier : Factory<Modifier, toml::table&, Game&>, public std::enable_shared_from_this<Modifier> {
-    friend ChaosEngine;
+  struct Modifier : Factory<Modifier, toml::table&, EngineInterface&>, public std::enable_shared_from_this<Modifier> {
 
   private:
     /**
@@ -318,8 +316,7 @@ namespace Chaos {
      */
     double totalLifespan;
     
-    static Controller& controller;
-    static std::shared_ptr<ChaosEngine> engine;
+    std::shared_ptr<EngineInterface> engine;
 
     /**
      * \brief Common initialization.
@@ -338,7 +335,8 @@ namespace Chaos {
      * - gamestate
      *
      */
-    void initialize(toml::table& config);
+    Modifier(toml::table& config, std::shared_ptr<EngineInterface> e);
+    void initialize(toml::table& config, std::shared_ptr<EngineInterface> e);
 
     /**
      * \brief Send any sequence intended to issue when the mod initializes.
@@ -392,11 +390,8 @@ namespace Chaos {
     /**
      * This constructor can only be invoked by the Registrar class
      */
-    Modifier(Passkey) {}
+    Modifier(toml::table& config, std::shared_ptr<EngineInterface> e) {}
     
-    static void setEngine(std::shared_ptr<ChaosEngine> e) { engine = e; }
-    static void setController(Controller& c) { controller = c; }
-
     /**
      * \brief Get the pointer to this mod if it's an ordinary mod, or its parent if it has one
      * 

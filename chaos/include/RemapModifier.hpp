@@ -25,6 +25,7 @@
 #include "Modifier.hpp"
 #include "ControllerInput.hpp"
 #include "ControllerInputTable.hpp"
+#include "EngineInterface.hpp"
 
 namespace Chaos {
   class Game;
@@ -74,7 +75,7 @@ namespace Chaos {
   class RemapModifier : public Modifier::Registrar<RemapModifier> {
 
   private:
-    ControllerInputTable& remap_table;
+    //ControllerInputTable& remap_table;
 
     /**
      * The list of remappings set by this mod.
@@ -99,7 +100,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
     
-    RemapModifier(toml::table& config, Game& game);
+    RemapModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
 
     void begin();
     void apply();

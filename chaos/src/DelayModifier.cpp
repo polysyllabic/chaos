@@ -21,18 +21,18 @@
 #include <stdexcept>
 
 #include "DelayModifier.hpp"
-#include "ChaosEngine.hpp"
+#include "EngineInterface.hpp"
 #include "TOMLUtils.hpp"
 
 using namespace Chaos;
 
 const std::string DelayModifier::mod_type = "delay";
 
-DelayModifier::DelayModifier(toml::table& config, Game& game) {
+DelayModifier::DelayModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
   
   TOMLUtils::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
 							  "appliesTo", "delay", "beginSequence", "finishSequence", "unlisted"});
-  initialize(config);
+  initialize(config, e);
 
   if (commands.empty() && ! applies_to_all) {
     throw std::runtime_error("No command(s) specified with 'appliesTo'");
@@ -72,7 +72,7 @@ bool DelayModifier::tweak(DeviceEvent& event) {
   }
   else {
     for (auto cmd : commands) {
-      if (controller.matches(event, cmd)) {
+      if (engine->matches(event, cmd)) {
 	eventQueue.push ({this->timer.runningTime(), event});
 	return false;
       }

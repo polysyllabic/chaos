@@ -64,14 +64,16 @@ void ChaosEngine::newCommand(const std::string& command) {
   }
 
   if (root.isMember("game")) {
-    // Tell the interface what game we're playing
-    PLOG_DEBUG << "Sending game information to interface: " << game.getName() << "(parsed with " << game.getErrors() << "errors)";
-    Json::Value msg;
-    msg["game"] = game.getName();
-    msg["errors"] = game.getErrors();
-    msg["nmods"] = game.getNumActiveMods();
-    msg["modtime"] = game.getTimePerModifier();
-    chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
+    lock();
+    pause = true;
+    // Load a new game file
+    game.loadConfigFile(root["game"].asString(), controller);
+    unlock();
+    reportGameStatus();
+  }
+
+  if (root.isMember("report")) {
+    reportGameStatus();
   }
 
   if (root.isMember("modlist")) {
@@ -86,8 +88,21 @@ void ChaosEngine::newCommand(const std::string& command) {
   }
 }
 
+// Tell the interface about the game we're playing
+void ChaosEngine::reportGameStatus() {
+  lock();
+  PLOG_DEBUG << "Sending game information to interface: " << game.getName() << "(parsed with " << game.getErrors() << "errors)";
+  Json::Value msg;
+  msg["game"] = game.getName();
+  msg["errors"] = game.getErrors();
+  msg["nmods"] = game.getNumActiveMods();
+  msg["modtime"] = game.getTimePerModifier();
+  chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
+  unlock();
+}
+
 void ChaosEngine::doAction() {
-  usleep(500);	// 200Hz
+  usleep(500);	// sleep .5 milliseconds
 	
   // Update timers/states of modifiers
   if (pause) {

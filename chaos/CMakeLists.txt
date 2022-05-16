@@ -110,6 +110,7 @@ add_executable(chaos include/config.hpp
   include/DeviceEvent.hpp
   include/DisableModifier.hpp
 	include/Dualshock.hpp
+  include/EngineInterface.hpp
   include/enumerations.hpp
 	include/factory.hpp
   include/FormulaModifier.hpp
