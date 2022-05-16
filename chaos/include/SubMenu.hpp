@@ -24,6 +24,7 @@
 #include <toml++/toml.h>
 
 #include "MenuItem.hpp"
+#include "MenuInterface.hpp"
 
 namespace Chaos {
 
@@ -40,10 +41,7 @@ namespace Chaos {
     int last_child_selected;
 
   public:
-    SubMenu(toml::table& config,
-            std::shared_ptr<MenuItem> par,
-            std::shared_ptr<MenuItem> grd,
-            std::shared_ptr<MenuItem> cnt);
+    SubMenu(toml::table& config, std::shared_ptr<MenuInterface> menu);
 
     void setState(Sequence& seq, unsigned int new_val);
     void restoreState(Sequence& seq);

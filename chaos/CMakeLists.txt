@@ -115,14 +115,18 @@ add_executable(chaos include/config.hpp
   include/FormulaModifier.hpp
   include/Game.hpp
   include/GameCommand.hpp
+  include/GameCommandTable.hpp
   include/GameCondition.hpp
+  include/GameConditionTable.hpp
   include/GameMenu.hpp
   include/InvertModifier.hpp
+  include/MenuInterface.hpp
   include/MenuItem.hpp
   include/MenuModifier.hpp
   include/MenuOption.hpp
   include/MenuSelect.hpp
 	include/Modifier.hpp
+  include/ModifierTable.hpp
   include/ParentModifier.hpp 
   include/RemapModifier.hpp
   include/RepeatModifier.hpp
@@ -149,7 +153,9 @@ add_executable(chaos include/config.hpp
   src/FormulaModifier.cpp
   src/Game.cpp
 	src/GameCommand.cpp
+  src/GameCommandTable.cpp
   src/GameCondition.cpp
+  src/GameConditionTable.cpp
   src/GameMenu.cpp
   src/InvertModifier.cpp
   src/MenuItem.cpp
@@ -157,6 +163,7 @@ add_executable(chaos include/config.hpp
   src/MenuOption.cpp
   src/MenuSelect.cpp
   src/Modifier.cpp
+  src/ModifierTable.cpp
   src/ParentModifier.cpp
   src/RemapModifier.cpp
   src/RepeatModifier.cpp

@@ -24,6 +24,7 @@
 
 #include "MenuItem.hpp"
 #include "Sequence.hpp"
+#include "MenuInterface.hpp"
 
 namespace Chaos {
 
@@ -44,15 +45,11 @@ namespace Chaos {
      * True if selecting this item requires a confirmation prompt to activate.
      */
     bool confirm;
-    
 
     void setMenuOption(Sequence& seq, unsigned int new_val);
 
   public:
-    MenuOption(toml::table& config,
-               std::shared_ptr<MenuItem> par,
-               std::shared_ptr<MenuItem> grd,
-               std::shared_ptr<MenuItem> cnt);
+    MenuOption(toml::table& config, std::shared_ptr<MenuInterface> menu);
     
     void setState(Sequence& seq, unsigned int new_state);
     void restoreState(Sequence& seq);

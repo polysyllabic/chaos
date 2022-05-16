@@ -22,12 +22,14 @@
 #include "config.hpp"
 #include "SequenceTable.hpp"
 #include "ControllerInput.hpp"
+#include "GameCommandTable.hpp"
 #include "GameCommand.hpp"
 #include "TOMLUtils.hpp"
 
 using namespace Chaos;
 
-int SequenceTable::buildSequenceList(toml::table& config, Controller& controller) {
+int SequenceTable::buildSequenceList(toml::table& config, GameCommandTable& commands,
+                                     Controller& controller) {
   int parse_errors = 0;
   // global parameters for sequences
   Sequence::setPressTime(config["controller"]["button_press_time"].value_or(0.0625));
@@ -63,7 +65,7 @@ int SequenceTable::buildSequenceList(toml::table& config, Controller& controller
 
       try {
         PLOG_VERBOSE << "Adding pre-defined sequence: " << *seq_name;
-        std::shared_ptr<Sequence> s = makeSequence(event_list, controller);
+        std::shared_ptr<Sequence> s = makeSequence(event_list, commands, controller);
        	auto [it, result] = sequence_map.try_emplace(*seq_name, s);
         if (! result) {
           ++parse_errors;
@@ -81,7 +83,7 @@ int SequenceTable::buildSequenceList(toml::table& config, Controller& controller
   return parse_errors;
 }
 
-std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::array* event_list,
+std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::array* event_list, GameCommandTable& commands,
                                                       Controller& controller) {
   assert(event_list);
   std::shared_ptr<Sequence> seq = std::make_shared<Sequence>(controller);
@@ -125,7 +127,7 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::array* event_list,
         seq->addSequence(new_seq);
       }
     } else {
-      std::shared_ptr<GameCommand> command = (cmd) ? game.getCommand(*cmd) : nullptr;
+      std::shared_ptr<GameCommand> command = (cmd) ? commands.getCommand(*cmd) : nullptr;
       std::shared_ptr<ControllerInput> signal = (command) ? command->getInput() : nullptr;
 
 	    // If this signal is a hybrid control, this gets the axis max, which is needed for addHold
@@ -181,4 +183,11 @@ std::shared_ptr<Sequence> SequenceTable::getSequence(const std::string& name) {
     return iter->second;
   }
   return nullptr;
+}
+
+void SequenceTable::addSequence(Sequence& seq, const std::string& name) {
+  std::shared_ptr<Sequence> new_sequence = getSequence(name);
+  if (new_sequence) {
+    seq.addSequence(new_sequence);
+  }
 }

@@ -17,22 +17,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <stdexcept>
-#include <plog/Log.h>
+#pragma once
+#include <string>
+#include <memory>
 
-#include "SubMenu.hpp"
-#include "TOMLUtils.hpp"
+#include "MenuItem.hpp"
 
-using namespace Chaos;
+namespace Chaos {
 
-SubMenu::SubMenu(toml::table& config, std::shared_ptr<MenuInterface> menu) : 
-                       MenuItem(config, menu) {
-}
+  class MenuInterface {
+  public:
+    virtual std::shared_ptr<MenuItem> getMenuItem(const std::string& name) = 0;
+    virtual void correctOffset(std::shared_ptr<MenuItem> sender) = 0;
+    virtual void addSequence(Sequence& sequence, const std::string& name) = 0;
+    virtual void addSelectDelay(Sequence& sequence) = 0;
+  };
 
-void SubMenu::setState(Sequence& seq, unsigned int new_val) {
-  PLOG_ERROR << "Cannot set the state of a submenu";
-}
-
-void SubMenu::restoreState(Sequence& seq) {
-  PLOG_ERROR << "Cannot restore the state of a submenu";
-}
+};

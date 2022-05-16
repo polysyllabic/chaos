@@ -20,6 +20,7 @@
 #include <algorithm>
 #include "ControllerInputTable.hpp"
 #include "ControllerInput.hpp"
+#include "GameConditionTable.hpp"
 #include "GameCondition.hpp"
 #include "TOMLUtils.hpp"
 
@@ -81,8 +82,6 @@ ControllerInputTable::ControllerInputTable() {
     }
   }
 }
-
-
 
 std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const std::string& name) {
   auto iter = by_name.find(name);
@@ -169,3 +168,40 @@ void ControllerInputTable::clearRemaps() {
     remapping->setRemap({nullptr, nullptr, false, false, 0, 1});
   }
 }
+
+// This is the game-specific initialization
+int ControllerInputTable::initializeInputs(const toml::table& config, GameConditionTable& conditions) {
+  int parse_errors;
+  double scale = config["remapping"]["touchpad_scale"].value_or(1.0);
+  if (scale == 0) {
+    PLOG_ERROR << "Touchpad scale cannot be 0. Setting to 1";
+    ++parse_errors;
+    scale = 1;
+  }
+  touchpad_scale = scale;
+
+  // Condition is optional; Flag an error if bad condition name but not if missing entirely
+  std::optional<std::string> c = config["remapping"]["touchpad_condition"].value<std::string>();
+  if (c) {
+    touchpad_condition = conditions.getCondition(*c);
+    if (!touchpad_condition) {
+      ++parse_errors;
+      PLOG_ERROR << "The condition " << *c << " is not defined";
+    }
+  } 
+  double scale_if = config["remapping"]["touchpad_scale_if"].value_or(1.0);
+  if (scale_if == 0) {
+    ++parse_errors;
+    PLOG_ERROR << "Touchpad scale_if cannot be 0. Setting to 1";
+    scale_if = 1;
+  }
+  touchpad_scale_if = scale_if;
+
+  int skew = config["remapping"]["touchpad_skew"].value_or(0);
+  touchpad_skew = skew;
+
+  PLOG_DEBUG << "Touchpad scale = " << scale << "; condition = " << 
+                (touchpad_condition ? touchpad_condition->getName() : "<none>") <<
+                "; scale_if = " << scale_if << "; skew = " << skew;
+}
+

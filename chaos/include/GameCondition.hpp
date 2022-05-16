@@ -168,13 +168,18 @@ namespace Chaos {
 
     bool testConditions(std::vector<std::shared_ptr<GameCommand>> command_list);
 
+    void addToVector(const toml::table& config, const std::string& key,
+                     std::vector<std::shared_ptr<GameCommand>>& vec,
+                     GameCommandTable& commands);
+
 public:
   /**
    * \brief Construct a new GameCondition object
    * 
-   * \param config parsed TOML table containing the list of parameters defining the condition.
+   * \param config Parsed TOML table containing the list of parameters defining the condition.
+   * \param commands Container object for previously initialized game commands
    */
-  GameCondition(toml::table& config);
+  GameCondition(toml::table& config, GameCommandTable& commands);
 
   /**
    * \brief Tests if the current state of the controller meets the defined condition(s)

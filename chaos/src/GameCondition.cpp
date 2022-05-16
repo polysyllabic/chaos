@@ -24,6 +24,7 @@
 #include <plog/Log.h>
 
 #include "GameCondition.hpp"
+#include "GameCommandTable.hpp"
 #include "GameCommand.hpp"
 #include "ControllerInput.hpp"
 #include "TOMLUtils.hpp"
@@ -34,7 +35,7 @@ using namespace Chaos;
 // before those defined with conditions. This has the effect of preventing recursion in the
 // conditions. Attempting to reference a game command with conditions in a condition will
 // result in an error.
-GameCondition::GameCondition(toml::table& config) {
+GameCondition::GameCondition(toml::table& config, GameCommandTable& commands) {
   assert(config.contains("name"));
   name = config["name"].value_or("");
 
@@ -43,7 +44,7 @@ GameCondition::GameCondition(toml::table& config) {
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "persistent", "trueOn", "falseOn", "threshold", "thresholdType", "testType"});
   
-  TOMLUtils::addToVector(config, "trueOn", true_on);
+  addToVector(config, "trueOn", true_on, commands);
 
   if (true_on.empty()) {
     throw std::runtime_error("No commands defined for trueOn");
@@ -52,9 +53,9 @@ GameCondition::GameCondition(toml::table& config) {
   persistent = config["persistent"].value_or(false);
 
   if (persistent) {
-    TOMLUtils::addToVector(config, "falseOn", true_off);
+    addToVector(config, "falseOn", true_off, commands);
     if (true_off.empty()) {
-      PLOG_WARNING << "No falseOn command set for persistent condition.";
+      throw std::runtime_error("No falseOn command set for persistent condition.");
     }
   } else {
     if (config.contains("falseOn")) {
@@ -89,6 +90,31 @@ GameCondition::GameCondition(toml::table& config) {
 
   PLOG_VERBOSE << "Condition: " << config["name"] <<  "; " << ((thtype) ? *thtype : "magnitude") <<
     " threshold = " << threshold;
+}
+
+void GameCondition::addToVector(const toml::table& config, const std::string& key,
+                                std::vector<std::shared_ptr<GameCommand>>& vec,
+                                GameCommandTable& commands) {
+      
+  if (config.contains(key)) {
+    const toml::array* cmd_list = config.get(key)->as_array();
+    if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
+      throw std::runtime_error(key + " must be an array of strings");
+   	}
+	
+    for (auto& elem : *cmd_list) {
+      std::optional<std::string> cmd = elem.value<std::string>();
+      assert(cmd);
+      // check that the string matches the name of a previously defined object
+   	  std::shared_ptr<GameCommand> item = commands.getCommand(*cmd);
+      if (item) {
+        vec.push_back(item);
+        PLOG_VERBOSE << "Added '" + *cmd + "' to the " + key + " vector.";
+      } else {
+        throw std::runtime_error("Unrecognized command: " + *cmd + " in " + key);
+     	}
+    }
+  }      
 }
 
 bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> command) {

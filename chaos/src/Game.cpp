@@ -33,6 +33,10 @@
 
 using namespace Chaos;
 
+Game::Game() {
+  sequences = std::make_shared<SequenceTable>();
+}
+
 bool Game::loadConfigFile(const std::string& configfile, Controller& controller) {
   parse_errors = 0;
   toml::table configuration;
@@ -73,273 +77,26 @@ bool Game::loadConfigFile(const std::string& configfile, Controller& controller)
   }
   PLOG_INFO << "Time per modifier: " << time_per_modifier << " seconds";
 
-  // If we're loading a game after initialization, empty the previous data
-  if (command_map.size() > 0) {
-    PLOG_VERBOSE << "Clearing existing GameCommand data.";
-    command_map.clear();
-  }
-  if (condition_map.size() > 0) {
-    PLOG_VERBOSE << "Clearing existing GameCondition data.";
-    condition_map.clear();
-  }
-  if (mod_map.size() > 0) {
-    PLOG_VERBOSE << "Clearing existing Modifier data.";
-    mod_map.clear();
-  }
+  // Process the game-command definitions
+  parse_errors += game_commands.buildCommandList(configuration, signal_table);
 
-  // Process those commands that do not have conditions
-  buildCommandList(configuration, false);
-
-  // Process all conditions
-  buildConditionList(configuration);
-
-  // Process those commands that have conditions
-  // Splitting the command-map initialization this way makes it easy to detect commands
-  // that try to reference undefined conditions.
-  buildCommandList(configuration, true);
-
-  if (command_map.size() == 0) {
-    ++parse_errors;
-    PLOG_ERROR << "No game commands were defined";
-  }
-
-  // Initialize defined sequences and static parameters for sequences
-  sequences.buildSequenceList(configuration, controller);
-
-  // Initialize the menu system
-  menu.initialize(configuration, this);
+  // Process the conditions
+  parse_errors += game_conditions.buildConditionList(configuration, game_commands);
 
   // Initialize the remapping table
-  initializeRemap(configuration);
+  parse_errors += signal_table.initializeInputs(configuration, game_conditions);
+
+  // Initialize defined sequences and static parameters for sequences
+  parse_errors += sequences->buildSequenceList(configuration, game_commands, controller);
+
+  use_menu = configuration["use_menu"].value_or(true);
+
+  if (use_menu) {
+    // Initialize the menu system
+    menu.initialize(configuration, sequences);
+  }
 
   // Create the modifiers
-  buildModList(configuration);
+  parse_errors += modifiers.buildModList(configuration, use_menu);
   return true;
-}
-
-void Game::buildCommandList(toml::table& config, bool process_conditions) {
-  bool invert;
-  // We should have an array of tables. Each table defines one command binding.
-  toml::array* arr = config["command"].as_array();
-  if (arr) {
-    for (toml::node& elem : *arr) {
-      if (toml::table* command = elem.as_table()) {
-         // If processing conditions, skip the commands definitions that do not contain conditions,
-         // and vice-versa
-        if (process_conditions ^ (command->contains("condition") || command->contains("unless"))) {
-          continue;
-        }
-	      if (! command->contains("name")) {
-	        PLOG_ERROR << "Command definition missing required 'name' field: " << command;          
-          ++parse_errors;
-          continue;
-        }
-        std::string cmd_name = command->get("name")->value_or("");
-	      if (command_map.count(cmd_name) > 0) {
-	        PLOG_ERROR << "Duplicate command definition for '" << cmd_name << "'. Later one will be ignored.";
-          ++parse_errors;
-          continue;
-	      }
-        std::optional<std::string> item = config["binding"].value<std::string>();
-        if (!item) {
-          PLOG_ERROR << "Missing command binding.";
-          ++parse_errors;
-          continue;
-        }
-        std::shared_ptr<ControllerInput> bind = signal_table.getInput(*item);
-        if (!bind) {
-          PLOG_ERROR << "Specified command binding does not exist.";
-          ++parse_errors;
-          continue;
-        }
-        invert = false;  
-        std::optional<std::string> cond = config["condition"].value<std::string>();
-
-        if (config.contains("unless")) {
-          if (cond) {
-            PLOG_ERROR << "'condition' and 'unless' are mutually exclusive options in a command definition";
-            ++parse_errors;
-            continue;
-          }
-          cond = config["unless"].value<std::string>();
-          invert = true;
-        }
-        std::shared_ptr<GameCondition> condition = nullptr;
-        if (cond) {
-          condition = getCondition(*cond);
-          if (!condition) {
-            PLOG_ERROR << "Unknown game condition: " << *cond; 
-            ++parse_errors;
-            continue;
-          }
-        }
-
-	      PLOG_VERBOSE << "Inserting '" << cmd_name << "' into game command list.";
-	      try {
-      	  command_map.insert({cmd_name, std::make_shared<GameCommand>(cmd_name, bind, condition, invert)});
-	      }
-	      catch (const std::runtime_error& e) {
-          ++parse_errors;
-	        PLOG_ERROR << "In definition for game command '" << cmd_name << "': " << e.what();
-	      }
-	    }
-    }
-  } else {
-    ++parse_errors;
-    PLOG_ERROR << "Command definitions should be an array of tables";
-  }
-}
-
-void Game::buildConditionList(toml::table& config) {
-  toml::array* arr = config["condition"].as_array();
-  if (arr) {
-    // Each node in the array should contain table defining one condition
-    for (toml::node& elem : *arr) {
-      toml::table* condition = elem.as_table();
-      if (! condition) {
-          ++parse_errors;
-        PLOG_ERROR << "Condition definition must be a table";
-        continue;
-      }
-      if (!condition->contains("name")) {
-          ++parse_errors;
-        PLOG_ERROR << "Condition missing required 'name' field: " << condition;
-        continue;
-      }
-      std::optional<std::string> cond_name = condition->get("name")->value<std::string>();
-      if (condition_map.count(*cond_name) == 1) {
-          ++parse_errors;
-        PLOG_ERROR << "The condition '" << *cond_name << "' has already been defined.";
-      }
-      try {
-        PLOG_VERBOSE << "Adding condition '" << *cond_name << "' to static map.";
-  	    condition_map.insert({*cond_name, std::make_shared<GameCondition>(*condition)});
-	    }
-	    catch (const std::runtime_error& e) {
-        ++parse_errors;
-	      PLOG_ERROR << "In definition for condition '" << *cond_name << "': " << e.what(); 
-	    }
-    }
-  }
-}
-
-// Handles the static initialization. We construct the list of mods from their TOML-file
-// definitions.
-void Game::buildModList(toml::table& config) {
-
-  // Should have an array of tables, each one defining an individual modifier.
-  toml::array* arr = config["modifier"].as_array();
-  
-  if (arr) {
-    // Each node in the array should contain the definition for a modifier.
-    // If there's a parsing error at this point, we skip that mod and keep going.
-    for (toml::node& elem : *arr) {
-      toml::table* modifier = elem.as_table();
-      if (! modifier) {
-        ++parse_errors;
-	      PLOG_ERROR << "Modifier definition must be a table";
-      	continue;
-      }
-      if (! modifier->contains("name")) {
-        ++parse_errors;
-	      PLOG_ERROR << "Modifier missing required 'name' field: " << modifier;
-	      continue;
-      }
-      std::optional<std::string> mod_name = modifier->get("name")->value<std::string>();
-      if (mod_map.count(*mod_name) == 1) {
-        ++parse_errors;
-	      PLOG_ERROR << "The modifier '" << *mod_name << " has already been defined";
-	      continue;
-      } 
-      if (! modifier->contains("type")) {
-        ++parse_errors;
-	      PLOG_ERROR << "Modifier '" << *mod_name << " does not specify a type";
-	      continue;
-      }
-      std::optional<std::string> mod_type = modifier->get("type")->value<std::string>();
-      if (! Modifier::hasType(*mod_type)) {
-        ++parse_errors;
-	      PLOG_ERROR << "Modifier '" << *mod_name << "' has unknown type '" << *mod_type << "'";
-	      continue;
-      }
-      // Now we can finally create the mod. The constructors handle the rest of the configuration.
-      try {
-	      PLOG_VERBOSE << "Adding modifier '" << *mod_name << "' of type " << *mod_type;
-	      std::shared_ptr<Modifier> m = Modifier::create(*mod_type, *modifier);
-        mod_map.insert({*mod_name, m});
-      }
-      catch (std::runtime_error e) {
-        ++parse_errors;
-	      PLOG_ERROR << "Modifier '" << *mod_name << "' not created: " << e.what();
-      }
-    }
-  }
-  if (mod_map.size() == 0) {
-    ++parse_errors;
-    PLOG_ERROR << "No modifiers were defined.";
-    throw std::runtime_error("No modifiers defined");
-  }
-}
-
-std::string Game::getModList() {
-  Json::Value root;
-  Json::Value& data = root["mods"];
-  for (auto const& [key, val] : mod_map) {
-    // Mods that are marked unlisted are not reported to the chatbot
-    if (! val->isUnlisted()) {
-      data.append(val->toJsonObject());
-    }
-  }
-	
-  Json::StreamWriterBuilder builder;	
-  return Json::writeString(builder, root);
-}
-
-// This is the game-specific initialization
-void Game::initializeRemap(const toml::table& config) {
-  double scale = config["remapping"]["touchpad_scale"].value_or(1.0);
-  if (scale == 0) {
-    PLOG_ERROR << "Touchpad scale cannot be 0. Setting to 1";
-    ++parse_errors;
-    scale = 1;
-  }
-  signal_table.setTouchpadScale(scale);
-
-  // Condition is optional; Flag an error if bad condition name but not if missing entirely
-  std::optional<std::string> c = config["remapping"]["touchpad_condition"].value<std::string>();
-  if (c) {
-    std::shared_ptr<GameCondition> condition = getCondition(*c);
-    if (condition) {
-      signal_table.setTouchpadCondition(condition);
-    } else {
-      ++parse_errors;
-      PLOG_ERROR << "The condition " << *c << " is not defined";
-    }
-  } 
-  double scale_if = config["remapping"]["touchpad_scale_if"].value_or(1.0);
-  if (scale_if == 0) {
-    ++parse_errors;
-    PLOG_ERROR << "Touchpad scale_if cannot be 0. Setting to 1";
-    scale_if = 1;
-  }
-  signal_table.setTouchpadScaleIf(scale_if);
-
-  int skew = config["remapping"]["touchpad_skew"].value_or(0);
-  signal_table.setTouchpadSkew(skew);
-
-  PLOG_DEBUG << "Touchpad scale = " << scale << "; condition = " << 
-                signal_table.getTouchpadCondition()->getName() <<
-                "; scale_if = " << scale_if << "; skew = " << skew;
-}
-
-std::shared_ptr<GameCommand> Game::getCommand(const std::string& name) {
-  return getFromMap<GameCommand>(command_map, name);
-}
-
-std::shared_ptr<GameCondition> Game::getCondition(const std::string& name) {
-  return getFromMap<GameCondition>(condition_map, name);
-}
-
-std::shared_ptr<Modifier> Game::getModifier(const std::string& name) {
-  return getFromMap<Modifier>(mod_map, name);
 }

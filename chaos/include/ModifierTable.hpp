@@ -20,36 +20,41 @@
 #pragma once
 #include <unordered_map>
 #include <string>
-#include "GameCommand.hpp"
-#include "ControllerInputTable.hpp"
+#include "Modifier.hpp"
+
 namespace Chaos {
 
-  class GameCommandTable {
+  /**
+   * \brief Container class for all available modifiers
+   * 
+   */
+  class ModifierTable {
 
-   /**
-     * The map of game commands identified by their names in the TOML file
+    /**
+     * The map of all the mods defined through the TOML file
      */
-    std::unordered_map<std::string, std::shared_ptr<GameCommand>> command_map;
+    std::unordered_map<std::string, std::shared_ptr<Modifier>> mod_map;
 
-                     
   public:
+    /**
+     * \brief Create the overall list of mods from the TOML file.
+     * \param config The object containing the fully parsed TOML file
+     * \param use_menu If false, do not use menu modifiers
+     */
+    int buildModList(toml::table& config, bool use_menu);
 
     /**
-     * \brief Accessor to GameCommand pointer by command name.
-     *
-     * \param name Name by which the game command is identified in the TOML file.
-     * \return The GameCommand pointer for this command, or NULL if not found.
+     * \brief Given the sequence name, get the object
+     * 
+     * \param name The name by which this sequence is identified in the TOML file
+     * \return std::shared_ptr<Sequence> Pointer to the Sequence object.
      */
-    std::shared_ptr<GameCommand> getCommand(const std::string& name);
+    std::shared_ptr<Modifier> getModifier(const std::string& name);
 
     /**
-     * \brief Initialize the global map to hold the command definitions
-     *
-     * \param config The object containing the complete parsed TOML file
-     * \param signals Reference to 
-     * This routine is called while parsing the game configuration file.
+     * Return list of modifiers for the chat bot.
      */
-    int buildCommandList(toml::table& config, ControllerInputTable& signals);
+    std::string getModList();
 
   };
 };

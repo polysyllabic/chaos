@@ -22,13 +22,12 @@
 
 #include "MenuOption.hpp"
 #include "TOMLUtils.hpp"
-#include "GameMenu.hpp"
+#include "MenuInterface.hpp"
 
 using namespace Chaos;
 
-MenuOption::MenuOption(toml::table& config, std::shared_ptr<MenuItem> par,
-                       std::shared_ptr<MenuItem> grd, std::shared_ptr<MenuItem> cnt) : 
-                       MenuItem(config, par, grd, cnt) {
+MenuOption::MenuOption(toml::table& config, std::shared_ptr<MenuInterface> menu) : 
+                       MenuItem(config, menu) {
 
  confirm = config["confirm"].value_or(false);
 
@@ -64,12 +63,12 @@ void MenuOption::setMenuOption(Sequence& seq, unsigned int new_val) {
   // scroll to the appropriate option
   PLOG_VERBOSE << "Setting option: difference = " << difference;
   for (int i = 0; i < difference; i++) {
-    seq.addSequence(GameMenu::instance().getOptionGreater());
+    menu_items->addSequence(seq, "option greater");
   }
   for (int i = 0; i > difference; i--) {
-    seq.addSequence(GameMenu::instance().getOptionLess());
+    menu_items->addSequence(seq, "option less");
   }
   if (confirm) {
-    seq.addSequence(GameMenu::instance().getConfirm());
+    menu_items->addSequence(seq, "confirm");
   }
 }

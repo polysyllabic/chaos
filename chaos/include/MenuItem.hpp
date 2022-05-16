@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <toml++/toml.h>
 
+#include "MenuInterface.hpp"
 #include "Sequence.hpp"
 
 namespace Chaos {
@@ -143,14 +144,14 @@ namespace Chaos {
      * 
      * If the #parent is NULL, this item is part of the root (main) menu.
      */
-    std::shared_ptr<MenuItem> parent;
+    std::shared_ptr<MenuItem> parent{nullptr};
 
     /**
      * \brief The guard for this item
      * 
      * If non-NULL, the item can only be set/selected if the guard item is set to true.
      */
-    std::shared_ptr<MenuItem> guard;
+    std::shared_ptr<MenuItem> guard{nullptr};
 
     /**
      * \brief Pointer to another menu item whose counter is tied to this item
@@ -158,7 +159,7 @@ namespace Chaos {
      * When non-null, setting this option will increment the sibling's counter and restoring the
      * state will decrement it.
      */
-    std::shared_ptr<MenuItem> sibling_counter;
+    std::shared_ptr<MenuItem> sibling_counter{nullptr};
 
     // Type of action to take when the counter changes value
     CounterAction counter_action;
@@ -177,24 +178,25 @@ namespace Chaos {
      */
     int counter;
 
+    std::shared_ptr<MenuInterface> menu_items{nullptr};
+
+    /**
+     * \brief Look up the defined MenuItem by name
+     * \param config TOML table containing this item entry
+     * \param key Name by which this menu item is referenced in the configuration file
+     * \return std::shared_ptr<MenuItem> 
+     * \return NULL if no item has been defined for this name.
+     */
+    std::shared_ptr<MenuItem> getItem(toml::table& config, const std::string& key);
 
   public:
     /**
      * \brief Construct a new Menu Item object
      * 
-     * \param ofst Vertical navigation from menu top to reach this item
-     * \param tab Horizontal tab group that this item belongs to
-     * \param initial The initial state of the menu item before any changes
-     * \param hide Initialize the menu item as hidden?
-     * \param par The parent menu item to this one
-     * \param grd The guard for this item
-     * \param cnt The subling counter for this item
-     * \param action Type of action to take when the counter changes value
+     * \param config TOML table for this item
+     * \param menu Pointer to the mediating class
      */
-    MenuItem(toml::table& config,
-             std::shared_ptr<MenuItem> par,
-             std::shared_ptr<MenuItem> grd,
-             std::shared_ptr<MenuItem> cnt);
+    MenuItem(toml::table& config, std::shared_ptr<MenuInterface> menu);
 
     /**
      * \brief Returns #this as a shared pointer

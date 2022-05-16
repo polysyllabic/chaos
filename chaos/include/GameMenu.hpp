@@ -24,22 +24,25 @@
 #include <unordered_map>
 #include <toml++/toml.h>
 
+#include "MenuInterface.hpp"
 #include "MenuItem.hpp"
 #include "Sequence.hpp"
+#include "SequenceTable.hpp"
 
 namespace Chaos {
-  class Game;
   class Controller;
+
   /**
    * \brief Defines the game's menu system.
    * 
    * This class provides a mechanism to select anything defined by the game menu. It is the central
-   * container for sub-menus and menu items.
+   * container for sub-menus and menu items, and it uses the mediator pattern to manage communication
+   * among the different menu items.
    */
-  class GameMenu {
-  protected:
+  class GameMenu : public MenuInterface, std::enable_shared_from_this<GameMenu> {
+  private:
     std::unordered_map<std::string, std::shared_ptr<MenuItem>> menu;
-
+    std::shared_ptr<SequenceTable> defined_sequences;
     /**
      * \brief Does the game menu remember the last position that the user left the menu in?
      *
@@ -85,7 +88,17 @@ namespace Chaos {
      * \param game Pointer to the calling game structure
      * \return int Number of parsing errors
      */
-    int initialize(toml::table& config, Game* game);
+    int initialize(toml::table& config, std::shared_ptr<SequenceTable> sequences);
+
+    /**
+     * \brief Returns #this as a shared pointer
+     * 
+     * \return std::shared_ptr<GameMenu> 
+     *
+     * Since the pointer for this object is managed by std::shared_ptr, using #this
+     * directly is dangerous. Use this function instead.
+     */
+    std::shared_ptr<GameMenu> getptr() { return shared_from_this(); }
 
     /**
      * \brief Look up the defined MenuItem by name
@@ -95,15 +108,6 @@ namespace Chaos {
      * \return NULL if no item has been defined for this name.
      */
     std::shared_ptr<MenuItem> getMenuItem(const std::string& name);
-
-    /**
-     * \brief Look up the defined MenuItem by name
-     * 
-     * \param key Name by which this menu item is referenced in the configuration file
-     * \return std::shared_ptr<MenuItem> 
-     * \return NULL if no item has been defined for this name.
-     */
-    std::shared_ptr<MenuItem> getMenuItem(toml::table& config, const std::string& key, int& errors);
 
     unsigned int getSelectDelay() { return select_delay; }
 
@@ -132,5 +136,10 @@ namespace Chaos {
      * offset correction for all other items that share the same parent and tab group.
      */
     void correctOffset(std::shared_ptr<MenuItem> changed);
+
+    void addSequence(Sequence& sequence, const std::string& name);
+
+    void addSelectDelay(Sequence& sequence);
+
 };
 };

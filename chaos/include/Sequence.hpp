@@ -105,7 +105,6 @@ namespace Chaos {
     void addDelay(unsigned int delay);
 
     void addSequence(std::shared_ptr<Sequence> seq);
-    //void addSequence(const std::string& name);
 
     /**
      * Test if the event queue is empty

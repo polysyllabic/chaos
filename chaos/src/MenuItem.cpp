@@ -22,15 +22,11 @@
 #include <plog/Log.h>
 
 #include "MenuItem.hpp"
-#include "Configuration.hpp"
-#include "GameMenu.hpp"
+#include "MenuInterface.hpp"
 
 using namespace Chaos;
 
-MenuItem::MenuItem(toml::table& config, std::shared_ptr<MenuItem> par,
-                   std::shared_ptr<MenuItem> grd,
-                   std::shared_ptr<MenuItem> cnt) :
-                   parent{par}, guard{grd}, sibling_counter{cnt} {
+MenuItem::MenuItem(toml::table& config, std::shared_ptr<MenuInterface> menu) : menu_items{menu} {
 
   if (! config.contains("offset")) {
     PLOG_WARNING << "Menu item '" << config["name"] << "' missing offset. Set to 0.";
@@ -40,6 +36,10 @@ MenuItem::MenuItem(toml::table& config, std::shared_ptr<MenuItem> par,
   default_state = config["initialState"].value_or(0);
   current_state = default_state;
   hidden = config["hidden"].value_or(false);
+
+  parent = getItem(config, "parent");
+  guard = getItem(config, "guard");
+  sibling_counter = getItem(config, "counter");
 
   counter_action = CounterAction::NONE;
   std::optional<std::string> action_name = config["counterAction"].value<std::string>();
@@ -60,7 +60,7 @@ void MenuItem::incrementCounter() {
   ++counter;
   if (counter_action == CounterAction::REVEAL && counter == 1) {
     hidden = false;
-    GameMenu::instance().correctOffset(getptr());
+    menu_items->correctOffset(getptr());
   }
 }
 
@@ -70,10 +70,24 @@ void MenuItem::decrementCounter() {
     if (counter == 0) {
       if (counter_action == CounterAction::REVEAL) {
         hidden = true;
-        GameMenu::instance().correctOffset(getptr());
+        menu_items->correctOffset(getptr());
       }
     }
   }
+}
+
+std::shared_ptr<MenuItem> MenuItem::getItem(toml::table& config, const std::string& key) {
+  std::optional<std::string> item_name = config[key].value<std::string>();
+  std::shared_ptr<MenuItem> item = nullptr;
+  if (item_name) {
+    item = menu_items->getMenuItem(*item_name);
+    if (item) {
+      PLOG_VERBOSE << "-- " << key << " = " << ((item_name) ? *item_name : "[NONE]");
+    } else {
+      throw std::runtime_error("Unknown " + key + " menu item: " + *item_name);
+    }
+  }
+  return item;
 }
 
 void MenuItem::moveTo(Sequence& seq) {
@@ -99,11 +113,11 @@ void MenuItem::selectItem(Sequence& seq, int delta) {
     // navigate left or right through tab groups
     for (int i = 0; i < tab_group; i++) {
       PLOG_VERBOSE << "tab right";
-      seq.addSequence(GameMenu::instance().getTabRight());
+      menu_items->addSequence(seq, "tab right");
     }
     for (int i = 0; i > tab_group; i++) {
       PLOG_VERBOSE << "tab left";
-      seq.addSequence(GameMenu::instance().getTabLeft());
+      menu_items->addSequence(seq, "tab left");
     }
 
     // If this item is guarded, make sure the guard is enabled
@@ -118,20 +132,20 @@ void MenuItem::selectItem(Sequence& seq, int delta) {
     // navigate down for positive offsets
     for (int i = 0; i < delta; i++) {
       PLOG_VERBOSE << "down";
-      seq.addSequence(GameMenu::instance().getNavDown());
+      menu_items->addSequence(seq, "menu down");
     }
 
     // navigate up for negative offsets
     for (int i = 0; i > delta; i--) {
       PLOG_VERBOSE << "up ";
-      seq.addSequence(GameMenu::instance().getNavUp());
+      menu_items->addSequence(seq, "menu up");
     }
 
     // Submenus and select option items items require a button press
     if (isSelectable()) {
       PLOG_VERBOSE << "select";
-      seq.addSequence(GameMenu::instance().getSelect());
-      seq.addDelay(GameMenu::instance().getSelectDelay());
+      menu_items->addSequence(seq, "menu select");
+      menu_items->addSelectDelay(seq);
     }
 }
 
@@ -143,21 +157,21 @@ void MenuItem::navigateBack(Sequence& seq) {
   do {
     for (int i = 0; i < item->getOffset(); i++) {
       PLOG_VERBOSE << " up ";
-      seq.addSequence(GameMenu::instance().getNavUp());
+      menu_items->addSequence(seq, "menu up");
     }
     for (int i = 0; i > item->getOffset(); i--) {
       PLOG_VERBOSE << " down ";
-      seq.addSequence(GameMenu::instance().getNavDown());
+      menu_items->addSequence(seq, "menu down");
     }
     for (int i = 0; i < item->getTab(); i++) {
-      PLOG_VERBOSE << " tab-left ";
-      seq.addSequence(GameMenu::instance().getTabLeft());
+      PLOG_VERBOSE << " tab left ";
+      menu_items->addSequence(seq, "tab left");
     }
     for (int i = 0; i > item->getTab(); i++) {
-      PLOG_VERBOSE << " tab-right ";
-      seq.addSequence(GameMenu::instance().getTabRight());
+      PLOG_VERBOSE << " tab right ";
+      menu_items->addSequence(seq, "tab right");
     }
-    seq.addSequence(GameMenu::instance().getBack());
+    menu_items->addSequence(seq, "menu exit");
     item = parent;
   } while (item != nullptr);
 
