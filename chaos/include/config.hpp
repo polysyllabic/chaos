@@ -23,7 +23,7 @@
 
 // Comment out this line for testing on a different platform.
 // TODO: Enable keyboard emulation of controller signals when this is false
-/* #undef RASPBERRY_PI */
+#define RASPBERRY_PI
 /* #undef USE_DUALSENSE */
 
 #define SEC_TO_MICROSEC 1000000.0

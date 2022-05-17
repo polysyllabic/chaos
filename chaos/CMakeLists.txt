@@ -10,7 +10,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
 endif()
 
 set(CMAKE_BUILD_TYPE Debug)
-set(RASPBERRY_PI FALSE)
+set(RASPBERRY_PI TRUE)
 set(USE_DUALSENSE FALSE)
 
 # Parse version variables
@@ -45,6 +45,13 @@ if(${ver} MATCHES "PRERELEASE[ \t]+([^\n]+)")
     endif()
 endif()
 message(NOTICE "Configuring Chaos engine ${CHAOS_VERSION}")
+
+# GCC 8 (still in use by Raspberry Pi) requires an explicit link of libstdc++fs, the library for
+# std::filesystem. This is unnecessary on GCC 9 or later
+function( set_required_build_settings_for_GCC8 )
+  # Note: This command makes sure that this option comes pretty late on the cmdline.
+  link_libraries( "$<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:-lstdc++fs>" )
+endfunction()
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/include/config.in ${CMAKE_CURRENT_LIST_DIR}/include/config.hpp )
 
@@ -93,6 +100,10 @@ FetchContent_MakeAvailable(tomlplusplus plog zmqpp sniffify)
 find_package (Threads REQUIRED)
 find_package (LibJsoncpp REQUIRED)
 find_package (Libusb1 REQUIRED)
+
+# This should make the old GCC 8 compiler on the Pi do the right thing while still being ignored
+# on a development system with a more modern toolchain.
+set_required_build_settings_for_GCC8()
 
 add_executable(chaos include/config.hpp
 	include/ChaosEngine.hpp
@@ -187,6 +198,7 @@ target_include_directories (chaos PRIVATE include
 	${LIBJSONCPP_INCLUDE_DIRS}
 	${LIBUSB1_INCLUDE_DIRS}
 )
+
 
 #add_subdirectory(src/sniffify)
 #add_subdirectory(src/signals)
