@@ -35,9 +35,6 @@ namespace Chaos {
      */
     std::unordered_map<std::string, std::shared_ptr<Sequence>> sequence_map;
 
-    std::shared_ptr<Sequence> makeSequence(toml::array* event_list, GameCommandTable& commands,
-                                           Controller& controller);
-
   public:
     int buildSequenceList(toml::table& config, GameCommandTable& commands,
                           Controller& controller);

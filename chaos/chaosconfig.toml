@@ -11,14 +11,13 @@
 chaos_toml = "1.0"
 
 # default_game: If no game file is specified on the command line, this is the game that we load.
-default_game = "~/chaos/examples/tlou2.toml"
+default_game = "./games/tlou2.toml"
 
 # How long, in microseconds, should the engine sleep between executions of the main loop
 usleep_interval = 500
 
 # log_dir: Directory to keep logs and json files. This path can be relative or absolute.
 # The default is relative to the home directory of the user running the engine.
-log_dir = "~/chaos/chaosLogs"
 # log_file: Name of the basic log file. Default = "chaos.log"
 log_file = "chaos.log"
 

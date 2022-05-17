@@ -39,6 +39,7 @@ Configuration::Configuration(const std::string& fname) {
     configuration = toml::parse_file(fname);
   }
   catch (const toml::parse_error& err) {
+    // to do: recreate a default config file if it's missing
     std::cerr << "Parsing the configuration file failed: " << err << std::endl;
     throw err;
   }

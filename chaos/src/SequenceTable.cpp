@@ -56,16 +56,16 @@ int SequenceTable::buildSequenceList(toml::table& config, GameCommandTable& comm
         PLOG_ERROR << "Sequence definition missing required 'name' field";
         continue;
       }
-      if (! seq->contains("sequence")) {
+
+      toml::array* event_list = config["sequence"].as_array();
+      if (! event_list) {
         ++parse_errors;
         PLOG_ERROR << "Sequence definition missing required 'sequence' field";
         continue;
       }
-      toml::array* event_list = config["sequence"].as_array();
-
       try {
+        std::shared_ptr<Sequence> s = makeSequence(*seq, "sequence", commands, controller, true);
         PLOG_VERBOSE << "Adding pre-defined sequence: " << *seq_name;
-        std::shared_ptr<Sequence> s = makeSequence(event_list, commands, controller);
        	auto [it, result] = sequence_map.try_emplace(*seq_name, s);
         if (! result) {
           ++parse_errors;
@@ -88,27 +88,18 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
                                                       GameCommandTable& commands,
                                                       Controller& controller,
                                                       bool required) {
-  std::shared_ptr<Sequence> rval{nullptr};
+  std::shared_ptr<Sequence> seq{nullptr};
   toml::array* event_list = config[key].as_array();
-  if (event_list) {
-    rval = makeSequence(event_list, commands, controller);
-  }
-  else if (required) {
-    throw std::runtime_error("Missing required '" + key + "' key");
-  }
-  return rval;
-}
 
-std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::array* event_list, GameCommandTable& commands,
-                                                      Controller& controller) {
-  assert(event_list);
-  std::shared_ptr<Sequence> seq = std::make_shared<Sequence>(controller);
+  if (! event_list) {
+    if (required) {
+      throw std::runtime_error("Missing required '" + key + "' key");
+    }
+    return seq;
+  }
 
   for (toml::node& elem : *event_list) {
-    if (!elem.as_table()) {
-      throw std::runtime_error("Entry in the sequence array is not a table!");
-    }
-    toml::table& definition = *elem.as_table();
+    toml::table definition = *elem.as_table();
     TOMLUtils::checkValid(definition, std::vector<std::string>{"event", "command", "delay",
                           "repeat", "value"}, "makeSequence");
       
@@ -120,12 +111,23 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::array* event_list, G
     double delay = definition["delay"].value_or(0.0);
     if (delay < 0) {
 	    throw std::runtime_error("Delay must be a non-negative number of seconds.");
-    }      
+    }
     unsigned int delay_time = (unsigned int) (delay * SEC_TO_MICROSEC);
+
     int repeat = definition["repeat"].value_or(1);
     if (repeat < 1) {
 	    PLOG_WARNING << "The value of 'repeat' should be an integer greater than 1. Will ignore.";
 	    repeat = 1;
+    }
+
+    if (*event == "delay") {
+      if (delay_time == 0) {
+        PLOG_WARNING << "You've tried to add a delay of 0 microseconds. This will be ignored.";
+	    } else {
+	      seq->addDelay(delay_time);
+        PLOG_VERBOSE << "Delay = " << delay_time << " microseconds";
+	    }
+      continue;
     }
 
     // Sequences are stored in terms of ControllerInput signals, but the TOML file uses command
@@ -143,49 +145,39 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::array* event_list, G
         seq->addSequence(new_seq);
       }
     } else {
+      // The remaining events all require a defined command.
       std::shared_ptr<GameCommand> command = (cmd) ? commands.getCommand(*cmd) : nullptr;
-      std::shared_ptr<ControllerInput> signal = (command) ? command->getInput() : nullptr;
+      if (!command) {
+        throw std::runtime_error("Undefined command: " + *cmd);
+   	  }
+      std::shared_ptr<ControllerInput> signal = command->getInput();
 
 	    // If this signal is a hybrid control, this gets the axis max, which is needed for addHold
 	    int max_val = (signal) ? signal->getMax(TYPE_AXIS) : 0;
       int value = definition["value"].value_or(max_val);
 
-      if (*event == "delay") {
-        if (delay_time == 0) {
-	        PLOG_WARNING << "You've tried to add a delay of 0 microseconds. This will be ignored.";
-	      } else {
-	        seq->addDelay(delay_time);
-          PLOG_VERBOSE << "Delay = " << delay_time << " microseconds";
-	      }
-      } else if (*event == "hold") {
-	      if (!signal) {
-	        throw std::runtime_error("Undefined hold command: " + *cmd);
-    	  }
+      if (*event == "hold") {
 	      if (repeat > 1) {
 	        PLOG_WARNING << "Repeat is not supported with 'hold' and will be ignored.";
     	  }
 	      seq->addHold(signal, value, 0);
         PLOG_VERBOSE << "Hold " << signal->getName();
       } else if (*event == "press") {
-	      if (!signal) {
-	        throw std::runtime_error("Undefined press command: " + *cmd);
-        }
 	      for (int i = 0; i < repeat; i++) {
 	        seq->addPress(signal, value);
 	        if (delay_time > 0) {
 	          seq->addDelay(delay_time);
-	        }
-          PLOG_VERBOSE << "Press " << signal->getName() << " with delay of " << delay_time << " microseconds.";
+            PLOG_VERBOSE << "Press " << signal->getName() << " with a delay of " << delay_time << " microseconds";
+	        } else {
+            PLOG_VERBOSE << "Press " << signal->getName();
+          }
 	      }
       } else if (*event == "release") {
-	      if (!signal) {
-	        throw std::runtime_error("Undefined release command: " + *cmd);
-	      }
 	      if (repeat > 1) {
 	        PLOG_WARNING << "Repeat is not supported with 'release' and will be ignored.";
 	      }
 	      seq->addRelease(signal, delay_time);
-        PLOG_VERBOSE << "Release " << signal->getName() << " with delay of " << delay_time << " microseconds.";
+        PLOG_VERBOSE << "Release " << signal->getName() << " (delay =" << delay_time << " microseconds)";
       } else {
     	  throw std::runtime_error("Unrecognized event type: " + *event);
       }

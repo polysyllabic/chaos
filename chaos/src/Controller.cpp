@@ -55,8 +55,9 @@ Controller::Controller() {
 }
 
 void Controller::doAction() {
-  PLOG_VERBOSE << "Queue length = " << deviceEventQueue.size();
-	
+  if (deviceEventQueue.size() > 0) {
+    PLOG_VERBOSE << "Queue length = " << deviceEventQueue.size();
+  }
   while (!bufferQueue.empty()) {
     lock();
     std::array<unsigned char, 64> bufferFront = bufferQueue.front();
