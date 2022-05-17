@@ -35,7 +35,7 @@ RemapModifier::RemapModifier(toml::table& config, std::shared_ptr<EngineInterfac
 
   initialize(config, e);
   
-  TOMLUtils::addToVector<ControllerInput>(config, "signals", signals);
+  engine->addControllerInputs(config, "signals", signals);
 
   disable_signals = config["disableSignals"].value_or(false);
 

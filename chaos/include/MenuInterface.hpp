@@ -21,9 +21,12 @@
 #include <string>
 #include <memory>
 
-#include "MenuItem.hpp"
+//#include "MenuItem.hpp"
+//#include "Sequence.hpp"
 
 namespace Chaos {
+  class MenuItem;
+  class Sequence; 
 
   class MenuInterface {
   public:

@@ -55,6 +55,8 @@ namespace Chaos {
      */
     int buildConditionList(toml::table& config, GameCommandTable& commands);
 
+    void addToVector(const toml::table& config, const std::string& key,
+                     std::vector<std::shared_ptr<GameCondition>>& vec);
 
   };
 };

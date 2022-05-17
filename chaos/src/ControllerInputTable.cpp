@@ -70,10 +70,10 @@ std::vector<SignalSettings> signal_settings = {
 };
 
 // The constructor handles the initialization of hard-coded values
-ControllerInputTable::ControllerInputTable() {
+ControllerInputTable::ControllerInputTable(Controller& c) {
   for (SignalSettings s : signal_settings) {
     PLOG_VERBOSE << "Initializing signal " << s.name;
-    std::shared_ptr<ControllerInput> sig = std::make_shared<ControllerInput>(s);
+    std::shared_ptr<ControllerInput> sig = std::make_shared<ControllerInput>(c, s);
     inputs.insert({s.input, sig});
     by_name.insert({s.name, sig});
     by_index.insert({sig->getIndex(), sig});
@@ -147,9 +147,10 @@ std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const toml::tabl
 void ControllerInputTable::setCascadingRemap(std::unordered_map<std::shared_ptr<ControllerInput>, SignalRemap>& remaps) {
   for (auto& r : remaps) {
     // Check if the from signal in the remaps list already appears as a to_console entry in the table
-    auto it = std::find_if(inputs.begin(), inputs.end(), [r](const auto &rtable)
+    auto it = std::find_if(inputs.begin(), inputs.end(), [r](auto inp)
       {
-        return rtable.first.getRemap() == r.first;
+        //std::shared_ptr<ControllerInput> s = ;
+        return (inp.second->getRemap() == r.first);
       });
     if (it == inputs.end()) {
       // The signal isn't currently being remapped.
@@ -203,5 +204,29 @@ int ControllerInputTable::initializeInputs(const toml::table& config, GameCondit
   PLOG_DEBUG << "Touchpad scale = " << scale << "; condition = " << 
                 (touchpad_condition ? touchpad_condition->getName() : "<none>") <<
                 "; scale_if = " << scale_if << "; skew = " << skew;
+  return parse_errors;
 }
 
+void ControllerInputTable::addToVector(const toml::table& config, const std::string& key,
+                                   std::vector<std::shared_ptr<ControllerInput>>& vec) {
+      
+  if (config.contains(key)) {
+    const toml::array* cmd_list = config.get(key)->as_array();
+    if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
+      throw std::runtime_error(key + " must be an array of strings");
+   	}
+	
+    for (auto& elem : *cmd_list) {
+      std::optional<std::string> cmd = elem.value<std::string>();
+      assert(cmd);
+      // check that the string matches the name of a previously defined object
+   	  std::shared_ptr<ControllerInput> item = getInput(*cmd);
+      if (item) {
+        vec.push_back(item);
+        PLOG_VERBOSE << "Added '" + *cmd + "' to the " + key + " vector.";
+      } else {
+        throw std::runtime_error("Unrecognized controller input: " + *cmd + " in " + key);
+     	}
+    }
+  }      
+}

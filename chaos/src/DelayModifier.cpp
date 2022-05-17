@@ -72,7 +72,7 @@ bool DelayModifier::tweak(DeviceEvent& event) {
   }
   else {
     for (auto cmd : commands) {
-      if (engine->matches(event, cmd)) {
+      if (engine->eventMatches(event, cmd)) {
 	eventQueue.push ({this->timer.runningTime(), event});
 	return false;
       }

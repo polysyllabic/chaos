@@ -50,7 +50,7 @@ void InvertModifier::finish() {
 bool InvertModifier::tweak(DeviceEvent& event) {
   // Traverse the list of affected commands
   for (auto& cmd : commands) {
-    if (engine->matches(event, cmd)) {
+    if (engine->eventMatches(event, cmd)) {
       event.value = -((int)event.value+1);
       break;
     }

@@ -28,6 +28,7 @@
 #include "GameConditionTable.hpp"
 #include "SequenceTable.hpp"
 #include "ModifierTable.hpp"
+#include "EngineInterface.hpp"
 
 namespace Chaos {
 
@@ -44,7 +45,7 @@ namespace Chaos {
    */
   class Game {
   public:
-    Game();
+    Game(Controller& c);
 
     /**
      * \brief Load game configuration file
@@ -55,7 +56,7 @@ namespace Chaos {
      * 
      * If we're reloading a new game, an early fatal error will leave the old game's data intact
      */
-    bool loadConfigFile(const std::string& configfile, Controller& controller);
+    bool loadConfigFile(const std::string& configfile, std::shared_ptr<EngineInterface> engine);
 
     /**
      * \brief Get the name of the game defined in the TOML file
@@ -87,8 +88,10 @@ namespace Chaos {
 
     std::string getModList() { return modifiers.getModList(); }
 
+    GameCommandTable& getGameCommandTable() { return game_commands; }
+    GameConditionTable& getGameConditionTable() { return game_conditions; }
     ControllerInputTable& getSignalTable() { return signal_table; }
-
+    std::shared_ptr<SequenceTable> getSequenceTable() { return sequences; }
     /**
      * \brief Alters the incomming event to the value expected by the console
      * \param[in,out] event The signal coming from the controller
@@ -111,7 +114,9 @@ namespace Chaos {
      * Remapping should be complete before the ordinary (non-remapping) mods see the event, so
      * it is safe to test for the actual events that the console expects.
      */
-    bool matchesID(const DeviceEvent& event, ControllerSignal to_match);
+    bool matchesID(const DeviceEvent& event, ControllerSignal to_match) {
+      return signal_table.matchesID(event, to_match);
+    }
 
     GameMenu& getMenu() { return menu; }
 
@@ -132,6 +137,8 @@ namespace Chaos {
      * If false, menu modifiers are disabled
      */
     bool use_menu;
+
+    Controller& controller;
 
     /**
      * Defines the structure of the game's menu system

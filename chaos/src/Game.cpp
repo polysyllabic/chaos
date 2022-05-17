@@ -17,6 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <memory>
 #include <optional>
 #include <string_view>
 
@@ -28,14 +29,15 @@
 #include "GameCondition.hpp"
 #include "Modifier.hpp"
 #include "GameMenu.hpp"
+#include "EngineInterface.hpp"
 
 using namespace Chaos;
 
-Game::Game() {
+Game::Game(Controller& c) : controller{c}, signal_table{c} {
   sequences = std::make_shared<SequenceTable>();
 }
 
-bool Game::loadConfigFile(const std::string& configfile, Controller& controller) {
+bool Game::loadConfigFile(const std::string& configfile, std::shared_ptr<EngineInterface> engine) {
   parse_errors = 0;
   toml::table configuration;
   try {
@@ -95,6 +97,6 @@ bool Game::loadConfigFile(const std::string& configfile, Controller& controller)
   }
 
   // Create the modifiers
-  parse_errors += modifiers.buildModList(configuration, use_menu);
+  parse_errors += modifiers.buildModList(configuration, engine, use_menu);
   return true;
 }

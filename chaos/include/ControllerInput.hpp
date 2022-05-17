@@ -141,11 +141,6 @@ namespace Chaos {
     ControllerInput(Controller& c, const SignalSettings& settings);
 
     /**
-     * \brief Initialize the global maps and variables
-     */
-    static void initialize();
-
-    /**
      * \brief Get the name of a particular signal as defined in the TOML file.
      * 
      * \return std::string 

@@ -25,12 +25,16 @@
 #include <toml++/toml.h>
 
 #include "MenuInterface.hpp"
-#include "MenuItem.hpp"
-#include "Sequence.hpp"
-#include "SequenceTable.hpp"
+//#include "MenuItem.hpp"
+//#include "Sequence.hpp"
+//#include "SequenceTable.hpp"
 
 namespace Chaos {
+  
   class Controller;
+  class SequenceTable;
+  class Sequence;
+  class MenuItem;
 
   /**
    * \brief Defines the game's menu system.

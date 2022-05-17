@@ -132,10 +132,7 @@ bool Controller::matches(const DeviceEvent& event, ControllerSignal signal) {
 } */
 
 bool Controller::matches(const DeviceEvent& event, std::shared_ptr<GameCommand> command) {
-  if (command->getCondition()->inCondition()) {
-    return (event.type == command->getInput()->getButtonType() && event.id == command->getInput()->getID());
-  }
-  return false;
+  return (event.type == command->getInput()->getButtonType() && event.id == command->getInput()->getID());
 }
 
 // Send a new event to turn off the command.

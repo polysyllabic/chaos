@@ -83,6 +83,22 @@ int SequenceTable::buildSequenceList(toml::table& config, GameCommandTable& comm
   return parse_errors;
 }
 
+std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config, 
+                                                      const std::string& key,
+                                                      GameCommandTable& commands,
+                                                      Controller& controller,
+                                                      bool required) {
+  std::shared_ptr<Sequence> rval{nullptr};
+  toml::array* event_list = config[key].as_array();
+  if (event_list) {
+    rval = makeSequence(event_list, commands, controller);
+  }
+  else if (required) {
+    throw std::runtime_error("Missing required '" + key + "' key");
+  }
+  return rval;
+}
+
 std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::array* event_list, GameCommandTable& commands,
                                                       Controller& controller) {
   assert(event_list);
@@ -175,6 +191,7 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::array* event_list, G
       }
     }
   }
+  return seq;
 }
 
 std::shared_ptr<Sequence> SequenceTable::getSequence(const std::string& name) {

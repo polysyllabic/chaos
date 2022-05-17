@@ -19,18 +19,22 @@
  */
 #pragma once
 #include <string>
+#include <vector>
 #include <memory>
 #include "DeviceEvent.hpp"
-#include "Modifier.hpp"
-#include "GameCommand.hpp"
-#include "MenuItem.hpp"
-#include "ControllerInput.hpp"
 
 // This gathers all the various data into a single facade run through the engine
 // Should we split this into multiple interfaces? Unless we need to speed things up, it's
 // probably better only to keep a pointer to a single facade (the engine)
 namespace Chaos {
-
+  class Modifier;
+  class GameCommand;
+  class MenuItem;
+  class ControllerInput;
+  class SignalRemap;
+  class GameCondition;
+  class Sequence;
+  
   class EngineInterface {
   public:
     virtual void fakePipelinedEvent(DeviceEvent& event, std::shared_ptr<Modifier> sourceMod) = 0;
@@ -47,5 +51,17 @@ namespace Chaos {
     virtual std::shared_ptr<ControllerInput> getInput(const std::string& name) = 0;
     virtual void setCascadingRemap(std::unordered_map<std::shared_ptr<ControllerInput>, SignalRemap>& remaps) = 0;
     virtual void clearRemaps() = 0;
+    // Game Controller Inputs
+    virtual void addControllerInputs(const toml::table& config, const std::string& key,
+                                 std::vector<std::shared_ptr<ControllerInput>>& vec) = 0;
+    // Game Commands
+    virtual void addGameCommands(const toml::table& config, const std::string& key,
+                                 std::vector<std::shared_ptr<GameCommand>>& vec) = 0;
+    // Game Conditions
+    virtual void addGameConditions(const toml::table& config, const std::string& key,
+                                 std::vector<std::shared_ptr<GameCondition>>& vec) = 0;
+    // Sequences
+    virtual std::shared_ptr<Sequence> createSequence(toml::table& config,
+                                                     const std::string& key, bool required) = 0;
   };
 };

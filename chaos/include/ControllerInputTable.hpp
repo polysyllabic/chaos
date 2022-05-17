@@ -25,10 +25,12 @@
 #include "signals.hpp"
 #include "Touchpad.hpp"
 #include "DeviceEvent.hpp"
-#include "ControllerInput.hpp"
+//#include "ControllerInput.hpp"
 #include "GameConditionTable.hpp"
 
 namespace Chaos {
+  class Controller;
+  class ControllerInput;
 
   /**
    * \brief Class holding the global table of all controller signal information, including remaps
@@ -37,6 +39,7 @@ namespace Chaos {
   class ControllerInputTable {
 
   public:
+    ControllerInputTable(Controller& c);
 
     /**
      * \brief Accessor for the class object identified by name.
@@ -132,6 +135,9 @@ namespace Chaos {
     short touchpadToAxis(ControllerSignal tp_axis, short value);
 
     int initializeInputs(const toml::table& config, GameConditionTable& conditions);
+
+    void addToVector(const toml::table& config, const std::string& key,
+                     std::vector<std::shared_ptr<ControllerInput>>& vec);
 
   private:
     /**

@@ -29,7 +29,8 @@
 namespace Chaos {
 
   class GameCommand;
-
+  class GameCommandTable;
+  
   /**
    * \brief Class to encapsulate a test for a controller condition that can be used by a modifier
    * to make a decision.
@@ -167,10 +168,6 @@ namespace Chaos {
     bool pastThreshold(std::shared_ptr<GameCommand> signal);
 
     bool testConditions(std::vector<std::shared_ptr<GameCommand>> command_list);
-
-    void addToVector(const toml::table& config, const std::string& key,
-                     std::vector<std::shared_ptr<GameCommand>>& vec,
-                     GameCommandTable& commands);
 
 public:
   /**

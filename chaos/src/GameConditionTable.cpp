@@ -76,3 +76,27 @@ std::shared_ptr<GameCondition> GameConditionTable::getCondition(const std::strin
   }
   return nullptr;
 }
+
+void GameConditionTable::addToVector(const toml::table& config, const std::string& key,
+                                   std::vector<std::shared_ptr<GameCondition>>& vec) {
+      
+  if (config.contains(key)) {
+    const toml::array* cmd_list = config.get(key)->as_array();
+    if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
+      throw std::runtime_error(key + " must be an array of strings");
+   	}
+	
+    for (auto& elem : *cmd_list) {
+      std::optional<std::string> cmd = elem.value<std::string>();
+      assert(cmd);
+      // check that the string matches the name of a previously defined object
+   	  std::shared_ptr<GameCondition> item = getCondition(*cmd);
+      if (item) {
+        vec.push_back(item);
+        PLOG_VERBOSE << "Added '" + *cmd + "' to the " + key + " vector.";
+      } else {
+        throw std::runtime_error("Unrecognized condition: " + *cmd + " in " + key);
+     	}
+    }
+  }      
+}
