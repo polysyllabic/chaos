@@ -184,7 +184,8 @@ namespace Chaos {
    *       // Initialization specific to this modifier goes here
    *     }
    */
-  struct Modifier : Factory<Modifier, toml::table&, EngineInterface&>, public std::enable_shared_from_this<Modifier> {
+  struct Modifier : Factory<Modifier, toml::table&, std::shared_ptr<EngineInterface>&>,
+                    public std::enable_shared_from_this<Modifier> {
 
   private:
     /**
@@ -335,7 +336,6 @@ namespace Chaos {
      * - gamestate
      *
      */
-    Modifier(toml::table& config, std::shared_ptr<EngineInterface> e);
     void initialize(toml::table& config, std::shared_ptr<EngineInterface> e);
 
     /**
@@ -390,7 +390,7 @@ namespace Chaos {
     /**
      * This constructor can only be invoked by the Registrar class
      */
-    Modifier(toml::table& config, std::shared_ptr<EngineInterface> e) {}
+    Modifier(Passkey) {}
     
     /**
      * \brief Get the pointer to this mod if it's an ordinary mod, or its parent if it has one

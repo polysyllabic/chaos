@@ -26,6 +26,7 @@
 #include "Configuration.hpp"
 #include "ControllerInput.hpp"
 #include "Controller.hpp"
+#include "EngineInterface.hpp"
 #include "ChaosEngine.hpp"
 
 using namespace Chaos;
@@ -38,7 +39,7 @@ int main(int argc, char** argv) {
 
   // Initialize the hard-coded controller input signals. These don't rely on anything in a
   // configuration file.
-  ControllerInput::initialize();
+  //ControllerInput::initialize();
 
   // Now process the game-configuration file. If a file is specified on the command line, we use
   // that. Otherwise we use the default. If no default is set, or the specified file does not exist,
@@ -50,7 +51,8 @@ int main(int argc, char** argv) {
   controller.start();
 
   // Start the engine
-  std::shared_ptr<ChaosEngine> engine = std::make_shared<ChaosEngine>(controller, configfile);
+  std::shared_ptr<ChaosEngine> engine = std::make_shared<ChaosEngine>(controller);
+  engine->setGame(configfile);
   engine->start();
 
   while(engine->keepGoing()) {

@@ -64,17 +64,18 @@ void Modifier::initialize(toml::table& config, std::shared_ptr<EngineInterface> 
     }
   } 
 
-#ifndef NDEBUG
   PLOG_VERBOSE << "Common initialization for mod " << config["name"].value_or("NAME NOT FOUND");
   PLOG_VERBOSE << " - description: " << description;
   PLOG_VERBOSE << " - type: " << config["type"].value_or("TYPE NOT FOUND");
   PLOG_VERBOSE << " - groups: " << groups;
-#endif
 
-  applies_to_all = TOMLUtils::addToVectorOrAll<GameCommand>(config, "appliesTo", commands);
-
+  std::optional<std::string> for_all = config["appliesTo"].value<std::string>();
+  applies_to_all = (for_all && *for_all == "ALL");
+  if (! applies_to_all) {
+    engine->addGameCommands(config, "appliesTo", commands);
+  }
  
-  TOMLUtils::addToVector<GameCondition>(config, "condition", conditions);
+  engine->addGameConditions(config, "condition", conditions);
   condition_test = getConditionTest(config, "conditionTest");
 
 #ifndef NDEBUG
@@ -90,7 +91,7 @@ void Modifier::initialize(toml::table& config, std::shared_ptr<EngineInterface> 
   }
 #endif
 
-  TOMLUtils::addToVector<GameCondition>(config, "unless", unless_conditions);
+  engine->addGameConditions(config, "unless", unless_conditions);
   unless_test = getConditionTest(config, "unlessTest");
 
 #ifndef NDEBUG
@@ -106,8 +107,8 @@ void Modifier::initialize(toml::table& config, std::shared_ptr<EngineInterface> 
   }
 #endif
 
-  on_begin  = std::make_shared<Sequence>(config, "beginSequence");
-  on_finish = std::make_shared<Sequence>(config, "finishSequence");  
+  on_begin  = engine->createSequence(config, "beginSequence", false);
+  on_finish = engine->createSequence(config, "finishSequence", false);  
 }
 
 // The chaos engine calls this routine directly, and we dispatch to the appropriate

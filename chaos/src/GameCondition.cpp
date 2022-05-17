@@ -44,7 +44,7 @@ GameCondition::GameCondition(toml::table& config, GameCommandTable& commands) {
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "persistent", "trueOn", "falseOn", "threshold", "thresholdType", "testType"});
   
-  addToVector(config, "trueOn", true_on, commands);
+  commands.addToVector(config, "trueOn", true_on);
 
   if (true_on.empty()) {
     throw std::runtime_error("No commands defined for trueOn");
@@ -53,7 +53,7 @@ GameCondition::GameCondition(toml::table& config, GameCommandTable& commands) {
   persistent = config["persistent"].value_or(false);
 
   if (persistent) {
-    addToVector(config, "falseOn", true_off, commands);
+    commands.addToVector(config, "falseOn", true_off);
     if (true_off.empty()) {
       throw std::runtime_error("No falseOn command set for persistent condition.");
     }
@@ -90,31 +90,6 @@ GameCondition::GameCondition(toml::table& config, GameCommandTable& commands) {
 
   PLOG_VERBOSE << "Condition: " << config["name"] <<  "; " << ((thtype) ? *thtype : "magnitude") <<
     " threshold = " << threshold;
-}
-
-void GameCondition::addToVector(const toml::table& config, const std::string& key,
-                                std::vector<std::shared_ptr<GameCommand>>& vec,
-                                GameCommandTable& commands) {
-      
-  if (config.contains(key)) {
-    const toml::array* cmd_list = config.get(key)->as_array();
-    if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
-      throw std::runtime_error(key + " must be an array of strings");
-   	}
-	
-    for (auto& elem : *cmd_list) {
-      std::optional<std::string> cmd = elem.value<std::string>();
-      assert(cmd);
-      // check that the string matches the name of a previously defined object
-   	  std::shared_ptr<GameCommand> item = commands.getCommand(*cmd);
-      if (item) {
-        vec.push_back(item);
-        PLOG_VERBOSE << "Added '" + *cmd + "' to the " + key + " vector.";
-      } else {
-        throw std::runtime_error("Unrecognized command: " + *cmd + " in " + key);
-     	}
-    }
-  }      
 }
 
 bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> command) {

@@ -50,6 +50,12 @@ namespace Chaos {
      */
     std::shared_ptr<Sequence> getSequence(const std::string& name);
 
+    std::shared_ptr<Sequence> makeSequence(toml::table& config, 
+                                           const std::string& key,
+                                           GameCommandTable& commands,
+                                           Controller& controller,
+                                           bool required);
+
     /**
      * \brief Append sequence to the end of the current one by name
      * 
@@ -58,7 +64,7 @@ namespace Chaos {
      */
     void addSequence(Sequence& seq, const std::string& name);
 
-    void addDelay(Sequence& sequence, unsigned int delay);
+    void addDelay(Sequence& sequence, unsigned int delay) { sequence.addDelay(delay); }
     
   };
 };

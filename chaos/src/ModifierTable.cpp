@@ -20,12 +20,14 @@
 #include <plog/Log.h>
 
 #include "ModifierTable.hpp"
+#include "EngineInterface.hpp"
 
 using namespace Chaos;
 
 // Handles the static initialization. We construct the list of mods from their TOML-file
 // definitions.
-int ModifierTable::buildModList(toml::table& config, bool use_menu) {
+int ModifierTable::buildModList(toml::table& config, std::shared_ptr<EngineInterface> engine,
+                                bool use_menu) {
   int parse_errors = 0;
 
   if (mod_map.size() > 0) {
@@ -70,7 +72,7 @@ int ModifierTable::buildModList(toml::table& config, bool use_menu) {
       // Now we can create the mod. The constructors handle the rest of the configuration.
       try {
 	      PLOG_VERBOSE << "Adding modifier '" << *mod_name << "' of type " << *mod_type;
-	      std::shared_ptr<Modifier> m = Modifier::create(*mod_type, *modifier);
+	      std::shared_ptr<Modifier> m = Modifier::create(*mod_type, *modifier, engine);
         auto [it, result] = mod_map.try_emplace(*mod_name, m);
         if (! result) {
           ++parse_errors;

@@ -27,16 +27,16 @@
 
 #include "ChaosEngine.hpp"
 #include "ControllerInput.hpp"
+#include "Sequence.hpp"
 
 using namespace Chaos;
 
-ChaosEngine::ChaosEngine(Controller& c, const std::string& configfile) : controller{c}, pause(true)
+ChaosEngine::ChaosEngine(Controller& c) : controller{c}, game{c}, pause(true)
 {
   controller.addInjector(this);
   time.initialize();
   chaosInterface.addObserver(this);
   jsonReader = jsonReaderBuilder.newCharReader();
-  game.loadConfigFile(configfile, controller);
 }
 
 void ChaosEngine::newCommand(const std::string& command) {
@@ -67,7 +67,7 @@ void ChaosEngine::newCommand(const std::string& command) {
     lock();
     pause = true;
     // Load a new game file
-    game.loadConfigFile(root["game"].asString(), controller);
+    game.loadConfigFile(root["game"].asString(), shared_from_this());
     unlock();
     reportGameStatus();
   }
@@ -321,3 +321,4 @@ void ChaosEngine::disableTPAxis(ControllerSignal tp_axis) {
     controller.applyEvent(new_event);
   }
 }
+

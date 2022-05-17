@@ -95,7 +95,7 @@ bool DisableModifier::tweak (DeviceEvent& event) {
   
   // Traverse the list of affected commands
   for (auto& cmd : commands) {
-    if (engine->matches(event, cmd)) {
+    if (engine->eventMatches(event, cmd)) {
       short min_val = (event.type == TYPE_AXIS && cmd->getInput()->getType() == ControllerSignalType::HYBRID)
         ? JOYSTICK_MIN : 0;
       switch (filter) {

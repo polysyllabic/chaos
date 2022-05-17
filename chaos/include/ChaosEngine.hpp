@@ -40,7 +40,7 @@ namespace Chaos {
    * the chaos engine will remove the modifier.
    */
   class ChaosEngine : public CommandObserver, public ControllerInjector, public Mogi::Thread,
-                      public EngineInterface {
+                      public EngineInterface, public std::enable_shared_from_this<ChaosEngine> {
   private:
     ChaosInterface chaosInterface;
 
@@ -89,15 +89,14 @@ namespace Chaos {
     void disableTPAxis(ControllerSignal tp_axis);
 
   public:
-    ChaosEngine(Controller& c, const std::string& configfile);
+    ChaosEngine(Controller& c);
     
-
-    //void setController(Controller& c) { controller = c; }
+    void loadConfigFile(const std::string& configfile, std::shared_ptr<EngineInterface> engine);
 
     void sendInterfaceMessage(const std::string& msg);
 
-    void setGame(const std::string& name, Controller& controller) {
-      game.loadConfigFile(name, controller);
+    void setGame(const std::string& name) {
+      game.loadConfigFile(name, shared_from_this());
     } 
 
     /**
@@ -151,7 +150,7 @@ namespace Chaos {
     }
 
     std::shared_ptr<ControllerInput> getInput(const std::string& name) {
-      game.getSignalTable().getInput(name);
+      return game.getSignalTable().getInput(name);
     }
 
     void setCascadingRemap(std::unordered_map<std::shared_ptr<ControllerInput>, SignalRemap>& remaps) {
@@ -160,7 +159,26 @@ namespace Chaos {
 
     void clearRemaps() { game.getSignalTable().clearRemaps(); }
 
-    /**
+    void addControllerInputs(const toml::table& config, const std::string& key,
+                                 std::vector<std::shared_ptr<ControllerInput>>& vec) {
+      game.getSignalTable().addToVector(config, key, vec);
+    }
+
+    void addGameCommands(const toml::table& config, const std::string& key,
+                         std::vector<std::shared_ptr<GameCommand>>& vec) {
+      game.getGameCommandTable().addToVector(config, key, vec);
+    }
+
+    void addGameConditions(const toml::table& config, const std::string& key,
+                           std::vector<std::shared_ptr<GameCondition>>& vec) {
+      game.getGameConditionTable().addToVector(config, key, vec);
+    }
+
+    std::shared_ptr<Sequence> createSequence(toml::table& config, const std::string& key,
+                                             bool required) {
+      return game.getSequenceTable()->makeSequence(config, key, game.getGameCommandTable(),
+                                                   controller, required);
+}/**
      * \brief Is the event an instance of the specified input command?
      * 
      * This tests both that the event against the defined signal and that any defined condition

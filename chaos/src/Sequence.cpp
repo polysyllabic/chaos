@@ -30,6 +30,9 @@
 
 using namespace Chaos;
 
+unsigned int Sequence::press_time;
+unsigned int Sequence::release_time;
+
 Sequence::Sequence(Controller& c) : controller{c} {}
 
 void Sequence::addEvent(DeviceEvent event) {

@@ -22,8 +22,6 @@
 #include <memory>
 #include <toml++/toml.h>
 
-#include "DeviceEvent.hpp"
-
 namespace Chaos {
   class ControllerInput;
 

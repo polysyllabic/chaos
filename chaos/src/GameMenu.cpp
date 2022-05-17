@@ -30,6 +30,8 @@
 #include "SubMenu.hpp"
 #include "MenuSelect.hpp"
 #include "Controller.hpp"
+#include "Sequence.hpp"
+#include "SequenceTable.hpp"
 
 using namespace Chaos;
 

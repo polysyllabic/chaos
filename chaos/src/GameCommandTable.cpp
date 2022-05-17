@@ -17,9 +17,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <string>
+#include <optional>
 #include <plog/Log.h>
+#include <toml++/toml.h>
 
 #include "GameCommandTable.hpp"
+#include "GameCommand.hpp"
 #include "ControllerInputTable.hpp"
 
 using namespace Chaos;
@@ -56,7 +60,7 @@ int GameCommandTable::buildCommandList(toml::table& config, ControllerInputTable
           ++parse_errors;
           continue;
         }
-	      PLOG_VERBOSE << "Inserting '" << cmd_name << "' into game command list.";
+	      PLOG_VERBOSE << "Inserting '" << *cmd_name << "' into game command list.";
 	      try {
       	  auto [it, result] = command_map.try_emplace(*cmd_name, std::make_shared<GameCommand>(*cmd_name, bind));
           if (!result) {
@@ -89,5 +93,29 @@ std::shared_ptr<GameCommand> GameCommandTable::getCommand(const std::string& nam
     return iter->second;
   }
   return nullptr;
+}
+
+void GameCommandTable::addToVector(const toml::table& config, const std::string& key,
+                                   std::vector<std::shared_ptr<GameCommand>>& vec) {
+      
+  if (config.contains(key)) {
+    const toml::array* cmd_list = config.get(key)->as_array();
+    if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
+      throw std::runtime_error(key + " must be an array of strings");
+   	}
+	
+    for (auto& elem : *cmd_list) {
+      std::optional<std::string> cmd = elem.value<std::string>();
+      assert(cmd);
+      // check that the string matches the name of a previously defined object
+   	  std::shared_ptr<GameCommand> item = getCommand(*cmd);
+      if (item) {
+        vec.push_back(item);
+        PLOG_VERBOSE << "Added '" + *cmd + "' to the " + key + " vector.";
+      } else {
+        throw std::runtime_error("Unrecognized command: " + *cmd + " in " + key);
+     	}
+    }
+  }      
 }
 

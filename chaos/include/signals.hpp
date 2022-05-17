@@ -20,6 +20,7 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <memory>
 
 namespace Chaos {
 
@@ -126,7 +127,9 @@ namespace Chaos {
 
   /**
    * Contains the information to remap signals between the controller and the console.
-   */  
+   */
+  class ControllerInput;
+  
   struct SignalRemap {
     /**
      * \brief The input type that the controller to which the input will be altered before it is

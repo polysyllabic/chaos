@@ -34,24 +34,21 @@ SequenceModifier::SequenceModifier(toml::table& config, std::shared_ptr<EngineIn
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "beginSequence", "finishSequence",
       "blockWhileBusy", "repeatSequence", "condition",
-      "startDelay", "cycleDelay"});
+      "startDelay", "cycleDelay", "unlisted"});
 
   initialize(config, e);
-
-  // The following keys are set in initialize() and don't need chcking here:
-  // name, description, type, groups, appliesTo, disableOnStart, startSequence,
-  // disableOnFinish, finishSequence
   
-  repeat_sequence = std::make_shared<Sequence>(config, "repeatSequence");
+  repeat_sequence = e->createSequence(config, "repeatSequence", false);
 
-  lock_while_busy = TOMLUtils::addToVectorOrAll<GameCommand>(config, "blockWhileBusy", block_while);
+  std::optional<std::string> for_all = config["blockWhileBusy"].value<std::string>();
+  lock_while_busy = (for_all && *for_all == "ALL");
+
+  engine->addGameCommands(config, "blockWhileBusy", block_while);
 
   start_delay = config["startDelay"].value_or(0.0);
   repeat_delay = config["cycleDelay"].value_or(0.0);
 
-#ifndef NDEBUG
-  PLOG_DEBUG << "- startDelay: " << start_delay << "; cycleDelay: " << repeat_delay;
-#endif
+  PLOG_VERBOSE << "- startDelay: " << start_delay << "; cycleDelay: " << repeat_delay;
 }
 
 void SequenceModifier::begin() {

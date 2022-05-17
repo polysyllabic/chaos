@@ -19,10 +19,14 @@
  */
 #pragma once
 #include <unordered_map>
+#include <memory>
 #include <string>
-#include "GameCommand.hpp"
-#include "ControllerInputTable.hpp"
+
+#include <toml++/toml.h>
+
 namespace Chaos {
+  class GameCommand;
+  class ControllerInputTable;
 
   class GameCommandTable {
 
@@ -51,5 +55,7 @@ namespace Chaos {
      */
     int buildCommandList(toml::table& config, ControllerInputTable& signals);
 
+    void addToVector(const toml::table& config, const std::string& key,
+                     std::vector<std::shared_ptr<GameCommand>>& vec);
   };
 };

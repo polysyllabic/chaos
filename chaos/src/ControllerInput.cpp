@@ -25,6 +25,7 @@
 
 #include "ControllerInput.hpp"
 #include "Controller.hpp"
+#include "signals.hpp"
 
 using namespace Chaos;
 

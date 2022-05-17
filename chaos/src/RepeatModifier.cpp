@@ -45,7 +45,7 @@ RepeatModifier::RepeatModifier(toml::table& config, std::shared_ptr<EngineInterf
   cycle_delay = config["cycleDelay"].value_or(0.0);
   force_on = config["forceOn"].value_or(false);
 
-  TOMLUtils::addToVector<GameCommand>(config, "blockWhileBusy", block_while);
+  engine->addGameCommands(config, "blockWhileBusy", block_while);
 
   PLOG_DEBUG << " - timeOn: " << time_on << "; timeOff: " << time_off << "; cycleDelay: " << cycle_delay;
   PLOG_DEBUG << " - repeat: " << repeat_count << "; forceOn: " << (force_on ? "true" : "false");
@@ -56,7 +56,6 @@ RepeatModifier::RepeatModifier(toml::table& config, std::shared_ptr<EngineInterf
       PLOG_DEBUG << " - blockWhileBusy:" << cmd->getName();
     }
   }
-  
 }
 
 void RepeatModifier::begin() {

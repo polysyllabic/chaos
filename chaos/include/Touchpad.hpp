@@ -21,6 +21,7 @@
 
 #include <toml++/toml.h>
 #include <mogi/math/systems.h>
+#include "signals.hpp"
 
 namespace Chaos {
 
