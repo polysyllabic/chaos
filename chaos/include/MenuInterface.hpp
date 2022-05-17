@@ -1,7 +1,8 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * file in the top-level directory of this distribution for a list of the
+ * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,18 +18,22 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#define CHAOS_VERSION_MAJOR 2
-#define CHAOS_VERSION_MINOR 0
-#define CHAOS_VERSION "2.0.0-alpha.5"
+#include <string>
+#include <memory>
 
-// Comment out this line for testing on a different platform.
-// TODO: Enable keyboard emulation of controller signals when this is false
-/* #undef RASPBERRY_PI */
-/* #undef USE_DUALSENSE */
+//#include "MenuItem.hpp"
+//#include "Sequence.hpp"
 
-#define SEC_TO_MICROSEC 1000000.0
+namespace Chaos {
+  class MenuItem;
+  class Sequence; 
 
-// These values probably should be encapsulated in a class somewhere, at least if they can ever
-// change between controllers. For now we leave them as global defines.
-#define JOYSTICK_MIN (-128)
-#define JOYSTICK_MAX (127)
+  class MenuInterface {
+  public:
+    virtual std::shared_ptr<MenuItem> getMenuItem(const std::string& name) = 0;
+    virtual void correctOffset(std::shared_ptr<MenuItem> sender) = 0;
+    virtual void addSequence(Sequence& sequence, const std::string& name) = 0;
+    virtual void addSelectDelay(Sequence& sequence) = 0;
+  };
+
+};

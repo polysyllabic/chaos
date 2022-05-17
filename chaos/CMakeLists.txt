@@ -46,7 +46,7 @@ if(${ver} MATCHES "PRERELEASE[ \t]+([^\n]+)")
 endif()
 message(NOTICE "Configuring Chaos engine ${CHAOS_VERSION}")
 
-configure_file(${CMAKE_CURRENT_LIST_DIR}/include/config.hpp.in ${CMAKE_CURRENT_LIST_DIR}/include/config.hpp )
+configure_file(${CMAKE_CURRENT_LIST_DIR}/include/config.in ${CMAKE_CURRENT_LIST_DIR}/include/config.hpp )
 
 # Standard CMake modules
 #include(CTest)
@@ -95,70 +95,85 @@ find_package (LibJsoncpp REQUIRED)
 find_package (Libusb1 REQUIRED)
 
 add_executable(chaos include/config.hpp
-	include/chaosEngine.hpp
-	include/chaosInterface.hpp
-  include/commandListener.hpp
-  include/commandObserver.hpp
-  include/commandSender.hpp
-	include/controller.hpp
-  include/controllerInput.hpp
-	include/controllerState.hpp
-  include/cooldownModifier.hpp
-  include/delayModifier.hpp
-  include/deviceEvent.hpp
-  include/disableModifier.hpp
-	include/dualshock.hpp
+	include/ChaosEngine.hpp
+	include/ChaosInterface.hpp
+  include/CommandListener.hpp
+  include/CommandObserver.hpp
+  include/CommandSender.hpp
+	include/Configuration.hpp
+  include/Controller.hpp
+  include/ControllerInput.hpp
+  include/ControllerInputTable.hpp
+	include/ControllerState.hpp
+  include/CooldownModifier.hpp
+  include/DelayModifier.hpp
+  include/DeviceEvent.hpp
+  include/DisableModifier.hpp
+	include/Dualshock.hpp
+  include/EngineInterface.hpp
   include/enumerations.hpp
 	include/factory.hpp
-  include/formulaModifier.hpp
-  include/gameCommand.hpp
-  include/gameCondition.hpp
-  include/gameMenu.hpp
-  include/invertModifier.hpp
-  include/menuItem.hpp
-  include/menuModifier.hpp
-  include/menuOption.hpp
-  include/menuSelect.hpp
-	include/modifier.hpp
-  include/parentModifier.hpp
-  include/remapModifier.hpp
-  include/repeatModifier.hpp
-  include/sequence.hpp
-  include/sequenceModifier.hpp
-  include/signalRemap.hpp
+  include/FormulaModifier.hpp
+  include/Game.hpp
+  include/GameCommand.hpp
+  include/GameCommandTable.hpp
+  include/GameCondition.hpp
+  include/GameConditionTable.hpp
+  include/GameMenu.hpp
+  include/InvertModifier.hpp
+  include/MenuInterface.hpp
+  include/MenuItem.hpp
+  include/MenuModifier.hpp
+  include/MenuOption.hpp
+  include/MenuSelect.hpp
+	include/Modifier.hpp
+  include/ModifierTable.hpp
+  include/ParentModifier.hpp 
+  include/RemapModifier.hpp
+  include/RepeatModifier.hpp
+  include/Sequence.hpp
+  include/SequenceModifier.hpp
+  include/SequenceTable.hpp
   include/signals.hpp
-  include/subMenu.hpp
-	include/tomlReader.hpp
-  include/touchpad.hpp
-	src/chaosEngine.cpp
-	src/chaosInterface.cpp
-	src/commandListener.cpp
-	src/commandSender.cpp
-	src/controller.cpp
-  src/controllerInput.cpp
-	src/controllerState.cpp
-  src/cooldownModifier.cpp
-  src/delayModifier.cpp
-  src/disableModifier.cpp
-	src/dualshock.cpp
-  src/formulaModifier.cpp
-	src/gameCommand.cpp
-  src/gameCondition.cpp
-  src/gameMenu.cpp
-  src/invertModifier.cpp
-  src/menuItem.cpp
-  src/menuModifier.cpp
-  src/menuOption.cpp
-  src/menuSelect.cpp
-  src/modifier.cpp
-  src/parentModifier.cpp
-  src/remapModifier.cpp
-  src/repeatModifier.cpp
-  src/sequence.cpp
-  src/sequenceModifier.cpp
-  src/subMenu.cpp
-	src/tomlReader.cpp
-	src/touchpad.cpp
+  include/SubMenu.hpp
+  include/TOMLUtils.hpp
+	include/Touchpad.hpp
+	src/ChaosEngine.cpp
+	src/ChaosInterface.cpp
+	src/CommandListener.cpp
+	src/CommandSender.cpp
+	src/Configuration.cpp
+	src/Controller.cpp
+  src/ControllerInput.cpp
+  src/ControllerInputTable.cpp
+	src/ControllerState.cpp
+  src/CooldownModifier.cpp
+  src/DelayModifier.cpp
+  src/DisableModifier.cpp
+	src/Dualshock.cpp
+  src/FormulaModifier.cpp
+  src/Game.cpp
+	src/GameCommand.cpp
+  src/GameCommandTable.cpp
+  src/GameCondition.cpp
+  src/GameConditionTable.cpp
+  src/GameMenu.cpp
+  src/InvertModifier.cpp
+  src/MenuItem.cpp
+  src/MenuModifier.cpp
+  src/MenuOption.cpp
+  src/MenuSelect.cpp
+  src/Modifier.cpp
+  src/ModifierTable.cpp
+  src/ParentModifier.cpp
+  src/RemapModifier.cpp
+  src/RepeatModifier.cpp
+  src/Sequence.cpp
+  src/SequenceModifier.cpp
+  src/SequenceTable.cpp
+  src/SubMenu.cpp
+	src/Touchpad.cpp
+  src/TOMLUtils.cpp
 	src/main.cpp)
 
 target_compile_features(chaos PRIVATE cxx_std_17)

@@ -16,47 +16,46 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-//#include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <string>
-#include <string_view>
 
 #include <toml++/toml.h>
-#include <fstream>
 
 #include "config.hpp"
-#include "chaosEngine.hpp"
-#include "modifier.hpp"
-#include "controller.hpp"
-#include "tomlReader.hpp"
+#include "Configuration.hpp"
+#include "ControllerInput.hpp"
+#include "Controller.hpp"
+#include "EngineInterface.hpp"
+#include "ChaosEngine.hpp"
 
 using namespace Chaos;
 
 int main(int argc, char** argv) {
-  // the name of the configuration file should be the only argument on the command line.
-  if (argc == 1) {
-    std::cerr << "Usage: chaos input_file\n  input_file: The TOML file for the game you want to make chaotic.\n";
-    exit (EXIT_FAILURE);
-  }
-  std::string configfile(argv[1]);
 
-  // Process the TOML file. This will initialize all the mods and associated data.
-  TOMLReader config(configfile);
+  // Process the configuration file for non-gameplay-related information
+  // This will start up the logger and configure other basic settings
+  Configuration chaos_config("chaosconfig.toml");
+
+  // Initialize the hard-coded controller input signals. These don't rely on anything in a
+  // configuration file.
+  //ControllerInput::initialize();
+
+  // Now process the game-configuration file. If a file is specified on the command line, we use
+  // that. Otherwise we use the default. If no default is set, or the specified file does not exist,
+  // we abort.
+  std::string configfile = (argc > 1) ? argv[1] : chaos_config.getGameFile();
 
   // Configure the controller
-  Controller::instance().initialize();
-  Controller::instance().start();
+  Controller controller;
+  controller.start();
 
   // Start the engine
-  ChaosEngine::instance().start();
+  std::shared_ptr<ChaosEngine> engine = std::make_shared<ChaosEngine>(controller);
+  engine->setGame(configfile);
+  engine->start();
 
-  // Set the data that the interface will want to query
-  ChaosEngine::instance().setGame(config.getGameName());
-  ChaosEngine::instance().setActiveMods(config.getNumActiveMods());
-  ChaosEngine::instance().setTimePerModifier(config.getTimePerModifier());
-
-  while(ChaosEngine::instance().keepGoing()) {
+  while(engine->keepGoing()) {
     // loop until we get an exit signal
     usleep(1000000);
   }

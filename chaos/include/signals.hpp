@@ -20,6 +20,7 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <memory>
 
 namespace Chaos {
 
@@ -122,6 +123,57 @@ namespace Chaos {
     ControllerSignalType type;
     uint8_t id;
     uint8_t hybrid_id;
-};
+  };
+
+  /**
+   * Contains the information to remap signals between the controller and the console.
+   */
+  class ControllerInput;
+  
+  struct SignalRemap {
+    /**
+     * \brief The input type that the controller to which the input will be altered before it is
+     * sent to the console.
+     *
+     * If no remapping is defined, this will be set to from_controller. ControllerSignal::NOTHING is a
+     * remapping that drops the signal. For remapping of an axis to multiple buttons, this contains
+     * the remap for positive axis values.
+     */
+    std::shared_ptr<ControllerInput> to_console;
+
+    /**
+     * The remapped control used for negative values when mapping one input onto multiple buttons for
+     * output.
+     */
+    std::shared_ptr<ControllerInput> to_negative;
+
+    /**
+     * \brief Proportion of axis signal required to remap
+     * 
+     * If the signal falls below the threshold proportion, the remapped signal will be 0. This is
+     * intended, for example, to prevent tiny movements (or controller drift) from triggering a
+     * button press
+     */
+    short threshold;
+
+
+    double scale;
+
+    /**
+     * If true, button-to-axis remaps go to the joystick minimum. Otherwise they go to the maximum.
+     */
+    bool to_min;
+
+    /**
+     * If true, invert the value on remapping.
+     */
+    bool invert;
+    
+    // Constructor
+      SignalRemap(std::shared_ptr<ControllerInput> to, std::shared_ptr<ControllerInput> neg_to,
+                  bool min, bool inv, short thresh, double sensitivity) :
+                  to_console(to), to_negative(neg_to), to_min(min), invert(inv),
+                  threshold(thresh), scale(sensitivity) {}
+    };
 
 };

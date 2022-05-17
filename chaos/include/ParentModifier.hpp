@@ -17,18 +17,28 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#define CHAOS_VERSION_MAJOR 2
-#define CHAOS_VERSION_MINOR 0
-#define CHAOS_VERSION "2.0.0-alpha.5"
+#include <vector>
+#include <string>
+#include <toml++/toml.h>
 
-// Comment out this line for testing on a different platform.
-// TODO: Enable keyboard emulation of controller signals when this is false
-/* #undef RASPBERRY_PI */
-/* #undef USE_DUALSENSE */
+#include "Modifier.hpp"
+#include "EngineInterface.hpp"
 
-#define SEC_TO_MICROSEC 1000000.0
+namespace Chaos {
+  class Game;
+  /**
+   * A modifier that enables child modifiers, either from a specific list or randomly selected.
+   */
+  class ParentModifier : public Modifier::Registrar<ParentModifier> {
+  protected:
+    std::vector<Modifier*> children;
+    
+  public:
+    static const std::string mod_type;
+    
+    ParentModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
 
-// These values probably should be encapsulated in a class somewhere, at least if they can ever
-// change between controllers. For now we leave them as global defines.
-#define JOYSTICK_MIN (-128)
-#define JOYSTICK_MAX (127)
+    void begin();
+
+  };
+};
