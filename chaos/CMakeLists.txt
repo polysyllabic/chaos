@@ -213,18 +213,6 @@ target_link_libraries(chaos	PUBLIC #chaos_controller chaos_engine chaos_menus ch
 		zmqpp 
 		${LIBUSB_LIBRARIES})
 
-if (RASPBERRY_PI)
-include(ExternalProject)
-# We use a patched fork insttead of re-applying the patch every time
-ExternalProject_Add(raw-gadget
-	GIT_REPOSITORY https://github.com/polysyllabic/raw-gadget.git
-	GIT_TAG	       origin/master
-  UPDATE_DISCONNECTED true
-  CONFIGURE_COMMAND ""  
-  BUILD_COMMAND make -j -C <SOURCE_DIR>/raw_gadget
-)
-endif()
-
 #find_package(Doxygen)
 #if (DOXYGEN_FOUND)
 #	set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in)
