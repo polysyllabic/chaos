@@ -107,6 +107,7 @@ int GameMenu::addMenuItem(toml::table& config) {
   
   PLOG_VERBOSE << "Adding menu item '" << *entry_name << "' of type " << *menu_type;
   // to do: make this another self-registering factory
+  assert(getptr());
   try {
     std::shared_ptr<MenuItem> m;
     if (*menu_type == "option") {

@@ -178,7 +178,7 @@ namespace Chaos {
      */
     int counter;
 
-    std::shared_ptr<MenuInterface> menu_items{nullptr};
+    std::shared_ptr<MenuInterface> menu_items;
 
     /**
      * \brief Look up the defined MenuItem by name

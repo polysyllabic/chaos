@@ -27,10 +27,11 @@
 using namespace Chaos;
 
 MenuItem::MenuItem(toml::table& config, std::shared_ptr<MenuInterface> menu) : menu_items{menu} {
-
+  assert(menu);
   if (! config.contains("offset")) {
     PLOG_WARNING << "Menu item '" << config["name"] << "' missing offset. Set to 0.";
   }
+
   offset = config["offset"].value_or(0);
   tab_group = config["tab"].value_or(0);
   default_state = config["initialState"].value_or(0);

@@ -408,38 +408,6 @@ hide_guarded_items = false
 # be overridden on a per-item basis if necessary. If you do not need some of these actions for your
 # particular game, you can leave the values as an empty string.
 
-# Actions necessary to open the menu.
-open = "open menu"
-
-# Actions necessary to open go back one level in the menu.
-back = "menu back"
-
-# Actions necessary to move up one item in a list of menu options
-navigate_up = "menu up"
-
-# Actions necessary to move down one item in a list of menu options
-navigate_down = "menu down"
-
-# Actions necessary to move left between menu tabs (i.e., submenus that are selected in a different
-# way than the ordinary submenus are.
-tab_left = ""
-
-# Actions necessary to move rightbetween menu tabs (i.e., submenus that are selected in a different
-# way than the ordinary submenus are).
-tab_right = ""
-
-# Actions necessary to select an individual menu item
-select = "select"
-
-# Actions necessary to scroll through a multi-value menu option to increase its value by one unit
-option_greater = "option right"
-
-# Actions necessary to scroll through a multi-value menu option to decrease its value by one unit
-option_less = "option left"
-
-# Actions necessary to confirm selecting a menu item
-confirm = "confirm"
-
 # === Menu Layout ===
 #
 # A menu is defined as a series of inline tables, each of which describes a single menu item.
