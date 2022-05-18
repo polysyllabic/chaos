@@ -30,11 +30,12 @@ using namespace Chaos;
 
 int SequenceTable::buildSequenceList(toml::table& config, GameCommandTable& commands,
                                      Controller& controller) {
+  PLOG_VERBOSE << "Initializing list of defined sequences";
   int parse_errors = 0;
   // global parameters for sequences
   Sequence::setPressTime(config["controller"]["button_press_time"].value_or(0.0625));
   Sequence::setReleaseTime(config["controller"]["button_release_time"].value_or(0.0625));
-
+  
   if (sequence_map.size() > 0) {
     PLOG_VERBOSE << "Clearing existing Sequence data";
     sequence_map.clear();
@@ -88,7 +89,7 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
                                                       GameCommandTable& commands,
                                                       Controller& controller,
                                                       bool required) {
-  std::shared_ptr<Sequence> seq{nullptr};
+  std::shared_ptr<Sequence> seq = std::make_shared<Sequence>(controller);
   toml::array* event_list = config[key].as_array();
 
   if (! event_list) {
