@@ -64,4 +64,5 @@ namespace Chaos {
     virtual std::shared_ptr<Sequence> createSequence(toml::table& config,
                                                      const std::string& key, bool required) = 0;
   };
+
 };

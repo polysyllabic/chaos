@@ -26,35 +26,16 @@
 
 using namespace Chaos;
 
-MenuItem::MenuItem(toml::table& config, std::shared_ptr<MenuInterface> menu) : menu_items{menu} {
-  assert(menu);
-  if (! config.contains("offset")) {
-    PLOG_WARNING << "Menu item '" << config["name"] << "' missing offset. Set to 0.";
-  }
-
-  offset = config["offset"].value_or(0);
-  tab_group = config["tab"].value_or(0);
-  default_state = config["initialState"].value_or(0);
+MenuItem::MenuItem(std::shared_ptr<MenuInterface> menu, std::string mname, short off, short tab,
+                   short initial, bool hide, bool opt, bool sel, bool conf,
+                   std::shared_ptr<MenuItem> par,
+                   std::shared_ptr<MenuItem> grd,
+                   std::shared_ptr<MenuItem> cnt) : 
+                   menu_items{menu}, name{mname}, 
+                   offset{off}, tab_group{tab}, default_state{initial}, 
+                   hidden{hide}, is_option{opt}, is_selectable{sel}, confirm{conf},
+                   parent{par}, guard{grd}, sibling_counter{cnt} {
   current_state = default_state;
-  hidden = config["hidden"].value_or(false);
-
-  parent = getItem(config, "parent");
-  guard = getItem(config, "guard");
-  sibling_counter = getItem(config, "counter");
-
-  counter_action = CounterAction::NONE;
-  std::optional<std::string> action_name = config["counterAction"].value<std::string>();
-  if (action_name) {
-    if (*action_name == "reveal") {
-      counter_action = CounterAction::REVEAL;
-    } else if (*action_name == "zeroReset") {
-      counter_action = CounterAction::ZERO_RESET;
-    } else if (*action_name != "none") {
-      throw std::runtime_error("Unknown counterAction type: " + *action_name);
-    }
-  }
-  PLOG_VERBOSE << "-- offset = " << offset << "; tab_group = " << tab_group <<
-      "; initial_state = " << default_state << "; hidden = " << hidden;
 }
 
 void MenuItem::incrementCounter() {
@@ -77,22 +58,8 @@ void MenuItem::decrementCounter() {
   }
 }
 
-std::shared_ptr<MenuItem> MenuItem::getItem(toml::table& config, const std::string& key) {
-  std::optional<std::string> item_name = config[key].value<std::string>();
-  std::shared_ptr<MenuItem> item = nullptr;
-  if (item_name) {
-    item = menu_items->getMenuItem(*item_name);
-    if (item) {
-      PLOG_VERBOSE << "-- " << key << " = " << ((item_name) ? *item_name : "[NONE]");
-    } else {
-      throw std::runtime_error("Unknown " + key + " menu item: " + *item_name);
-    }
-  }
-  return item;
-}
-
 void MenuItem::moveTo(Sequence& seq) {
-  PLOG_VERBOSE << "moveTo: ";
+  PLOG_VERBOSE << "Building moveTo sequence";
 
   // Create a stack of all the parent menus of this option
   std::stack<std::shared_ptr<MenuItem>> menu_stack;
@@ -110,7 +77,7 @@ void MenuItem::moveTo(Sequence& seq) {
   }
 }
 
-void MenuItem::selectItem(Sequence& seq, int delta) {
+void MenuItem::selectItem(Sequence& seq, short delta) {
     // navigate left or right through tab groups
     for (int i = 0; i < tab_group; i++) {
       PLOG_VERBOSE << "tab right";
@@ -178,3 +145,52 @@ void MenuItem::navigateBack(Sequence& seq) {
 
 }
 
+void MenuItem::setState(Sequence& seq, unsigned int new_val) {
+  PLOG_VERBOSE << "setState to " << new_val;
+  moveTo(seq);
+
+  if (is_option) {
+    setMenuOption(seq, new_val);
+    current_state = new_val;
+  }
+  if (is_selectable) {
+    menu_items->addSequence(seq, "menu select");
+  }
+  if (confirm) {
+    menu_items->addSequence(seq, "confirm");
+  }
+
+  // Increment the counter, if set
+  if (sibling_counter) {
+    sibling_counter->incrementCounter();
+    PLOG_VERBOSE << "Incrementing sibling counter";
+  }
+  navigateBack(seq);
+}
+
+void MenuItem::restoreState(Sequence& seq) {
+  PLOG_VERBOSE << "restoreState ";
+  setMenuOption(seq, default_state);
+  current_state = default_state;
+  // Decrement the counter, if set
+  if (sibling_counter) {
+    sibling_counter->decrementCounter();
+    PLOG_VERBOSE << "Decrementing sibling counter";
+  }
+  navigateBack(seq);
+}
+
+void MenuItem::setMenuOption(Sequence& seq, unsigned int new_val) {
+  int difference = new_val - current_state;
+  // scroll to the appropriate option
+  PLOG_VERBOSE << "Setting option: difference = " << difference;
+  for (int i = 0; i < difference; i++) {
+    menu_items->addSequence(seq, "option greater");
+  }
+  for (int i = 0; i > difference; i--) {
+    menu_items->addSequence(seq, "option less");
+  }
+  if (confirm) {
+    menu_items->addSequence(seq, "confirm");
+  }
+}

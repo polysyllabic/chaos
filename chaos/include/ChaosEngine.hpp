@@ -128,7 +128,7 @@ namespace Chaos {
       return game.getMenu().getMenuItem(name);
     }
 
-        /**
+    /**
      * \brief Sets a menu item to the specified value
      * \param item The menu item to change
      * \param new_val The new value of the item

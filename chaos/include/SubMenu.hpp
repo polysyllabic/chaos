@@ -41,7 +41,7 @@ namespace Chaos {
     int last_child_selected;
 
   public:
-    SubMenu(toml::table& config, std::shared_ptr<MenuInterface> menu);
+    SubMenu(std::shared_ptr<MenuInterface> menu);
 
     void setState(Sequence& seq, unsigned int new_val);
     void restoreState(Sequence& seq);

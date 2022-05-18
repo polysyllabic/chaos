@@ -94,7 +94,7 @@ bool Game::loadConfigFile(const std::string& configfile, std::shared_ptr<EngineI
 
   if (use_menu) {
     // Initialize the menu system
-    menu.initialize(configuration, sequences);
+    parse_errors += menu.initialize(configuration, sequences);
   }
 
   // Create the modifiers

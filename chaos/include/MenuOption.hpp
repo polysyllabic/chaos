@@ -49,7 +49,7 @@ namespace Chaos {
     void setMenuOption(Sequence& seq, unsigned int new_val);
 
   public:
-    MenuOption(toml::table& config, std::shared_ptr<MenuInterface> menu);
+    MenuOption(std::shared_ptr<MenuInterface> menu);
     
     void setState(Sequence& seq, unsigned int new_state);
     void restoreState(Sequence& seq);

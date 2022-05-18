@@ -144,8 +144,8 @@ add_executable(chaos include/config.hpp
   include/MenuInterface.hpp
   include/MenuItem.hpp
   include/MenuModifier.hpp
-  include/MenuOption.hpp
-  include/MenuSelect.hpp
+  #include/MenuOption.hpp
+  #include/MenuSelect.hpp
 	include/Modifier.hpp
   include/ModifierTable.hpp
   include/ParentModifier.hpp 
@@ -155,7 +155,7 @@ add_executable(chaos include/config.hpp
   include/SequenceModifier.hpp
   include/SequenceTable.hpp
   include/signals.hpp
-  include/SubMenu.hpp
+  #include/SubMenu.hpp
   include/TOMLUtils.hpp
 	include/Touchpad.hpp
 	src/ChaosEngine.cpp
@@ -182,8 +182,8 @@ add_executable(chaos include/config.hpp
   src/InvertModifier.cpp
   src/MenuItem.cpp
   src/MenuModifier.cpp
-  src/MenuOption.cpp
-  src/MenuSelect.cpp
+  #src/MenuOption.cpp
+  #src/MenuSelect.cpp
   src/Modifier.cpp
   src/ModifierTable.cpp
   src/ParentModifier.cpp
@@ -192,7 +192,7 @@ add_executable(chaos include/config.hpp
   src/Sequence.cpp
   src/SequenceModifier.cpp
   src/SequenceTable.cpp
-  src/SubMenu.cpp
+  #src/SubMenu.cpp
 	src/Touchpad.cpp
   src/TOMLUtils.cpp
 	src/main.cpp)

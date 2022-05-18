@@ -111,28 +111,32 @@ namespace Chaos {
    */
   class MenuItem : std::enable_shared_from_this<MenuItem> {
   protected:
+    std::shared_ptr<MenuInterface> menu_items;
+
+    std::string name;
     /**
      * Vertical navigation from menu top to reach this item
      */
-    int offset;
+    short offset;
+
     /**
      * Horizontal tab group that this item belongs to
      */
-    int tab_group;
+    short tab_group;
 
     /**
      * \brief Correction of the offset to account for hidden items
      *
      * This value is updated actively when menu items are hidden or revealed.
      */
-    int offset_correction;
+    short offset_correction;
 
     /**
      * \brief The default state of the menu item before any changes
      * 
      * We use this to restore the menu to its original state after any menu modifier
      */
-    int default_state;
+    short default_state;
 
     /**
      * Is the menu item currently hidden?
@@ -140,7 +144,7 @@ namespace Chaos {
     bool hidden;
 
     /**
-     * The parent to this menu item
+     * \brief The parent to this menu item
      * 
      * If the #parent is NULL, this item is part of the root (main) menu.
      */
@@ -167,36 +171,51 @@ namespace Chaos {
     /**
      * \brief The current state of the menu item.
      * 
-     * For options and groups, this value is the 
      */
-    unsigned int current_state;
+    short current_state;
 
     /**
      * \brief Internal counter for this item.
      * 
-     * Mods can increment or decrement the item to track particular states
+     * Mods can increment or decrement the item to track particular states.
      */
-    int counter;
-
-    std::shared_ptr<MenuInterface> menu_items;
+    short counter;
 
     /**
-     * \brief Look up the defined MenuItem by name
-     * \param config TOML table containing this item entry
-     * \param key Name by which this menu item is referenced in the configuration file
-     * \return std::shared_ptr<MenuItem> 
-     * \return NULL if no item has been defined for this name.
+     * \brief Confirm yes after selection
+     *
+     * True if selecting this item requires a confirmation prompt to activate.
      */
-    std::shared_ptr<MenuItem> getItem(toml::table& config, const std::string& key);
+    bool confirm;
+
+    bool is_option;
+
+    bool is_selectable;
+
+    void setMenuOption(Sequence& seq, unsigned int new_val);
 
   public:
     /**
      * \brief Construct a new Menu Item object
      * 
-     * \param config TOML table for this item
-     * \param menu Pointer to the mediating class
+     * \param menu Pointer to the menu table
+     * \param name Name of this menu entry
+     * \param off Offset
+     * \param tab Tab group
+     * \param initial Initial value
+     * \param hide Start hidden
+     * \param opt Is an option
+     * \param sel Is selectable
+     * \param conf Confirm on selection
+     * \param par Parent of item
+     * \param grd Guard for item
+     * \param cnt Associated counter for item
      */
-    MenuItem(toml::table& config, std::shared_ptr<MenuInterface> menu);
+    MenuItem(std::shared_ptr<MenuInterface> menu, std::string name, short off, short tab,
+             short initial, bool hide, bool opt, bool sel, bool conf,
+             std::shared_ptr<MenuItem> par,
+             std::shared_ptr<MenuItem> grd,
+             std::shared_ptr<MenuItem> cnt);
 
     /**
      * \brief Returns #this as a shared pointer
@@ -244,27 +263,27 @@ namespace Chaos {
      * If the item is a menu, it will be selected. If it is an option, the cursor will be positioned
      * at this item but not set.
      */
-    void selectItem(Sequence& seq, int delta);
+    void selectItem(Sequence& seq, short delta);
 
     /**
      * \brief Get the offset between this menu item and the top object
      * 
      * \return int The offset with corrections for any hidden items
      */
-    int getOffset() { return offset + offset_correction; }
-    int getDefault() { return default_state; }
+    short getOffset() { return offset + offset_correction; }
+    short getDefault() { return default_state; }
     
     void adjustOffset(int delta) { offset_correction += delta; }
 
-    int getTab() { return tab_group; }
+    short getTab() { return tab_group; }
 
-    virtual int getState() { return current_state; }
+    short getState() { return current_state; }
     
-    virtual void setState(Sequence& seq, unsigned int new_state) = 0;
-    virtual void restoreState(Sequence& seq) = 0;
+    void setState(Sequence& seq, unsigned int new_state);
+    void restoreState(Sequence& seq);
 
-    virtual bool isOption() = 0;
-    virtual bool isSelectable() = 0;
+    bool isOption() { return is_option; }
+    bool isSelectable() { return is_selectable; }
 
     void setHidden(bool hide) { hidden = hide; }
     bool isHidden() { return hidden; }

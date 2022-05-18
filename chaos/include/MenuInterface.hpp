@@ -21,9 +21,6 @@
 #include <string>
 #include <memory>
 
-//#include "MenuItem.hpp"
-//#include "Sequence.hpp"
-
 namespace Chaos {
   class MenuItem;
   class Sequence; 
@@ -31,6 +28,8 @@ namespace Chaos {
   class MenuInterface {
   public:
     virtual std::shared_ptr<MenuItem> getMenuItem(const std::string& name) = 0;
+    //virtual void setMenuState(std::shared_ptr<MenuItem> item, unsigned int new_val) = 0;
+    //virtual void restoreMenuState(std::shared_ptr<MenuItem> item) = 0;
     virtual void correctOffset(std::shared_ptr<MenuItem> sender) = 0;
     virtual void addSequence(Sequence& sequence, const std::string& name) = 0;
     virtual void addSelectDelay(Sequence& sequence) = 0;

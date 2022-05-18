@@ -37,10 +37,6 @@ int main(int argc, char** argv) {
   // This will start up the logger and configure other basic settings
   Configuration chaos_config("chaosconfig.toml");
 
-  // Initialize the hard-coded controller input signals. These don't rely on anything in a
-  // configuration file.
-  //ControllerInput::initialize();
-
   // Now process the game-configuration file. If a file is specified on the command line, we use
   // that. Otherwise we use the default. If no default is set, or the specified file does not exist,
   // we abort.

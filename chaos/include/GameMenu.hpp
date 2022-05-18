@@ -82,6 +82,15 @@ namespace Chaos {
 
     int addMenuItem(toml::table& config);
 
+    /**
+     * \brief Look up the defined MenuItem by name
+     * \param config TOML table containing this item entry
+     * \param key Name by which this menu item is referenced in the configuration file
+     * \return std::shared_ptr<MenuItem> 
+     * \return NULL if no item has been defined for this name.
+     */
+    std::shared_ptr<MenuItem> getMenuItem(toml::table& config, const std::string& key);
+
   public:
     GameMenu() {}
 
