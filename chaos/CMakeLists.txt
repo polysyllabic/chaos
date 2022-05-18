@@ -88,6 +88,13 @@ FetchContent_Declare(
 	GIT_REPOSITORY https://github.com/polysyllabic/usb-sniffify.git
 	GIT_TAG	       origin/main
 )
+FetchContent_Declare(
+	raw-gadget
+	GIT_REPOSITORY https://github.com/polysyllabic/raw-gadget.git
+	GIT_TAG	       origin/master
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND ""
+)
 
 # Life would be easier if the Raspberry OS cmake were 3.18 or greater
 if(NOT mogi_POPULATED)
@@ -95,7 +102,7 @@ if(NOT mogi_POPULATED)
   add_subdirectory(${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi)
 endif()
 
-FetchContent_MakeAvailable(tomlplusplus plog zmqpp sniffify)
+FetchContent_MakeAvailable(tomlplusplus plog zmqpp sniffify raw-gadget)
 
 find_package (Threads REQUIRED)
 find_package (LibJsoncpp REQUIRED)
