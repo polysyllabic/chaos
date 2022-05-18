@@ -29,7 +29,8 @@ using namespace Chaos;
 int ModifierTable::buildModList(toml::table& config, std::shared_ptr<EngineInterface> engine,
                                 bool use_menu) {
   int parse_errors = 0;
-
+  PLOG_VERBOSE << "Building modifier list";
+  
   if (mod_map.size() > 0) {
     PLOG_VERBOSE << "Clearing existing Modifier data.";
     mod_map.clear();
