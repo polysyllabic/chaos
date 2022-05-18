@@ -43,7 +43,7 @@ namespace Chaos {
    * container for sub-menus and menu items, and it uses the mediator pattern to manage communication
    * among the different menu items.
    */
-  class GameMenu : public MenuInterface, std::enable_shared_from_this<GameMenu> {
+  class GameMenu : public MenuInterface {
   private:
     std::unordered_map<std::string, std::shared_ptr<MenuItem>> menu;
     std::shared_ptr<SequenceTable> defined_sequences;
@@ -79,18 +79,6 @@ namespace Chaos {
      */
     unsigned int select_delay;
 
-
-    int addMenuItem(toml::table& config);
-
-    /**
-     * \brief Look up the defined MenuItem by name
-     * \param config TOML table containing this item entry
-     * \param key Name by which this menu item is referenced in the configuration file
-     * \return std::shared_ptr<MenuItem> 
-     * \return NULL if no item has been defined for this name.
-     */
-    std::shared_ptr<MenuItem> getMenuItem(toml::table& config, const std::string& key);
-
   public:
     GameMenu() {}
 
@@ -102,16 +90,6 @@ namespace Chaos {
      * \return int Number of parsing errors
      */
     int initialize(toml::table& config, std::shared_ptr<SequenceTable> sequences);
-
-    /**
-     * \brief Returns #this as a shared pointer
-     * 
-     * \return std::shared_ptr<GameMenu> 
-     *
-     * Since the pointer for this object is managed by std::shared_ptr, using #this
-     * directly is dangerous. Use this function instead.
-     */
-    std::shared_ptr<GameMenu> getptr() { return shared_from_this(); }
 
     /**
      * \brief Look up the defined MenuItem by name
@@ -156,5 +134,15 @@ namespace Chaos {
 
     void addSelectDelay(Sequence& sequence);
 
+    /**
+     * \brief Look up the defined MenuItem by name
+     * \param config TOML table containing this item entry
+     * \param key Name by which this menu item is referenced in the configuration file
+     * \return std::shared_ptr<MenuItem> 
+     * \return NULL if no item has been defined for this name.
+     */
+    std::shared_ptr<MenuItem> getMenuItem(toml::table& config, const std::string& key);
+
+    bool insertMenuItem(std::string& name, std::shared_ptr<MenuItem> new_item);
 };
 };

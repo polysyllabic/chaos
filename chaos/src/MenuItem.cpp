@@ -26,17 +26,15 @@
 
 using namespace Chaos;
 
-MenuItem::MenuItem(std::shared_ptr<MenuInterface> menu, std::string mname, short off, short tab,
+MenuItem::MenuItem(MenuInterface& menu, std::string mname, short off, short tab,
                    short initial, bool hide, bool opt, bool sel, bool conf,
                    std::shared_ptr<MenuItem> par,
                    std::shared_ptr<MenuItem> grd,
-                   std::shared_ptr<MenuItem> cnt) : 
+                   std::shared_ptr<MenuItem> cnt) : menu_items{menu},
                    name{mname}, 
                    offset{off}, tab_group{tab}, default_state{initial}, 
                    hidden{hide}, is_option{opt}, is_selectable{sel}, confirm{conf},
                    parent{par}, guard{grd}, sibling_counter{cnt} {
-  menu_items = menu;
-  assert(menu_items);
   current_state = default_state;
 }
 
@@ -44,7 +42,7 @@ void MenuItem::incrementCounter() {
   ++counter;
   if (counter_action == CounterAction::REVEAL && counter == 1) {
     hidden = false;
-    menu_items->correctOffset(getptr());
+    menu_items.correctOffset(getptr());
   }
 }
 
@@ -54,7 +52,7 @@ void MenuItem::decrementCounter() {
     if (counter == 0) {
       if (counter_action == CounterAction::REVEAL) {
         hidden = true;
-        menu_items->correctOffset(getptr());
+        menu_items.correctOffset(getptr());
       }
     }
   }
@@ -83,11 +81,11 @@ void MenuItem::selectItem(Sequence& seq, short delta) {
     // navigate left or right through tab groups
     for (int i = 0; i < tab_group; i++) {
       PLOG_VERBOSE << "tab right";
-      menu_items->addSequence(seq, "tab right");
+      menu_items.addSequence(seq, "tab right");
     }
     for (int i = 0; i > tab_group; i++) {
       PLOG_VERBOSE << "tab left";
-      menu_items->addSequence(seq, "tab left");
+      menu_items.addSequence(seq, "tab left");
     }
 
     // If this item is guarded, make sure the guard is enabled
@@ -102,20 +100,20 @@ void MenuItem::selectItem(Sequence& seq, short delta) {
     // navigate down for positive offsets
     for (int i = 0; i < delta; i++) {
       PLOG_VERBOSE << "down";
-      menu_items->addSequence(seq, "menu down");
+      menu_items.addSequence(seq, "menu down");
     }
 
     // navigate up for negative offsets
     for (int i = 0; i > delta; i--) {
       PLOG_VERBOSE << "up ";
-      menu_items->addSequence(seq, "menu up");
+      menu_items.addSequence(seq, "menu up");
     }
 
     // Submenus and select option items items require a button press
     if (isSelectable()) {
       PLOG_VERBOSE << "select";
-      menu_items->addSequence(seq, "menu select");
-      menu_items->addSelectDelay(seq);
+      menu_items.addSequence(seq, "menu select");
+      menu_items.addSelectDelay(seq);
     }
 }
 
@@ -127,21 +125,21 @@ void MenuItem::navigateBack(Sequence& seq) {
   do {
     for (int i = 0; i < item->getOffset(); i++) {
       PLOG_VERBOSE << " up ";
-      menu_items->addSequence(seq, "menu up");
+      menu_items.addSequence(seq, "menu up");
     }
     for (int i = 0; i > item->getOffset(); i--) {
       PLOG_VERBOSE << " down ";
-      menu_items->addSequence(seq, "menu down");
+      menu_items.addSequence(seq, "menu down");
     }
     for (int i = 0; i < item->getTab(); i++) {
       PLOG_VERBOSE << " tab left ";
-      menu_items->addSequence(seq, "tab left");
+      menu_items.addSequence(seq, "tab left");
     }
     for (int i = 0; i > item->getTab(); i++) {
       PLOG_VERBOSE << " tab right ";
-      menu_items->addSequence(seq, "tab right");
+      menu_items.addSequence(seq, "tab right");
     }
-    menu_items->addSequence(seq, "menu exit");
+    menu_items.addSequence(seq, "menu exit");
     item = parent;
   } while (item != nullptr);
 
@@ -156,10 +154,10 @@ void MenuItem::setState(Sequence& seq, unsigned int new_val) {
     current_state = new_val;
   }
   if (is_selectable) {
-    menu_items->addSequence(seq, "menu select");
+    menu_items.addSequence(seq, "menu select");
   }
   if (confirm) {
-    menu_items->addSequence(seq, "confirm");
+    menu_items.addSequence(seq, "confirm");
   }
 
   // Increment the counter, if set
@@ -187,12 +185,12 @@ void MenuItem::setMenuOption(Sequence& seq, unsigned int new_val) {
   // scroll to the appropriate option
   PLOG_VERBOSE << "Setting option: difference = " << difference;
   for (int i = 0; i < difference; i++) {
-    menu_items->addSequence(seq, "option greater");
+    menu_items.addSequence(seq, "option greater");
   }
   for (int i = 0; i > difference; i--) {
-    menu_items->addSequence(seq, "option less");
+    menu_items.addSequence(seq, "option less");
   }
   if (confirm) {
-    menu_items->addSequence(seq, "confirm");
+    menu_items.addSequence(seq, "confirm");
   }
 }

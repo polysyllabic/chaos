@@ -182,6 +182,9 @@ namespace Chaos {
      */
     ControllerInputTable signal_table;
 
+    void makeMenu(toml::table& config);
+    void addMenuItem(toml::table& config);
+
   };
 
 };

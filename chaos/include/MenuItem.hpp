@@ -111,7 +111,7 @@ namespace Chaos {
    */
   class MenuItem : std::enable_shared_from_this<MenuItem> {
   protected:
-    std::shared_ptr<MenuInterface> menu_items;
+    MenuInterface& menu_items;
 
     std::string name;
     /**
@@ -211,7 +211,7 @@ namespace Chaos {
      * \param grd Guard for item
      * \param cnt Associated counter for item
      */
-    MenuItem(std::shared_ptr<MenuInterface> menu, std::string name, short off, short tab,
+    MenuItem(MenuInterface& menu, std::string name, short off, short tab,
              short initial, bool hide, bool opt, bool sel, bool conf,
              std::shared_ptr<MenuItem> par,
              std::shared_ptr<MenuItem> grd,

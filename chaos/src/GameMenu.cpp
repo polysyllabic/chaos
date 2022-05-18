@@ -68,117 +68,7 @@ int GameMenu::initialize(toml::table& config, std::shared_ptr<SequenceTable> seq
     PLOG_ERROR << "No menu layout found!";
     return 1;
   }
-  // Menu layout
-  toml::array* arr = (*menu_list)["layout"].as_array();
-  if (! arr) {
-    ++errors;
-    PLOG_ERROR << "Menu layout must be in an array.";
-  }
-  for (toml::node& elem : *arr) {
-    toml::table* m = elem.as_table();
-    if (m) {
-      errors += addMenuItem(*m);
-    } else {
-      ++errors;
-      PLOG_ERROR << "Each menu-item definition must be a table.";
-    }
-  }
-  return errors;
-}
-
-int GameMenu::addMenuItem(toml::table& config) {
-  int errors = 0;
-
-  TOMLUtils::checkValid(config, std::vector<std::string>{"name", "type", "offset", "tab",
-                        "initialState", "parent", "guard", "hidden", "counter", "counterAction"});
-
-  std::optional<std::string> entry_name = config["name"].value<std::string>();
-  if (! entry_name) {
-    PLOG_ERROR << "Menu item missing required name field";
-    return 1;
-  }
-
-  std::optional<std::string> menu_type = config["type"].value<std::string>();
-  if (! menu_type) {
-    PLOG_ERROR << "Menu item definition lacks required 'type' parameter.";
-    return 1;
-  }
-
-  if (*menu_type != "option" && *menu_type == "select" && *menu_type != "menu") {
-    PLOG_ERROR << "Menu type '" << *menu_type << "' not recognized.";
-    return 1;
-  }
-
-  bool opt = (*menu_type == "option" || *menu_type == "select");
-  bool sel = (*menu_type == "select" || *menu_type == "menu");
-
-  PLOG_VERBOSE << "Adding menu item '" << *entry_name << "' of type " << *menu_type;
-
-  if (! config.contains("offset")) {
-    PLOG_WARNING << "Menu item '" << config["name"] << "' missing offset. Set to 0.";
-  }
-  short off = config["offset"].value_or(0);
-  short tab = config["tab"].value_or(0);
-  short initial = config["initialState"].value_or(0);
-  bool hide = config["hidden"].value_or(false);
-
-  PLOG_VERBOSE << "-- offset = " << off << "; tab = " << tab <<
-      "; initial_state = " << initial << "; hidden = " << hide;
-
-  std::shared_ptr<MenuItem> parent;
-  try {
-    PLOG_VERBOSE << "checking parent";
-    parent = getMenuItem(config, "parent");
-  } catch (const std::runtime_error& e) {
-    ++errors;
-    PLOG_ERROR << e.what();
-  }
-
-  std::shared_ptr<MenuItem> guard;
-  try {
-    PLOG_VERBOSE << "checking guard";
-    guard = getMenuItem(config, "guard");
-  } catch (const std::runtime_error& e) {
-    ++errors;
-    PLOG_ERROR << e.what();
-  }
-
-  std::shared_ptr<MenuItem> counter;
-  try {
-    PLOG_VERBOSE << "checking sibling";
-    counter = getMenuItem(config, "counter");
-  } catch (const std::runtime_error& e) {
-    ++errors;
-    PLOG_ERROR << e.what();
-  }
-
-  // CounterAction ignored for now
-/* 
-  CounterAction action = CounterAction::NONE;
-  std::optional<std::string> action_name = config["counterAction"].value<std::string>();  
-  if (action_name) {
-    if (*action_name == "reveal") {
-      action = CounterAction::REVEAL;
-    } else if (*action_name == "zeroReset") {
-      action = CounterAction::ZERO_RESET;
-    } else if (*action_name != "none") {
-      throw std::runtime_error("Unknown counterAction type: " + *action_name);
-    }
-  } */
-
-  bool confirm = config["confirm"].value_or(false);
-
-  PLOG_VERBOSE << "constructing menu item";
-  assert(getptr());
-  try {
-    std::shared_ptr<MenuItem> m = std::make_shared<MenuItem>(getptr(), *entry_name,
-      off, tab, initial, hide, opt, sel, confirm, parent, guard, counter);
- 	  menu.try_emplace(*entry_name, m);
-  } catch (const std::runtime_error& e) {
-    ++errors;
-    PLOG_ERROR << "In definition for MenuItem '" << *entry_name << "': " << e.what(); 
-  }
-  return errors;
+  return 0;
 }
 
 std::shared_ptr<MenuItem> GameMenu::getMenuItem(const std::string& name) {
@@ -255,3 +145,7 @@ void GameMenu::addSelectDelay(Sequence& sequence) {
   defined_sequences->addDelay(sequence, select_delay);
 }
 
+bool GameMenu::insertMenuItem(std::string& name, std::shared_ptr<MenuItem> new_item) {
+  auto [it, result] = menu.try_emplace(name, new_item);
+  return result;
+}
