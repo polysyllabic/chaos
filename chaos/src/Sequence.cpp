@@ -125,5 +125,14 @@ bool Sequence::empty() {
   return events.empty();
 }
 
+void Sequence::setPressTime(unsigned int time) {
+  PLOG_VERBOSE << "Setting button press time to " << time;
+  press_time = time;
+}
+
+void Sequence::setReleaseTime(unsigned int time) {
+  PLOG_VERBOSE << "Setting button release time to " << time;
+  release_time = time;
+}
 
 

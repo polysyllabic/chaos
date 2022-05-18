@@ -56,8 +56,8 @@ namespace Chaos {
   public:
     Sequence(Controller& c);
 
-    static void setPressTime(unsigned int time) { press_time = time; }
-    static void setReleaseTime(unsigned int time) { release_time = time; }
+    static void setPressTime(unsigned int time);
+    static void setReleaseTime(unsigned int time);
 
     /**
      * \brief Directly add an individual event to the sequence stack
@@ -129,7 +129,6 @@ namespace Chaos {
      * \return false if sequence is still in progress
      */
     bool sendParallel(double sequenceTime);
-
     
   };
 

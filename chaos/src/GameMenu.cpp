@@ -36,7 +36,10 @@
 using namespace Chaos;
 
 int GameMenu::initialize(toml::table& config, std::shared_ptr<SequenceTable> sequences) {
+  PLOG_VERBOSE << "Initializing menu";
   defined_sequences = sequences;
+  assert(defined_sequences);
+
   int errors = 0;
   toml::table* menu_list = config["menu"].as_table();
   if (! config.contains("menu")) {
