@@ -19,7 +19,6 @@
  */
 #pragma once
 #include <deque>
-#include <array>
 #include <memory>
 
 #include <mogi/thread.h>
@@ -27,6 +26,7 @@
 
 #include "config.hpp"
 #include "DeviceEvent.hpp"
+#include "ControllerInjector.hpp"
 #include "ControllerState.hpp"
 #include "signals.hpp"
 #include "Touchpad.hpp"
@@ -37,44 +37,22 @@ namespace Chaos {
   class ControllerInput;
   class GameCommand;
 
-  class ControllerInjector  {
-  public:
-    /**
-     * Sniff the input and pass/modify it on way to the output.
-     */
-    virtual bool sniffify(const DeviceEvent& input, DeviceEvent& output) = 0;
-  };
-
   /**
-   * Class to manage the gamepad controller.
+   * \brief Abstract class to manage the gamepad controller.
    *
-   * Since this is a unique hardware device, we use Scott Meyers's technique of creating a global
-   * object with local static initialization to ensure it is only created once and is properly
-   * initialized on the first access.
    */
-  class Controller : public EndpointObserver, public Mogi::Thread {
-  private:
-    std::deque<std::array<unsigned char,64>> bufferQueue;
-	
-    //ChaosUhid* chaosHid;
-	
-    // Main purpose of this Mogi::Thread is to handle DeviceEvent queue
-    void doAction();
-
-    // overloaded from EndpointObserver
-    void notification(unsigned char* buffer, int length);
-    
-    RawGadgetPassthrough mRawGadgetPassthrough;
-    
+  class Controller {
   protected:
-    
-    ControllerState* mControllerState;
 
-    std::deque<DeviceEvent> deviceEventQueue;
-	
+ 	  // based on DS4 and Dualsense sizes
+	  std::deque<std::array<unsigned char,64>> deviceEventQueue;
+
+    virtual bool applyHardware(const DeviceEvent& event) = 0;
+
     void storeState(const DeviceEvent& event);
-	
+
     void handleNewDeviceEvent(const DeviceEvent& event);
+
 	
     /**
      * Database for tracking current button states:
@@ -118,7 +96,7 @@ namespace Chaos {
      * 
      * \param event New event to go to the console
      */
-    void applyEvent(const DeviceEvent& event) { storeState(event); }
+    void applyEvent(const DeviceEvent& event);
     
     /**
      * \brief Test if event matches a specific input signal
@@ -149,9 +127,6 @@ namespace Chaos {
     
     void addInjector(ControllerInjector* injector);
 
-    //bool touchpadActive() { return touchpad.isActive(); }
-    //void touchpadClearActive() { touchpad.clearActive(); }
-    //void setTouchpadActive(bool state) { touchpad.setActive(state); }
     
   };
 

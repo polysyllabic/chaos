@@ -43,8 +43,8 @@ int GameMenu::initialize(toml::table& config, std::shared_ptr<SequenceTable> seq
   int errors = 0;
   toml::table* menu_list = config["menu"].as_table();
   if (! config.contains("menu")) {
-    ++errors;
     PLOG_ERROR << "No 'menu' table found in configuration file";
+    return 1;
   }
 
   // Timing parameters
@@ -64,11 +64,15 @@ int GameMenu::initialize(toml::table& config, std::shared_ptr<SequenceTable> seq
   hide_guarded = (*menu_list)["hide_guarded"].value_or(false);
   PLOG_VERBOSE << "menu hide_guarded = " << hide_guarded;
 
+  if (! menu_list->contains("layout")) {
+    PLOG_ERROR << "No menu layout found!";
+    return 1;
+  }
   // Menu layout
   toml::array* arr = (*menu_list)["layout"].as_array();
   if (! arr) {
     ++errors;
-    throw std::runtime_error("Menu layout must be in an array.");
+    PLOG_ERROR << "Menu layout must be in an array.";
   }
   for (toml::node& elem : *arr) {
     toml::table* m = elem.as_table();

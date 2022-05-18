@@ -120,8 +120,10 @@ add_executable(chaos include/config.hpp
   include/CommandSender.hpp
 	include/Configuration.hpp
   include/Controller.hpp
+  include/ControllerInjector.hpp
   include/ControllerInput.hpp
   include/ControllerInputTable.hpp
+  include/ControllerRaw.hpp
 	include/ControllerState.hpp
   include/CooldownModifier.hpp
   include/DelayModifier.hpp
@@ -164,6 +166,7 @@ add_executable(chaos include/config.hpp
 	src/Controller.cpp
   src/ControllerInput.cpp
   src/ControllerInputTable.cpp
+  src/ControllerRaw.cpp
 	src/ControllerState.cpp
   src/CooldownModifier.cpp
   src/DelayModifier.cpp

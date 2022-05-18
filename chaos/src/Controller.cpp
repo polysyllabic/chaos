@@ -31,64 +31,6 @@ using namespace Chaos;
 
 Controller::Controller() {
   memset(controllerState, 0, sizeof(controllerState));
-  PLOG_DEBUG << "Initializing controller";
-  this->setEndpoint(0x84);	// Works for both dualshock4 and dualsense
-  mRawGadgetPassthrough.addObserver(this);
-	
-  mRawGadgetPassthrough.initialize();
-  mRawGadgetPassthrough.start();
-	
-  while (!mRawGadgetPassthrough.readyProductVendor()) {
-    usleep(10000);
-  }
-	
-  mControllerState = ControllerState::factory(mRawGadgetPassthrough.getVendor(), mRawGadgetPassthrough.getProduct());
-  //chaosHid = new ChaosUhid(mControllerState);
-  //chaosHid->start();
-	
-  if (mControllerState == nullptr) {
-    PLOG_ERROR << "ERROR!  Could not build a ControllerState for vendor=0x"
-	       << std::setfill('0') << std::setw(4) << std::hex << mRawGadgetPassthrough.getVendor()
-	       << " product=0x" << std::setfill('0') << std::setw(4) << std::hex << mRawGadgetPassthrough.getProduct();
-    exit(EXIT_FAILURE);
-  }
-}
-
-void Controller::doAction() {
-  if (deviceEventQueue.size() > 0) {
-    PLOG_VERBOSE << "Queue length = " << deviceEventQueue.size();
-  }
-  while (!bufferQueue.empty()) {
-    lock();
-    std::array<unsigned char, 64> bufferFront = bufferQueue.front();
-    bufferQueue.pop_front();
-    unlock();
-		
-    // First convert the incoming buffer into a device event. A buffer can contain multiple events.
-    std::vector<DeviceEvent> deviceEvents;
-    mControllerState->getDeviceEvents(bufferFront.data(), 64, deviceEvents);
-		
-    for (std::vector<DeviceEvent>::iterator it=deviceEvents.begin();
-	 it != deviceEvents.end();
-	 it++) {
-      DeviceEvent& event = *it;
-      handleNewDeviceEvent(event);
-    }
-    pause();
-  }
-}
-
-void Controller::notification(unsigned char* buffer, int length) {
-	
-  lock();
-  bufferQueue.push_back( *(std::array<unsigned char, 64>*) buffer);
-  unlock();
-	
-  resume();	// kick off the thread if paused
-	
-  // This is our only chance to intercept the data.
-  // Take the mControllerState and replace the provided buffer:
-  mControllerState->applyHackedState(buffer, controllerState);
 }
 
 short Controller::getState(std::shared_ptr<ControllerInput> signal) {
@@ -116,7 +58,7 @@ void Controller::handleNewDeviceEvent(const DeviceEvent& event) {
 	
   // Is our event valid?  If so, send the chaos modified data:
   if (validEvent) {
-    storeState(updatedEvent);
+    applyEvent(updatedEvent);
   } else {
     PLOG_VERBOSE << "Event with id " << event.id << " was NOT applied\n";
   }	
@@ -145,13 +87,13 @@ void Controller::setOff(std::shared_ptr<GameCommand> command) {
     break;
   case ControllerSignalType::HYBRID:
     event = {0, 0, TYPE_BUTTON, command->getInput()->getID()};
-    storeState(event);
+    applyEvent(event);
     event = {0, JOYSTICK_MIN, TYPE_AXIS, command->getInput()->getHybridAxis()};
     break;
   default:
     event = {0, 0, TYPE_AXIS, command->getInput()->getID()};
   }
-  storeState(event);
+  applyEvent(event);
 }
 
 // Send a new event to turn the command to its maximum value.
@@ -163,11 +105,18 @@ void Controller::setOn(std::shared_ptr<GameCommand> command) {
     break;
   case ControllerSignalType::HYBRID:
     event = {0, 1, TYPE_BUTTON, command->getInput()->getID()};
-    storeState(event);
+    applyEvent(event);
     event = {0, JOYSTICK_MAX, TYPE_AXIS, command->getInput()->getHybridAxis()};
     break;
   default:
     event = {0, JOYSTICK_MAX, TYPE_AXIS, command->getInput()->getID()};
   }
-  storeState(event);
+  applyEvent(event);
+}
+
+void Controller::applyEvent(const DeviceEvent& event) {
+	if (!applyHardware(event)) {
+		return;
+	}
+	storeState(event);
 }

@@ -25,7 +25,7 @@
 #include "config.hpp"
 #include "Configuration.hpp"
 #include "ControllerInput.hpp"
-#include "Controller.hpp"
+#include "ControllerRaw.hpp"
 #include "EngineInterface.hpp"
 #include "ChaosEngine.hpp"
 
@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
   std::string configfile = (argc > 1) ? argv[1] : chaos_config.getGameFile();
 
   // Configure the controller
-  Controller controller;
+  ControllerRaw controller;
   controller.start();
 
   // Start the engine
