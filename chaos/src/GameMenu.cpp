@@ -152,6 +152,8 @@ int GameMenu::addMenuItem(toml::table& config) {
     PLOG_ERROR << e.what();
   }
 
+  // CounterAction ignored for now
+/* 
   CounterAction action = CounterAction::NONE;
   std::optional<std::string> action_name = config["counterAction"].value<std::string>();  
   if (action_name) {
@@ -162,12 +164,12 @@ int GameMenu::addMenuItem(toml::table& config) {
     } else if (*action_name != "none") {
       throw std::runtime_error("Unknown counterAction type: " + *action_name);
     }
-  }
+  } */
 
   bool confirm = config["confirm"].value_or(false);
 
   PLOG_VERBOSE << "constructing menu item";
-  
+  assert(getptr());
   try {
     std::shared_ptr<MenuItem> m = std::make_shared<MenuItem>(getptr(), *entry_name,
       off, tab, initial, hide, opt, sel, confirm, parent, guard, counter);

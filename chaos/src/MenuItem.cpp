@@ -31,10 +31,12 @@ MenuItem::MenuItem(std::shared_ptr<MenuInterface> menu, std::string mname, short
                    std::shared_ptr<MenuItem> par,
                    std::shared_ptr<MenuItem> grd,
                    std::shared_ptr<MenuItem> cnt) : 
-                   menu_items{menu}, name{mname}, 
+                   name{mname}, 
                    offset{off}, tab_group{tab}, default_state{initial}, 
                    hidden{hide}, is_option{opt}, is_selectable{sel}, confirm{conf},
                    parent{par}, guard{grd}, sibling_counter{cnt} {
+  menu_items = menu;
+  assert(menu_items);
   current_state = default_state;
 }
 
