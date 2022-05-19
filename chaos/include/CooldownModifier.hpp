@@ -63,6 +63,7 @@ namespace Chaos {
     bool pressedState;
     double cooldownTimer;
     bool inCooldown;
+    
     /**
      * Time that the event is allowed before we block it
      */
@@ -71,10 +72,13 @@ namespace Chaos {
      * Time that the event is held in cooldown before re-enabled.
      */
     double time_off;
+
   public:
-    static const std::string mod_type;
     CooldownModifier(toml::table& config, EngineInterface* e);
-    
+
+    static const std::string mod_type;
+    const std::string& getModType() { return mod_type; }
+
     void begin();
     void update();
     void finish();

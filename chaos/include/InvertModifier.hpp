@@ -48,9 +48,11 @@ namespace Chaos {
   class InvertModifier : public Modifier::Registrar<InvertModifier> {
 
   public:
-    static const std::string mod_type;
     
     InvertModifier(toml::table& config, EngineInterface* e);
+
+    static const std::string mod_type;
+    const std::string& getModType() { return mod_type; }
 
     void begin();
     void finish();

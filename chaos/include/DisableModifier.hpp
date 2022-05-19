@@ -74,7 +74,6 @@ namespace Chaos {
     DisableFilter filter;
 
   public:
-    static const std::string mod_type;
     
     /**
      * \brief The public constructor
@@ -82,6 +81,9 @@ namespace Chaos {
      * object will contain the key/value pair 'type=disable'.
      */
     DisableModifier(toml::table& config, EngineInterface* e);
+
+    static const std::string mod_type;
+    const std::string& getModType() { return mod_type; }
 
     // virtual routines we need to override
     void begin();

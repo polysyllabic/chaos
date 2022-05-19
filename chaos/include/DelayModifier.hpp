@@ -55,15 +55,17 @@ namespace Chaos {
    *
    */
   class DelayModifier : public Modifier::Registrar<DelayModifier> {
-
   protected:
     std::queue<TimeAndEvent> eventQueue;
     double delayTime;
     
   public:
-    static const std::string mod_type;
     
     DelayModifier(toml::table& config, EngineInterface* e);
+
+    static const std::string mod_type;
+    const std::string& getModType() { return mod_type; }
+
     void begin();
     void update();
     bool tweak(DeviceEvent& event);

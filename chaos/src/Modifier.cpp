@@ -36,7 +36,6 @@
 
 using namespace Chaos;
 
-const std::string Modifier::mod_type = "modifier";
 
 void Modifier::initialize(toml::table& config, EngineInterface* e) {
   engine = e;
@@ -49,7 +48,7 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
   description = config["description"].value_or("Description not available");
 
   // The mod always belongs to the group of its type  
-  groups.insert(mod_type);
+  groups.insert(getModType());
   if (config.contains("groups")) {
     const toml::array* group_list = config.get("groups")->as_array();
     if (group_list && group_list->is_homogeneous(toml::node_type::string)) {

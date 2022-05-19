@@ -384,9 +384,10 @@ namespace Chaos {
 
   public:
     /**
-     * Name by which this mod type will be identified in the TOML file
+     * Get name of this mod type will be identified in the TOML file
      */
-    static const std::string mod_type;
+    virtual const std::string& getModType() = 0;
+
     /**
      * This constructor can only be invoked by the Registrar class
      */

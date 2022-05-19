@@ -34,9 +34,10 @@ namespace Chaos {
     std::vector<Modifier*> children;
     
   public:
-    static const std::string mod_type;
-    
     ParentModifier(toml::table& config, EngineInterface* e);
+
+    static const std::string mod_type;
+    const std::string& getModType() { return mod_type; }
 
     void begin();
 

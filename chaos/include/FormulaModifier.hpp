@@ -41,9 +41,11 @@ namespace Chaos {
     double period;
 
   public:
-    static const std::string mod_type;
-
     FormulaModifier(toml::table& config, EngineInterface* e);
+
+    static const std::string mod_type;
+    const std::string& getModType() { return mod_type; }
+
     void begin();
     void update();
   };
