@@ -47,12 +47,14 @@ int main(int argc, char** argv) {
   controller.start();
 
   // Start the engine
-  std::shared_ptr<ChaosEngine> engine = std::make_shared<ChaosEngine>(controller);
-  engine->setInterfaces();
-  engine->setGame(configfile);
-  engine->start();
+  // Note: we haven't made this a shared ptr because the sniffify library uses raw pointers and we
+  // need to register with that using "this" -- look into modifiying sniffify-usb
+  ChaosEngine engine = ChaosEngine(controller);
+  //engine.setInterfaces();
+  engine.setGame(configfile);
+  engine.start();
 
-  while(engine->keepGoing()) {
+  while(engine.keepGoing()) {
     // loop until we get an exit signal
     usleep(1000000);
   }

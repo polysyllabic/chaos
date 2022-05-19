@@ -33,7 +33,7 @@ using namespace Chaos;
 
 const std::string DisableModifier::mod_type = "disable";
 
-DisableModifier::DisableModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
+DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
   PLOG_VERBOSE << "constructing disable modifier";
   assert(config.contains("name"));
   assert(config.contains("type"));

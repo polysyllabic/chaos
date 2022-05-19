@@ -50,7 +50,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
     
-    MenuModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
+    MenuModifier(toml::table& config, EngineInterface* e);
     
     void begin();
     void finish();

@@ -100,7 +100,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
     
-    RemapModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
+    RemapModifier(toml::table& config, EngineInterface* e);
 
     void begin();
     void apply();

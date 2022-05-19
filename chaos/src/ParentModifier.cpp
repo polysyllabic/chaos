@@ -23,7 +23,7 @@ using namespace Chaos;
 
 const std::string ParentModifier::mod_type = "parent";
 
-ParentModifier::ParentModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
+ParentModifier::ParentModifier(toml::table& config, EngineInterface* e) {
   initialize(config, e);
  
 }

@@ -36,7 +36,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
     
-    ParentModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
+    ParentModifier(toml::table& config, EngineInterface* e);
 
     void begin();
 

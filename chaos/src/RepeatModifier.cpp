@@ -26,7 +26,7 @@ using namespace Chaos;
 
 const std::string RepeatModifier::mod_type = "repeat";
 
-RepeatModifier::RepeatModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
+RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "appliesTo", "disableOnStart", "disableOnFinish", "forceOn",
       "timeOn", "timeOff", "repeat", "cycleDelay", "blockWhileBusy", "beginSequence", "finishSequence", "unlisted"});

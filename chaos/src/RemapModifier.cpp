@@ -28,7 +28,7 @@ using namespace Chaos;
 
 const std::string RemapModifier::mod_type = "remap";
 
-RemapModifier::RemapModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
+RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "signals", "disableSignals", "remap", "random_remap", "unlisted"});

@@ -38,7 +38,7 @@ using namespace Chaos;
 
 const std::string Modifier::mod_type = "modifier";
 
-void Modifier::initialize(toml::table& config, std::shared_ptr<EngineInterface> e) {
+void Modifier::initialize(toml::table& config, EngineInterface* e) {
   engine = e;
   timer.initialize();
   parent = nullptr;

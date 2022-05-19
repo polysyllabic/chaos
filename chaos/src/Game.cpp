@@ -39,7 +39,7 @@ Game::Game(Controller& c) : controller{c}, signal_table{c} {
   sequences = std::make_shared<SequenceTable>();
 }
 
-bool Game::loadConfigFile(const std::string& configfile, std::shared_ptr<EngineInterface> engine) {
+bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine) {
   parse_errors = 0;
   toml::table configuration;
   try {

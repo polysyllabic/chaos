@@ -56,7 +56,7 @@ namespace Chaos {
      * 
      * If we're reloading a new game, an early fatal error will leave the old game's data intact
      */
-    bool loadConfigFile(const std::string& configfile, std::shared_ptr<EngineInterface> engine);
+    bool loadConfigFile(const std::string& configfile, EngineInterface* engine);
 
     /**
      * \brief Get the name of the game defined in the TOML file

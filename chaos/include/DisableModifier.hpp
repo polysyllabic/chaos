@@ -81,7 +81,7 @@ namespace Chaos {
      * \param config A TOML modifier-table object. If the constructor is properly dispatched, this
      * object will contain the key/value pair 'type=disable'.
      */
-    DisableModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
+    DisableModifier(toml::table& config, EngineInterface* e);
 
     // virtual routines we need to override
     void begin();

@@ -135,7 +135,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
 
-    SequenceModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
+    SequenceModifier(toml::table& config, EngineInterface* e);
     
     void begin();
     void update();

@@ -63,7 +63,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
     
-    DelayModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
+    DelayModifier(toml::table& config, EngineInterface* e);
     void begin();
     void update();
     bool tweak(DeviceEvent& event);

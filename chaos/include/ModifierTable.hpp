@@ -43,7 +43,7 @@ namespace Chaos {
      * \param engine Reference to the engine interface
      * \param use_menu If false, do not use menu modifiers
      */
-    int buildModList(toml::table& config, std::shared_ptr<EngineInterface> engine, bool use_menu);
+    int buildModList(toml::table& config, EngineInterface* engine, bool use_menu);
 
     /**
      * \brief Given the sequence name, get the object

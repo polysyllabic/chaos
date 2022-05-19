@@ -30,7 +30,7 @@ using namespace Chaos;
 
 const std::string CooldownModifier::mod_type = "cooldown";
 
-CooldownModifier::CooldownModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
+CooldownModifier::CooldownModifier(toml::table& config, EngineInterface* e) {
   
   TOMLUtils::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
 							  "beginSequence", "finishSequence", "appliesTo", "timeOn", "timeOff", "unlisted"});

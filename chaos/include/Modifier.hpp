@@ -184,7 +184,7 @@ namespace Chaos {
    *       // Initialization specific to this modifier goes here
    *     }
    */
-  struct Modifier : Factory<Modifier, toml::table&, std::shared_ptr<EngineInterface>>,
+  struct Modifier : Factory<Modifier, toml::table&, EngineInterface*>,
                     public std::enable_shared_from_this<Modifier> {
 
   private:
@@ -317,7 +317,7 @@ namespace Chaos {
      */
     double totalLifespan;
     
-    std::shared_ptr<EngineInterface> engine;
+    EngineInterface* engine;
 
     /**
      * \brief Common initialization.
@@ -336,7 +336,7 @@ namespace Chaos {
      * - gamestate
      *
      */
-    void initialize(toml::table& config, std::shared_ptr<EngineInterface> e);
+    void initialize(toml::table& config, EngineInterface* e);
 
     /**
      * \brief Send any sequence intended to issue when the mod initializes.

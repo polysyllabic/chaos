@@ -29,7 +29,7 @@ using namespace Chaos;
 
 const std::string SequenceModifier::mod_type = "sequence";
 
-SequenceModifier::SequenceModifier(toml::table& config, std::shared_ptr<EngineInterface> e) {
+SequenceModifier::SequenceModifier(toml::table& config, EngineInterface* e) {
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "beginSequence", "finishSequence",

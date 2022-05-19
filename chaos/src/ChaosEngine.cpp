@@ -35,13 +35,16 @@ ChaosEngine::ChaosEngine(Controller& c) : controller{c}, game{c}, pause{true}
 {
   time.initialize();
   jsonReader = jsonReaderBuilder.newCharReader();
-}
-
-void ChaosEngine::setInterfaces() {
   controller.addInjector(this);
   chaosInterface.addObserver(this);
 }
 
+/*
+void ChaosEngine::setInterfaces() {
+  controller.addInjector(this);
+  chaosInterface.addObserver(this);
+}
+*/
 void ChaosEngine::newCommand(const std::string& command) {
   PLOG_DEBUG << "Received command: " << command;
 	
@@ -70,7 +73,7 @@ void ChaosEngine::newCommand(const std::string& command) {
     lock();
     pause = true;
     // Load a new game file
-    game.loadConfigFile(root["game"].asString(), shared_from_this());
+    game.loadConfigFile(root["game"].asString(), this);
     unlock();
     reportGameStatus();
   }

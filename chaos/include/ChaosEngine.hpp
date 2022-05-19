@@ -39,8 +39,8 @@ namespace Chaos {
    * comes in, chaos engine adds the modifier to list of active modifiers. After a set amount of time,
    * the chaos engine will remove the modifier.
    */
-  class ChaosEngine : public CommandObserver, public ControllerInjector, public Mogi::Thread,
-                      public EngineInterface, public std::enable_shared_from_this<ChaosEngine> {
+  class ChaosEngine : public CommandObserver, public ControllerInjector,
+                      public Mogi::Thread, public EngineInterface {
   private:
     ChaosInterface chaosInterface;
 
@@ -91,14 +91,14 @@ namespace Chaos {
   public:
     ChaosEngine(Controller& c);
     
-    void setInterfaces();
+    //void setInterfaces();
 
     void loadConfigFile(const std::string& configfile, EngineInterface* engine);
 
     void sendInterfaceMessage(const std::string& msg);
 
     void setGame(const std::string& name) {
-      game.loadConfigFile(name, shared_from_this());
+      game.loadConfigFile(name, this);
     } 
 
     /**

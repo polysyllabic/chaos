@@ -90,7 +90,7 @@ namespace Chaos {
   public:
     static const std::string mod_type;
 
-    RepeatModifier(toml::table& config, std::shared_ptr<EngineInterface> e);
+    RepeatModifier(toml::table& config, EngineInterface* e);
     void begin();
     void update();
     void finish();
