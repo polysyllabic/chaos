@@ -583,7 +583,6 @@ layout = [
       #{name = "lock-on aim", type="option", parent="alternate controls", offset=-6, initialState=0},
       #{name = "lock-on strength", type="option", parent="alternate controls", guard="lock-on aim", offset=-5, initialState=10},
       {name = "arc throw lock-on", type="option", parent="alternate controls", offset=-4, initialState=0},
-      {name = "arc throw lock-on strength", type="option", parent="alternate controls", guard="arc-throw lock-on", offset=-3, initialState=10},
       {name = "auto weapon swap", type="option", parent="alternate controls", offset=-2, initialState=0},
       {name = "auto pick-up", type="option", parent="alternate controls", offset=-1, initialState=0},
 
@@ -1588,7 +1587,7 @@ name = "Show Pickups"
 description = "Enables the HUD that shows notifications on ammo, crafting, and other pickups"
 type = "menu"
 groups = [ "UI" ]
-menu_items = [{entry = "pickups notifications", value = 0 }]
+menu_items = [{entry = "pickup notifications", value = 0 }]
 
 [[modifier]]
 name = "Large Subtitles"
