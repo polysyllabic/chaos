@@ -58,19 +58,24 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
                  "threshold", "sensitivity"}, "remap config");
       
       std::shared_ptr<ControllerInput> from = lookupInput(*remapping, "from", true);
-      std::shared_ptr<ControllerInput> to = lookupInput(*remapping, "to", true);
-      std::shared_ptr<ControllerInput> to_neg = lookupInput(*remapping, "to_neg", false);
 
+      std::shared_ptr<ControllerInput> to = lookupInput(*remapping, "to", true);
+
+      std::shared_ptr<ControllerInput> to_neg = lookupInput(*remapping, "to_neg", false);
       // Check for unsupported remappings
       if (from->getType() == ControllerSignalType::DUMMY) {
-        PLOG_ERROR << "Cannot map from NONE or NOTHING";
+        throw std::runtime_error("Cannot map from NONE or NOTHING");
       } else if (from->getType() != to->getType()) {
-        if (to->getType() == ControllerSignalType::ACCELEROMETER || to_neg->getType() == ControllerSignalType::ACCELEROMETER ||
-            to->getType() == ControllerSignalType::GYROSCOPE || to_neg->getType() == ControllerSignalType::GYROSCOPE ||
-            to->getType() == ControllerSignalType::TOUCHPAD || to_neg->getType() == ControllerSignalType::TOUCHPAD) {
-          PLOG_ERROR << "Cross-type remapping not supported going to the accelerometer, gyroscope, or touchpad.";
+        if ((to->getType() == ControllerSignalType::ACCELEROMETER ||
+            to->getType() == ControllerSignalType::GYROSCOPE || 
+            to->getType() == ControllerSignalType::TOUCHPAD) || (to_neg && (
+            to_neg->getType() == ControllerSignalType::ACCELEROMETER || 
+            to_neg->getType() == ControllerSignalType::GYROSCOPE || 
+            to_neg->getType() == ControllerSignalType::TOUCHPAD
+            ))) {
+          throw std::runtime_error("Cross-type remapping not supported going to the accelerometer, gyroscope, or touchpad.");
         }
-        if (to_neg->getType() != ControllerSignalType::DUMMY && to_neg->getType() != to->getType()) {
+        if (to_neg && to_neg->getType() != ControllerSignalType::DUMMY && to_neg->getType() != to->getType()) {
           PLOG_WARNING << "The 'to' and 'to_neg' signals belong to different classes. Are you sure this is what you want?";
         }
       }
@@ -84,7 +89,7 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
       double thresh_proportion = (*remapping)["threshold"].value_or(0);
       short threshold = 1;
       if (thresh_proportion < 0 || thresh_proportion > 1) {
-        PLOG_ERROR << "Threshold proportion = " << thresh_proportion << ": must be between 0 and 1";
+        PLOG_WARNING << "Threshold proportion = " << thresh_proportion << ": must be between 0 and 1";
       } else {
         threshold = (int) (thresh_proportion * JOYSTICK_MAX);
       }
