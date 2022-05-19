@@ -201,7 +201,7 @@ int ControllerInputTable::initializeInputs(const toml::table& config, GameCondit
   int skew = config["remapping"]["touchpad_skew"].value_or(0);
   touchpad_skew = skew;
 
-  PLOG_DEBUG << "Touchpad scale = " << scale << "; condition = " << 
+  PLOG_VERBOSE << "Touchpad scale = " << scale << "; condition = " << 
                 (touchpad_condition ? touchpad_condition->getName() : "<none>") <<
                 "; scale_if = " << scale_if << "; skew = " << skew;
   return parse_errors;
