@@ -44,13 +44,13 @@ int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
     // Each node in the array should contain the definition for a modifier.
     // If there's a parsing error at this point, we skip that mod and keep going.
     for (toml::node& elem : *arr) {
-      PLOG_VERBOSE << "Processing mod #" << i << " elem: " << elem;
       toml::table* modifier = elem.as_table();
       if (! modifier) {
         ++parse_errors;
 	      PLOG_ERROR << "Modifier definition must be a table";
       	continue;
       }
+      PLOG_VERBOSE << "Processing mod #" << i;
       std::optional<std::string> mod_name = modifier->get("name")->value<std::string>();
       if (! mod_name) {
         ++parse_errors;
