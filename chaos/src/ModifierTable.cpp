@@ -50,14 +50,15 @@ int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
 	      PLOG_ERROR << "Modifier definition must be a table";
       	continue;
       }
+      assert (modifier);
       PLOG_VERBOSE << "Processing mod #" << i;
-      std::optional<std::string> mod_name = modifier->get("name")->value<std::string>();
+      std::optional<std::string> mod_name = (*modifier)["name"].value<std::string>();
       if (! mod_name) {
         ++parse_errors;
 	      PLOG_ERROR << "Modifier missing required 'name' field: ";
 	      continue;
       }
-      std::optional<std::string> mod_type = modifier->get("type")->value<std::string>();
+      std::optional<std::string> mod_type = (*modifier)["type"].value<std::string>();
       if (!mod_type) {
         ++parse_errors;
 	      PLOG_ERROR << "Modifier '" << *mod_name << " does not specify a type";
