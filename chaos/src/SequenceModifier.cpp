@@ -41,9 +41,11 @@ SequenceModifier::SequenceModifier(toml::table& config, EngineInterface* e) {
   repeat_sequence = e->createSequence(config, "repeatSequence", false);
 
   std::optional<std::string> for_all = config["blockWhileBusy"].value<std::string>();
-  lock_while_busy = (for_all && *for_all == "ALL");
-
-  engine->addGameCommands(config, "blockWhileBusy", block_while);
+  // Allow "ALL" as a shortcut to avoid enumerating all signals
+  lock_all = (for_all && *for_all == "ALL");
+  if (! lock_all) {
+    engine->addGameCommands(config, "blockWhileBusy", block_while);
+  }
 
   start_delay = config["startDelay"].value_or(0.0);
   repeat_delay = config["cycleDelay"].value_or(0.0);
@@ -110,7 +112,7 @@ void SequenceModifier::finish() {
 
 bool SequenceModifier::tweak(DeviceEvent& event) {
   if (sequence_state == SequenceState::IN_SEQUENCE) {
-    if (lock_while_busy) {
+    if (lock_all) {
       // drop all signals while in sequence
       return false;
     } else {

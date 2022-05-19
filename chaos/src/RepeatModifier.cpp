@@ -45,7 +45,12 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
   cycle_delay = config["cycleDelay"].value_or(0.0);
   force_on = config["forceOn"].value_or(false);
 
-  engine->addGameCommands(config, "blockWhileBusy", block_while);
+    // Allow "ALL" as a shortcut to avoid enumerating all signals
+  std::optional<std::string> for_all = config["blockWhileBusy"].value<std::string>();
+  lock_all = (for_all && *for_all == "ALL");
+  if (for_all && !lock_all) {
+    engine->addGameCommands(config, "blockWhileBusy", block_while);
+  }
 
   PLOG_VERBOSE << " - timeOn: " << time_on << "; timeOff: " << time_off << "; cycleDelay: " << cycle_delay;
   PLOG_VERBOSE << " - repeat: " << repeat_count << "; forceOn: " << (force_on ? "true" : "false");

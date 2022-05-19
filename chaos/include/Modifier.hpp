@@ -267,9 +267,17 @@ namespace Chaos {
     bool in_sequence;
 
     /**
-     * \brief If true, lock out all events listed in appliesTo while sending a sequence.
+     * \brief A flag to indicate that events should be dropped while sending a sequence.
+     * 
      */
     bool lock_while_busy;
+
+    /**
+     * \brief A flag to indicate that all events should be dropped in a lock condition
+     * 
+     * This allows us to skip traversing the vectors if the action applies to all signals
+     */
+    bool lock_all;
 
     /**
      * \brief If true, do not list the mod to the chatbot
