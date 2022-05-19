@@ -62,19 +62,17 @@ DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
   }
   filterThreshold = config["filterThreshold"].value_or(0);
   
-#ifndef NDEBUG
   switch (filter) {
   case DisableFilter::ALL:
-    PLOG_DEBUG << "Filter: ALL";
+    PLOG_VERBOSE << "Filter: ALL";
     break;
   case DisableFilter::ABOVE_THRESHOLD:
-    PLOG_DEBUG << "Filter: ABOVE";
+    PLOG_VERBOSE << "Filter: ABOVE";
     break;
   case DisableFilter::BELOW_THRESHOLD:
-    PLOG_DEBUG << "Filter: BELOW";
+    PLOG_VERBOSE << "Filter: BELOW";
   }
-  PLOG_DEBUG << "FilterThreshold: " << filterThreshold;
-#endif
+  PLOG_VERBOSE << "FilterThreshold: " << filterThreshold;
 }
 
 void DisableModifier::begin() {
