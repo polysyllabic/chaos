@@ -184,7 +184,7 @@ namespace Chaos {
    *       // Initialization specific to this modifier goes here
    *     }
    */
-  struct Modifier : Factory<Modifier, toml::table&, std::shared_ptr<EngineInterface>&>,
+  struct Modifier : Factory<Modifier, toml::table&, std::shared_ptr<EngineInterface>>,
                     public std::enable_shared_from_this<Modifier> {
 
   private:

@@ -31,12 +31,15 @@
 
 using namespace Chaos;
 
-ChaosEngine::ChaosEngine(Controller& c) : controller{c}, game{c}, pause(true)
+ChaosEngine::ChaosEngine(Controller& c) : controller{c}, game{c}, pause{true}
 {
-  controller.addInjector(this);
   time.initialize();
-  chaosInterface.addObserver(this);
   jsonReader = jsonReaderBuilder.newCharReader();
+}
+
+void ChaosEngine::setInterfaces() {
+  controller.addInjector(this);
+  chaosInterface.addObserver(this);
 }
 
 void ChaosEngine::newCommand(const std::string& command) {

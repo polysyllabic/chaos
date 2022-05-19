@@ -47,13 +47,13 @@ RepeatModifier::RepeatModifier(toml::table& config, std::shared_ptr<EngineInterf
 
   engine->addGameCommands(config, "blockWhileBusy", block_while);
 
-  PLOG_DEBUG << " - timeOn: " << time_on << "; timeOff: " << time_off << "; cycleDelay: " << cycle_delay;
-  PLOG_DEBUG << " - repeat: " << repeat_count << "; forceOn: " << (force_on ? "true" : "false");
+  PLOG_VERBOSE << " - timeOn: " << time_on << "; timeOff: " << time_off << "; cycleDelay: " << cycle_delay;
+  PLOG_VERBOSE << " - repeat: " << repeat_count << "; forceOn: " << (force_on ? "true" : "false");
   if (block_while.empty()) {
-    PLOG_DEBUG << " - blockWhileBusy: NONE";
+    PLOG_VERBOSE << " - blockWhileBusy: NONE";
   } else {
     for (auto& cmd : block_while) {
-      PLOG_DEBUG << " - blockWhileBusy:" << cmd->getName();
+      PLOG_VERBOSE << " - blockWhileBusy:" << cmd->getName();
     }
   }
 }

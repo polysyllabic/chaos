@@ -91,7 +91,9 @@ namespace Chaos {
   public:
     ChaosEngine(Controller& c);
     
-    void loadConfigFile(const std::string& configfile, std::shared_ptr<EngineInterface> engine);
+    void setInterfaces();
+
+    void loadConfigFile(const std::string& configfile, EngineInterface* engine);
 
     void sendInterfaceMessage(const std::string& msg);
 

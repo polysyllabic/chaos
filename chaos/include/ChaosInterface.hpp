@@ -20,6 +20,7 @@
 #pragma once
 #include <queue>
 #include <string>
+#include <memory>
 #include <mogi/thread.h>
 
 #include "CommandListener.hpp"

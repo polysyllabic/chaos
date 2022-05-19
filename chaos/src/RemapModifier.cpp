@@ -39,14 +39,6 @@ RemapModifier::RemapModifier(toml::table& config, std::shared_ptr<EngineInterfac
 
   disable_signals = config["disableSignals"].value_or(false);
 
-#ifndef NDEBUG
-  PLOG_VERBOSE << " - signals: ";
-  for (auto sig : signals) {
-    PLOG_VERBOSE << sig->getName();
-  }
-  PLOG_VERBOSE << " - disableSignals: " << disable_signals;
-#endif
-  
   // remap
   if (config.contains("remap")) {
     if (config.contains("random_remap")) {
@@ -56,6 +48,7 @@ RemapModifier::RemapModifier(toml::table& config, std::shared_ptr<EngineInterfac
     if (! remap_list) {
       throw std::runtime_error("Expect 'remap' to contain an array of remappings.");
     }
+    PLOG_VERBOSE << "Processing remap list";
     for (auto& elem : *remap_list) {
       const toml::table* remapping = elem.as_table();
       if (! remapping) {

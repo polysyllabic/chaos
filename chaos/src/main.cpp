@@ -48,6 +48,7 @@ int main(int argc, char** argv) {
 
   // Start the engine
   std::shared_ptr<ChaosEngine> engine = std::make_shared<ChaosEngine>(controller);
+  engine->setInterfaces();
   engine->setGame(configfile);
   engine->start();
 
