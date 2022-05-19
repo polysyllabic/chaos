@@ -582,8 +582,8 @@ layout = [
       #{name = "camera assist", type="option", parent="alternate controls", offset=-7, initialState=0},
       #{name = "lock-on aim", type="option", parent="alternate controls", offset=-6, initialState=0},
       #{name = "lock-on strength", type="option", parent="alternate controls", guard="lock-on aim", offset=-5, initialState=10},
-      {name = "arc-throw lock-on", type="option", parent="alternate controls", offset=-4, initialState=0},
-      {name = "arc-throw lock-on strength", type="option", parent="alternate controls", guard="arc-throw lock-on", offset=-3, initialState=10},
+      {name = "arc throw lock-on", type="option", parent="alternate controls", offset=-4, initialState=0},
+      {name = "arc throw lock-on strength", type="option", parent="alternate controls", guard="arc-throw lock-on", offset=-3, initialState=10},
       {name = "auto weapon swap", type="option", parent="alternate controls", offset=-2, initialState=0},
       {name = "auto pick-up", type="option", parent="alternate controls", offset=-1, initialState=0},
 
@@ -1567,7 +1567,7 @@ name = "No Hit Markers"
 description = "No feedback on connected shots"
 type = "menu"
 groups = [ "UI" ]
-menu_items = [{entry = "hit indicators", value = 0 }]
+menu_items = [{entry = "hit markers", value = 0 }]
 
 [[modifier]]
 name = "No Arc Throw Paths"
@@ -1581,14 +1581,14 @@ name = "No Health HUD"
 description = "The health and weapon HUD is disabled."
 type = "menu"
 groups = [ "UI" ]
-menu_items = [{entry = "no health hud", value = 0 }]
+menu_items = [{entry = "health bar", value = 0 }]
 
 [[modifier]]
 name = "Show Pickups"
 description = "Enables the HUD that shows notifications on ammo, crafting, and other pickups"
 type = "menu"
 groups = [ "UI" ]
-menu_items = [{entry = "show pickups", value = 0 }]
+menu_items = [{entry = "pickups notifications", value = 0 }]
 
 [[modifier]]
 name = "Large Subtitles"
@@ -1978,15 +1978,15 @@ menu_items = [{entry = "lock-on aim", value = 1 }]
 
 [[modifier]]
 name = "Aimbot Throwables"
-description = "Aimbot for throwables. Turns on lock-on Throwables"
+description = "Aimbot for throwables. Turns on lock-on throwables"
 type = "menu"
 groups = ["buff"]
 menu_items = [{entry = "arc throw lock-on", value = 1 }]
 
 [[modifier]]
 name = "Kleptomania"
-description = "Picking up items at inconvenient times. Turns on Auto Pick-Up"
-types = "menu"
+description = "Picking up items at inconvenient times. Turns on auto pick-up"
+type = "menu"
 groups = [ "buff" ]
 menu_items = [{entry = "auto pick-up", value = 1 }]
 
@@ -2057,7 +2057,7 @@ name = "Mute Dialogue"
 description = "Sorry Shannon :("
 type = "menu"
 groups = [ "sound" ]
-menu_items = [{entry = "dialog", value = 0 }]
+menu_items = [{entry = "dialogue", value = 0 }]
 
 [[modifier]]
 name = "Mono Audio"
