@@ -88,7 +88,6 @@ int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
         ++parse_errors;
 	      PLOG_ERROR << "Modifier '" << *mod_name << "' not created: " << e.what();
       }
-      PLOG_VERBOSE << "Errors so far: " << parse_errors;
       ++i;
     }
   }
