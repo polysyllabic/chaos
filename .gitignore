@@ -42,3 +42,4 @@ __pycache__
 # VS Code directory
 .vscode/*
 settings.json
+chaos/.vscode/settings.json

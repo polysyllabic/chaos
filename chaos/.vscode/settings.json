@@ -76,5 +76,8 @@
     "variant": "cpp",
     "*.ipp": "cpp",
     "regex": "cpp"
+  },
+  "search.exclude": {
+    "**/_deps": true
   }
 }
