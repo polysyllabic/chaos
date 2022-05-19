@@ -42,7 +42,7 @@ DelayModifier::DelayModifier(toml::table& config, EngineInterface* e) {
   if (delayTime <= 0) {
     throw std::runtime_error("Bad or missing delay time. The 'delay' parameter must be positive.");
   }
-  PLOG_DEBUG << " - delay: " << delayTime;
+  PLOG_VERBOSE << " - delay: " << delayTime;
 }
 
 void DelayModifier::begin() {
