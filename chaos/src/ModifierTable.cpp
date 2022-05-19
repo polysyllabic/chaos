@@ -44,7 +44,7 @@ int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
     // Each node in the array should contain the definition for a modifier.
     // If there's a parsing error at this point, we skip that mod and keep going.
     for (toml::node& elem : *arr) {
-      PLOG_VERBOSE << "Processing mod #" << i;
+      PLOG_VERBOSE << "Processing mod #" << i << " elem: " << elem;
       toml::table* modifier = elem.as_table();
       if (! modifier) {
         ++parse_errors;
@@ -87,7 +87,7 @@ int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
         ++parse_errors;
 	      PLOG_ERROR << "Modifier '" << *mod_name << "' not created: " << e.what();
       }
-      PLOG_VERBOSE << "Errors to far: " << parse_errors;
+      PLOG_VERBOSE << "Errors so far: " << parse_errors;
       ++i;
     }
   }

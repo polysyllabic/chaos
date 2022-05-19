@@ -140,7 +140,7 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
     if (*event == "sequence") {
       if (cmd) {
         std::shared_ptr<Sequence> new_seq = getSequence(*cmd);
-        if (new_seq) {
+        if (!new_seq) {
 	        throw std::runtime_error("Undefined sequence: " + *cmd);
         }
         seq->addSequence(new_seq);

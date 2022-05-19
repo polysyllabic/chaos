@@ -1395,7 +1395,7 @@ blockWhileBusy = "ALL"
 beginSequence = [
   { event = "press", command = "select weapon", delay = 1.0 },
   { event = "hold", command = "aiming", delay = 1.0 },
-  { event = "press", command ="fire/throw" },
+  { event = "press", command ="shoot" },
   { event = "release", command = "aiming" }
   ]
 

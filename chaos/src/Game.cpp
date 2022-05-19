@@ -139,7 +139,7 @@ void Game::makeMenu(toml::table& config) {
 
 void Game::addMenuItem(toml::table& config) {
 
-  TOMLUtils::checkValid(config, std::vector<std::string>{"name", "type", "offset", "tab",
+  TOMLUtils::checkValid(config, std::vector<std::string>{"name", "type", "offset", "tab", "confirm",
                         "initialState", "parent", "guard", "hidden", "counter", "counterAction"});
 
   std::optional<std::string> entry_name = config["name"].value<std::string>();
@@ -156,7 +156,7 @@ void Game::addMenuItem(toml::table& config) {
     return;
   }
 
-  if (*menu_type != "option" && *menu_type == "select" && *menu_type != "menu") {
+  if (*menu_type != "option" && *menu_type != "select" && *menu_type != "menu") {
     ++parse_errors;
     PLOG_ERROR << "Menu type '" << *menu_type << "' not recognized.";
     return;
@@ -227,6 +227,6 @@ void Game::addMenuItem(toml::table& config) {
   
   if (! menu.insertMenuItem(*entry_name, m)) {
     ++parse_errors;
-    PLOG_ERROR << "Duplicate definition if menu item '" << *entry_name; 
+    PLOG_ERROR << "Duplicate menu item: " << *entry_name; 
   }
 }
