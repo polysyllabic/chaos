@@ -1,3 +1,21 @@
+[tool.poetry]
+name = "chaosface"
+version = "2.0.0"
+description = "Chatbot and user interface for Twitch Controls Chaos"
+authors = ["polysyl <polysyltwitch@gmail.com>", "blegas78"]
+license = "GPL 3.0"
+readme = "README.rst"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+PySimpleGUIWeb = "*"
+PythonTwitchbotFramework = "*"
+pyzmq = "*"
+numpy = "*"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+
 [build-system]
-requires = ["setuptools >= 40.6.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

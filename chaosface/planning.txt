@@ -1,0 +1,48 @@
+New Chaos Bot Features
+
+Old bot framework (from scratch) -> PythonTwitchBotFramework
+Old GUI: flexx -> PySimpleGUIWeb (w/ Remi)
+
+Commands in chat:
+
+Info:
+!mod <mod name>: describe listed mod
+!mods: link to all available mods (to do: dynamically update)
+!mods active: list currently active mods
+!mods voting: list mods currently being voted on
+
+Mod Redemption
+!mods redeem <mod name>: Apply credit for 1 mod Redemption
+
+Cooldown length: time between redemptions? 15 minutes
+
+On redemption, what happens to mods selected by normal voting?
+- redeemed mod bumps mod off the list (when do apply it? immediate? after next vote closes?)
+- apply as an extra mod or part of the basic list
+ 
+Ways to get mod credits:
+- channel point redemption
+- bit donation
+- raffle
+- user with credit can give to another user
+- direct donation (but through which source(s)?)
+
+!mods credit: Tell user how many mod credits they have
+
+!addcredit <user> (admin only): add a mod credit to a user's account
+!addmod <mod name> (admin only): directly add mod
+
+Mod Selection Methods:
+- weighted probability by prior use
+- restrict within groups
+
+Voting Methods:
+1 - proportional (weighted random) voting (mod 1 gets 50%, mod 2 gets 40%, mod 3 gets 10%)
+2 - majority voting (ties broken randomly)
+- ranked order voting?
+
+UI adjustments:
+- dark mode
+- change colors of progress bars
+- text size
+- text color
