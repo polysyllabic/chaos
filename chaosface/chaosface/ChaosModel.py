@@ -1,3 +1,22 @@
+#-----------------------------------------------------------------------------
+# Twitch Controls Chaos (TCC)
+# Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+# file at the top-level directory of this distribution for details of the
+# contributers.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#-----------------------------------------------------------------------------
 import sys
 import logging
 import threading
@@ -28,10 +47,9 @@ class ChaosModel():
 		
 		now = datetime.now()
 		currentTime = now.strftime("%Y-%m-%d_%H:%M:%S")
-		self.votingLog = open("/home/pi/chaosLogs/votes-" + currentTime + ".log","a", buffering=1)
-		#self.modifierDataFile = open("/home/pi/chaosLogs/chaosModifierData.json","a", buffering=1)
+		self.votingLog = open("~/chaosLogs/votes-" + currentTime + ".log","a", buffering=1)
 		
-		self.openDatabase("/home/pi/chaosLogs/chaosModifierData.json")
+		self.openDatabase("~/chaosLogs/chaosModifierData.json")
 		
 		self.pause = True
 
@@ -236,7 +254,7 @@ class ChaosModel():
 		dTime = 1.0/relay.ui_rate
 		priorTime = beginTime - dTime
 		
-		self.timePerVote = 1.0	# This will be set by the C program
+		self.timePerVote = 1.0	# This will be set by the chaos engine
 				
 		self.totalVoteOptions = 3
 		self.votes = [0.0] * self.totalVoteOptions
@@ -249,7 +267,7 @@ class ChaosModel():
 		
 		self.proportionalVoting = True
 		
-		# allMods will be set by the C program
+		# allMods will be set by the chaos engine
 		self.allMods = list(self.modifierData.keys())
 		self.verifySoftmaxIntegrity()
 		
@@ -260,6 +278,7 @@ class ChaosModel():
 		
 		self.disconnectedFlashingTimer = 0.0
 		self.disconnectedFlashingToggle = True
+
 		while True:
 			time.sleep(1.0/relay.ui_rate)
 			priorTime = now
