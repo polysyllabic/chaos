@@ -1,5 +1,5 @@
 from flexx import flx
-from chaosface.config import relay
+from chaosface.configs.config import relay
 from views import VoteTimerView
 
 class VoteTimer(flx.PyWidget):

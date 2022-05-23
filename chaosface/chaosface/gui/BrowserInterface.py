@@ -1,11 +1,11 @@
 from flexx import flx, ui
-from chaosface.config import relay
+from chaosface.configs.config import relay
 
 import StreamerInterface
 import Settings
 import BotConfiguration
 
-class Interface(flx.PyWidget):
+class BrowserInterface(flx.PyWidget):
 
 	def init(self, relay):
 		self.relay = relay

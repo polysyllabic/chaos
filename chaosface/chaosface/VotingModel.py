@@ -1,23 +1,23 @@
-#-----------------------------------------------------------------------------
-# Twitch Controls Chaos (TCC)
-# Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
-# file at the top-level directory of this distribution for details of the
-# contributers.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-#-----------------------------------------------------------------------------
-import sys
+"""
+  Twitch Controls Chaos (TCC)
+  Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+  file at the top-level directory of this distribution for details of the
+  contributers.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
+
 import logging
 import threading
 import time
@@ -76,22 +76,11 @@ class ChaosModel():
     self.thread = threading.Thread(target=self.process)
     self.thread.start()
 
-  def process(self):
-    try:
-      # Start loop
-      print("Press CTRL-C to stop sample")
-      self._loop()
-    except KeyboardInterrupt:
-      print("Exiting\n")
-      sys.exit(0)
-
     
   def updateCommand(self, message ) -> None:
-    #logging.info("Recieved message from C++: " + str(message))
     y = json.loads(message)
 
     if "mods" in y:
-#      logging.info("Got new mods!")
       self.newAllMods = y["mods"]
       self.gotNewMods = True
       
@@ -101,7 +90,6 @@ class ChaosModel():
         
     
   def applyNewMod(self, mod):
-#    print("Winning mod: " + mod)
     toSend = {}
     toSend["winner"] = mod
     toSend["timePerModifier"] = relay.timePerModifier
@@ -301,8 +289,8 @@ class ChaosModel():
       #  except Exception as e:
       #    logging.info(e)
           
-      if not self.chatbot.isConnected():  # hack implementation of pausing
-        self.flashDisconnected()
+      #if not self.chatbot.isConnected():  # hack implementation of pausing
+      #  self.flashDisconnected()
               
       self.voteTime =  now - beginTime
         
@@ -402,66 +390,4 @@ class ChaosModel():
     except Exception as e:
       logging.info(e)
     
-    
-  def announceMods(self):
-    message = "The currently active mods are " + ", ".join(filter(None, self.activeMods))
-    self.chatbot.sendReply( message )
-    
-  def announceVoting(self):
-    message = "You can currently vote for the following mods: "
-    for num, mod in enumerate(self.currentMods, start=1):
-      message += " {}: {}.".format(num, mod)
-    self.chatbot.sendReply( message )
-    
-      
-  def checkMessages(self):
-    #if q.qsize() > 0:
-    needToUpdateVotes = False
-    while self.chatbot.messageQueue.qsize() > 0:
-      notice = self.chatbot.messageQueue.get()
-      
-      if notice["user"] == "tmi":
-        self.tmiChatText += "tmi: " + notice["message"] + "\r\n"
-        continue
           
-      message = notice["message"]
-      if message.isdigit():
-        messageAsInt = int(message) - 1
-        if messageAsInt >= 0 and messageAsInt < self.totalVoteOptions and not notice["user"] in self.votedUsers:
-          self.votedUsers.append(notice["user"])
-          self.votes[messageAsInt] += 1
-          needToUpdateVotes = True
-          continue
-                
-      command = message.split(" ",1)
-      firstWord = command[0]
-      if firstWord == "!mods":
-        self.chatbot.sendReply( "!mods: There are currently " + str(len(self.allMods)) + " modifiers!  See them all with descriptions here: https://github.com/blegas78/chaos/tree/main/docs/TLOU2 @" + notice["user"] )
-        continue
-              
-      if firstWord == "!mod":
-        if len(command) == 1:
-          message = "Usage: !mod <mod name>"
-          self.chatbot.sendReply( message )
-          continue
-        argument = (''.join(c for c in command[1] if c.isalnum())).lower()
-        message = "!mod: Unrecognized mod :("
-        
-        for key in self.modifierData.keys():
-          keyReduced = (''.join(c for c in key if c.isalnum())).lower()
-          if keyReduced == argument:
-            mod = self.modifierData[key]
-            if mod["desc"] == "":
-              message = "!mod " + key + ": No Description :("
-            else:
-              message = "!mod " + key + ": " + mod["desc"]
-            break
-        message += " @" + notice["user"]
-        self.chatbot.sendReply( message )
-        
-      if firstWord == "!activemods":
-        self.announceMods()
-        
-      if firstWord == "!nowvoting":
-        self.announceVoting()
-
