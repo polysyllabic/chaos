@@ -37,7 +37,7 @@ version.
 
 "[I liked watching your stream, those mods you have are awesome!](https://clips.twitch.tv/AggressiveSuspiciousWalrusFutureMan-RZRm3iwICUuD8rgY)" - Shannon Woodward aka [ShannonIsLive](https://www.twitch.tv/shannonislive), Voice Actress for Dina in TLOU2
 
-This is a collection of clips from streamers who have used chaos on their streams
+This is a collection of clips from streamers who have used chaos on their streams:
 
 [blegas78](https://www.twitch.tv/blegas78)
 - [Use Items Works Perfectly](https://www.twitch.tv/blegas78/clip/BeautifulNiceDurianGivePLZ-freRXy_EDPVJ1KcB)
@@ -192,7 +192,15 @@ This software tool is convenient to flash SD cards: [Raspberry Pi Imager](https:
 
 - Connect your SD card to your computer using an SD card reader
 - Select the SD card in the Raspberry Pi Imager
-- Under "Choose OS" select Raspberry Pi OS (other) -> Raspberry Pi OS Lite (32-bit)
+- Under "Choose OS" select Raspberry Pi OS (other) -> Raspberry Pi OS Lite (32-bit) [TODO: images for connection issues]
+- In advanced options:
+
+    - Set image customization options to "to always use":
+    - Check "Set hostname" and accept raspberrypi.local
+    - If you want SSH, check "Enable SSH" and choose your method of authentication. (If you don't know how to set up public-key authentication, you can stick with a password), but for security you should change the password from the default
+    - Check Set username and password. The original version of Chaos is hard-coded to assume the username is pi. Chaos unbound theoretically removes this restriction, but it has not been fully tested. For now, leave the username as 'pi'. Do change the password, though, if you've enabled SSH.
+    - If you want WAN, configure that as well.
+
 - Click on the "Write" button.  If writing fails, simply try it again.
 
 2. Install the SD card into your Pi. The slot for this is on the bottom side of the board.
@@ -244,10 +252,7 @@ may change later, but for now, you should not try to move it.
 
 TODO: Add alternate instructions for installation variants
 
-Running the install command above will take ~5 minutes. During the first part of this process, you
-may not see any progress messages for a while. This silent period occurs while git is downloading
-all the necessary files. Once the program starts compiling, you should see regular progress
-notifications.
+Running the install command above will take ~5 minutes.
 
 6. (Optional) If you want to access the Pi without needing to plug in a keyboard and monitor,
 you can set up SSH access. SSH is disabled by default. This will be particularly useful if you
@@ -383,10 +388,21 @@ Currently TLOU2 is the only supported game.  See TLOU2 specific instructions her
 ## Known Issues
 
 ### No USB Hot-Plugging
-If the controller becomes disconnected, the chaos service must be restarted or a reboot must be performed.  This is certainly annoying and can be fixed in code with an overhaul to usb-sniffify to allow hot-plugging.
+If the controller becomes disconnected, you must restart the chaos service or reboot the Pi. This is
+annoying, and needs to be fixed. An overhaul to usb-sniffify to allow hot-plugging is necessary.
 
 ### USB crashing or delaying inputs over time on PS5
-This can usually only currently be corrected with a reboot of the Pi.  dmesg will show many errors and they are fine, but eventually the kernel will prevent raw-gadget from running.  This may be a limitation of the raw-gadget Linux kernel module.
+This can usually only currently be corrected with a reboot of the Pi. A check of dmesg will show
+many errors, and they are generally fine, but eventually the kernel will prevent raw-gadget from
+running. This may be a limitation of the raw-gadget Linux kernel module.
+
+### Controller failing to connect
+The current version of usb-sniffify has significant issues connecting a controller when run on
+compiles with recent versions of the Raspberry Pi OS (images since Nov. 2021).  A symptom of this
+is that your console shows the "connect a contoller" screen, and when you press the PS button to
+sync the controller, the PlayStation shows the controller connecting momentarily and then announces
+it is disconnected.
+
 
 ## TODO List
 
@@ -524,6 +540,19 @@ This means that the controller has to connect over Bluetooth, using the same dev
 for its network connection. There may be performance issues going that route, including controller
 lag and disconnections, as well as chat/OBS overlay issues. Some of these performance issues may
 be reduced by running the chatbot on a different computer, to lighten the Pi's workload.
+
+*Why did Chaos stop working after I updated my Pi?*
+TCC uses a hacked version of the raw-gadget kernel module. If you updated the kernel to a newer
+version, the old kernel module will now be incompatible with the new one. You can manually
+rebuild the module with these commands:
+
+```bash
+cd
+cd chaos/raw-gadget-timeout/raw_gadget/
+make
+```
+
+To restart chaos 
 
 ## Contributors
 
