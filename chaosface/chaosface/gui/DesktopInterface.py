@@ -1,6 +1,6 @@
 import PySimpleGUI as sg
 
-from chaosface.configs.config import relay
+from configs import relay
 
 import StreamerInterface
 import Settings

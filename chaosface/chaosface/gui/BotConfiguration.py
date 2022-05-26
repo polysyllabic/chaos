@@ -1,5 +1,5 @@
 from flexx import flx
-from chaosface.configs.config import relay
+from chaosface.configs.globals import relay
 
 class BotConfiguration(flx.PyWidget):
 	def init(self, relay):

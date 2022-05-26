@@ -1,5 +1,5 @@
 from flexx import flx
-from chaosface.configs.config import relay
+from configs import relay
 
 class Votes(flx.PyWidget):
 	def init(self, relay):

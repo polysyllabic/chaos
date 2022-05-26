@@ -1,5 +1,5 @@
 from flexx import flx, ui
-from chaosface.configs.config import relay
+from configs import relay
 
 import StreamerInterface
 import Settings
@@ -7,13 +7,12 @@ import BotConfiguration
 
 class BrowserInterface(flx.PyWidget):
 
-	def init(self, relay):
-		self.relay = relay
+	def init(self):
 		with ui.TabLayout(style="background: #aaa; color: #000; text-align: center; foreground-color:#808080") as self.t:
 		#with StreamerInterfaceLayout() as self.s:
-			self.interface = StreamerInterface(self.relay, title='Interface')
-			self.settings = Settings(self.relay, title='Settings')
-			self.botSetup = BotConfiguration(self.relay, title='Bot Setup')
+			self.interface = StreamerInterface(relay, title='Interface')
+			self.settings = Settings(relay, title='Settings')
+			self.botSetup = BotConfiguration(relay, title='Bot Setup')
 
 	def dispose(self):
 		super().dispose()

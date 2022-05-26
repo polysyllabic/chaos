@@ -3,7 +3,7 @@ from flexx import flx, ui
 from views import ConnectionView, VoteTimerView
 from views import ActiveView
 
-from chaosface.configs.config import relay
+from chaosface.configs.globals import relay
 
 class StreamerInterfaceLayout(ui.HVLayout):
 	def init(self):

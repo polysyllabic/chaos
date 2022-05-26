@@ -134,21 +134,21 @@ By default, the chaos bot recognizes five user roles:
 - Admin: The streamer is automatically assigned this role
 - Moderator: Channel moderators are automatically assigned this role
 - VIP: Channel VIPs are automatically assigned this role
-- Subscriber
-- User: Anyone in chat
+- Subscriber: Channel subscribers are automatically assigned this role
+- User: This is the default role of anyone who can chat
 
 Each command is associated with one or more permission levels, so you can change who is allowed
 to execute which commands.
 
-You can manually add users to or remove them from roles, for example if you want to give one mod
-admin permissions.
+You can also manually add users to or remove them from roles, for example if you want to give one
+moderator admin permissions.
 
 
 Commands
 --------
 User commands
 * !chaos -- Get a general description of Twitch Controls Chaos
-* !chaos vote -- Get an explanation of the voting method
+* !chaos voting -- Get an explanation of the voting method
 * !mod <mod name> -- Describe the function of a specific mod
 * !mods -- Link to list of available mods
 * !mods active -- List currently active mods

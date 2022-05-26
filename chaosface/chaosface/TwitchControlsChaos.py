@@ -25,41 +25,39 @@ import logging
 
 from flexx import flx
 
-from config import relay
-from chatbot.ChaosBot import ChaosBot
+from config import model
+from chatbot import ChaosBot
 
 from gui import ActiveMods, VoteTimer, Votes, Interface
 
-import chaosface.ChaosModel as ChaosModel
+from ChaosController import ChaosController
 
 logging.basicConfig(level="INFO")
 
     
 def startFlexx():
-  flx.App(ActiveMods, relay).serve()
-  flx.App(VoteTimer, relay).serve()
-  flx.App(Votes, relay).serve()
-  flx.App(Interface, relay).serve()
-  
-  flx.create_server(host='0.0.0.0', port=relay.uiPort, loop=asyncio.new_event_loop())
+  if model.get_value('obs_overlays'):
+    flx.App(ActiveMods, model).serve()
+    flx.App(VoteTimer, model).serve()
+    flx.App(Votes, model).serve()
+  if model.get_value('use_gui'):
+    flx.App(Interface, model).serve()
+  flx.create_server(host='0.0.0.0', port=model.get_value('ui_port'), loop=asyncio.new_event_loop())
   flx.start()
 
 if __name__ == "__main__":
-  # for chat
-  logging.info("Starting chaos chatbot")
-  ChaosBot().run_threaded()
   
-  #startFlexx()
-  flexxThread = threading.Thread(target=startFlexx)
-  flexxThread.start()
+  # Start the UI
+  if model.get_value('obs_overlays') or model.get_value('use_gui'):
+    flexxThread = threading.Thread(target=startFlexx)
+    flexxThread.start()
 
-  # Voting model:
-  chaosModel = ChaosModel()
-  if (not chaosModel.process()):
-    chaosModel.print_help()
+  # The controller mediates communication between the engine and the chatbot and ui
+  controller = ChaosController()
+  asyncio.get_event_loop().create_task(ChaosController.loop())
       
-  logging.info("Stopping threads...")
-  
-  flx.stop()
-  flexxThread.join()
+  # Finally, start the chatbot
+  logging.info("Starting chaos chatbot")
+  ChaosBot().run()
+
 

@@ -1,6 +1,6 @@
 from flexx import flx
 
-from chaosface.configs.config import relay
+from chaosface.configs.globals import relay
 from views import ActiveView
 
 class ActiveMods(flx.PyWidget):
