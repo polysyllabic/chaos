@@ -26,8 +26,6 @@ from ModelObserver import ModelObserver
 from config import CHAOS_CONFIG_FILE
 from config.defaults import chaosDefaults
 
-import SoftMax
-
 class ChaosModel(ModelSubject):
   _observers: List[ModelObserver] = []
 
@@ -41,6 +39,8 @@ class ChaosModel(ModelSubject):
     self.game_name = 'NONE'
     self.game_config_errors = 0
     self.modifierData = {}
+    self.activeMods = [""] * self.get_value('active_modifiers')
+    self.activeModTimes = [0.0] * self.get_value('active_modifiers')
 
     # We don't set defaults for the chatbot here because the framework will generate its
     # own configuration file if one doesn't exist.
@@ -77,14 +77,22 @@ class ChaosModel(ModelSubject):
     if value < 1:
       logging.error("There must be at least one active modifier at a time")
       value = 1
-    self._set_value('active_modifiers', value)
+    if value != self.chaosConfig['active_modifiers']:
+      self.set_value('active_modifiers', value)
+      self.activeMods = [""] * value
+      self.activeModTimes = [0.0] * value
+
+  def newModifier(self, name: str) -> None:
+    finishedModIndex = self.activeModTimes.index(min(self.activeModTimes))
+    self.activeMods[finishedModIndex] = name
+    self.activeModTimes[finishedModIndex] = 1.0
 
   def setModifierTime(self, value: float) -> None:
     if value < 30.0:
       logging.error("Modifiers must be applied for at least 30 seconds each")
       value = 30.0
-    
-
+    self.set_value('modifier_time', value)
+  
   def openConfig(self, configFile) -> None:
     try:
       self.chaosConfigFile = configFile

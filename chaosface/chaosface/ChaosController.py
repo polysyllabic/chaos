@@ -26,6 +26,7 @@ import json
 import numpy as np
 import copy
 
+from twitchbot import Message
 from config import model
 from model import ModelObserver, SoftMax, Voting
 from communicator import ChaosCommunicator, CommunicatorObserver
@@ -66,10 +67,11 @@ class ChaosController(CommunicatorObserver, ModelObserver):
     toSend["timePerModifier"] = model.get_value('modifier_time')
     response = self.chaosCommunicator.sendMessage(json.dumps(toSend))
     logging.debug("Socket response: " + response)
+    model.newModifier(mod)
     
   def getNewVotingPool(self):
     # Ignore currently active mods
-    inactiveMods = set(np.setdiff1d(model.getModNames(), self.activeMods))
+    inactiveMods = set(np.setdiff1d(model.getModNames(), model.activeMods))
         
     self.currentMods = []
     for k in range(model.get_value('vote_options')):
@@ -136,11 +138,6 @@ class ChaosController(CommunicatorObserver, ModelObserver):
     message = self.chaosCommunicator.sendMessage(json.dumps(toSend))
     logging.debug("Socket response: " + message)
 
-    
-  def updateNumModifiers(self):
-    self.numMods = model.get_value('active_modifiers')
-    self.activeMods = [""] * self.numMods
-    self.activeModTimes = [0.0] * self.numMods
 
   async def loop(self):
     beginTime = time.time() #0.0
@@ -150,7 +147,6 @@ class ChaosController(CommunicatorObserver, ModelObserver):
 
     # Send a message to the engine asking for info about the game
     self.requestGameInfo()
-    self.updateNumModifiers()    
     
     self.pausedFlashingTimer = 0.0
     self.pausedFlashingToggle = True
@@ -179,6 +175,7 @@ class ChaosController(CommunicatorObserver, ModelObserver):
       for i in range(len(self.activeModTimes)):
         self.activeModTimes[i] -= dTime/Voting.adjustedModTime()
       
+      # When voting time has expired, pick a winner and select a new set for voting
       if self.voteTime >= Voting.timePerVote():
         beginTime = now
         
@@ -194,17 +191,12 @@ class ChaosController(CommunicatorObserver, ModelObserver):
         logString += newMod + "\n"
         logging.debug(logString)
         
-        # Update view:
-        if not (newMod.isdigit() and 0 < int(newMod) and int(newMod) < 7):
-          finishedModIndex = self.activeModTimes.index(min(self.activeModTimes))
-          self.activeMods[finishedModIndex] = newMod
-          self.activeModTimes[finishedModIndex] = 1.0
         
         self.getNewVotingPool()
 
         if model.get_value('announce_mods'):
-          model.announceMods()
-          model.announceVoting()
+          Message.reply(model.getActiveMods())
+          Message.reply(model.getVotableMods())
         
 
 

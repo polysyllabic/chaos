@@ -1,12 +1,24 @@
 import logging
 import numpy as np
+from typing import List
+
 from config import model 
 import ModelObserver
+import VotingSubject
+from VotingObserver import VotingObserver
 
-class Voting(ModelObserver):
+class Voting(VotingSubject, ModelObserver):
+  _observers: List[VotingObserver] = []
+
   def __init__(self):
     model.attach(self)
     self.resetVoteOptions()
+
+  def attach(self, observer: VotingObserver) -> None:
+    self._observers.append(observer)
+
+  def detach(self, observer: VotingObserver) -> None:
+    self._observers.remove(observer)
 
   # process the parameter changes that matter to us
   def modelUpdate(self, message):
