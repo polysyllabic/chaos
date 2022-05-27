@@ -59,4 +59,6 @@ chaosDefaults = {
   'mod_text_style': "color: white; text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;text-align:left;font-weight: bold; vertical-align: middle; line-height: 1.5; min-width:250px;",
   'title_text_style': "color:white;text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;text-align:center;font-weight: bold; vertical-align: bottom; line-height: 1.5; min-width:250px;",
   'progress_style': "background-color:#808080; foreground-color:#808080; color:#FFFFFF; border-color:#000000; border-radius:5px; width:1050px;",
+  'disconnect_dark_style': "color:white; text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black; text-align:center; font-weight: bold; vertical-align: middle; font-size:25px; min-width:250px; line-height: 1.1; background-color:black",
+  'disconnect_bright_style': "color:white; text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black; text-align:center; font-weight: bold; vertical-align: middle; font-size:25px; min-width:250px; line-height: 1.1; background-color:red",
 }

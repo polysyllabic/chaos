@@ -27,30 +27,26 @@ class ActiveView(flx.PyWidget):
     self.label = []
     self.progress = []
     
-    styleModText = model.get_value('mod_text_style')
-    styleTitleText = model.get_value('title_text_style')
-    styleProgress = model.get_value('progress_style')
-    
     with flx.VBox(flex=0):
       with flx.HFix(flex=1):
-        self.voteLabel = flx.Label(flex=0,style=styleTitleText, text="Active Mods" )
-        self.blankLabel = flx.Label(flex=0,style=styleTitleText, text=" ")
+        self.voteLabel = flx.Label(flex=0,style=model.get_value('title_text_style'), text="Active Mods" )
+        self.blankLabel = flx.Label(text=' ', flex=1) # take remaining space
         
       with flx.HFix(flex=1):
         with flx.VFix(flex=1):
-          for i in range(3):
-            self.progress.append(flx.ProgressBar(flex=2, value=self.model.relay.modTimes[i], text='', style=styleProgress) )
+          for i in range(model.get_value('active_modifiers')):
+            self.progress.append(flx.ProgressBar(flex=2, value=model.modTimes[i], text='', style=model.get_value('progress_style')) )
         with flx.VFix(flex=1):
-          for i in range(3):
-            self.label.append( flx.Label(flex=1,style=styleModText, text=self.model.relay.activeMods[i]) )
+          for i in range(model.get_value('active_modifiers')):
+            self.label.append(flx.Label(flex=1,style=model.get_value('mod_text_style'), text=model.activeMods[i]) )
 
 
-  #@flx.action
+  @flx.action
   def updateMods(self, activeMods):
     for i in range(model.get_value('active_modifiers')):
       self.label[i].set_text(activeMods[i])
     
-  #@flx.action
+  @flx.action
   def updateTime(self, modTimes):
     for i in range(model.get_value('active_modifiers')):
       self.progress[i].set_value(modTimes[i])

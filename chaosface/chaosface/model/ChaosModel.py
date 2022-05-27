@@ -23,7 +23,7 @@ from typing import List
 from os.path import normpath
 from ModelSubject import ModelSubject
 from ModelObserver import ModelObserver
-from config import CHAOS_CONFIG_FILE
+from config import CHAOS_CONFIG_FILE, CHATBOT_CONFIG_FILE
 from config.defaults import chaosDefaults
 
 class ChaosModel(ModelSubject):
@@ -42,10 +42,12 @@ class ChaosModel(ModelSubject):
     self.activeMods = [""] * self.get_value('active_modifiers')
     self.activeModTimes = [0.0] * self.get_value('active_modifiers')
 
-    # We don't set defaults for the chatbot here because the framework will generate its
-    # own configuration file if one doesn't exist.
-    self.chaosConfig = {}      
-    self.openConfig(normpath(CHAOS_CONFIG_FILE))
+    self.chaosConfigFile = normpath(CHAOS_CONFIG_FILE)
+    logging.info("Initializing ChaosModel with file " + self.chaosConfigFile)
+    self.chaosConfig = self.openConfig(self.chaosConfigFile)
+    self.botConfig = self.openConfig(CHATBOT_CONFIG_FILE)
+
+    # The chatbot generates its own configuration file automatically. We hook into it here
 
   def attach(self, observer: ModelObserver) -> None:
     self._observers.append(observer)
@@ -58,10 +60,28 @@ class ChaosModel(ModelSubject):
     for observer in self._observers:
       observer.modelUpdate(message)
 
+  def openConfig(self, configFile):
+    try:
+      with open(configFile) as json_data_file:
+        chaos_dict = json.load(json_data_file)
+    except Exception:
+      logging.error("Error opening " + configFile)
+      chaos_dict = {}
+    return chaos_dict
+
+  def saveConfig(self) -> None:
+    with open(self.chaosConfigFile, 'w') as outfile:
+      json.dump(self.chaosConfig, outfile)
+
+
   def get_value(self, attribute: str):
     if not self.chaosConfig.get(attribute):    
       self.chaosConfig[attribute] = chaosDefaults[attribute]
     return self.chaosConfig[attribute]
+
+  # No default for the bot values -- should there be?
+  def get_bot_value(self, attribute: str):
+    return self.botConfig[attribute]
 
   # Set value directly without notifying observers
   def _set_value(self, attribute: str, new_val) -> None:
@@ -93,20 +113,6 @@ class ChaosModel(ModelSubject):
       value = 30.0
     self.set_value('modifier_time', value)
   
-  def openConfig(self, configFile) -> None:
-    try:
-      self.chaosConfigFile = configFile
-      logging.info("Initializing ChaosModel with file " + self.chaosConfigFile)
-      with open(self.chaosConfigFile) as json_data_file:
-        self.chaosConfig = json.load(json_data_file)
-    except Exception:
-      logging.error("Error opening " + self.chaosConfigFile)
-      self.chaosConfig = {}
-
-  def saveConfig(self) -> None:
-    with open(self.chaosConfigFile, 'w') as outfile:
-      json.dump(self.chaosConfig, outfile)
-
   def initializeGameData(self, gamedata):
     self.game_name = gamedata["game"]
     if "errors" in gamedata:
