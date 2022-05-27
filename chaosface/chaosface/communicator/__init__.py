@@ -1,2 +1,3 @@
-from chaosface.communicator.ChaosObserver import ChaosObserver
-from chaosface.communicator.ChaosSubject import ChaosSubject
+from ChaosCommunicator import ChaosCommunicator
+from EngineObserver import EngineObserver
+from EngineSubject import EngineSubject

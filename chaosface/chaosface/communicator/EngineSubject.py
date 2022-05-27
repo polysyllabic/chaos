@@ -17,29 +17,31 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+from abc import ABC, abstractmethod
+import EngineObserver
 
-from flexx import flx
-from config import relay
+class EngineSubject(ABC):
+	"""
+	The Subject interface declares a set of methods for managing subscribers.
+	"""
 
-class VoteTimer(flx.PyWidget):
-	def init(self, relay):
-		self.relay = relay
-		self.voteTimerView = VoteTimerView(self)
-			
-	@relay.reaction('updateVoteTime')
-	def _updateVoteTime(self, *events):
-		for ev in events:
-			self.voteTimerView.updateTime(ev.value)
-		
-class VoteTimerView(flx.PyWidget):
-	def init(self, model):
-		super().init()
-		self.model = model
-		
-		styleTime = " background-color:#808080; foreground-color:#808080; color:#000000; border-color:#000000; border-radius:5px"
-		self.progressTime = flx.ProgressBar(flex=1, value=self.model.relay.voteTime, text='', style=styleTime)
-		
-	@flx.action
-	def updateTime(self, voteTime):
-		self.progressTime.set_value(voteTime)
+	@abstractmethod
+	def attach(self, observer: EngineObserver) -> None:
+		"""
+		Attach an observer to the subject.
+		"""
+		pass
 
+	@abstractmethod
+	def detach(self, observer: EngineObserver) -> None:
+		"""
+		Detach an observer from the subject.
+		"""
+		pass
+
+	@abstractmethod
+	def notify(self, message) -> None:
+		"""
+		Notify all observers about an event.
+		"""
+		pass

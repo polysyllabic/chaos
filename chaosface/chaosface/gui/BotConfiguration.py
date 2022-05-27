@@ -1,17 +1,37 @@
+
+"""
+  Twitch Controls Chaos (TCC)
+  Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+  file at the top-level directory of this distribution for details of the
+  contributers.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
 from flexx import flx
-from chaosface.config import relay
+from config import relay
 
 class BotConfiguration(flx.PyWidget):
 	def init(self, relay):
 		self.relay = relay
-		self.configurationView = ConfigurationView(self)
+		self.configurationView = BotConfigurationView(self)
 			
 	@relay.reaction('updateTmiResponse')
 	def _updateTmiResponse(self, *events):
 		for ev in events:
 			self.configurationView.updateTmiResponse(ev.value)
 
-class ConfigurationView(flx.PyWidget):
+class BotConfigurationView(flx.PyWidget):
 	def init(self, model):
 		super().init()
 		self.model = model
@@ -48,7 +68,11 @@ class ConfigurationView(flx.PyWidget):
 			flx.Label(flex=1,style="font-weight: bold; text-align:center", wrap=True, html="Twitch Chat Server Responses:" )
 			
 			with flx.VBox(minsize=450):
+#					flx.Widget(flex=1)
 				self.tmiResponse = flx.MultiLineEdit(flex=2, style="text-align:left; background-color:#CCCCCC;", text=self.model.relay.tmiResponse)
+#					self.tmiResponse = flx.Label(flex=2, style="text-align:left; background-color:#CCCCCC", wrap=True, text=self.model.relay.tmiResponse)
+#					flx.Widget(flex=1)
+			#flx.Widget(flex=1)
 			
 	@flx.reaction('submitButton.pointer_click')
 	def _button_clicked(self, *events):
@@ -74,4 +98,3 @@ class ConfigurationView(flx.PyWidget):
 	@flx.action
 	def updateTmiResponse(self, text):
 		self.tmiResponse.set_text(text)
-

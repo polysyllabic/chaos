@@ -17,29 +17,29 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
-from flexx import flx
+from flexx import flx, ui
 from config import relay
 
-class VoteTimer(flx.PyWidget):
+from gui import BotConfiguration, Settings, StreamerInterface
+
+class MainInterface(flx.PyWidget):
+
+#	CSS = """
+#    .flx-Widget {
+#	background: #0C0C0C;
+#    }
+#    """
 	def init(self, relay):
 		self.relay = relay
-		self.voteTimerView = VoteTimerView(self)
-			
-	@relay.reaction('updateVoteTime')
-	def _updateVoteTime(self, *events):
-		for ev in events:
-			self.voteTimerView.updateTime(ev.value)
-		
-class VoteTimerView(flx.PyWidget):
-	def init(self, model):
-		super().init()
-		self.model = model
-		
-		styleTime = " background-color:#808080; foreground-color:#808080; color:#000000; border-color:#000000; border-radius:5px"
-		self.progressTime = flx.ProgressBar(flex=1, value=self.model.relay.voteTime, text='', style=styleTime)
-		
-	@flx.action
-	def updateTime(self, voteTime):
-		self.progressTime.set_value(voteTime)
+		with ui.TabLayout(style="background: #aaa; color: #000; text-align: center; foreground-color:#808080") as self.t:
+		#with StreamerInterfaceLayout() as self.s:
+			self.interface = StreamerInterface(self.relay, title='Interface')
+			self.settings = Settings(self.relay, title='Settings')
+			self.botSetup = BotConfiguration(self.relay, title='Bot Setup')
 
+	def dispose(self):
+		super().dispose()
+		# ... do clean up or notify other parts of the app
+		self.interface.dispose()
+		self.settings.dispose()
+		self.botSetup.dispose()
