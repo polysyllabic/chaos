@@ -26,18 +26,18 @@ from datetime import datetime
 import math
 
 import numpy as np
-import zmq
+#import zmq
 import logging
 import threading
 
-from communicator.ChaosCommunicator import ChaosCommunicator
+from communicator import ChaosCommunicator
 from config import relay
 
 class ChaosModel():
 	def __init__(self, chatbot):
 		self.chatbot = chatbot
 		
-		self.context = zmq.Context()
+		#self.context = zmq.Context()
 		self.firstTime = True
 
 		#  Socket to talk to server
@@ -74,19 +74,9 @@ class ChaosModel():
 			json.dump(self.modifierData, outfile)
 
 	def start(self):
-		self.thread = threading.Thread(target=self.process)
+		self.thread = threading.Thread(target=self._loop)
 		self.thread.start()
 
-	def process(self):
-		try:
-			# Start loop
-			print("Press CTRL-C to stop sample")
-			self._loop()
-		except KeyboardInterrupt:
-			print("Exiting\n")
-			sys.exit(0)
-
-		return True
 		
 	def updateCommand(self, message ) -> None:
 		#logging.info("Recieved message from C++: " + str(message))

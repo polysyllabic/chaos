@@ -53,10 +53,7 @@ if __name__ == "__main__":
 
 	# Voting model
 	chaosModel = ChaosModel(chatbot)
-	if (not chaosModel.process()):
-			chaosModel.print_help()
-			
-	logging.info("Stopping threads...")
+	chaosModel.start()
 	
 	flx.stop()
 	flexxThread.join()
