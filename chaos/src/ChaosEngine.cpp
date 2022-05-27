@@ -78,17 +78,8 @@ void ChaosEngine::newCommand(const std::string& command) {
     reportGameStatus();
   }
 
-  if (root.isMember("report")) {
-    reportGameStatus();
-  }
-
-  if (root.isMember("modlist")) {
-    // Announce the mods to the chaos interface
-    std::string reply = game.getModList();
-    PLOG_DEBUG << "Json mod list = " << reply;
-    chaosInterface.sendMessage(reply);
-  }
-
+  // TODO: report available games
+  
   if (root.isMember("exit")) {
     keep_going = false;
   }
@@ -103,6 +94,7 @@ void ChaosEngine::reportGameStatus() {
   msg["errors"] = game.getErrors();
   msg["nmods"] = game.getNumActiveMods();
   msg["modtime"] = game.getTimePerModifier();
+  msg["mods"] = game.getModList();
   chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
   unlock();
 }
