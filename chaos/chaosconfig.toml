@@ -21,6 +21,9 @@ usleep_interval = 500
 # log_file: Name of the basic log file. Default = "chaos.log"
 log_file = "chaos.log"
 
+# overwrite_log: If true, we delete any existing log file when starting the program
+overwrite_log = true
+
 # log_verbosity: Level of message detail sent to the log file. Must be an integer from 0 to 6.
 # Higher numbers include all messages of the lower types.
 # 0 = NONE (logging disabled)

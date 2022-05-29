@@ -17,6 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <regex>
 #include <plog/Log.h>
 
 #include "ModifierTable.hpp"
@@ -58,6 +59,8 @@ int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
 	      PLOG_ERROR << "Modifier missing required 'name' field: ";
 	      continue;
       }
+      // regularize the name by removing any duplicate spaces
+      std::regex_replace(*mod_name, std::regex("[' ']{2,}"), " ");
       std::optional<std::string> mod_type = (*modifier)["type"].value<std::string>();
       if (!mod_type) {
         ++parse_errors;
