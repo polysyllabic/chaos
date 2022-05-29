@@ -20,26 +20,28 @@
 from flexx import flx, ui
 from config import relay
 
-from gui import BotConfiguration, Settings, StreamerInterface
+from .BotConfiguration import BotConfiguration
+from .Settings import Settings
+from .StreamerInterface import StreamerInterface
 
 class MainInterface(flx.PyWidget):
 
-#	CSS = """
+#  CSS = """
 #    .flx-Widget {
-#	background: #0C0C0C;
+#  background: #0C0C0C;
 #    }
 #    """
-	def init(self, relay):
-		self.relay = relay
-		with ui.TabLayout(style="background: #aaa; color: #000; text-align: center; foreground-color:#808080") as self.t:
-		#with StreamerInterfaceLayout() as self.s:
-			self.interface = StreamerInterface(self.relay, title='Interface')
-			self.settings = Settings(self.relay, title='Settings')
-			self.botSetup = BotConfiguration(self.relay, title='Bot Setup')
+  def init(self, relay):
+    self.relay = relay
+    with ui.TabLayout(style="background: #aaa; color: #000; text-align: center; foreground-color:#808080") as self.t:
+    #with StreamerInterfaceLayout() as self.s:
+      self.interface = StreamerInterface(self.relay, title='Interface')
+      self.settings = Settings(self.relay, title='Settings')
+      self.botSetup = BotConfiguration(self.relay, title='Bot Setup')
 
-	def dispose(self):
-		super().dispose()
-		# ... do clean up or notify other parts of the app
-		self.interface.dispose()
-		self.settings.dispose()
-		self.botSetup.dispose()
+  def dispose(self):
+    super().dispose()
+    # ... do clean up or notify other parts of the app
+    self.interface.dispose()
+    self.settings.dispose()
+    self.botSetup.dispose()

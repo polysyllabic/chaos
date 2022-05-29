@@ -1,3 +1,3 @@
-from ChaosCommunicator import ChaosCommunicator
-from EngineObserver import EngineObserver
-from EngineSubject import EngineSubject
+from .ChaosCommunicator import ChaosCommunicator
+from .ChaosCommunicator import EngineObserver
+from .ChaosCommunicator import EngineSubject

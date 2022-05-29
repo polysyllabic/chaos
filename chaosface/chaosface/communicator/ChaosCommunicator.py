@@ -19,13 +19,49 @@
 """
 
 # follows patterns from here: https://refactoring.guru/design-patterns/observer/python/example
-
 from abc import ABC, abstractmethod
 from typing import List
 import threading
 import zmq
-from communicator import EngineSubject
-from communicator import EngineObserver
+
+class EngineObserver(ABC):
+	"""
+	An observer for listening to events from the chaos engine
+	"""
+	
+	@abstractmethod
+	def updateCommand(self, message ) -> None:
+		"""
+		Process message from ZMQ
+		"""
+		pass
+
+
+class EngineSubject(ABC):
+	"""
+	The Subject interface declares a set of methods for managing subscribers.
+	"""
+
+	@abstractmethod
+	def attach(self, observer: EngineObserver) -> None:
+		"""
+		Attach an observer to the subject.
+		"""
+		pass
+
+	@abstractmethod
+	def detach(self, observer: EngineObserver) -> None:
+		"""
+		Detach an observer from the subject.
+		"""
+		pass
+
+	@abstractmethod
+	def notify(self, message) -> None:
+		"""
+		Notify all observers about an event.
+		"""
+		pass
 
 class ChaosCommunicator(EngineSubject):
 	_state: int = None

@@ -17,8 +17,13 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from ChaosRelay import ChaosRelay
+from pathlib import Path
+from .ChaosRelay import ChaosRelay
+
+CHAOS_PATH = Path.home().name
+CHAOS_LOG_FILE = Path(CHAOS_PATH, "chaosface.log").name
+CHAOS_CONFIG_FILE = Path(CHAOS_PATH, "config", "chaosConfig.json").name
 
 #  This is how Flexx API states that data passing should work
 relay = ChaosRelay()
-relay.openConfig("./chaosConfig.json")
+relay.openConfig(CHAOS_CONFIG_FILE)

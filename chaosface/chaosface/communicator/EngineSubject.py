@@ -18,7 +18,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from abc import ABC, abstractmethod
-import EngineObserver
+from communicator import EngineObserver
 
 class EngineSubject(ABC):
 	"""

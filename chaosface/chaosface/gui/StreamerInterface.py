@@ -19,55 +19,58 @@
 """
 from flexx import flx, ui
 from config import relay
-from gui import VoteTimerView, ActiveModsView, ConnectionView, PausedView
+from .VoteTimerView import VoteTimerView
+from .ActiveModsView import ActiveModsView
+from .ConnectionView import ConnectionView
+from .PausedView import PausedView
 
 class StreamerInterfaceLayout(ui.HVLayout):
-	def init(self):
-		self.set_flex(1)
-		self.set_orientation('v')
-		self.apply_style('background:#000000;')
+  def init(self):
+    self.set_flex(1)
+    self.set_orientation('v')
+    self.apply_style('background:#000000;')
 
 class StreamerInterface(flx.PyWidget):
 
-	def init(self, relay):
-		self.relay = relay
-		with StreamerInterfaceLayout() as self.s:
-			self.voteTimerView = VoteTimerView(self)
-			self.activeModsView = ActiveModsView(self)
-			self.connectionView = ConnectionView(self)
-			self.pausedView = PausedView(self)
-			
-	@relay.reaction('updateVoteTime')
-	def _updateVoteTime(self, *events):
-		for ev in events:
-			self.voteTimerView.updateTime(ev.value)
-			
-	@relay.reaction('updateModTimes')
-	def _updateModTimes(self, *events):
-		for ev in events:
-			self.activeModsView.updateTime(ev.value)
-			
-	@relay.reaction('updateActiveMods')
-	def _updateActiveMods(self, *events):
-		for ev in events:
-			self.activeModsView.updateMods(ev.value)
-			
-	@relay.reaction('updatePaused')
-	def _updatePaused(self, *events):
-		for ev in events:
-			self.pausedView.updatePaused(ev.value)
-			
-	@relay.reaction('updatePausedBrightBackground')
-	def _updatePausedBrightBackground(self, *events):
-		for ev in events:
-			self.pausedView.updatePausedBrightBackground(ev.value)
-			
-	@relay.reaction('updateConnected')
-	def _updateConnected(self, *events):
-		for ev in events:
-			self.connectionView.updateConnected(ev.value)
-			
-	@relay.reaction('updateConnectedBrightBackground')
-	def _updateConnectedBrightBackground(self, *events):
-		for ev in events:
-			self.connectionView.updateConnectedBrightBackground(ev.value)
+  def init(self, relay):
+    self.relay = relay
+    with StreamerInterfaceLayout() as self.s:
+      self.voteTimerView = VoteTimerView(self)
+      self.activeModsView = ActiveModsView(self)
+      self.connectionView = ConnectionView(self)
+      self.pausedView = PausedView(self)
+      
+  @relay.reaction('updateVoteTime')
+  def _updateVoteTime(self, *events):
+    for ev in events:
+      self.voteTimerView.updateTime(ev.value)
+      
+  @relay.reaction('updateModTimes')
+  def _updateModTimes(self, *events):
+    for ev in events:
+      self.activeModsView.updateTime(ev.value)
+      
+  @relay.reaction('updateActiveMods')
+  def _updateActiveMods(self, *events):
+    for ev in events:
+      self.activeModsView.updateMods(ev.value)
+      
+  @relay.reaction('updatePaused')
+  def _updatePaused(self, *events):
+    for ev in events:
+      self.pausedView.updatePaused(ev.value)
+      
+  @relay.reaction('updatePausedBrightBackground')
+  def _updatePausedBrightBackground(self, *events):
+    for ev in events:
+      self.pausedView.updatePausedBrightBackground(ev.value)
+      
+  @relay.reaction('updateConnected')
+  def _updateConnected(self, *events):
+    for ev in events:
+      self.connectionView.updateConnected(ev.value)
+      
+  @relay.reaction('updateConnectedBrightBackground')
+  def _updateConnectedBrightBackground(self, *events):
+    for ev in events:
+      self.connectionView.updateConnectedBrightBackground(ev.value)
