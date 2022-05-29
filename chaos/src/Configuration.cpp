@@ -58,9 +58,15 @@ Configuration::Configuration(const std::string& fname) {
   std::filesystem::path logfile = configuration["log_file"].value_or("chaos.log");  
   logfile = log_path / logfile;
   
+  bool overwrite = configuration["overwrite_log"].value_or(false);
+
   plog::Severity maxSeverity = (plog::Severity) configuration["log_verbosity"].value_or(3);
   size_t max_size = (size_t) configuration["max_log_size"].value_or(0);
   int max_logs = configuration["max_log_files"].value_or(8);  
+  if (overwrite && std::filesystem::exists(logfile)) {
+    std::filesystem::remove(logfile);
+  }
+  
   plog::init(maxSeverity, logfile.c_str(), max_size, max_logs);
   
   PLOG_NONE << "Welcome to Chaos " << CHAOS_VERSION;
