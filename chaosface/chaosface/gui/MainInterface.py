@@ -17,18 +17,31 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
-from flexx import flx
+from flexx import flx, ui
 from config import relay
-from .VoteTimerView import VoteTimerView
 
-class VoteTimer(flx.PyWidget):
+from .BotConfiguration import BotConfiguration
+from .Settings import Settings
+from .StreamerInterface import StreamerInterface
+
+class MainInterface(flx.PyWidget):
+
+#  CSS = """
+#    .flx-Widget {
+#  background: #0C0C0C;
+#    }
+#    """
   def init(self, relay):
     self.relay = relay
-    self.voteTimerView = VoteTimerView(self)
-      
-  @relay.reaction('updateVoteTime')
-  def _updateVoteTime(self, *events):
-    for ev in events:
-      self.voteTimerView.updateTime(ev.value)
+    with ui.TabLayout(style="background: #aaa; color: #000; text-align: center; foreground-color:#808080") as self.t:
+    #with StreamerInterfaceLayout() as self.s:
+      self.interface = StreamerInterface(self.relay, title='Interface')
+      self.settings = Settings(self.relay, title='Settings')
+      self.botSetup = BotConfiguration(self.relay, title='Bot Setup')
 
+  def dispose(self):
+    super().dispose()
+    # ... do clean up or notify other parts of the app
+    self.interface.dispose()
+    self.settings.dispose()
+    self.botSetup.dispose()
