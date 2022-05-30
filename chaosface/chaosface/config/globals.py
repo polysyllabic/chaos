@@ -26,4 +26,4 @@ CHAOS_CONFIG_FILE = Path(CHAOS_PATH, "config", "chaosConfig.json").name
 
 #  This is how Flexx API states that data passing should work
 relay = ChaosRelay()
-relay.openConfig(CHAOS_CONFIG_FILE)
+

@@ -18,6 +18,8 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import logging
+log = logging.getLogger(__name__)
+
 from flexx import flx
 import json
 
@@ -30,9 +32,8 @@ def get_attribute(data, attribute, default_value):
 
 class ChaosRelay(flx.Component):
 
-  def __init__(self):
-    self.chaosConfigFile = "chaosRelay.json"
-    super().__init__()
+#  def __init__(self):
+#    super().__init__()
     
   chaosConfig = {}
       
@@ -76,12 +77,24 @@ class ChaosRelay(flx.Component):
   def openConfig(self, configFile):
     try:
       self.chaosConfigFile = configFile
-      logging.info("ChaosRelay initializing with file:" + self.chaosConfigFile)
+      log.info("ChaosRelay initializing with file:" + self.chaosConfigFile)
       with open(self.chaosConfigFile) as json_data_file:
         ChaosRelay.chaosConfig = json.load(json_data_file)
     except Exception as e:
-      logging.error("openConfig(): Error in opening file:" + self.chaosConfigFile)
-      ChaosRelay.chaosConfig = {}
+      log.error("openConfig(): Error in opening file:" + self.chaosConfigFile)
+      ChaosRelay.chaosConfig = {
+        "modifier_time": 180.0,
+        "softmax_factor": 33,
+        "host": "irc.twitch.tv",
+        "port": 6667,
+        "bot_name": "polysylbot",
+        "bot_oauth": "oauth:s70n7o8wyfh7x7hp6vl16wxwr8ng7s",
+        "channel_name": "polysyl",
+        "chat-rate": 0.67,
+        "ui_rate": 20.0,
+        "uiPort": 80,
+      }
+      self.saveConfig()
       
     self.set_timePerModifier(get_attribute(self.chaosConfig, "modifier_time", 180.0))
     self.set_softmaxFactor(get_attribute(self.chaosConfig, "softmax_factor", 33))
@@ -89,11 +102,11 @@ class ChaosRelay(flx.Component):
     self.set_ircHost(get_attribute(self.chaosConfig, "host", "irc.twitch.tv"))
     self.set_ircPort(get_attribute(self.chaosConfig, "port", 6667))
       
-    self.set_bot_name(get_attribute(self.chaosConfig, "bot_name", "see_bot"))
+    self.set_bot_name(get_attribute(self.chaosConfig, "bot_name", "polysylbot"))
     self.set_bot_oauth(get_attribute(self.chaosConfig, "bot_oauth", "oauth:abcdefghijklmnopqrstuvwxyz1234"))
     #print('self.chaosConfig["channel_name"] = ' + ChaosRelay.chaosConfig["channel_name"])
     #print('channel_name = ' + self.channel_name)
-    self.set_channel_name(get_attribute(self.chaosConfig, "channel_name", "blegas7"))
+    self.set_channel_name(get_attribute(self.chaosConfig, "channel_name", "polysyl"))
     #print('self.chaosConfig["channel_name"] = ' + ChaosRelay.chaosConfig["channel_name"])
     #print('channel_name = ' + self.channel_name)
     
@@ -150,7 +163,7 @@ class ChaosRelay(flx.Component):
 #  def on_allMods(self, *events):
 #    for ev in events:
 #      chaosConfig["allMods"] = ev.new_value
-##      logging.info("Relay set allMods")
+##      log.info("Relay set allMods")
       
   @flx.reaction('timePerModifier')
   def on_timePerModifier(self, *events):
@@ -235,7 +248,7 @@ class ChaosRelay(flx.Component):
   def on_shouldSave(self, *events):
     for ev in events:
       if ev.new_value:
-        logging.info("Saving config to: " + self.chaosConfigFile)
+        log.info("Saving config to: " + self.chaosConfigFile)
         self.saveConfig()
         self.set_shouldSave(False)
       

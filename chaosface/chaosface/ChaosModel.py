@@ -17,6 +17,7 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+import sys
 import time
 #import random
 import json
@@ -24,8 +25,11 @@ import copy
 import math
 
 import numpy as np
-import logging
+
 import threading
+
+import logging
+log = logging.getLogger(__name__)
 
 from communicator import ChaosCommunicator
 from config import relay
@@ -37,7 +41,7 @@ class ChaosModel():
     self.firstTime = True
 
     #  Socket to talk to server
-    logging.info("Connecting to chaos engine")
+    log.info("Connecting to chaos engine")
     self.chaosCommunicator = ChaosCommunicator()
     self.chaosCommunicator.attach(self)
     self.chaosCommunicator.start()
@@ -50,74 +54,82 @@ class ChaosModel():
     self.tmiChatText = ""
 
   def start(self):
-    self.thread = threading.Thread(target=self._loop)
+    self.thread = threading.Thread(target=self.process)
     self.thread.start()
 
+  def process(self):
+    try:
+      log.info("Starting voting loop")
+      self._loop()
+    except KeyboardInterrupt:
+      log.info("Exiting")
+      sys.exit(0)
+    return True
 
   def updateCommand(self, message) -> None:
-    logging.debug("Recieved message from chaos engine: " + str(message))
+    log.debug("Recieved message from chaos engine: " + str(message))
     received = json.loads(message)
 
     if "game" in received:
-      logging.debug("Received game info!")
+      log.debug("Received game info!")
       self.initializeGameData(received)
 
     if "mods" in received:
-      logging.error("The old chaos engine is running. This won't work!")
+      log.error("The old chaos engine is running. This won't work!")
 
     if "pause" in received:
-      logging.info("Got a pause command of: " + str(received["pause"]))
+      log.info("Got a pause command of: " + str(received["pause"]))
       self.pause = received["pause"]
         
     
   def applyNewMod(self, mod):
-    logging.debug("Winning mod: " + mod)
+    log.debug("Winning mod: " + mod)
     toSend = {}
     toSend["winner"] = mod
     toSend["timePerModifier"] = relay.timePerModifier
     response = self.chaosCommunicator.sendMessage(json.dumps(toSend))
-    logging.debug("Engine response: " + response)
+    log.debug("Engine response: " + response)
 
 
   def initializeGameData(self, gamedata):
-    logging.debug("Initializing game data")
+    log.debug("Initializing game data")
     self.game_name = gamedata["game"]
     try:
       relay.set_gameName(gamedata["game"])
     except Exception as e:
-      logging.error(e)
+      log.error(e)
 
     if "errors" in gamedata:
       errors = int(gamedata["errors"])
     else:
-      logging.error("Missing error count in gamedata message")
+      log.error("Missing error count in gamedata message")
       errors = -1
     try:
       relay.set_gameErrors(errors)
     except Exception as e:
-      logging.error(e)
+      log.error(e)
 
     if "nmods" in gamedata:
       nmods = int(gamedata["nmods"])
     else:
-      logging.error("Missing modifier count in gamedata message")
+      log.error("Missing modifier count in gamedata message")
       nmods = 3
     try:
       relay.set_totalActiveMods(nmods)
     except Exception as e:
-      logging.error(e)
+      log.error(e)
     
     if "modtime" in gamedata:
       modtime = float(gamedata["modtime"])
     else:
-      logging.error("Missing modifier time in gamedata message")
+      log.error("Missing modifier time in gamedata message")
       modtime = 180.0
     try:
       relay.set_timePerModifier(modtime)
     except Exception as e:
-      logging.error(e)
+      log.error(e)
 
-    logging.debug("Initializing modifier data")
+    log.debug("Initializing modifier data")
     self.modifierData = {}
     for mod in gamedata:
       modName = mod["name"]
@@ -129,7 +141,7 @@ class ChaosModel():
     self.validData = True
   
   def resetSoftMax(self):
-    logging.info("Resetting SoftMax!")
+    log.info("Resetting SoftMax!")
     for mod in self.modifierData:
       self.modifierData[mod]["count"] = 0
     
@@ -181,12 +193,12 @@ class ChaosModel():
           self.currentMods.append(mod)
           inactiveMods.remove(mod)  #remove this to prevent a repeat
           break
-    logging.info("New Voting Round:")
+    log.info("New Voting Round:")
     for mod in self.currentMods:
       if "p" in self.modifierData[mod]:
-        logging.info(" - %0.2f%% %s" % (self.modifierData[mod]["p"]*100.0, mod))
+        log.info(" - %0.2f%% %s" % (self.modifierData[mod]["p"]*100.0, mod))
       else:
-        logging.info(" - %0.2f%% %s" % (0, mod))
+        log.info(" - %0.2f%% %s" % (0, mod))
     # Reset votes since there is a new voting pool
     self.votes = [0.0] * self.totalVoteOptions
   
@@ -208,7 +220,7 @@ class ChaosModel():
         if accumulator >= theChoice:
           break
       
-      logging.info("Winning Mod: \"%s\" at %0.2f%% chance" % (self.currentMods[ index ], 100.0 * float(self.votes[index])/totalVotes) )
+      log.info("Winning Mod: \"%s\" at %0.2f%% chance" % (self.currentMods[ index ], 100.0 * float(self.votes[index])/totalVotes) )
       return self.currentMods[ index ]
     else:
       return self.currentMods[ self.votes.index(max(self.votes)) ]
@@ -218,43 +230,43 @@ class ChaosModel():
     self.chatbot.setChannelName(relay.channel_name)
     self.chatbot.setBotCredentials(relay.bot_name, relay.bot_oauth)
     self.chatbot.setIrcInfo(relay.ircHost, relay.ircPort)
-#    logging.info("Credentions set to: " + relay.channel_name + " using bot: " + relay.bot_name + " " + relay.bot_oauth)
+    log.info("Credentials set to: " + relay.channel_name + " using bot: " + relay.bot_name + " " + relay.bot_oauth)
 
   def flashPause(self):
     if self.pausedFlashingTimer > 0.5 and relay.pausedBrightBackground == True:
       try:
         relay.set_pausedBrightBackground(False)
       except Exception as e:
-        logging.info(e)
+        log.error(e)
     elif self.pausedFlashingTimer > 1.0 and relay.pausedBrightBackground == False:
       try:
         relay.set_pausedBrightBackground(True)
         self.pausedFlashingTimer = 0.0
       except Exception as e:
-        logging.info(e)
+        log.error(e)
         
   def flashDisconnected(self):
     if self.disconnectedFlashingTimer > 0.5 and relay.connectedBrightBackground == True:
       try:
         relay.set_connectedBrightBackground(False)
       except Exception as e:
-        logging.info(e)
+        log.error(e)
     elif self.disconnectedFlashingTimer > 1.0 and relay.connectedBrightBackground == False:
       try:
         relay.set_connectedBrightBackground(True)
         self.disconnectedFlashingTimer = 0.0
       except Exception as e:
-        logging.info(e)
+        log.error(e)
   
   # Ask the engine to tell us about the game we're playing
   # TODO: Request a list of available games
   # TODO: Send a config file from the computer running this bot
   def requestGameInfo(self):
-    logging.debug("Asking engine about the game")
+    log.debug("Asking engine about the game")
     toSend = {}
     toSend["game"] = True
     resp = self.chaosCommunicator.sendMessage(json.dumps(toSend))
-    logging.debug("Socket response: " + resp)
+    log.debug("Socket response: " + resp)
 
 
   def _loop(self):
@@ -295,13 +307,13 @@ class ChaosModel():
       self.pausedFlashingTimer += dTime
       self.disconnectedFlashingTimer += dTime
       
-      self.updateChatCredentials()
+      #self.updateChatCredentials()
       
       if not relay.paused == self.pause:
         try:
           relay.set_paused(self.pause)
         except Exception as e:
-          logging.error(e)
+          log.error(e)
           
       if self.pause:  # hack implementation of pausing
         beginTime += dTime
@@ -312,7 +324,7 @@ class ChaosModel():
         try:
           relay.set_connected(self.chatbot.isConnected())
         except Exception as e:
-          logging.error(e)
+          log.error(e)
           
       if not self.chatbot.isConnected():  # hack implementation of pausing
         self.flashDisconnected()
@@ -338,7 +350,7 @@ class ChaosModel():
           relay.set_resetSoftmax(False)
           self.resetSoftMax()
         except Exception as e:
-          logging.error(e)
+          log.error(e)
       
       if self.voteTime >= self.timePerVote:
         beginTime = now
@@ -346,7 +358,7 @@ class ChaosModel():
         if not self.validData:
           if self.timeout % (relay.ui_rate * 10) == 0:
             # log a waiting message every 10 seconds
-            logging.info("Waiting for controller sync...")
+            log.info("Waiting for controller sync...")
           self.timeout += 1
           continue
         
@@ -357,14 +369,14 @@ class ChaosModel():
         try:
           self.updateSoftMax(newMod)
         except Exception as e:
-          logging.error(e)
+          log.error(e)
           continue
         
         logString = ""
         for j in range(self.totalVoteOptions):
           logString += self.currentMods[j] + "," + str(int(self.votes[j])) + ","
         logString += newMod + "\n"
-        logging.info(logString)
+        log.info(logString)
         
         # Update view:
         if not (newMod.isdigit() and 0 < int(newMod) and int(newMod) < 7):
@@ -388,27 +400,27 @@ class ChaosModel():
     try:
       relay.set_mods( self.currentMods )
     except Exception as e:
-      logging.error(e)
+      log.error(e)
     try:
       relay.set_activeMods( self.activeMods )
     except Exception as e:
-      logging.error(e)
+      log.error(e)
     try:
       relay.set_votes( self.votes )
     except Exception as e:
-      logging.error(e)
+      log.error(e)
     try:
       relay.set_voteTime( self.timeToSend )
     except Exception as e:
-      logging.error(e)
+      log.error(e)
     try:
       relay.set_modTimes( self.activeModTimes )
     except Exception as e:
-      logging.error(e)
+      log.error(e)
     try:
       relay.set_tmiResponse(self.tmiChatText)
     except Exception as e:
-      logging.error(e)
+      log.error(e)
     
     
   def announceMods(self):
