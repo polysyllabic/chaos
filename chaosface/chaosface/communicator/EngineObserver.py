@@ -17,18 +17,17 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+from abc import ABC, abstractmethod
 
-from flexx import flx
-from config import relay
-from .VoteTimerView import VoteTimerView
-
-class VoteTimer(flx.PyWidget):
-  def init(self, relay):
-    self.relay = relay
-    self.voteTimerView = VoteTimerView(self)
-      
-  @relay.reaction('updateVoteTime')
-  def _updateVoteTime(self, *events):
-    for ev in events:
-      self.voteTimerView.updateTime(ev.value)
+class EngineObserver(ABC):
+	"""
+	An observer for listening to events from the chaos engine
+	"""
+	
+	@abstractmethod
+	def updateCommand(self, message ) -> None:
+		"""
+		Process message from ZMQ
+		"""
+		pass
 

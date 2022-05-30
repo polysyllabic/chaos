@@ -22,9 +22,10 @@ from twitchbot import Message
 from twitchbot import Command, SubCommand
 
 import logging
-import json 
+log = logging.getLogger(__name__)
+#import json 
 
-from ChaosRelay import ChaosRelay
+from config import ChaosRelay
 
 class ChaosBot(BaseBot):
 
@@ -98,7 +99,7 @@ async def cmd_chaos_vote(msg: Message, *args):
 
 if __name__ == "__main__":
   # Start the chatbot
-  logging.info("Starting ChaosBot...")
+  log.info("Starting ChaosBot...")
   ChaosBot().run_threaded()
 
   
