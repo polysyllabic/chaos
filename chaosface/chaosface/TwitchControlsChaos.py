@@ -24,7 +24,7 @@ import asyncio
 import logging
 
 from chatbot import Chatbot
-from config import relay, CHAOS_LOG_FILE
+from config import relay, CHAOS_LOG_FILE, CHAOS_CONFIG_FILE
 from ChaosModel import ChaosModel
 
 from gui.ActiveMods import ActiveMods
@@ -33,7 +33,7 @@ from gui.VoteTimer import VoteTimer
 from gui.MainInterface import MainInterface
 
 from flexx import flx
-logging.basicConfig(filename=CHAOS_LOG_FILE, level=logging.DEBUG)
+
     
 def startFlexx():
   flx.App(ActiveMods, relay).serve()
@@ -45,20 +45,27 @@ def startFlexx():
   flx.start()
 
 if __name__ == "__main__":
+  logging.basicConfig(level=logging.DEBUG)
+  relay.openConfig(CHAOS_CONFIG_FILE)
+
   # Start chatbot
-  logging.info("Starting chatbot")
+  #logging.info("Starting chatbot")
   chatbot = Chatbot()
-  chatbot.setIrcInfo(relay.ircHost, relay.ircPort)
-  chatbot.start()
-  logging.info("Starting GUI")
+  #chatbot.setIrcInfo(relay.ircHost, relay.ircPort)
+  #chatbot.start()
+
   # Start GUI
-  flexxThread = threading.Thread(target=startFlexx)
-  flexxThread.start()
-  logging.info("Starting voting loop")
+  #logging.info("Starting GUI")
+  #startFlexx()
+  #flexxThread = threading.Thread(target=startFlexx)
+  #flexxThread.start()
+
   # Voting model
+  logging.info("Starting voting loop")
   chaosModel = ChaosModel(chatbot)
   chaosModel.start()
+
   logging.info("Stopping")
-  flx.stop()
-  flexxThread.join()
+  #flx.stop()
+  #flexxThread.join()
 
