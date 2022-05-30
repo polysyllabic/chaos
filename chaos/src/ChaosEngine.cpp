@@ -39,12 +39,6 @@ ChaosEngine::ChaosEngine(Controller& c) : controller{c}, game{c}, pause{true}
   chaosInterface.addObserver(this);
 }
 
-/*
-void ChaosEngine::setInterfaces() {
-  controller.addInjector(this);
-  chaosInterface.addObserver(this);
-}
-*/
 void ChaosEngine::newCommand(const std::string& command) {
   PLOG_DEBUG << "Received command: " << command;
 	
