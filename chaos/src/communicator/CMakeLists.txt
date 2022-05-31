@@ -1,5 +1,5 @@
 
-add_library (chaos_communicator OBJECT
+add_library (chaos_communicator 
     ChaosInterface.cpp
     CommandListener.cpp
     CommandSender.cpp

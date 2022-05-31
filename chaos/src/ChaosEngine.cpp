@@ -31,12 +31,14 @@
 
 using namespace Chaos;
 
-ChaosEngine::ChaosEngine(Controller& c) : controller{c}, game{c}, pause{true}
+ChaosEngine::ChaosEngine(Controller& c, const std::string& server_endpoint, const std::string& listener_endpoint) : 
+  controller{c}, game{c}, pause{true}
 {
   time.initialize();
   jsonReader = jsonReaderBuilder.newCharReader();
   controller.addInjector(this);
-  chaosInterface.addObserver(this);
+  chaosInterface.setObserver(this);
+  chaosInterface.setupInterface(server_endpoint, listener_endpoint);
 }
 
 void ChaosEngine::newCommand(const std::string& command) {
@@ -81,7 +83,6 @@ void ChaosEngine::newCommand(const std::string& command) {
 
 // Tell the interface about the game we're playing
 void ChaosEngine::reportGameStatus() {
-  lock();
   PLOG_DEBUG << "Sending game information to interface: " << game.getName() << "(parsed with " << game.getErrors() << "errors)";
   Json::Value msg;
   msg["game"] = game.getName();
@@ -90,7 +91,6 @@ void ChaosEngine::reportGameStatus() {
   msg["modtime"] = game.getTimePerModifier();
   msg["mods"] = game.getModList();
   chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
-  unlock();
 }
 
 void ChaosEngine::doAction() {

@@ -25,16 +25,7 @@
 
 using namespace Chaos;
 
-CommandListener::CommandListener() {
-  const std::string endpoint = "tcp://*:5555";
-
-  // generate a pull socket
-  zmqpp::socket_type type = zmqpp::socket_type::reply;
-  socket = new zmqpp::socket(context, type);
-
-  // bind to the socket
-  socket->bind(endpoint);
-}
+CommandListener::CommandListener() {}
 
 CommandListener::~CommandListener() {
   if(socket != nullptr) {
@@ -42,25 +33,34 @@ CommandListener::~CommandListener() {
   }
 }
 
-void CommandListener::addObserver(CommandObserver* observer ) {
+void CommandListener::setEndpoint(const std::string& endpoint) {
+  // create a reply socket
+  zmqpp::socket_type type = zmqpp::socket_type::reply;
+  socket = new zmqpp::socket(context, type);
+  // bind to the socket
+  socket->bind(endpoint);
+}
+
+void CommandListener::setObserver(CommandObserver* observer ) {
   this->observer = observer;
 }
 
 void CommandListener::doAction() {
-  // receive the message
   zmqpp::message message;
-  // decompose the message
-  socket->receive(message);	// Blocking
+  // Wait for a message to arive. This call is blocking
+  socket->receive(message);	
   std::string text;
   message >> text;
-
-  //Do some 'work'
   PLOG_VERBOSE << "CommandListener received this message: " << text;
-  socket->send(reply.c_str());
-	
+
+  // Tell observer what we received
   if (observer != nullptr) {
     observer->newCommand(text);
   }
+
+  // Send an acknowledgment. We do this after notifying the observers to give them
+  // a chance to set the reply if necessary
+  socket->send(reply.c_str());
 }
 
 void CommandListener::setReply(const std::string& reply) {

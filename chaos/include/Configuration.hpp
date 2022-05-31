@@ -48,6 +48,9 @@ namespace Chaos {
     std::filesystem::path game_config; 
     std::filesystem::path log_path;
     unsigned int usleep_interval;
+    std::string interface_addr;
+    std::string interface_port;
+    std::string listener_port;
 
   public:
     /**
@@ -69,7 +72,7 @@ namespace Chaos {
      */
     std::string getGameFile() { return game_config.string(); }
 
-
-    
+    std::string getInterfaceAddress() { return "tcp://" + interface_addr + ":" + interface_port; }
+    std::string getListenerAddress() { return "tcp://*:" + listener_port; }
   };
 };
