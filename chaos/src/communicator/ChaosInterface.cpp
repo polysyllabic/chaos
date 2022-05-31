@@ -18,28 +18,40 @@
  */
 #include "ChaosInterface.hpp"
 
+#include <iostream>
+#include <unistd.h>
+#include <string>
+
 using namespace Chaos;
 
-CommandSender::CommandSender() {
-  const std::string endpoint = "tcp://localhost:5556";
+ChaosInterface::ChaosInterface() {}
 
-  // generate a pull socket
-  zmqpp::socket_type type = zmqpp::socket_type::request;
-  socket = new zmqpp::socket(context, type);
-
-  // bind to the socket
-  socket->connect(endpoint);
+void ChaosInterface::setupInterface(const std::string& server_endpoint, const std::string& listener_endpoint) {
+  server.setEndpoint(server_endpoint);
+  client.setEndpoint(listener_endpoint);
+  server.start();
+  start();
 }
 
-CommandSender::~CommandSender() {
+void ChaosInterface::doAction() {
+  while (!outgoingQueue.empty()) {
+    lock();
+    std::string message = outgoingQueue.front();
+    outgoingQueue.pop();
+    unlock();
+    client.sendMessage(message);
+  }
+  pause();
 }
 
-bool CommandSender::sendMessage(std::string message) {
-  socket->send( message.c_str() );
-	
-  zmqpp::message msg;
-  // decompose the message
-  socket->receive(msg);	// Blocking
-  msg >> reply;
+bool ChaosInterface::sendMessage(std::string message) {
+  lock();
+  outgoingQueue.push(message);
+  unlock();
+  resume();
   return true;
+}
+
+void ChaosInterface::setObserver(CommandObserver* observer) {
+  server.setObserver(observer);
 }

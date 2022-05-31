@@ -13,6 +13,14 @@ chaos_toml = "1.0"
 # default_game: If no game file is specified on the command line, this is the game that we load.
 default_game = "./games/tlou2.toml"
 
+# IP address/domain name of the computer running the chaos interface. Use 'localhost' if you're
+# running both the interface and the engine on the Raspberry Pi.
+interface_addr = "192.168.1.8"
+# Port to send outgoing messages to the chaos interface
+interface_port = "5556"
+# Port to listen for incoming messages from the chaos interface
+listener_port = "5555"
+
 # How long, in microseconds, should the engine sleep between executions of the main loop
 usleep_interval = 500
 

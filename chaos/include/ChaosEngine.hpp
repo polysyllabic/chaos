@@ -68,6 +68,7 @@ namespace Chaos {
 
     // overridden from ControllerInjector
     bool sniffify(const DeviceEvent& input, DeviceEvent& output);
+
     // overridden from Mogi::Thread
     void doAction();
 
@@ -89,10 +90,8 @@ namespace Chaos {
     void disableTPAxis(ControllerSignal tp_axis);
 
   public:
-    ChaosEngine(Controller& c);
+    ChaosEngine(Controller& c, const std::string& server_endpoint, const std::string& listener_endpoint);
     
-    //void setInterfaces();
-
     void loadConfigFile(const std::string& configfile, EngineInterface* engine);
 
     void sendInterfaceMessage(const std::string& msg);

@@ -49,8 +49,8 @@ int main(int argc, char** argv) {
   // Start the engine
   // Note: we haven't made this a shared ptr because the sniffify library uses raw pointers and we
   // need to register with that using "this" -- look into modifiying sniffify-usb
-  ChaosEngine engine = ChaosEngine(controller);
-  //engine.setInterfaces();
+  ChaosEngine engine = ChaosEngine(controller, chaos_config.getInterfaceAddress(),
+                                   chaos_config.getListenerAddress());
   engine.setGame(configfile);
   engine.start();
 

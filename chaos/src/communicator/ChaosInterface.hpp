@@ -1,7 +1,7 @@
 /*
  * Twitch Controls Chaos (TCC)
  * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
- * file in top-level directory of this distribution for a list of the
+ * file in the top-level directory of this distribution for a list of the
  * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,21 +20,33 @@
 #pragma once
 #include <queue>
 #include <string>
-#include <zmqpp/zmqpp.hpp>
+#include <mogi/thread.h>
+
+#include "CommandListener.hpp"
+#include "CommandSender.hpp"
 
 namespace Chaos {
 
-  class CommandSender {
+  /**
+   * \brief Communication interface between the engine and the chatbot
+   * 
+   * The interface combines both a server (to receive messages) and a client (to send them).
+   * We need both because messages can be initiated from either end.
+   */
+  class ChaosInterface : public Mogi::Thread {
   private:
-    zmqpp::socket *socket;
-    zmqpp::context context;	
-    std::string reply;
-	
+    CommandListener server;
+    CommandSender client;
+
+    std::queue<std::string> outgoingQueue;
+
+    void doAction();
+
   public:
-    CommandSender();
-    ~CommandSender();
-	
+    ChaosInterface();
+    void setupInterface(const std::string& server_endpoint, const std::string& interface_endpoint);
     bool sendMessage(std::string message);
+    void setObserver(CommandObserver* observer);
   };
 
 };

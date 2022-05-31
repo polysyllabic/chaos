@@ -16,41 +16,33 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "ChaosInterface.hpp"
-
-#include <iostream>
-#include <unistd.h>
-#include <string>
+#include "CommandSender.hpp"
 
 using namespace Chaos;
 
-ChaosInterface::ChaosInterface() {
-  listener.start();
-  start();
+CommandSender::CommandSender() {
 }
 
-void ChaosInterface::doAction() {
-  while (!outgoingQueue.empty()) {
-    lock();
-    std::string message = outgoingQueue.front();
-    outgoingQueue.pop();
-    unlock();
-		
-    sender.sendMessage(message);
+CommandSender::~CommandSender() {
+  if(socket != nullptr) {
+    delete socket;
   }
-	
-  pause();
-}
-	
-bool ChaosInterface::sendMessage(const std::string& message) {
-  lock();
-  outgoingQueue.push(message);
-  unlock();
-	
-  resume();
-  return true;
 }
 
-void ChaosInterface::addObserver(CommandObserver* observer ) {
-  listener.addObserver(observer);
+void CommandSender::setEndpoint(const std::string& endpoint) {
+  // generate a pull socket
+  zmqpp::socket_type type = zmqpp::socket_type::request;
+  socket = new zmqpp::socket(context, type);
+
+  // bind to the socket
+  socket->connect(endpoint);
+}
+
+bool CommandSender::sendMessage(std::string message) {
+  socket->send(message.c_str());
+  zmqpp::message msg;
+  // decompose the message
+  socket->receive(msg);	// Blocking
+  msg >> reply;
+  return true;
 }
