@@ -1,7 +1,7 @@
 /*
  * Twitch Controls Chaos (TCC)
  * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
- * file in the top-level directory of this distribution for a list of the
+ * file in top-level directory of this distribution for a list of the
  * contributers.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,33 +20,23 @@
 #pragma once
 #include <queue>
 #include <string>
-#include <memory>
-#include <mogi/thread.h>
-
-#include "CommandListener.hpp"
-#include "CommandSender.hpp"
+#include <zmqpp/zmqpp.hpp>
 
 namespace Chaos {
 
-  /**
-   * \brief Communication interface between the engine and the chatbot
-   * 
-   * Uses the ZeroMQ library for asynchronous messaging.
-   */
-  class ChaosInterface : public Mogi::Thread {
+  class CommandSender {
   private:
-    CommandListener listener;
-    CommandSender sender;
-	
-    std::queue<std::string> outgoingQueue;
-	
-    void doAction();
+    zmqpp::socket *socket;
+    zmqpp::context context;	
+    std::string reply;
 	
   public:
-    ChaosInterface();
+    CommandSender();
+    ~CommandSender();
 	
-    bool sendMessage(const std::string& message);
-    void addObserver(CommandObserver* observer);
+    void setEndpoint(const std::string& endpoint);
+
+    bool sendMessage(std::string message);
   };
 
 };

@@ -114,10 +114,6 @@ set_required_build_settings_for_GCC8()
 
 add_executable(chaos include/config.hpp
 	include/ChaosEngine.hpp
-	include/ChaosInterface.hpp
-  include/CommandListener.hpp
-  include/CommandObserver.hpp
-  include/CommandSender.hpp
 	include/Configuration.hpp
   include/Controller.hpp
   include/ControllerInjector.hpp
@@ -144,8 +140,6 @@ add_executable(chaos include/config.hpp
   include/MenuInterface.hpp
   include/MenuItem.hpp
   include/MenuModifier.hpp
-  #include/MenuOption.hpp
-  #include/MenuSelect.hpp
 	include/Modifier.hpp
   include/ModifierTable.hpp
   include/ParentModifier.hpp 
@@ -155,13 +149,9 @@ add_executable(chaos include/config.hpp
   include/SequenceModifier.hpp
   include/SequenceTable.hpp
   include/signals.hpp
-  #include/SubMenu.hpp
   include/TOMLUtils.hpp
 	include/Touchpad.hpp
 	src/ChaosEngine.cpp
-	src/ChaosInterface.cpp
-	src/CommandListener.cpp
-	src/CommandSender.cpp
 	src/Configuration.cpp
 	src/Controller.cpp
   src/ControllerInput.cpp
@@ -182,8 +172,6 @@ add_executable(chaos include/config.hpp
   src/InvertModifier.cpp
   src/MenuItem.cpp
   src/MenuModifier.cpp
-  #src/MenuOption.cpp
-  #src/MenuSelect.cpp
   src/Modifier.cpp
   src/ModifierTable.cpp
   src/ParentModifier.cpp
@@ -192,7 +180,6 @@ add_executable(chaos include/config.hpp
   src/Sequence.cpp
   src/SequenceModifier.cpp
   src/SequenceTable.cpp
-  #src/SubMenu.cpp
 	src/Touchpad.cpp
   src/TOMLUtils.cpp
 	src/main.cpp)
@@ -209,18 +196,16 @@ target_include_directories (chaos PRIVATE include
 	${LIBUSB1_INCLUDE_DIRS}
 )
 
-
-#add_subdirectory(src/sniffify)
+add_subdirectory(src/communicator)
 #add_subdirectory(src/signals)
 #add_subdirectory(src/controller)
 #add_subdirectory(src/menu)
 #add_subdirectory(src/mods)
 #add_subdirectory(src/engine)
 
-target_link_libraries(chaos	PUBLIC #chaos_controller chaos_engine chaos_menus chaos_mods
+target_link_libraries(chaos	PUBLIC chaos_communicator #chaos_controller chaos_engine chaos_menus chaos_mods
 		sniffify 
 		mogi 
-		zmqpp 
 		${LIBUSB_LIBRARIES})
 
 #find_package(Doxygen)
@@ -236,3 +221,6 @@ target_link_libraries(chaos	PUBLIC #chaos_controller chaos_engine chaos_menus ch
 #		COMMENT "Generating HTML documentation"
 #		VERBATIM)
 #endif()
+
+# Tests
+add_subdirectory(tests EXCLUDE_FROM_ALL)
