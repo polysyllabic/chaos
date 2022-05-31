@@ -34,6 +34,8 @@ namespace Chaos {
     CommandSender();
     ~CommandSender();
 	
+    void setEndpoint(const std::string& endpoint);
+
     bool sendMessage(std::string message);
   };
 

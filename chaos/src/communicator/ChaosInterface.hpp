@@ -20,7 +20,6 @@
 #pragma once
 #include <queue>
 #include <string>
-#include <memory>
 #include <mogi/thread.h>
 
 #include "CommandListener.hpp"
@@ -31,22 +30,23 @@ namespace Chaos {
   /**
    * \brief Communication interface between the engine and the chatbot
    * 
-   * Uses the ZeroMQ library for asynchronous messaging.
+   * The interface combines both a server (to receive messages) and a client (to send them).
+   * We need both because messages can be initiated from either end.
    */
   class ChaosInterface : public Mogi::Thread {
   private:
-    CommandListener listener;
-    CommandSender sender;
-	
+    CommandListener server;
+    CommandSender client;
+
     std::queue<std::string> outgoingQueue;
-	
+
     void doAction();
-	
+
   public:
     ChaosInterface();
-	
-    bool sendMessage(const std::string& message);
-    void addObserver(CommandObserver* observer);
+    void setupInterface(const std::string& server_endpoint, const std::string& interface_endpoint);
+    bool sendMessage(std::string message);
+    void setObserver(CommandObserver* observer);
   };
 
 };

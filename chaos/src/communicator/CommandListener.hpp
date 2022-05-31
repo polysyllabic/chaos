@@ -25,11 +25,15 @@
 
 namespace Chaos {
 
+  /**
+   * \brief A ZMQ server to receive messages from the chaosface client
+   * 
+   */
   class CommandListener : public Mogi::Thread {
   private:
     zmqpp::socket *socket;
     zmqpp::context context;
-	
+    std::string reply;
     CommandObserver* observer = nullptr;
 	
     void doAction();
@@ -38,9 +42,16 @@ namespace Chaos {
     CommandListener();
     ~CommandListener();
 	
-    std::string reply;
+    void setEndpoint(const std::string& endpoint);
 	
-    void addObserver(CommandObserver* observer);
+    /**
+     * \brief Set an observer for incomming messages
+     * 
+     * \param observer Pointer to the observer
+     * 
+     * We only allow one observer at the moment.3
+     */
+    void setObserver(CommandObserver* observer);
     void setReply(const std::string& reply);
   };
 

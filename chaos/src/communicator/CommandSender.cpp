@@ -16,13 +16,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "ChaosInterface.hpp"
+#include "CommandSender.hpp"
 
 using namespace Chaos;
 
 CommandSender::CommandSender() {
-  const std::string endpoint = "tcp://localhost:5556";
+}
 
+CommandSender::~CommandSender() {
+  if(socket != nullptr) {
+    delete socket;
+  }
+}
+
+void CommandSender::setEndpoint(const std::string& endpoint) {
   // generate a pull socket
   zmqpp::socket_type type = zmqpp::socket_type::request;
   socket = new zmqpp::socket(context, type);
@@ -31,12 +38,8 @@ CommandSender::CommandSender() {
   socket->connect(endpoint);
 }
 
-CommandSender::~CommandSender() {
-}
-
 bool CommandSender::sendMessage(std::string message) {
-  socket->send( message.c_str() );
-	
+  socket->send(message.c_str());
   zmqpp::message msg;
   // decompose the message
   socket->receive(msg);	// Blocking
