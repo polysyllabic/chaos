@@ -59,13 +59,17 @@ class ChaosRelay(flx.Component):
   timePerModifier = flx.FloatProp(get_attribute(chaosConfig, "modifier_time", 180.0), settable=True)
   softmaxFactor = flx.IntProp(get_attribute(chaosConfig, "softmax_factor", 33), settable=True)
 
-  # Bot Configuration  
+  # Chat Bot Configuration  
   ircHost = flx.StringProp(get_attribute(chaosConfig, "host", "irc.twitch.tv"), settable=True)
   ircPort = flx.IntProp(get_attribute(chaosConfig, "port", 6667), settable=True)  
-  bot_name = flx.StringProp(get_attribute(chaosConfig, "bot_name", "see_bot"), settable=True)
-  bot_oauth = flx.StringProp(get_attribute(chaosConfig, "bot_oauth", "oauth:abcdefghijklmnopqrstuvwxyz1234"), settable=True)
-  channel_name = flx.StringProp(get_attribute(chaosConfig, "channel_name", "blegas78"), settable=True)
-  chat_rate = flx.FloatProp(get_attribute(chaosConfig, "chat-rate", 0.67), settable=True)
+  bot_name = flx.StringProp(get_attribute(chaosConfig, "bot_name", "your_bot"), settable=True)
+  bot_oauth = flx.StringProp(get_attribute(chaosConfig, "bot_oauth", "oauth:"), settable=True)
+  channel_name = flx.StringProp(get_attribute(chaosConfig, "channel_name", "your_channel"), settable=True)
+  chat_rate = flx.FloatProp(get_attribute(chaosConfig, "chat_rate", 0.67), settable=True)
+
+  # Engine Settings
+  pi_host = flx.StringProp(get_attribute(chaosConfig, "pi_host", "localhost"), settable=True)
+  chaos_engine_port = flx.IntProp(get_attribute(chaosConfig, 5555))
 
   # User Interface Settings      
   announce_mods = flx.BoolProp(get_attribute(chaosConfig, "announce_mods", False), settable=True)
@@ -88,7 +92,7 @@ class ChaosRelay(flx.Component):
         "host": "irc.twitch.tv",
         "port": 6667,
         "bot_name": "polysylbot",
-        "bot_oauth": "oauth:***REMOVED***",
+        "bot_oauth": "oauth:",
         "channel_name": "polysyl",
         "chat-rate": 0.67,
         "ui_rate": 20.0,
