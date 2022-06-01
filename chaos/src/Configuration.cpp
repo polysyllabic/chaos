@@ -44,6 +44,11 @@ Configuration::Configuration(const std::string& fname) {
     throw err;
   }
 
+  toml_version = configuration["chaos_toml"].value_or("");
+  if (toml_version.empty()) {
+    throw std::runtime_error("Missing chaos version identifier in TOML configuration file");
+  }
+
   log_path = configuration["log_dir"].value_or(".");
   if (! std::filesystem::exists(log_path)) {
     // If this directory doesn't exist, create it
@@ -66,11 +71,16 @@ Configuration::Configuration(const std::string& fname) {
   if (overwrite && std::filesystem::exists(logfile)) {
     std::filesystem::remove(logfile);
   }
-  
   plog::init(maxSeverity, logfile.c_str(), max_size, max_logs);
-  
   PLOG_NONE << "Welcome to Chaos " << CHAOS_VERSION;
 
+  interface_addr = configuration["interface_addr"].value_or("localhost");
+  interface_port = configuration["interface_port"].value_or(5556);
+  PLOG_DEBUG << "Sending messages to chaosface at endpoint " << getInterfaceAddress();
+  listener_port = configuration["listener_port"].value_or(5555);
+  PLOG_DEBUG << "Lisening to messages from chaosface at enpoint " << getListenerAddress();
+
+  game_config = configuration["default_game"].value_or("");
 }
 
 

@@ -26,10 +26,10 @@ using namespace Chaos;
 
 ChaosInterface::ChaosInterface() {}
 
-void ChaosInterface::setupInterface(const std::string& server_endpoint, const std::string& listener_endpoint) {
-  server.setEndpoint(server_endpoint);
-  client.setEndpoint(listener_endpoint);
-  server.start();
+void ChaosInterface::setupInterface(const std::string& listener_endpoint, const std::string& talker_endpoint) {
+  listener.setEndpoint(listener_endpoint);
+  talker.setEndpoint(talker_endpoint);
+  listener.start();
   start();
 }
 
@@ -39,7 +39,7 @@ void ChaosInterface::doAction() {
     std::string message = outgoingQueue.front();
     outgoingQueue.pop();
     unlock();
-    client.sendMessage(message);
+    talker.sendMessage(message);
   }
   pause();
 }
@@ -53,5 +53,5 @@ bool ChaosInterface::sendMessage(std::string message) {
 }
 
 void ChaosInterface::setObserver(CommandObserver* observer) {
-  server.setObserver(observer);
+  listener.setObserver(observer);
 }
