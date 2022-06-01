@@ -18,7 +18,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-# follows patterns from here: https://refactoring.guru/design-patterns/observer/python/example
 import time
 from abc import ABC, abstractmethod
 from typing import List
@@ -28,47 +27,14 @@ import zmq
 import logging
 log = logging.getLogger(__name__)
 
-class EngineObserver(ABC):
-  """
-  An observer for listening to events from the chaos engine
-  """
-  
+# An observer for listening to events from the chaos engine
+class EngineObserver(ABC):  
   @abstractmethod
   def updateCommand(self, message ) -> None:
-    """
-    Process message from ZMQ
-    """
+    # Process message from ZMQ
     pass
 
-
-class EngineSubject(ABC):
-  """
-  The Subject interface declares a set of methods for managing subscribers.
-  """
-
-  @abstractmethod
-  def attach(self, observer: EngineObserver) -> None:
-    """
-    Attach an observer to the subject.
-    """
-    pass
-
-  @abstractmethod
-  def detach(self, observer: EngineObserver) -> None:
-    """
-    Detach an observer from the subject.
-    """
-    pass
-
-  @abstractmethod
-  def notify(self, message) -> None:
-    """
-    Notify all observers about an event.
-    """
-    pass
-
-class ChaosCommunicator(EngineSubject):
-  _state: int = None
+class ChaosCommunicator():
   _observers: List[EngineObserver] = []
   
   def attach(self, observer: EngineObserver) -> None:
@@ -80,9 +46,7 @@ class ChaosCommunicator(EngineSubject):
     self._observers.remove(observer)
     
   def notify(self, message) -> None:
-    """
-    Trigger an update in each subscriber.
-    """
+    # Trigger an update in each subscriber.
     for observer in self._observers:
       observer.updateCommand(message)
   
@@ -94,7 +58,7 @@ class ChaosCommunicator(EngineSubject):
     self.socketListen.bind("tcp://*:5556")
         
     self.socketTalk = self.context.socket(zmq.REQ)
-    self.socketTalk.connect("tcp://192.168.1.232:5555")
+    self.socketTalk.connect("tcp://localhost:5555")
         
     self.keepRunning = True
     self.thread = threading.Thread(target=self.listenLoop)
@@ -108,18 +72,20 @@ class ChaosCommunicator(EngineSubject):
     while self.keepRunning:
       #  Wait for next request from client
       message = self.socketListen.recv()
-      log.debug("Received request from engine: " + message.decode("utf-8"))
+      print("Received request from engine: " + message.decode("utf-8"))
+      #log.debug("Received request from engine: " + message.decode("utf-8"))
 
       self.notify(message.decode("utf-8"))
       self.socketListen.send(b"Pong")
   
   def sendMessage(self, message):
+    print("Sending message: " + message)
     self.socketTalk.send_string(message)
     return self.socketTalk.recv()
     
 class TestObserver(EngineObserver):
   def updateCommand(self, message ) -> None:
-    print("Message: " + str(message))
+    print("Notified about message: " + str(message))
 
 if __name__ == "__main__":
   log.setLevel(logging.DEBUG)
@@ -127,7 +93,6 @@ if __name__ == "__main__":
   testObserver = TestObserver()
   subject.attach(testObserver)
   subject.start()
-
   subject.sendMessage("game")
   time.sleep(10)
   subject.stop()
