@@ -78,7 +78,7 @@ Configuration::Configuration(const std::string& fname) {
   interface_port = configuration["interface_port"].value_or(5556);
   PLOG_DEBUG << "Sending messages to chaosface at endpoint " << getInterfaceAddress();
   listener_port = configuration["listener_port"].value_or(5555);
-  PLOG_DEBUG << "Lisening to messages from chaosface at enpoint " << getListenerAddress();
+  PLOG_DEBUG << "Listening to messages from chaosface at endpoint " << getListenerAddress();
 
   game_config = configuration["default_game"].value_or("");
 }
