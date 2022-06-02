@@ -90,7 +90,8 @@ namespace Chaos {
     void disableTPAxis(ControllerSignal tp_axis);
 
   public:
-    ChaosEngine(Controller& c, const std::string& server_endpoint, const std::string& listener_endpoint);
+    ChaosEngine(Controller& c, const std::string& listener_endpoint,
+                const std::string& talker_endpoint);
     
     void loadConfigFile(const std::string& configfile, EngineInterface* engine);
 

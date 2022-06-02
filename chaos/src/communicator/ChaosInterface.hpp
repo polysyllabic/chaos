@@ -35,8 +35,8 @@ namespace Chaos {
    */
   class ChaosInterface : public Mogi::Thread {
   private:
-    CommandListener server;
-    CommandSender client;
+    CommandListener listener;
+    CommandSender talker;
 
     std::queue<std::string> outgoingQueue;
 
@@ -44,7 +44,7 @@ namespace Chaos {
 
   public:
     ChaosInterface();
-    void setupInterface(const std::string& server_endpoint, const std::string& interface_endpoint);
+    void setupInterface(const std::string& listener_endpoint, const std::string& talker_endpoint);
     bool sendMessage(std::string message);
     void setObserver(CommandObserver* observer);
   };

@@ -31,14 +31,14 @@
 
 using namespace Chaos;
 
-ChaosEngine::ChaosEngine(Controller& c, const std::string& server_endpoint, const std::string& listener_endpoint) : 
+ChaosEngine::ChaosEngine(Controller& c, const std::string& listener_endpoint, const std::string& talker_endpoint) : 
   controller{c}, game{c}, pause{true}
 {
   time.initialize();
   jsonReader = jsonReaderBuilder.newCharReader();
   controller.addInjector(this);
   chaosInterface.setObserver(this);
-  chaosInterface.setupInterface(server_endpoint, listener_endpoint);
+  chaosInterface.setupInterface(listener_endpoint, talker_endpoint);
 }
 
 void ChaosEngine::newCommand(const std::string& command) {

@@ -17,6 +17,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CommandSender.hpp"
+#include <plog/Log.h>
 
 using namespace Chaos;
 
@@ -33,7 +34,7 @@ void CommandSender::setEndpoint(const std::string& endpoint) {
   // generate a pull socket
   zmqpp::socket_type type = zmqpp::socket_type::request;
   socket = new zmqpp::socket(context, type);
-
+  PLOG_DEBUG << "Connecting request socket to endpoint " << endpoint;
   // bind to the socket
   socket->connect(endpoint);
 }
