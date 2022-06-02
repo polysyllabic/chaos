@@ -1,0 +1,17 @@
+chaosDefaults = {
+  "active_modifiers": 3,
+  "modifier_time": 180.0,
+  "softmax_factor": 33,
+  "host": "irc.twitch.tv",
+  "port": 6667,
+  "bot_name": "your_bot",
+  "bot_oauth": "oauth:",
+  "channel_name": "your_channel",
+  "chat_rate": 0.67,
+  "pi_host": "localhost",
+  "listen_port": 5555,
+  "talk_port": 5556,
+  "announce_mods": False,
+  "ui_rate": 20.0,
+  "uiPort": 80,
+}

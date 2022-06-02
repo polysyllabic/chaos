@@ -18,21 +18,20 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from flexx import flx
+from chaosface.config.globals import relay
 
 class SettingsView(flx.PyWidget):
 
-  def init(self, model):
+  def init(self):
     super().init()
-    self.model = model
-
     styleLabel = "text-align:right"
     styleField = "background-color:#BBBBBB;text-align:center"
 
     with flx.VBox(flex=1):
       flx.Label(style="text-align:center", text="Settings" )
       flx.Widget(flex=1)
-      self.gameLabel = flx.Label(style="font-weight:bold;font-size:large", text=str(self.model.relay.gameName))
-      self.gameErrors = flx.Label(text=f"Loaded with {str(self.model.relay.gameErrors)} errors")
+      self.gameLabel = flx.Label(style="font-weight:bold;font-size:large", text=str(relay.gameName))
+      self.gameErrors = flx.Label(text=f"Loaded with {str(relay.gameErrors)} errors")
       flx.Widget(flex=1)
       with flx.HBox():
         with flx.VBox():
@@ -42,13 +41,13 @@ class SettingsView(flx.PyWidget):
           flx.Label(style=styleLabel, text="Browser Update Rate (Hz):" )
           flx.Label(style=styleLabel, text="Reset Repeat Mod Memory:")
         with flx.VBox(flex=1):
-          self.totalActiveMods = flx.LineEdit(style=styleField, text=str(self.model.relay.totalActiveMods))
-          self.timePerModifier = flx.LineEdit(style=styleField, text=str(self.model.relay.timePerModifier))
-          self.uiRate = flx.LineEdit(style=styleField, text=str(self.model.relay.ui_rate))
-          self.softmaxFactor = flx.Slider(min=1, max=100, step=1, value=self.model.relay.softmaxFactor)
+          self.totalActiveMods = flx.LineEdit(style=styleField, text=str(relay.totalActiveMods))
+          self.timePerModifier = flx.LineEdit(style=styleField, text=str(relay.timePerModifier))
+          self.uiRate = flx.LineEdit(style=styleField, text=str(relay.ui_rate))
+          self.softmaxFactor = flx.Slider(min=1, max=100, step=1, value=relay.softmaxFactor)
           self.resetButton = flx.Button(flex=0,text="Reset")
       with flx.VBox(flex=1):
-        self.announceMods = flx.CheckBox(flex=0, text="Announce Mods in Chat", value=self.model.relay.announce_mods)
+        self.announceMods = flx.CheckBox(flex=0, text="Announce Mods in Chat", value=relay.announceMods)
       with flx.HBox():
         flx.Widget(flex=1)
         self.saveButton = flx.Button(flex=0,text="Save")
@@ -61,16 +60,16 @@ class SettingsView(flx.PyWidget):
   @flx.reaction('saveButton.pointer_click')
   def _save_button_clicked(self, *events):
     ev = events[-1]
-    self.model.relay.set_totalActiveMods(int(self.totalActiveMods.text))
-    self.model.relay.set_timePerModifier(float(self.timePerModifier.text))
-    self.model.relay.set_ui_rate(float(self.uiRate.text))
-    self.model.relay.set_softmaxFactor(self.softmaxFactor.value)
-    self.model.relay.set_announce_mods(self.announceMods.checked)
-    self.model.relay.set_shouldSave(True)
+    relay.set_totalActiveMods(int(self.totalActiveMods.text))
+    relay.set_timePerModifier(float(self.timePerModifier.text))
+    relay.set_ui_rate(float(self.uiRate.text))
+    relay.set_softmaxFactor(self.softmaxFactor.value)
+    relay.set_announce_mods(self.announceMods.checked)
+    relay.set_shouldSave(True)
     self.successLabel.set_text('Saved!')
 
   @flx.reaction('resetButton.pointer_click')
   def _reset_button_clicked(self, *events):
     ev = events[-1]
-    self.model.relay.set_resetSoftmax(True)
+    relay.set_resetSoftmax(True)
     self.successLabel.set_text('Reset!')

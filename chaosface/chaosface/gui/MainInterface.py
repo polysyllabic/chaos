@@ -18,7 +18,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from flexx import flx, ui
-from config import relay
 
 from .BotConfiguration import BotConfiguration
 from .Settings import Settings
@@ -26,18 +25,11 @@ from .StreamerInterface import StreamerInterface
 
 class MainInterface(flx.PyWidget):
 
-#  CSS = """
-#    .flx-Widget {
-#  background: #0C0C0C;
-#    }
-#    """
-  def init(self, relay):
-    self.relay = relay
+  def init(self):
     with ui.TabLayout(style="background: #aaa; color: #000; text-align: center; foreground-color:#808080") as self.t:
-    #with StreamerInterfaceLayout() as self.s:
-      self.interface = StreamerInterface(self.relay, title='Interface')
-      self.settings = Settings(self.relay, title='Settings')
-      self.botSetup = BotConfiguration(self.relay, title='Bot Setup')
+      self.interface = StreamerInterface(title='Interface')
+      self.settings = Settings(title='Settings')
+      self.botSetup = BotConfiguration(title='Connection')
 
   def dispose(self):
     super().dispose()

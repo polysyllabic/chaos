@@ -23,232 +23,210 @@ log = logging.getLogger(__name__)
 from flexx import flx
 import json
 
-def get_attribute(data, attribute, default_value):
-  result = data.get(attribute)
-  if result:
-    return result
-  data[attribute] = default_value
-  return default_value
+from .defaults import chaosDefaults
 
 class ChaosRelay(flx.Component):
 
-#  def __init__(self):
-#    super().__init__()
-    
-  chaosConfig = {}
-      
-  # Model-View bridge:
-  gameName = flx.StringProp("NONE", settable=True)
-  gameErrors = flx.IntProp(0, settable=True)
+  def init(self, file_name):
+    super().init()
+    self.chaosConfig = {}
+    self.openConfig(file_name)
 
-  voteTime = flx.FloatProp(0.5, settable=True)
-  modTimes = flx.ListProp([0.0,0.0,0.0], settable=True)
-  votes = flx.ListProp([0,0,0], settable=True)
-  mods = flx.ListProp(["","",""], settable=True)
-  activeMods = flx.ListProp(["","",""], settable=True)
-  allMods = flx.ListProp([], settable=True)
-  paused = flx.BoolProp(True, settable=True)
-  pausedBrightBackground = flx.BoolProp(True, settable=True)
-  connected = flx.BoolProp(True, settable=True)
-  connectedBrightBackground = flx.BoolProp(True, settable=True)
-  resetSoftmax = flx.BoolProp(False, settable=True)
-  tmiResponse = flx.StringProp("", settable=True)
+    # Model-View bridge:
+    self.gameName = flx.StringProp("NONE", settable=True)
+    self.gameErrors = flx.IntProp(0, settable=True)
+
+    self.voteTime = flx.FloatProp(0.5, settable=True)
+    self.modTimes = flx.ListProp([0.0,0.0,0.0], settable=True)
+    self.votes = flx.ListProp([0,0,0], settable=True)
+    self.mods = flx.ListProp(["","",""], settable=True)
+    self.activeMods = flx.ListProp(["","",""], settable=True)
+    self.allMods = flx.ListProp([], settable=True)
+    self.paused = flx.BoolProp(True, settable=True)
+    self.pausedBrightBackground = flx.BoolProp(True, settable=True)
+    self.connected = flx.BoolProp(True, settable=True)
+    self.connectedBrightBackground = flx.BoolProp(True, settable=True)
+    self.resetSoftmax = flx.BoolProp(False, settable=True)
+    self.tmiResponse = flx.StringProp("", settable=True)
   
-  # Chaos Settings:
-  totalActiveMods = flx.IntProp(get_attribute(chaosConfig, "active_modifiers", 3), settable=True)
-  timePerModifier = flx.FloatProp(get_attribute(chaosConfig, "modifier_time", 180.0), settable=True)
-  softmaxFactor = flx.IntProp(get_attribute(chaosConfig, "softmax_factor", 33), settable=True)
+    # Chaos Settings:
+    self.totalActiveMods = flx.IntProp(self.get_attribute("active_modifiers"), settable=True)
+    self.timePerModifier = flx.FloatProp(self.get_attribute("modifier_time"), settable=True)
+    self.softmaxFactor = flx.IntProp(self.get_attribute("softmax_factor"), settable=True)
 
-  # Chat Bot Configuration  
-  ircHost = flx.StringProp(get_attribute(chaosConfig, "host", "irc.twitch.tv"), settable=True)
-  ircPort = flx.IntProp(get_attribute(chaosConfig, "port", 6667), settable=True)  
-  bot_name = flx.StringProp(get_attribute(chaosConfig, "bot_name", "your_bot"), settable=True)
-  bot_oauth = flx.StringProp(get_attribute(chaosConfig, "bot_oauth", "oauth:"), settable=True)
-  channel_name = flx.StringProp(get_attribute(chaosConfig, "channel_name", "your_channel"), settable=True)
-  chat_rate = flx.FloatProp(get_attribute(chaosConfig, "chat_rate", 0.67), settable=True)
+    # Chat Bot Configuration  
+    self.ircHost = flx.StringProp(self.get_attribute("host"), settable=True)
+    self.ircPort = flx.IntProp(self.get_attribute("port"), settable=True)  
+    self.bot_name = flx.StringProp(self.get_attribute("bot_name"), settable=True)
+    self.bot_oauth = flx.StringProp(self.get_attribute("bot_oauth"), settable=True)
+    self.channel_name = flx.StringProp(self.get_attribute("channel_name"), settable=True)
+    self.chat_rate = flx.FloatProp(self.get_attribute("chat_rate"), settable=True)
 
-  # Engine Settings
-  pi_host = flx.StringProp(get_attribute(chaosConfig, "pi_host", "localhost"), settable=True)
-  chaos_engine_port = flx.IntProp(get_attribute(chaosConfig, 5555))
-
-  # User Interface Settings      
-  announce_mods = flx.BoolProp(get_attribute(chaosConfig, "announce_mods", False), settable=True)
-  ui_rate = flx.FloatProp(get_attribute(chaosConfig, "ui_rate", 20.0), settable=True)
-  uiPort = flx.IntProp(get_attribute(chaosConfig, "uiPort", 80), settable=True)
+    # Engine Settings
+    self.piHost = flx.StringProp(self.get_attribute("pi_host"), settable=True)
+    self.listenPort = flx.IntProp(self.get_attribute("listen_port"), settable=True)
+    self.talkPort = flx.IntProp(self.get_attribute("talk_port"), settable=True)
+    # User Interface Settings      
+    self.announceMods = flx.BoolProp(self.get_attribute("announce_mods"), settable=True)
+    self.uiRate = flx.FloatProp(self.get_attribute("ui_rate"), settable=True)
+    self.uiPort = flx.IntProp(self.get_attribute("uiPort"), settable=True)
   
-  shouldSave = flx.BoolProp(False, settable=True)
-  
+    self.shouldSave = flx.BoolProp(False, settable=True)
+
+  def get_attribute(self, attribute):
+    if attribute in self.chaosConfig:
+      return self.chaosConfig.get(attribute)
+    # Nothing found, return default setting
+    if attribute in chaosDefaults:
+      return chaosDefaults[attribute]
+    log.error(f"No default for attribute '{attribute}'")
+    return None
+
+
   def openConfig(self, configFile):
     try:
       self.chaosConfigFile = configFile
-      log.info("ChaosRelay initializing with file:" + self.chaosConfigFile)
+      log.info("ChaosRelay initializing with file: " + self.chaosConfigFile)
       with open(self.chaosConfigFile) as json_data_file:
         ChaosRelay.chaosConfig = json.load(json_data_file)
     except Exception as e:
-      log.error("openConfig(): Error in opening file:" + self.chaosConfigFile)
-      ChaosRelay.chaosConfig = {
-        "modifier_time": 180.0,
-        "softmax_factor": 33,
-        "host": "irc.twitch.tv",
-        "port": 6667,
-        "bot_name": "polysylbot",
-        "bot_oauth": "oauth:",
-        "channel_name": "polysyl",
-        "chat-rate": 0.67,
-        "ui_rate": 20.0,
-        "uiPort": 80,
-      }
-      self.saveConfig()
-      
-    self.set_timePerModifier(get_attribute(self.chaosConfig, "modifier_time", 180.0))
-    self.set_softmaxFactor(get_attribute(self.chaosConfig, "softmax_factor", 33))
-    
-    self.set_ircHost(get_attribute(self.chaosConfig, "host", "irc.twitch.tv"))
-    self.set_ircPort(get_attribute(self.chaosConfig, "port", 6667))
-      
-    self.set_bot_name(get_attribute(self.chaosConfig, "bot_name", "polysylbot"))
-    self.set_bot_oauth(get_attribute(self.chaosConfig, "bot_oauth", "oauth:abcdefghijklmnopqrstuvwxyz1234"))
-    #print('self.chaosConfig["channel_name"] = ' + ChaosRelay.chaosConfig["channel_name"])
-    #print('channel_name = ' + self.channel_name)
-    self.set_channel_name(get_attribute(self.chaosConfig, "channel_name", "polysyl"))
-    #print('self.chaosConfig["channel_name"] = ' + ChaosRelay.chaosConfig["channel_name"])
-    #print('channel_name = ' + self.channel_name)
-    
-    self.set_chat_rate(get_attribute(self.chaosConfig, "chat-rate", 0.67))
-      
-    self.set_ui_rate(get_attribute(self.chaosConfig, "ui_rate", 20.0))
-    self.set_uiPort(get_attribute(self.chaosConfig, "uiPort", 80))
+      log.error("openConfig(): Error in opening file: " + self.chaosConfigFile)
 
   def saveConfig(self):
     with open(self.chaosConfigFile, 'w') as outfile:
       json.dump(self.chaosConfig, outfile)
 
-  @flx.reaction('gameName')
+  @flx.reaction('!gameName')
   def on_gameName(self, *events):
     for ev in events:
       self.updateGameName(ev.new_value)
 
-  @flx.reaction('gameErrors')
+  @flx.reaction('!gameErrors')
   def on_gameErrors(self, *events):
     for ev in events:
       self.updateGameErrors(ev.new_value)
 
-  @flx.reaction('totalActiveMods')
+  @flx.reaction('!totalActiveMods')
   def on_totalActiveMods(self, *events):
     for ev in events:
       self.updateTotalActiveMods(ev.new_value)
 
-  @flx.reaction('voteTime')
+  @flx.reaction('!voteTime')
   def on_voteTime(self, *events):
     for ev in events:
       self.updateVoteTime(ev.new_value)
       
-  @flx.reaction('modTimes')
+  @flx.reaction('!modTimes')
   def on_modTimes(self, *events):
     for ev in events:
       self.updateModTimes(ev.new_value)
       
-  @flx.reaction('votes')
+  @flx.reaction('!votes')
   def on_votes(self, *events):
     for ev in events:
       self.updateVotes(ev.new_value)
       
-  @flx.reaction('mods')
+  @flx.reaction('!mods')
   def on_mods(self, *events):
     for ev in events:
       self.updateMods(ev.new_value)
       
-  @flx.reaction('activeMods')
+  @flx.reaction('!activeMods')
   def on_activeMods(self, *events):
     for ev in events:
       self.updateActiveMods(ev.new_value)
       
-#  @flx.reaction('allMods')
-#  def on_allMods(self, *events):
-#    for ev in events:
-#      chaosConfig["allMods"] = ev.new_value
-##      log.info("Relay set allMods")
-      
-  @flx.reaction('timePerModifier')
+  @flx.reaction('!timePerModifier')
   def on_timePerModifier(self, *events):
     for ev in events:
       self.chaosConfig["modifier_time"]  = ev.new_value
-#      self.updateTimePerModifier(ev.new_value)
       
-  @flx.reaction('softmaxFactor')
+  @flx.reaction('!softmaxFactor')
   def on_softmaxFactor(self, *events):
     for ev in events:
       self.chaosConfig["softmax_factor"]  = ev.new_value
       
-  @flx.reaction('paused')
+  @flx.reaction('!paused')
   def on_paused(self, *events):
     for ev in events:
       self.updatePaused(ev.new_value)
       
-  @flx.reaction('pausedBrightBackground')
+  @flx.reaction('!pausedBrightBackground')
   def on_pausedBrightBackground(self, *events):
     for ev in events:
       self.updatePausedBrightBackground(ev.new_value)
       
-  @flx.reaction('connected')
+  @flx.reaction('!connected')
   def on_connected(self, *events):
     for ev in events:
       self.updateConnected(ev.new_value)
       
-  @flx.reaction('connectedBrightBackground')
+  @flx.reaction('!connectedBrightBackground')
   def on_connectedBrightBackground(self, *events):
     for ev in events:
       self.updateConnectedBrightBackground(ev.new_value)
       
-      
-  @flx.reaction('tmiResponse')
+  @flx.reaction('!tmiResponse')
   def on_tmiResponse(self, *events):
     for ev in events:
       self.updateTmiResponse(ev.new_value)
       
-  @flx.reaction('ircHost')
+  @flx.reaction('!ircHost')
   def on_ircHost(self, *events):
     for ev in events:
       self.chaosConfig["host"] = ev.new_value
       
-  @flx.reaction('ircPort')
+  @flx.reaction('!ircPort')
   def on_ircPort(self, *events):
     for ev in events:
       self.chaosConfig["port"] = ev.new_value
       
-  @flx.reaction('bot_name')
+  @flx.reaction('!bot_name')
   def on_bot_name(self, *events):
     for ev in events:
       self.chaosConfig["bot_name"] = ev.new_value
       
-  @flx.reaction('bot_oauth')
+  @flx.reaction('!bot_oauth')
   def on_bot_oauth(self, *events):
     for ev in events:
       self.chaosConfig["bot_oauth"] = ev.new_value
       
-  @flx.reaction('channel_name')
+  @flx.reaction('!channel_name')
   def on_channel_name(self, *events):
     for ev in events:
       self.chaosConfig["channel_name"] = ev.new_value
 
-  @flx.reaction('announce_mods')
-  def on_announce_mods(self, *events):
+  @flx.reaction('!announceMods')
+  def on_announceMods(self, *events):
     for ev in events:
       self.chaosConfig["announce_mods"] = ev.new_value
                         
-  @flx.reaction('ui_rate')
-  def on_ui_rate(self, *events):
+  @flx.reaction('!uiRate')
+  def on_uiRate(self, *events):
     for ev in events:
-#      print("new ui_Rate: " + str(ev.new_value))
       self.chaosConfig["ui_rate"]  = ev.new_value
       
-  @flx.reaction('uiPort')
+  @flx.reaction('!uiPort')
   def on_uiPort(self, *events):
     for ev in events:
-#      print("new ui_Rate: " + str(ev.new_value))
       self.chaosConfig["uiPort"]  = ev.new_value
-      
-  @flx.reaction('shouldSave')
+
+  @flx.reaction('!piHost')
+  def on_piHost(self, *events):
+    for ev in events:
+      self.chaosConfig["pi_host"]  = ev.new_value
+
+  @flx.reaction('!listenPort')
+  def on_listenPort(self, *events):
+    for ev in events:
+      self.chaosConfig["listen_port"]  = ev.new_value
+
+  @flx.reaction('!talkPort')
+  def on_talkPort(self, *events):
+    for ev in events:
+      self.chaosConfig["talkPort"]  = ev.new_value
+
+  @flx.reaction('!shouldSave')
   def on_shouldSave(self, *events):
     for ev in events:
       if ev.new_value:
@@ -310,6 +288,14 @@ class ChaosRelay(flx.Component):
   def updateTmiResponse(self, value):
     return dict(value=value)
         
-# Create global relay object, shared by all connections
-#relay = Relay()
-#chatRelay = ChatRelay()
+  @flx.emitter
+  def updatePiHost(self, value):
+    return dict(value=value)
+
+  @flx.emitter
+  def updateListenPort(self, value):
+    return dict(value=value)
+
+  @flx.emitter
+  def updateTalkPort(self, value):
+    return dict(value=value)

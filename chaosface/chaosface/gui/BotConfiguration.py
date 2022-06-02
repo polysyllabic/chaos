@@ -19,15 +19,15 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from flexx import flx
-from config import relay
+import chaosface.config as config
+
 from .BotConfigurationView import BotConfigurationView
 
 class BotConfiguration(flx.PyWidget):
-  def init(self, relay):
-    self.relay = relay
-    self.configurationView = BotConfigurationView(self)
+  def init(self):
+    self.configurationView = BotConfigurationView()
       
-  @relay.reaction('updateTmiResponse')
+  @config.relay.reaction('updateTmiResponse')
   def _updateTmiResponse(self, *events):
     for ev in events:
       self.configurationView.updateTmiResponse(ev.value)

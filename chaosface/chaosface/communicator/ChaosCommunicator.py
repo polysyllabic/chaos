@@ -17,18 +17,17 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
+from chaosface.config.globals import relay
 import time
 from abc import ABC, abstractmethod
 from typing import List
 import threading
 import zmq
-
 import logging
 log = logging.getLogger(__name__)
 
 # An observer for listening to events from the chaos engine
-class EngineObserver(ABC):  
+class EngineObserver(ABC):
   @abstractmethod
   def updateCommand(self, message ) -> None:
     # Process message from ZMQ
@@ -36,10 +35,13 @@ class EngineObserver(ABC):
 
 class ChaosCommunicator():
   _observers: List[EngineObserver] = []
-  
+  request_retries = -1
+  request_timeout = 2500
+  socketListen = None 
+  socketTalk = None
+
   def attach(self, observer: EngineObserver) -> None:
-    #log.debug("Attached an observer.")
-    print("Attached an observer.")
+    log.debug("Attached an observer.")
     self._observers.append(observer)
 
   def detach(self, observer: EngineObserver) -> None:
@@ -51,38 +53,60 @@ class ChaosCommunicator():
       observer.updateCommand(message)
   
   def start(self):
-    #log.debug("Opening zmq socket")
-    print("Opening zmq socket")
+    log.debug("Opening zmq socket")
     self.context = zmq.Context()
-    self.socketListen = self.context.socket(zmq.REP)
-    self.socketListen.bind("tcp://*:5556")
-        
-    self.socketTalk = self.context.socket(zmq.REQ)
-    self.socketTalk.connect("tcp://localhost:5555")
+    self.reconnectListener()
+    self.reconnectTalker()
         
     self.keepRunning = True
     self.thread = threading.Thread(target=self.listenLoop)
     self.thread.start()
     
+  def reconnectListener(self):
+    if (self.socketListen):
+      # Close and reconnect socket
+      self.socketListen.setsockopt(zmq.LINGER, 0)
+      self.socketListen.close()
+    self.socketListen = self.context.socket(zmq.REP)
+    self.socketListen.bind(f"tcp://*:{relay.listenPort}")
+
+  def reconnectTalker(self):
+    if (self.socketTalk):
+      self.socketTalk.setsockopt(zmq.LINGER, 0)
+      self.socketTalk.close()
+    self.socketTalk = self.context.socket(zmq.REQ)
+    self.socketTalk.connect(f"tcp://{relay.piHost}:{relay.talkPort}")
+
   def stop(self):
     self.keepRunning = False
     self.thread.join()
     
   def listenLoop(self):
     while self.keepRunning:
-      #  Wait for next request from client
+      #  Wait for next message from engine
       message = self.socketListen.recv()
-      print("Received request from engine: " + message.decode("utf-8"))
-      #log.debug("Received request from engine: " + message.decode("utf-8"))
+      log.debug("Received from engine: " + message.decode("utf-8"))
 
       self.notify(message.decode("utf-8"))
       self.socketListen.send(b"Pong")
   
   def sendMessage(self, message):
-    print("Sending message: " + message)
+    log.debug("Sending message: " + message)
     self.socketTalk.send_string(message)
     return self.socketTalk.recv()
-    
+
+  @relay.reaction('updatePiHost')
+  def _updatePiHost(self, *events):
+    self.reconnectTalker()
+
+  @relay.reaction('updateTalkerPort')
+  def _updateTalkerPort(self, *events):
+    self.reconnectTalker()
+
+  @relay.reaction('updateListenPort')
+  def _updatePiHost(self, *events):
+    self.reconnectListener()
+
 class TestObserver(EngineObserver):
   def updateCommand(self, message ) -> None:
     print("Notified about message: " + str(message))

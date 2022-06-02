@@ -19,10 +19,9 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from flexx import flx
-from config import relay
+
 from .SettingsView import SettingsView
 
 class Settings(flx.PyWidget):
-  def init(self, relay):
-    self.relay = relay
+  def init(self):
     self.settingsView = SettingsView(self)

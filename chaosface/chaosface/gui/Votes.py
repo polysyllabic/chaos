@@ -19,7 +19,7 @@
 """
 
 from flexx import flx
-from config import relay
+import chaosface.config as config
 from .VoteView import VoteView
 
 class Votes(flx.PyWidget):
@@ -27,12 +27,12 @@ class Votes(flx.PyWidget):
     self.relay = relay
     self.chaosVoteView = VoteView(self)
     
-  @relay.reaction('updateMods')
+  @config.relay.reaction('updateMods')
   def _updateMods(self, *events):
     for ev in events:
       self.chaosVoteView.updateMods(ev.value)
       
-  @relay.reaction('updateVotes')
+  @config.relay.reaction('updateVotes')
   def _updateVotes(self, *events):
     for ev in events:
       self.chaosVoteView.updateNumbers(ev.value)
