@@ -53,6 +53,11 @@ overwrite_log = true
 # 6 = VERBOSE
 log_verbosity = 5
 
+# Separate log file for events from the usb-sniffify liberary. If not set or set to an empty
+# string, usb events will be logged to the main log file at the severity level set in log_verbosity.
+# If you want to disable usb logging, keep a file name and set the verbosity to 0.
+sniffify_log = "sniffify.log"
+
 # snifity_verbosity: Level of message detail sent to the log file for messages from the
 # usb-sniffify library. Uses same numerical scale as the main program.
 snifify_verbosity = 4
