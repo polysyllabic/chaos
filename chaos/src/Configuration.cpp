@@ -30,6 +30,9 @@
 #include "Modifier.hpp"
 #include "GameMenu.hpp"
 
+// This lets us configure the severity level of log messages coming from usb-sniffify separately
+extern "C" void initializeSniffifyLog(plog::Severity severity, plog::IAppender* appender);
+
 using namespace Chaos;
 
 // Parse the TOML file into memory and do initial setup.
@@ -59,19 +62,26 @@ Configuration::Configuration(const std::string& fname) {
       std::cerr << "Log path '" << log_path.string() << "' is not a directory!";
     }
   }
-  // Initialize the logger
+
+  // Set up the log
   std::filesystem::path logfile = configuration["log_file"].value_or("chaos.log");  
   logfile = log_path / logfile;
   
   bool overwrite = configuration["overwrite_log"].value_or(false);
 
   plog::Severity maxSeverity = (plog::Severity) configuration["log_verbosity"].value_or(3);
+  plog::Severity sniffifySeverity = (plog::Severity) configuration["sniffify_verbosity"].value_or(3);
+
   size_t max_size = (size_t) configuration["max_log_size"].value_or(0);
   int max_logs = configuration["max_log_files"].value_or(8);  
   if (overwrite && std::filesystem::exists(logfile)) {
     std::filesystem::remove(logfile);
   }
+  // Initialize the main logger
   plog::init(maxSeverity, logfile.c_str(), max_size, max_logs);
+  // Chain the sniffify logger into this one with its own severity level
+  initializeSniffifyLog(sniffifySeverity, plog::get());
+
   PLOG_NONE << "Welcome to Chaos " << CHAOS_VERSION;
 
   interface_addr = configuration["interface_addr"].value_or("localhost");
@@ -95,7 +105,7 @@ Configuration::Configuration(const std::string& fname) {
   if (! game_config.has_parent_path()) {
     game_config = game_directory / game_config;
   }
-  
+
 }
 
 

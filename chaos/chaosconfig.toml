@@ -42,8 +42,8 @@ log_file = "chaos.log"
 # overwrite_log: If true, we delete any existing log file when starting the program
 overwrite_log = true
 
-# log_verbosity: Level of message detail sent to the log file. Must be an integer from 0 to 6.
-# Higher numbers include all messages of the lower types.
+# log_verbosity: Level of message detail sent to the log file for the main program. Must be an
+# integer from 0 to 6. Higher numbers include all messages of the lower types.
 # 0 = NONE (logging disabled)
 # 1 = FATAL
 # 2 = ERROR
@@ -52,6 +52,11 @@ overwrite_log = true
 # 5 = DEBUG
 # 6 = VERBOSE
 log_verbosity = 5
+
+# snifity_verbosity: Level of message detail sent to the log file for messages from the
+# usb-sniffify library. Uses same numerical scale as the main program.
+snifify_verbosity = 4
+
 # max_log_size: Maximum log-file size in bytes
 max_log_size = 0
 # max_log_files: Maximum number of log files to keep (0 = disable log rolling)
