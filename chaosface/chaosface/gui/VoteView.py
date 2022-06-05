@@ -19,11 +19,11 @@
 """
 
 from flexx import flx
+from chaosface.config.globals import relay
 
 class VoteView(flx.PyWidget):
-  def init(self, model):
+  def init(self):
     super().init()
-    self.model = model
     
     self.label = []
     self.progress = []
@@ -32,7 +32,7 @@ class VoteView(flx.PyWidget):
     styleTitleText = "color:white;text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;text-align:center;font-weight: bold; vertical-align: bottom; line-height: 1.5; min-width:250px;"
     styleVoteProgress = " background-color:#808080; foreground-color:#808080; color:#FFFFFF; border-color:#000000; border-radius:5px; text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black; font-weight: bold;"
 
-    totalVotes = sum(self.model.relay.votes)
+    totalVotes = sum(relay.votes)
     with flx.VBox(flex=0):
       with flx.HFix(flex=1):
         self.voteLabel = flx.Label(flex=0,style=styleTitleText, text="Total Votes: " + str(int(totalVotes)) )
@@ -41,15 +41,16 @@ class VoteView(flx.PyWidget):
         
       with flx.HFix(flex=1):
         with flx.VFix(flex=1):
-          for i in range(len(self.model.relay.votes)):
+          for i in range(len(relay.votes)):
             if totalVotes > 0:
-              self.progress.append( flx.ProgressBar(flex=2, value=self.model.relay.votes[i]/totalVotes, text='{percent}', style=styleVoteProgress) )
+              self.progress.append(flx.ProgressBar(flex=2, value=relay.votes[i]/totalVotes, text='{percent}', style=styleVoteProgress))
             else:
-              self.progress.append( flx.ProgressBar(flex=2, value=1.0/len(self.model.relay.votes), text='{percent}', style=styleVoteProgress) )
+              self.progress.append(flx.ProgressBar(flex=2, value=1.0/len(relay.votes), text='{percent}', style=styleVoteProgress))
               
         with flx.VFix(flex=1):
-          for i in range(len(self.model.relay.votes)):
-            self.label.append( flx.Label(flex=1,style=styleModText, text=str(i+1) + " " + self.model.relay.mods[i]) )
+          for i in range(len(relay.votes)):
+            self.label.append(flx.Label(flex=1, style=styleModText, text=str(i+1) + " " + relay.mods[i]))
+
   @flx.action
   def updateMods(self, mods):
     self.label[0].set_text( "1 " + mods[0])

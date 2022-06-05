@@ -55,6 +55,7 @@ class Chatbot():
     self.qResponse = queue.Queue()
       
   def setIrcInfo(self, host, port):
+    log.debug("Setting IRC info")
     if self.host != host:
       self.host = host
       self.reconfigured = True
@@ -63,6 +64,7 @@ class Chatbot():
       self.reconfigured = True
 
   def setBotCredentials(self, name, oauth):
+    log.debug("Setting bot credentials")
     if self.bot_oauth != oauth:
       self.bot_oauth = oauth
       self.reconfigured = True
@@ -71,11 +73,13 @@ class Chatbot():
       self.reconfigured = True
       
   def setChannelName(self, name):
+    log.debug("Setting channel name")
     if self.channel_name != name:
       self.channel_name = name
       self.reconfigured = True
       
   def setChatRate(self, rate):
+    log.debug("Setting chat rate")
     self.chat_rate = rate
     
   def sendReply(self, message):
@@ -124,7 +128,7 @@ class Chatbot():
 #          self.s.connect((config.HOST, config.PORT))
           self.s.connect((self.host, self.port))
           
-          log.info("Attempting to connect to " + self.channel_name + " as " + self.bot_name )
+          log.info(f"Attempting to connect to {self.channel_name} as {self.bot_name}")
 
           self.s.sendall("PASS {}\r\n".format( self.bot_oauth ).encode("utf-8"))
           self.s.sendall("NICK {}\r\n".format( self.bot_name ).encode("utf-8"))

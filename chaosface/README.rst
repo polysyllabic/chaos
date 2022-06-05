@@ -9,7 +9,7 @@ The Chaos interface, *chaosface*, is one of two main parts of the Twitch Control
 system for allowing Twitch chat to alter various aspects of gameplay in a Playstation game.
 Chaosface is a Python application that provides the connection between viewers in Twitch chat
 and the chaos engine that directly controls gameplay modifications (mods). This file provides
- reference documentation for the chaos interface. For a general overview and quick guide,
+reference documentation for the chaos interface. For a general overview and quick guide,
 see the general README file for Twitch Controls Chaos.
 
 Chaosface consists of three major parts:
@@ -50,6 +50,10 @@ Installing Chaosface on Another Computer
 
 3. Install the Chatbot somewhere useful
 
+4. Configure the IP addresses for both the engine and the interface:
+    - In the chaosconfig.toml file, set the address or domain name of the computer hosting the
+      python interface program.
+    - From the interface program, set the address of the Raspberry Pi.
 
 Initial Setup
 -------------

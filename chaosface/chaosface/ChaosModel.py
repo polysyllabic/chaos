@@ -31,13 +31,12 @@ import threading
 import logging
 log = logging.getLogger(__name__)
 
-from communicator import ChaosCommunicator
-from config import relay
+from chaosface.communicator.ChaosCommunicator import ChaosCommunicator
 
 class ChaosModel():
-  def __init__(self, chatbot):
+  def __init__(self, chatbot, relay):
     self.chatbot = chatbot
-    
+    self.relay = relay
     self.firstTime = True
 
     #  Socket to talk to server
@@ -86,7 +85,7 @@ class ChaosModel():
     log.debug("Winning mod: " + mod)
     toSend = {}
     toSend["winner"] = mod
-    toSend["timePerModifier"] = relay.timePerModifier
+    toSend["timePerModifier"] = self.relay.timePerModifier
     response = self.chaosCommunicator.sendMessage(json.dumps(toSend))
     log.debug("Engine response: " + response)
 
@@ -95,7 +94,7 @@ class ChaosModel():
     log.debug("Initializing game data")
     self.game_name = gamedata["game"]
     try:
-      relay.set_gameName(gamedata["game"])
+      self.relay.set_gameName(gamedata["game"])
     except Exception as e:
       log.error(e)
 
@@ -105,7 +104,7 @@ class ChaosModel():
       log.error("Missing error count in gamedata message")
       errors = -1
     try:
-      relay.set_gameErrors(errors)
+      self.relay.set_gameErrors(errors)
     except Exception as e:
       log.error(e)
 
@@ -115,7 +114,7 @@ class ChaosModel():
       log.error("Missing modifier count in gamedata message")
       nmods = 3
     try:
-      relay.set_totalActiveMods(nmods)
+      self.relay.set_totalActiveMods(nmods)
     except Exception as e:
       log.error(e)
     
@@ -125,7 +124,7 @@ class ChaosModel():
       log.error("Missing modifier time in gamedata message")
       modtime = 180.0
     try:
-      relay.set_timePerModifier(modtime)
+      self.relay.set_timePerModifier(modtime)
     except Exception as e:
       log.error(e)
 
@@ -154,7 +153,7 @@ class ChaosModel():
     
   def updateSoftmaxProbabilities(self, data):
     for mod in data:
-      data[mod]["contribution"] = math.exp(self.modifierData[mod]["count"] * math.log(float(relay.softmaxFactor)/100.0))
+      data[mod]["contribution"] = math.exp(self.modifierData[mod]["count"] * math.log(float(self.relay.softmaxFactor)/100.0))
     softMaxDivisor = self.getSoftmaxDivisor(data)
     for mod in data:
       data[mod]["p"] = data[mod]["contribution"]/softMaxDivisor
@@ -226,34 +225,34 @@ class ChaosModel():
       return self.currentMods[ self.votes.index(max(self.votes)) ]
       
   def updateChatCredentials(self):
-    self.chatbot.setChatRate(relay.chat_rate)
-    self.chatbot.setChannelName(relay.channel_name)
-    self.chatbot.setBotCredentials(relay.bot_name, relay.bot_oauth)
-    self.chatbot.setIrcInfo(relay.ircHost, relay.ircPort)
-    log.info("Credentials set to: " + relay.channel_name + " using bot: " + relay.bot_name + " " + relay.bot_oauth)
+    self.chatbot.setChatRate(self.relay.chat_rate)
+    self.chatbot.setChannelName(self.relay.channel_name)
+    self.chatbot.setBotCredentials(self.relay.bot_name, self.relay.bot_oauth)
+    self.chatbot.setIrcInfo(self.relay.ircHost, self.relay.ircPort)
+    log.info(f"Credentials set for {self.relay.channel_name} using bot {self.relay.bot_name}")
 
   def flashPause(self):
-    if self.pausedFlashingTimer > 0.5 and relay.pausedBrightBackground == True:
+    if self.pausedFlashingTimer > 0.5 and self.relay.pausedBrightBackground == True:
       try:
-        relay.set_pausedBrightBackground(False)
+        self.relay.set_pausedBrightBackground(False)
       except Exception as e:
         log.error(e)
-    elif self.pausedFlashingTimer > 1.0 and relay.pausedBrightBackground == False:
+    elif self.pausedFlashingTimer > 1.0 and self.relay.pausedBrightBackground == False:
       try:
-        relay.set_pausedBrightBackground(True)
+        self.relay.set_pausedBrightBackground(True)
         self.pausedFlashingTimer = 0.0
       except Exception as e:
         log.error(e)
         
   def flashDisconnected(self):
-    if self.disconnectedFlashingTimer > 0.5 and relay.connectedBrightBackground == True:
+    if self.disconnectedFlashingTimer > 0.5 and self.relay.connectedBrightBackground == True:
       try:
-        relay.set_connectedBrightBackground(False)
+        self.relay.set_connectedBrightBackground(False)
       except Exception as e:
         log.error(e)
-    elif self.disconnectedFlashingTimer > 1.0 and relay.connectedBrightBackground == False:
+    elif self.disconnectedFlashingTimer > 1.0 and self.relay.connectedBrightBackground == False:
       try:
-        relay.set_connectedBrightBackground(True)
+        self.relay.set_connectedBrightBackground(True)
         self.disconnectedFlashingTimer = 0.0
       except Exception as e:
         log.error(e)
@@ -272,7 +271,7 @@ class ChaosModel():
   def _loop(self):
     beginTime = time.time()
     now = beginTime
-    dTime = 1.0/relay.ui_rate
+    dTime = 1.0/self.relay.ui_rate
     priorTime = beginTime - dTime
     
     self.timePerVote = 1.0  # This will be set by the engine
@@ -300,7 +299,7 @@ class ChaosModel():
     self.timeout = 0
 
     while True:
-      time.sleep(1.0/relay.ui_rate)
+      time.sleep(1.0/self.relay.ui_rate)
       priorTime = now
       now = time.time()
       dTime = now - priorTime
@@ -309,9 +308,9 @@ class ChaosModel():
       
       #self.updateChatCredentials()
       
-      if not relay.paused == self.pause:
+      if not self.relay.paused == self.pause:
         try:
-          relay.set_paused(self.pause)
+          self.relay.set_paused(self.pause)
         except Exception as e:
           log.error(e)
           
@@ -320,9 +319,9 @@ class ChaosModel():
         dTime = 0
         self.flashPause()
 
-      if not relay.connected == self.chatbot.isConnected():
+      if not self.relay.connected == self.chatbot.isConnected():
         try:
-          relay.set_connected(self.chatbot.isConnected())
+          self.relay.set_connected(self.chatbot.isConnected())
         except Exception as e:
           log.error(e)
           
@@ -332,10 +331,10 @@ class ChaosModel():
       self.voteTime =  now - beginTime
       
       # If time-per-modifier has been changed, update time-per-vote and tell the engine
-      if not self.timePerVote == (relay.timePerModifier/3.0 - 0.5):
-        self.timePerVote = relay.timePerModifier/3.0 - 0.5
+      if not self.timePerVote == (self.relay.timePerModifier/3.0 - 0.5):
+        self.timePerVote = self.relay.timePerModifier/3.0 - 0.5
         newVoteTime={}
-        newVoteTime["timePerModifier"] = relay.timePerModifier
+        newVoteTime["timePerModifier"] = self.relay.timePerModifier
         self.chaosCommunicator.sendMessage(json.dumps(newVoteTime))
       
       for i in range(len(self.activeModTimes)):
@@ -345,9 +344,9 @@ class ChaosModel():
         self.voteTime = self.timePerVote+1
         self.firstTime = False
       
-      if relay.resetSoftmax:
+      if self.relay.resetSoftmax:
         try:
-          relay.set_resetSoftmax(False)
+          self.relay.set_resetSoftmax(False)
           self.resetSoftMax()
         except Exception as e:
           log.error(e)
@@ -356,7 +355,7 @@ class ChaosModel():
         beginTime = now
         
         if not self.validData:
-          if self.timeout % (relay.ui_rate * 10) == 0:
+          if self.timeout % (self.relay.ui_rate * 10) == 0:
             # log a waiting message every 10 seconds
             log.info("Waiting for controller sync...")
           self.timeout += 1
@@ -398,27 +397,27 @@ class ChaosModel():
   
   def updateUI(self):
     try:
-      relay.set_mods( self.currentMods )
+      self.relay.set_mods( self.currentMods )
     except Exception as e:
       log.error(e)
     try:
-      relay.set_activeMods( self.activeMods )
+      self.relay.set_activeMods( self.activeMods )
     except Exception as e:
       log.error(e)
     try:
-      relay.set_votes( self.votes )
+      self.relay.set_votes( self.votes )
     except Exception as e:
       log.error(e)
     try:
-      relay.set_voteTime( self.timeToSend )
+      self.relay.set_voteTime( self.timeToSend )
     except Exception as e:
       log.error(e)
     try:
-      relay.set_modTimes( self.activeModTimes )
+      self.relay.set_modTimes( self.activeModTimes )
     except Exception as e:
       log.error(e)
     try:
-      relay.set_tmiResponse(self.tmiChatText)
+      self.relay.set_tmiResponse(self.tmiChatText)
     except Exception as e:
       log.error(e)
     

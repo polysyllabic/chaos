@@ -17,15 +17,13 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
 from flexx import flx
-from config import relay
 from .ActiveModsView import ActiveModsView
 
 class ActiveMods(flx.PyWidget):
   def init(self, relay):
     self.relay = relay
-    self.chaosActiveView = ActiveModsView(self)
+    self.chaosActiveView = ActiveModsView()
     
   @relay.reaction('updateModTimes')
   def _updateModTimes(self, *events):

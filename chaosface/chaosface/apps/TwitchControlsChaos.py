@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
   Twitch Controls Chaos (TCC)
   Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
@@ -18,11 +19,42 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from pathlib import Path
-from .ChaosRelay import ChaosRelay
+
+import threading
+import logging
+
+from chaosface.chatbot.chatbot import Chatbot
+from chaosface.ChaosModel import ChaosModel
+from chaosface.config.globals import relay
 
 CHAOS_PATH = Path.home().name
 CHAOS_LOG_FILE = Path(CHAOS_PATH, "chaosface.log").name
 CHAOS_CONFIG_FILE = Path(CHAOS_PATH, "config", "chaosConfig.json").name
 
-relay = ChaosRelay(CHAOS_CONFIG_FILE)
+import chaosface.gui.flexxgui as gui
+
+if __name__ == "__main__":
+
+  logging.basicConfig(filename=CHAOS_LOG_FILE, level=logging.DEBUG)
+
+  # Start chatbot
+  logging.info("Starting chatbot")
+  chatbot = Chatbot()
+  chatbot.setIrcInfo(relay.ircHost, relay.ircPort)
+  chatbot.start()
+
+  # Start GUI
+  logging.info("Starting GUI")
+  gui.startFlexx()
+  flexxThread = threading.Thread(target=gui.startFlexx)
+  flexxThread.start()
+
+  # Voting model
+  logging.info("Starting voting loop")
+  chaosModel = ChaosModel(relay)
+  chaosModel.start()
+
+  logging.info("Stopping")
+  gui.stopFlexx()
+  flexxThread.join()
 

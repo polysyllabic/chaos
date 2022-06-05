@@ -18,6 +18,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
 import logging
+log = logging.getLogger(__name__)
 import collections
 import re
 
@@ -141,7 +142,7 @@ class irc():
       else:
         notice["user"] = ""
     except Exception as e:
-      logging.info("Parsing error for response:" + str(response))
+      log.error("Parsing error for response:" + str(response))
     #message = CHAT_MSG.sub("", response)
     #logging.info("Chat " + notice["user"] + ":" + notice["message"])
     #if username == "tmi" or username == "see_bot":

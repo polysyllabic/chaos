@@ -43,3 +43,6 @@ __pycache__
 .vscode/*
 settings.json
 chaos/.vscode/settings.json
+
+# virtual environments
+chaosface/venv/*

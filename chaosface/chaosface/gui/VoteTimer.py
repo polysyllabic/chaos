@@ -19,15 +19,14 @@
 """
 
 from flexx import flx
-from config import relay
+import chaosface.config as config
 from .VoteTimerView import VoteTimerView
 
 class VoteTimer(flx.PyWidget):
-  def init(self, relay):
-    self.relay = relay
+  def init(self):
     self.voteTimerView = VoteTimerView(self)
       
-  @relay.reaction('updateVoteTime')
+  @config.relay.reaction('updateVoteTime')
   def _updateVoteTime(self, *events):
     for ev in events:
       self.voteTimerView.updateTime(ev.value)

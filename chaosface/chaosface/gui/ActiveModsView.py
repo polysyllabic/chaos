@@ -18,12 +18,11 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from flexx import flx
+from chaosface.config.globals import relay
 
 class ActiveModsView(flx.PyWidget):
-	def init(self, model):
+	def init(self):
 		super().init()
-		self.model = model
-		
 		self.label = []
 		self.progress = []
 		
@@ -33,17 +32,17 @@ class ActiveModsView(flx.PyWidget):
 		
 		with flx.VBox(flex=0):
 			with flx.HFix(flex=1):
-				self.voteLabel = flx.Label(flex=0,style=styleTitleText, text="Active Mods" )
+				self.voteLabel = flx.Label(flex=0,style=styleTitleText, text="Active Mods")
 				self.blankLabel = flx.Label(flex=0,style=styleTitleText, text=" ")
-			#with flx.VBox(flex=1):
 				
 			with flx.HFix(flex=1):
 				with flx.VFix(flex=1):
 					for i in range(3):
-						self.progress.append( flx.ProgressBar(flex=2, value=self.model.relay.modTimes[i], text='', style=styleModProgress) )
+						self.progress.append(flx.ProgressBar(flex=2, value=relay.modTimes[i], text='', style=styleModProgress))
 				with flx.VFix(flex=1):
 					for i in range(3):
-						self.label.append( flx.Label(flex=1,style=styleModText, text=self.model.relay.activeMods[i]) )
+						self.label.append(flx.Label(flex=1,style=styleModText, text=relay.activeMods[i]))
+
 	@flx.action
 	def updateMods(self, activeMods):
 		self.label[0].set_text(activeMods[0])
