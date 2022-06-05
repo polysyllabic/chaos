@@ -66,10 +66,14 @@ void ChaosEngine::newCommand(const std::string& command) {
   }
 
   if (root.isMember("game")) {
+    reportGameStatus();
+  }
+
+  if (root.isMember("newgame")) {
     lock();
     pause = true;
     // Load a new game file
-    game.loadConfigFile(root["game"].asString(), this);
+    game.loadConfigFile(root["newgame"].asString(), this);
     unlock();
     reportGameStatus();
   }
