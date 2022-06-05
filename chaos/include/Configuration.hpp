@@ -45,7 +45,8 @@ namespace Chaos {
 
   private:
     std::string toml_version;
-    std::filesystem::path game_config; 
+    std::filesystem::path game_directory;
+    std::filesystem::path game_config;
     std::filesystem::path log_path;
     unsigned int usleep_interval;
     std::string interface_addr;

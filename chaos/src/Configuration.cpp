@@ -49,7 +49,7 @@ Configuration::Configuration(const std::string& fname) {
     throw std::runtime_error("Missing chaos version identifier in TOML configuration file");
   }
 
-  log_path = configuration["log_dir"].value_or(".");
+  log_path = configuration["log_directory"].value_or(".");
   if (! std::filesystem::exists(log_path)) {
     // If this directory doesn't exist, create it
     std::filesystem::create_directory(log_path);
@@ -80,7 +80,22 @@ Configuration::Configuration(const std::string& fname) {
   listener_port = configuration["listener_port"].value_or(5555);
   PLOG_DEBUG << "Listening to messages from chaosface at endpoint " << getListenerAddress();
 
+  game_directory = configuration["game_directory"].value_or(".");
+  // Error if directory does not exist, or the path contains an ordinary file
+  if (! std::filesystem::exists(game_directory)) {
+    PLOG_ERROR << "Game directory '" << game_directory.string() << "' does not exist!";
+    game_directory = ".";
+  } else if (! std::filesystem::is_directory(game_directory)) {
+    PLOG_ERROR << "Game directory '" << game_directory.string() << "' is not a directory!";
+    game_directory = ".";
+  }
+
+  // If the game configuration file doesn't specify a path, use the default games directory
   game_config = configuration["default_game"].value_or("");
+  if (! game_config.has_parent_path()) {
+    game_config = game_directory / game_config;
+  }
+  
 }
 
 

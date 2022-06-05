@@ -10,21 +10,31 @@
 # game-configuraiton files.
 chaos_toml = "1.0"
 
+# Default directory where we look for games. This is used if no specific game file is specified on
+# the command line and the default game contains no path. Game configuration files put here can
+# also be reported to the chaos interface as available games
+game_directory = "./games/"
+
 # default_game: If no game file is specified on the command line, this is the game that we load.
-default_game = "./games/tlou2.toml"
+# If this string does not contain a path, we look for the file in the game directory.
+default_game = "tlou2.toml"
 
 # IP address/domain name of the computer running the chaos interface. Use 'localhost' if you're
 # running both the interface and the engine on the Raspberry Pi.
 interface_addr = "192.168.1.1"
+
 # Port to send outgoing messages to the chaos interface
 interface_port = 5556
+
 # Port to listen for incoming messages from the chaos interface
 listener_port = 5555
 
 # How long, in microseconds, should the engine sleep between executions of the main loop
 usleep_interval = 500
 
-# log_dir: Directory to keep logs and json files. This path can be relative or absolute.
+# log_directory: Directory to keep logs and json files. This path can be relative or absolute.
+log_directory = "."
+
 # The default is relative to the home directory of the user running the engine.
 # log_file: Name of the basic log file. Default = "chaos.log"
 log_file = "chaos.log"
