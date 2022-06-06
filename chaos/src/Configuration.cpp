@@ -30,9 +30,6 @@
 #include "Modifier.hpp"
 #include "GameMenu.hpp"
 
-// This lets us configure the severity level of log messages coming from usb-sniffify separately
-extern "C" void initializeSniffifyLog(plog::Severity severity, std::string filename);
-
 using namespace Chaos;
 
 // Parse the TOML file into memory and do initial setup.
@@ -84,9 +81,9 @@ Configuration::Configuration(const std::string& fname) {
 
   plog::Severity sniffifySeverity = (plog::Severity) configuration["sniffify_verbosity"].value_or(3);
   // IF we've specified a separate sniffify log, set it up
-  if (! sniflog.string().empty()) {
-    initializeSniffifyLog(sniffifySeverity, sniflog);
-  }
+  //if (! sniflog.string().empty()) {
+  //  initializeSniffifyLog(sniffifySeverity, sniflog);
+  //}
 
   interface_addr = configuration["interface_addr"].value_or("localhost");
   interface_port = configuration["interface_port"].value_or(5556);
