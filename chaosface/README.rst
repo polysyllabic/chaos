@@ -53,7 +53,15 @@ Installing Chaosface on Another Computer
 4. Configure the IP addresses for both the engine and the interface:
     - In the chaosconfig.toml file, set the address or domain name of the computer hosting the
       python interface program.
-    - From the interface program, set the address of the Raspberry Pi.
+    - From the interface program, set the address of the Raspberry Pi to 'raspberrypi.local'. If
+      that does not work, you will need to find the numeric address of the Pi (e.g., 192.168.1.232)
+      and enter that.
+    - Do not change the talk/listen ports unless you know what you are doing.
+
+5. Make sure your firewall isn't blocking the ports (5555 and 5556). If you are running the
+   interface on a Windows machine, and it is set to be on a private network, you should not have
+   any issues. If your computer is set to public network, you will have to manually open the
+   listen port (5556 by default) to incomming connections.
 
 Initial Setup
 -------------
