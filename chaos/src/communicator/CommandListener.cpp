@@ -36,6 +36,9 @@ CommandListener::~CommandListener() {
 void CommandListener::setEndpoint(const std::string& endpoint) {
 
   // create a reply socket
+  if (socket) {
+    PLOG_WARNING << "socket already connected";
+  }
   zmqpp::socket_type type = zmqpp::socket_type::reply;
   socket = new zmqpp::socket(context, type);
   // bind to the socket
@@ -54,15 +57,13 @@ void CommandListener::doAction() {
   std::string text;
   message >> text;
   PLOG_VERBOSE << "CommandListener received this message: " << text;
+  socket->send(reply.c_str());
 
   // Tell observer what we received
   if (observer != nullptr) {
     observer->newCommand(text);
   }
 
-  // Send an acknowledgment. We do this after notifying the observers to give them
-  // a chance to set the reply if necessary
-  socket->send(reply.c_str());
 }
 
 void CommandListener::setReply(const std::string& reply) {

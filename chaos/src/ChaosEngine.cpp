@@ -87,7 +87,7 @@ void ChaosEngine::newCommand(const std::string& command) {
 
 // Tell the interface about the game we're playing
 void ChaosEngine::reportGameStatus() {
-  PLOG_DEBUG << "Sending game information to interface: " << game.getName() << "(parsed with " << game.getErrors() << "errors)";
+  PLOG_DEBUG << "Sending game information to interface: " << game.getName() << " (parsed with " << game.getErrors() << "errors)";
   Json::Value msg;
   msg["game"] = game.getName();
   msg["errors"] = game.getErrors();

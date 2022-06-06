@@ -21,6 +21,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <string>
+#include <plog/Log.h>
 
 using namespace Chaos;
 
@@ -46,6 +47,7 @@ void ChaosInterface::doAction() {
 
 bool ChaosInterface::sendMessage(std::string message) {
   lock();
+
   outgoingQueue.push(message);
   unlock();
   resume();
