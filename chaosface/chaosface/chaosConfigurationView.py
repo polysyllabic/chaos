@@ -1,33 +1,16 @@
-"""
-  Twitch Controls Chaos (TCC)
-  Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
-  file at the top-level directory of this distribution for details of the
-  contributers.
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <https://www.gnu.org/licenses/>.
-"""
 from flexx import flx
-from chaosface.config.globals import relay
 
-class BotConfigurationView(flx.PyWidget):
-  def init(self):
+class ConfigurationView(flx.PyWidget):
+  def init(self, model):
     super().init()
+    self.model = model
+    
     styleLabel = "text-align:right"
     styleField = "background-color:#BBBBBB;text-align:center"
     
     with flx.VSplit(flex=1):
-      flx.Label(style="font-weight: bold; text-align:center", text="Bot Information" )
+      flx.Label(style="font-weight: bold; text-align:center", text="Twitch Connection" )
       flx.Label(style="text-align:center", wrap=True, html='<a href="https://twitchapps.com/tmi/" target="_blank">Click here to get your bot\'s OAuth Token</a>.  You must be logged in as your bot.' )
       with flx.HBox():
         with flx.VBox(flex=1):
@@ -37,9 +20,23 @@ class BotConfigurationView(flx.PyWidget):
           flx.Label(style=styleLabel, text="Twitch Bot Oauth:" )
           flx.Label(style=styleLabel, text="Your Channel Name:" )
         with flx.VBox(flex=1):
-          self.bot_name = flx.LineEdit(style=styleField, placeholder_text=relay.bot_name)
-          self.bot_oauth = flx.LineEdit(style=styleField, placeholder_text=relay.bot_oauth)
-          self.channel_name = flx.LineEdit(style=styleField, placeholder_text=relay.channel_name[1:])
+          self.bot_name = flx.LineEdit(style=styleField, placeholder_text=self.model.relay.bot_name)
+          self.bot_oauth = flx.LineEdit(style=styleField, placeholder_text=self.model.relay.bot_oauth)
+          self.channel_name = flx.LineEdit(style=styleField, placeholder_text=self.model.relay.channel_name[1:])
+        with flx.VBox(flex=1):
+          flx.Widget(flex=1)
+      flx.Label(style="font-weight: bold; text-align:center", text="Chaos Engine Connection")
+      with flx.HBox():
+        with flx.VBox(flex=1):
+          flx.Widget(flex=1)
+        with flx.VBox():
+          flx.Label(style=styleLabel, text="Raspberry Pi Address:" )
+          flx.Label(style=styleLabel, text="Listen Port:" )
+          flx.Label(style=styleLabel, text="Talk Port:" )
+        with flx.VBox(flex=1):
+          self.piHost = flx.LineEdit(style=styleField, placeholder_text=self.model.relay.piHost)
+          self.listenPort = flx.LineEdit(style=styleField, placeholder_text=str(self.model.relay.listenPort))
+          self.talkPort = flx.LineEdit(style=styleField, placeholder_text=str(self.model.relay.talkPort))
         with flx.VBox(flex=1):
           flx.Widget(flex=1)
       with flx.HBox():
@@ -56,8 +53,8 @@ class BotConfigurationView(flx.PyWidget):
       
       with flx.VBox(minsize=450):
 #          flx.Widget(flex=1)
-        self.tmiResponse = flx.MultiLineEdit(flex=2, style="text-align:left; background-color:#CCCCCC;", text=relay.tmiResponse)
-#          self.tmiResponse = flx.Label(flex=2, style="text-align:left; background-color:#CCCCCC", wrap=True, text=relay.tmiResponse)
+        self.tmiResponse = flx.MultiLineEdit(flex=2, style="text-align:left; background-color:#CCCCCC;", text=self.model.relay.tmiResponse)
+#          self.tmiResponse = flx.Label(flex=2, style="text-align:left; background-color:#CCCCCC", wrap=True, text=self.model.relay.tmiResponse)
 #          flx.Widget(flex=1)
       #flx.Widget(flex=1)
       
@@ -67,17 +64,26 @@ class BotConfigurationView(flx.PyWidget):
     newData = False
     if self.bot_oauth.text != "":
       newData = True
-      relay.set_bot_oauth(self.bot_oauth.text)
+      self.model.relay.set_bot_oauth(self.bot_oauth.text)
     if self.bot_name.text != "":
       newData = True
-      relay.set_bot_name(self.bot_name.text)
+      self.model.relay.set_bot_name(self.bot_name.text)
     if self.channel_name.text != "":
       newData = True
-      relay.set_channel_name('#' + self.channel_name.text)
+      self.model.relay.set_channel_name('#' + self.channel_name.text)
+    if self.piHost != "":
+      newData = True
+      self.model.relay.set_piHost(self.piHost)
+    if self.listenPort != "":
+      newData = True
+      self.model.relay.set_listenPort(int(self.listenPort))
+    if self.talkPort != "":
+      newData = True
+      self.model.relay.set_talkPort(int(self.talkPort))
     if newData:
       self.successLabel.set_text('Saved!')
       #saveConfig()
-      relay.set_shouldSave(True)
+      self.model.relay.set_shouldSave(True)
     else:
       self.successLabel.set_text('No Change')
 
