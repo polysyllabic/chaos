@@ -87,9 +87,10 @@ Configuration::Configuration(const std::string& fname) {
 
   interface_addr = configuration["interface_addr"].value_or("localhost");
   interface_port = configuration["interface_port"].value_or(5556);
-  PLOG_DEBUG << "Sending messages to chaosface at endpoint " << getInterfaceAddress();
+  PLOG_VERBOSE << "chaosface talk endpoint: " << getInterfaceAddress();
+
   listener_port = configuration["listener_port"].value_or(5555);
-  PLOG_DEBUG << "Listening to messages from chaosface at endpoint " << getListenerAddress();
+  PLOG_VERBOSE << "chaosface listen endpoint: " << getListenerAddress();
 
   game_directory = configuration["game_directory"].value_or(".");
   // Error if directory does not exist, or the path contains an ordinary file

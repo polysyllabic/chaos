@@ -35,13 +35,9 @@ CommandListener::~CommandListener() {
 
 void CommandListener::setEndpoint(const std::string& endpoint) {
 
-  // create a reply socket
-  if (socket) {
-    PLOG_WARNING << "socket already connected";
-  }
   zmqpp::socket_type type = zmqpp::socket_type::reply;
   socket = new zmqpp::socket(context, type);
-  // bind to the socket
+  // Bind to the socket
   PLOG_DEBUG << "Binding reply socket to endpoint " << endpoint;
   socket->bind(endpoint);
 }

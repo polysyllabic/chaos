@@ -64,7 +64,7 @@ void ChaosEngine::newCommand(const std::string& command) {
       PLOG_ERROR << "ERROR: Modifier not found: " << command;
     }
   }
-
+  
   if (root.isMember("game")) {
     reportGameStatus();
   }

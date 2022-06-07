@@ -31,14 +31,9 @@ CommandSender::~CommandSender() {
 }
 
 void CommandSender::setEndpoint(const std::string& endpoint) {
-  if (socket) {
-    PLOG_WARNING << "socket already connected";
-  }
-  // generate a pull socket
   zmqpp::socket_type type = zmqpp::socket_type::request;
   socket = new zmqpp::socket(context, type);
   PLOG_DEBUG << "Connecting request socket to endpoint " << endpoint;
-  // bind to the socket
   socket->connect(endpoint);
 }
 
@@ -46,8 +41,8 @@ bool CommandSender::sendMessage(std::string message) {
   PLOG_DEBUG << "Sending message: " << message;
   socket->send(message.c_str());
   zmqpp::message msg;
-  // decompose the message
-  socket->receive(msg);	// Blocking
+  // Wait for reply. This call is blocking
+  socket->receive(msg);
   msg >> reply;
   return true;
 }

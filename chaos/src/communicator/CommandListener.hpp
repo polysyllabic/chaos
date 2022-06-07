@@ -49,7 +49,7 @@ namespace Chaos {
      * 
      * \param observer Pointer to the observer
      * 
-     * We only allow one observer at the moment.3
+     * We only allow one observer at the moment.
      */
     void setObserver(CommandObserver* observer);
     void setReply(const std::string& reply);
