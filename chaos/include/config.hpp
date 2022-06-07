@@ -19,7 +19,7 @@
 #pragma once
 #define CHAOS_VERSION_MAJOR 2
 #define CHAOS_VERSION_MINOR 0
-#define CHAOS_VERSION "2.0.0-alpha.5"
+#define CHAOS_VERSION "2.0.0-alpha.6"
 
 // Comment out this line for testing on a different platform.
 // TODO: Enable keyboard emulation of controller signals when this is false

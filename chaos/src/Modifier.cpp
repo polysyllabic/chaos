@@ -45,6 +45,8 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
   totalLifespan = -1;    // An erroneous value that if set should be positive
   lock_while_busy = true;
   
+  name = config["name"].value_or("NAME NOT FOUND");
+
   description = config["description"].value_or("Description not available");
 
   // The mod always belongs to the group of its type  
@@ -63,7 +65,7 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
     }
   } 
 
-  PLOG_VERBOSE << "Common initialization for mod " << config["name"].value_or("NAME NOT FOUND");
+  PLOG_VERBOSE << "Common initialization for mod " << name;
   PLOG_VERBOSE << " - description: " << description;
   PLOG_VERBOSE << " - type: " << config["type"].value_or("TYPE NOT FOUND");
   PLOG_VERBOSE << " - groups: " << groups;
