@@ -21,6 +21,7 @@
 #include <string>
 #include <memory>
 #include <unordered_map>
+#include <json/json.h>
 
 #include "GameMenu.hpp"
 #include "ControllerInputTable.hpp"
@@ -86,7 +87,7 @@ namespace Chaos {
      */
     std::shared_ptr<Modifier> getModifier(const std::string& name) { return modifiers.getModifier(name); }
 
-    std::string getModList() { return modifiers.getModList(); }
+    Json::Value getModList() { return modifiers.getModList(); }
 
     GameCommandTable& getGameCommandTable() { return game_commands; }
     GameConditionTable& getGameConditionTable() { return game_conditions; }
