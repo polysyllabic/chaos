@@ -105,10 +105,11 @@ int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
 std::string ModifierTable::getModList() {
   Json::Value root;
   Json::Value& data = root["mods"];
+  int i = 0;
   for (auto const& [key, val] : mod_map) {
     // Mods that are marked unlisted are not reported to the chatbot
     if (! val->isUnlisted()) {
-      data.append(val->toJsonObject());
+      data[i++] = val->toJsonObject();
     }
   }
 	

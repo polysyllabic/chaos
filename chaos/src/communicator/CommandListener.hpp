@@ -20,7 +20,6 @@
 #include <string>
 #include <mogi/thread.h>
 #include <zmqpp/zmqpp.hpp>
-
 #include "CommandObserver.hpp"
 
 namespace Chaos {

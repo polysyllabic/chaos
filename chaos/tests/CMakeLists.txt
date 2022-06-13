@@ -5,7 +5,4 @@ add_executable(test_socket test_sockets.cpp)
 target_include_directories(test_socket PRIVATE chaos_communicator)
 target_link_libraries(test_socket chaos_communicator)
 
-add_executable(test_socket_receive test_socket_receive.cpp)
-target_include_directories(test_socket_receive PRIVATE chaos_communicator)
-target_link_libraries(test_socket_receive chaos_communicator)
 

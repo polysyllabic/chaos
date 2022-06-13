@@ -41,8 +41,10 @@ bool CommandSender::sendMessage(std::string message) {
   PLOG_DEBUG << "Sending message: " << message;
   socket->send(message.c_str());
   zmqpp::message msg;
-  // Wait for reply. This call is blocking
+  // Wait for reply. TODO: implement the lazy pirate pattern to try to recover from a failure of the
+  // chaos interface. See https://zguide.zeromq.org/docs/chapter4/
   socket->receive(msg);
   msg >> reply;
+  PLOG_DEBUG << "Received ack";
   return true;
 }

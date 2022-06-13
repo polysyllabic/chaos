@@ -28,6 +28,7 @@ using namespace Chaos;
 ChaosInterface::ChaosInterface() {}
 
 void ChaosInterface::setupInterface(const std::string& listener_endpoint, const std::string& talker_endpoint) {
+
   listener.setEndpoint(listener_endpoint);
   talker.setEndpoint(talker_endpoint);
   listener.start();
