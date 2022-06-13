@@ -46,5 +46,8 @@ chaosConfig.json
 settings.json
 chaos/.vscode/settings.json
 
+# generated json files
+*.json
+
 # virtual environments
 chaosface/venv/*
