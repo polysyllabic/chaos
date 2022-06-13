@@ -17,14 +17,15 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from chaosface.config.globals import relay
 import time
 from abc import ABC, abstractmethod
 from typing import List
 import threading
 import zmq
 import logging
-log = logging.getLogger(__name__)
+
+import chaosface.config.globals as config
+#from ..gui.ChaosRelay import model
 
 # An observer for listening to events from the chaos engine
 class EngineObserver(ABC):
@@ -41,7 +42,7 @@ class ChaosCommunicator():
   socketTalk = None
 
   def attach(self, observer: EngineObserver) -> None:
-    log.debug("Attached an observer.")
+    logging.debug("Attached an observer.")
     self._observers.append(observer)
 
   def detach(self, observer: EngineObserver) -> None:
@@ -53,29 +54,33 @@ class ChaosCommunicator():
       observer.updateCommand(message)
   
   def start(self):
-    log.debug("Opening zmq socket")
+    logging.debug("Opening zmq socket")
     self.context = zmq.Context()
-    self.reconnectListener()
-    self.reconnectTalker()
+    self.connectListener(config.relay.get_attribute('listen_port'))
+    self.connectTalker(config.relay.get_attribute('pi_host'), config.relay.get_attribute('talk_port'))
         
     self.keepRunning = True
     self.thread = threading.Thread(target=self.listenLoop)
     self.thread.start()
     
-  def reconnectListener(self):
+  def connectListener(self, listen_port):
     if (self.socketListen):
       # Close and reconnect socket
       self.socketListen.setsockopt(zmq.LINGER, 0)
       self.socketListen.close()
     self.socketListen = self.context.socket(zmq.REP)
-    self.socketListen.bind(f"tcp://*:{relay.listenPort}")
+    logging.debug(f"Bind listener to tcp://*:{listen_port}")
+    #self.socketListen.bind("tcp://*:5556")
+    self.socketListen.bind(f"tcp://*:{listen_port}")
 
-  def reconnectTalker(self):
+  def connectTalker(self, host_addr, talk_port):
     if (self.socketTalk):
       self.socketTalk.setsockopt(zmq.LINGER, 0)
       self.socketTalk.close()
     self.socketTalk = self.context.socket(zmq.REQ)
-    self.socketTalk.connect(f"tcp://{relay.piHost}:{relay.talkPort}")
+    #self.socketTalk.connect("tcp://raspberrypi.local:5555")
+    logging.debug(f"Connect talker to tcp://{host_addr}:{talk_port}")
+    self.socketTalk.connect(f"tcp://{host_addr}:{talk_port}")
 
   def stop(self):
     self.keepRunning = False
@@ -85,34 +90,34 @@ class ChaosCommunicator():
     while self.keepRunning:
       #  Wait for next message from engine
       message = self.socketListen.recv()
-      log.debug("Received from engine: " + message.decode("utf-8"))
+      logging.debug("Received from engine: " + message.decode("utf-8"))
 
       self.notify(message.decode("utf-8"))
       self.socketListen.send(b"Pong")
   
   def sendMessage(self, message):
-    log.debug("Sending message: " + message)
+    logging.debug("Sending message: " + message)
     self.socketTalk.send_string(message)
     return self.socketTalk.recv()
 
-  @relay.reaction('updatePiHost')
-  def _updatePiHost(self, *events):
-    self.reconnectTalker()
+#  @relay.reaction('updatePiHost')
+#  def _updatePiHost(self, *events):
+#    self.reconnectTalker()
 
-  @relay.reaction('updateTalkerPort')
-  def _updateTalkerPort(self, *events):
-    self.reconnectTalker()
+#  @relay.reaction('updateTalkerPort')
+#  def _updateTalkerPort(self, *events):
+#    self.reconnectTalker()
 
-  @relay.reaction('updateListenPort')
-  def _updatePiHost(self, *events):
-    self.reconnectListener()
+#  @relay.reaction('updateListenPort')
+#  def _updatePiHost(self, *events):
+#    self.reconnectListener()
 
 class TestObserver(EngineObserver):
   def updateCommand(self, message ) -> None:
     print("Notified about message: " + str(message))
 
 if __name__ == "__main__":
-  log.setLevel(logging.DEBUG)
+  logging.setLevel(logging.DEBUG)
   subject = ChaosCommunicator()  
   testObserver = TestObserver()
   subject.attach(testObserver)
