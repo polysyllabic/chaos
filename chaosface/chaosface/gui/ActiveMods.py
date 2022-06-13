@@ -1,10 +1,24 @@
 
 from flexx import flx
+import chaosface.config.globals as config
+
+class ActiveMods(flx.PyWidget):
+  def init(self):
+    self.chaosActiveView = ChaosActiveView()
+    
+  @config.relay.reaction('updateModTimes')
+  def _updateModTimes(self, *events):
+    for ev in events:
+      self.chaosActiveView.updateTime(ev.value)
+      
+  @config.relay.reaction('updateActiveMods')
+  def _updateActiveMods(self, *events):
+    for ev in events:
+      self.chaosActiveView.updateMods(ev.value)
 
 class ChaosActiveView(flx.PyWidget):
-	def init(self, model):
+	def init(self):
 		super().init()
-		self.model = model
 		
 		self.label = []
 		self.progress = []
@@ -17,15 +31,15 @@ class ChaosActiveView(flx.PyWidget):
 			with flx.HFix(flex=1):
 				self.voteLabel = flx.Label(flex=0,style=styleTitleText, text="Active Mods" )
 				self.blankLabel = flx.Label(flex=0,style=styleTitleText, text=" ")
-			#with flx.VBox(flex=1):
 				
 			with flx.HFix(flex=1):
 				with flx.VFix(flex=1):
 					for i in range(3):
-						self.progress.append( flx.ProgressBar(flex=2, value=self.model.relay.modTimes[i], text='', style=styleModProgress) )
+						self.progress.append(flx.ProgressBar(flex=2, value=config.relay.modTimes[i], text='', style=styleModProgress))
 				with flx.VFix(flex=1):
 					for i in range(3):
-						self.label.append( flx.Label(flex=1,style=styleModText, text=self.model.relay.activeMods[i]) )
+						self.label.append(flx.Label(flex=1,style=styleModText, text=config.relay.activeMods[i]))
+
 	@flx.action
 	def updateMods(self, activeMods):
 		self.label[0].set_text(activeMods[0])

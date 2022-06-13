@@ -18,7 +18,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from pathlib import Path
-from .ChaosRelay import ChaosRelay
+from ..gui.ChaosRelay import ChaosRelay
 
 CHAOS_PATH = Path.home().name
 CHAOS_LOG_FILE = Path(CHAOS_PATH, "chaosface.log").name
