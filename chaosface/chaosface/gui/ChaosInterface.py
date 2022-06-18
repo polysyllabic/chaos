@@ -44,38 +44,4 @@ class ChaosInterface(flx.PyWidget):
     self.game_settings.dispose()
     self.botSetup.dispose()
 
-  # Actions that are called from a different thread are here, so they can be invoked by a call to the root app
-
-  @flx.action
-  def initializeGame(self, gamedata: dict):
-    logging.debug("Initializing game data")
-    game_name = gamedata["game"]
-    logging.debug(f"Setting game name to '{game_name}'")
-    config.relay.set_gameName(gamedata["game"])
-
-    errors = int(gamedata["errors"])
-    logging.debug(f"Setting game errors to '{errors}'")
-    config.relay.set_gameErrors(errors)
-
-    nmods = int(gamedata["nmods"])
-    logging.debug(f"Setting total active mods to '{nmods}'")
-    config.relay.set_numActiveMods(nmods)
-    
-    modtime = float(gamedata["modtime"])
-    logging.debug(f"Setting modifier time to {modtime}")
-    config.relay.set_timePerModifier(modtime)
-
-    logging.debug(f"Initializing modifier data:")
-    config.relay.modifierData = {}
-    for mod in gamedata["mods"][0]:
-      print(mod)
-      modName = mod["name"]
-      config.relay.modifierData[modName] = {}
-      config.relay.modifierData[modName]["desc"] = mod["desc"]
-      config.relay.modifierData[modName]["groups"] = mod["groups"]
-    config.relay.allMods = config.relay.modifierData.keys()
-    config.relay.resetSoftMax()
-
-  @flx.action
-  def setTimePerVote(self, time):
-    config.relay.set_voteTime(time/config.relay.get_attribute('time_per_vote'))
+ 

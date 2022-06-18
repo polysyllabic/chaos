@@ -39,8 +39,8 @@ class ConnectionSetup(flx.PyWidget):
           flx.Label(style=styleLabel, text="Your Channel Name:" )
         with flx.VBox(flex=1):
           self.bot_name = flx.LineEdit(style=styleField, placeholder_text=config.relay.bot_name)
-          self.bot_oauth = flx.LineEdit(style=styleField, placeholder_text=config.relay.bot_oauth)
-          self.channel_name = flx.LineEdit(style=styleField, placeholder_text=config.relay.channel_name[1:])
+          self.bot_oauth = flx.LineEdit(style=styleField, placeholder_text=config.relay.bot_oauth, password_mode=True)
+          self.channel_name = flx.LineEdit(style=styleField, placeholder_text=config.relay.channel_name)
         with flx.VBox(flex=1):
           flx.Widget(flex=1)
       flx.Label(style="font-weight: bold; text-align:center", text="Chaos Engine Connection")

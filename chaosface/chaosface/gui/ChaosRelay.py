@@ -142,8 +142,6 @@ class ChaosRelay(flx.Component):
   uiRate = BoundedFloatProp(minval=0.05, maxval=60.0, settable=True)
   uiPort = BoundedIntProp(minval=1, maxval=65535, settable=True)
   
-  shouldSave = flx.BoolProp(settable=True)
-
   def init(self, file_name):
     self.chaosConfig = {}
     self.openConfig(file_name)
@@ -211,6 +209,7 @@ class ChaosRelay(flx.Component):
     self.set_allMods([])
     
     self.votedUsers = []
+    self.validData = False
 
   def timePerVote(self) -> float:
     return self.get_attribute('modifier_time')/float(self.get_attribute('active_modifiers'))
@@ -221,7 +220,7 @@ class ChaosRelay(flx.Component):
 
   @flx.action
   def initializeGame(self, gamedata: dict):
-    logging.debug("Initializing game data")
+    logging.debug(f"Initializing game data: {gamedata}")
     game_name = gamedata["game"]
     logging.debug(f"Setting game name to '{game_name}'")
     self.set_gameName(gamedata["game"])
@@ -240,13 +239,15 @@ class ChaosRelay(flx.Component):
 
     logging.debug(f"Initializing modifier data:")
     self.modifierData = {}
-    for mod in gamedata["mods"][0]:
-      print(mod)
+    i = 0
+    for mod in gamedata["mods"]:
+      i = i+1
+      logging.debug(f"mod {i}: '{mod}'")
       modName = mod["name"]
       self.modifierData[modName] = {}
       self.modifierData[modName]["desc"] = mod["desc"]
       self.modifierData[modName]["groups"] = mod["groups"]
-    self.allMods = self.modifierData.keys()
+    self.set_allMods (list(self.modifierData.keys()))
     self.resetSoftMax()
 
   def sleepTime(self):
@@ -269,10 +270,6 @@ class ChaosRelay(flx.Component):
     if index >= 0 and index < self.get_attribute('vote_options') and not user in self.votedUsers:
       self.votedUsers.append(user)
       self._mutate('votes', self.votes[index]+1, 'set', index)
-
-  @flx.action
-  def resetVotes(self):
-    self.votedUsers = []
 
   @flx.action
   def decrementVoteTimes(self, dTime):
@@ -345,8 +342,15 @@ class ChaosRelay(flx.Component):
     # Reset votes since there is a new voting pool
     self.set_votes([0]*self.get_attribute('vote_options'))
 
+  def saveSettings(self):
+    logging.info("Saving config to: " + self.chaosConfigFile)
+    with open(self.chaosConfigFile, 'w') as outfile:
+      json.dump(self.chaosConfig, outfile)
+      
+
   @flx.action
   def replaceMod(self, newMod):
+    self.updateSoftMax(newMod)
     mods = list(self.activeMods)
     # Find the oldest mod
     times = list(self.modTimes)
@@ -355,6 +359,7 @@ class ChaosRelay(flx.Component):
     times[finishedModIndex] = 1.0
     self._mutate_modTimes(times)
     self._mutate_activeMods(mods)
+    self.getNewVotingPool()
 
   @flx.reaction('gameName')
   def on_gameName(self, *events):
@@ -487,14 +492,6 @@ class ChaosRelay(flx.Component):
     for ev in events:
       self.chaosConfig["talkPort"]  = ev.new_value
 
-  @flx.reaction('shouldSave')
-  def on_shouldSave(self, *events):
-    for ev in events:
-      if ev.new_value:
-        logging.info("Saving config to: " + self.chaosConfigFile)
-        self.saveConfig()
-        self.set_shouldSave(False)
-      
   # Emitters to relay events to all participants.
     
   @flx.emitter

@@ -29,7 +29,7 @@ class ModifierSelection(EngineObserver):
     currentTime = now.strftime("%Y-%m-%d")
     self.votingLog = open("votes-" + currentTime + ".log","a", buffering=1)
     
-    self.validData = False
+    self.data_received = False
     
     self.tmiChatText = ""
 
@@ -57,14 +57,11 @@ class ModifierSelection(EngineObserver):
 
     elif "game" in received:
       logging.debug("Received game info!")
-      self.initializeGameData(received)
+      self.data_received = True
+      flx.loop.call_soon(config.relay.initializeGame, received)
     else:
       logging.warn(f"Unprocessed message from engine: {received}")
         
-  def initializeGameData(self, gamedata: dict):
-    flx.loop.call_soon(config.relay.initializeGame, gamedata)
-    self.validData = True
-    
   def applyNewMod(self, mod):
     logging.debug("Winning mod: " + mod)
     toSend = {"winner": mod,
@@ -83,6 +80,7 @@ class ModifierSelection(EngineObserver):
       flx.loop.call_soon(config.relay.set_connectedBrightBackground, False)
     elif self.disconnectedFlashingTimer > 1.0 and config.relay.connectedBrightBackground == False:
       flx.loop.call_soon(config.relay.set_connectedBrightBackground, True)
+      self.disconnectedFlashingTimer = 0.0
   
   def selectWinningModifier(self):
     tally = list(config.relay.votes)
@@ -157,7 +155,7 @@ class ModifierSelection(EngineObserver):
       if dTime > 0:
         flx.loop.call_soon(config.relay.decrementVoteTimes, dTime)
         
-      if self.firstTime and self.validData:
+      if self.firstTime and config.relay.validData:
         self.voteTime = config.relay.timePerVote() + 1
         self.firstTime = False
           
@@ -165,7 +163,7 @@ class ModifierSelection(EngineObserver):
         # Vote time expired. Pick a winner
         beginTime = now
         
-        if not self.validData or config.relay.votingType == 'DISABLE':
+        if not config.relay.validData or config.relay.votingType == 'DISABLE':
           continue
         
         # Pick the winner
@@ -173,10 +171,7 @@ class ModifierSelection(EngineObserver):
         # Tell the engine
         self.applyNewMod(newMod)
 
-        config.relay.updateSoftMax(newMod)
-        self.replaceMod(newMod)
-        self.getNewVotingPool()
-
+        flx.loop.call_soon(config.relay.replaceMod, newMod)
           
         #self.announceMods()
         #self.announceVoting()

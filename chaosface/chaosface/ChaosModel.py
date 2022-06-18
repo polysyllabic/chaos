@@ -114,7 +114,7 @@ class ChaosModel():
       log.error("Missing modifier count in gamedata message")
       nmods = 3
     try:
-      self.relay.set_totalActiveMods(nmods)
+      self.relay.set_numActiveMods(nmods)
     except Exception as e:
       log.error(e)
     
@@ -275,17 +275,6 @@ class ChaosModel():
     priorTime = beginTime - dTime
     
     self.timePerVote = 1.0  # This will be set by the engine
-        
-    self.totalVoteOptions = 3
-    self.votes = [0.0] * self.totalVoteOptions
-    self.votedUsers = []
-    
-    self.totalActiveMods = 3
-    self.activeMods = [""] * self.totalActiveMods
-    self.activeModTimes = [0.0] * self.totalActiveMods
-    self.currentMods = [""] * self.totalActiveMods
-
-    self.proportionalVoting = True
     
     # Ping the engine for game information
     self.requestGameInfo()

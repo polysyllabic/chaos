@@ -19,7 +19,7 @@
 """
 import logging
 from twitchbot import BaseBot, Message
-import config.globals as config
+import chaosface.config.globals as config
 
 class ChaosBot(BaseBot):
 

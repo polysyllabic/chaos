@@ -18,43 +18,41 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from pathlib import Path
 
-import threading
+import asyncio
 import logging
+logging.basicConfig(level=logging.DEBUG)
 
-from chaosface.chatbot.chatbot import Chatbot
-from chaosface.ChaosModel import ChaosModel
-from chaosface.config.globals import relay
+from flexx import flx
 
-CHAOS_PATH = Path.home().name
-CHAOS_LOG_FILE = Path(CHAOS_PATH, "chaosface.log").name
-CHAOS_CONFIG_FILE = Path(CHAOS_PATH, "config", "chaosConfig.json").name
+import chaosface.config.globals as config
 
-import chaosface.gui.flexxgui as gui
+from chaosface.chatbot.ChaosBot import ChaosBot
+from chaosface.gui.ActiveMods import ActiveMods
+from chaosface.gui.CurrentVotes import CurrentVotes
+from chaosface.gui.VoteTimer import VoteTimer
+from chaosface.gui.ChaosInterface import ChaosInterface
+
+
+from chaosface.ModifierSelection import ModifierSelection
 
 if __name__ == "__main__":
+  # Start Twitch chatbot
+  chatbot = ChaosBot()
+  chatbot.run_threaded()
+  
+  # Set up GUI
+  interface = flx.App(ChaosInterface)
+  interface.serve('Chaos')
+  flx.App(ActiveMods).serve()
+  flx.App(VoteTimer).serve()
+  flx.App(CurrentVotes).serve()
+  flx.create_server(host='0.0.0.0', port=config.relay.get_attribute('ui_port'), loop=asyncio.new_event_loop())
 
-  logging.basicConfig(filename=CHAOS_LOG_FILE, level=logging.DEBUG)
+  # Event loop to select the modifiers and communicate with the chaos engine
+  selector = ModifierSelection()
+  selector.start()
 
-  # Start chatbot
-  logging.info("Starting chatbot")
-  chatbot = Chatbot()
-  chatbot.setIrcInfo(relay.ircHost, relay.ircPort)
-  chatbot.start()
-
-  # Start GUI
-  logging.info("Starting GUI")
-  gui.startFlexx()
-  flexxThread = threading.Thread(target=gui.startFlexx)
-  flexxThread.start()
-
-  # Voting model
-  logging.info("Starting voting loop")
-  chaosModel = ChaosModel(relay)
-  chaosModel.start()
-
-  logging.info("Stopping")
-  gui.stopFlexx()
-  flexxThread.join()
+  # Start the browser-based GUI
+  flx.start()
 
