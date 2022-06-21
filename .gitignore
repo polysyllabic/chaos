@@ -51,3 +51,4 @@ chaos/.vscode/settings.json
 
 # virtual environments
 chaosface/venv/*
+chaosface/database.sqlite
