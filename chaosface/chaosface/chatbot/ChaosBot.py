@@ -19,6 +19,7 @@
 """
 import logging
 from twitchbot import BaseBot, Message
+from flexx import flx
 import chaosface.config.globals as config
 
 class ChaosBot(BaseBot):
@@ -29,19 +30,17 @@ class ChaosBot(BaseBot):
   # All we do here is look for potential votes. Commands are dispatched by the parent class and
   # handled by the commands defined in the commands subdirectory
   async def on_privmsg_received(self, msg: Message):
-    if config.relay.connected and config.relay.get_attribute('voting_enabled'):
+    logging.debug('Dispatching message')
+    if config.relay.bot_connected and config.relay.voting_type != 'DISABLED':
       # A vote message must be a pure number
       if msg.content.isdigit():
-        messageAsInt = int(msg.content) - 1
-        if messageAsInt >= 0:
-          config.relay.tallyVote(messageAsInt, msg.author)
+        vote_num = int(msg.content) - 1
+        if vote_num >= 0:
+          flx.loop.call_soon(config.relay.tally_vote, vote_num, msg.author)
 
   async def on_connected(self):
-    config.relay.connected = True
+    flx.loop.call_soon(config.relay.set_connected, True)
 
-  # TODO: handle bot being banned or timed out
-  async def on_bot_shutdown(self):
-    config.relay.keepGoing = False
 
 
 if __name__ == "__main__":

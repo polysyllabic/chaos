@@ -4,8 +4,9 @@ import logging
 import json
 import random
 import numpy as np
-from datetime import datetime
+#from datetime import datetime
 from flexx import flx
+from twitchbot import is_config_valid
 import chaosface.config.globals as config
 from chaosface.communicator import EngineObserver
 from chaosface.communicator import ChaosCommunicator
@@ -17,36 +18,28 @@ from chaosface.communicator import ChaosCommunicator
 
 class ModifierSelection(EngineObserver):
   def __init__(self):
-    self.firstTime = True
-
+    self.first_time = True
     #  Socket to talk to server
     logging.info("Connecting to chaos server")
-    self.chaosCommunicator = ChaosCommunicator()
-    self.chaosCommunicator.attach(self)
-    self.chaosCommunicator.start()
+    self.chaos_communicator = ChaosCommunicator()
+    self.chaos_communicator.attach(self)
+    self.chaos_communicator.start()
     
-    now = datetime.now()
-    currentTime = now.strftime("%Y-%m-%d")
-    self.votingLog = open("votes-" + currentTime + ".log","a", buffering=1)
-    
-    self.data_received = False
-    
-    self.tmiChatText = ""
 
   def start(self):
-    self.thread = threading.Thread(target=self.loop)
+    self.thread = threading.Thread(target=self._loop)
     self.thread.start()
 
   # Ask the engine to tell us about the game we're playing
   # TODO: Request a list of available games
   # TODO: Send a config file from the computer running this bot
-  def requestGameInfo(self):
+  def request_game_info(self):
     logging.debug("Asking engine about the game")
-    toSend = {"game": True}
-    resp = self.chaosCommunicator.sendMessage(json.dumps(toSend))
+    to_send = {"game": True}
+    resp = self.chaos_communicator.sendMessage(json.dumps(to_send))
     logging.debug(f"Socket response: {resp}")
 
-  def updateCommand(self, message) -> None:
+  def update_command(self, message) -> None:
     received = json.loads(message)
     logging.debug(f"Notified of message from chaos engine")
 
@@ -57,50 +50,49 @@ class ModifierSelection(EngineObserver):
 
     elif "game" in received:
       logging.debug("Received game info!")
-      self.data_received = True
-      flx.loop.call_soon(config.relay.initializeGame, received)
+      flx.loop.call_soon(config.relay.initialize_game, received)
     else:
       logging.warn(f"Unprocessed message from engine: {received}")
         
-  def applyNewMod(self, mod):
+  def apply_new_mod(self, mod):
     logging.debug("Winning mod: " + mod)
     toSend = {"winner": mod,
-              "timePerModifier": config.relay.get_attribute('modifier_time')}
-    message = self.chaosCommunicator.sendMessage(json.dumps(toSend))
+              "time": config.relay.get_attribute('modifier_time')}
+    message = self.chaos_communicator.sendMessage(json.dumps(toSend))
 
-  def flashPause(self):
-    if self.pausedFlashingTimer > 0.5 and config.relay.pausedBrightBackground == True:
-      flx.loop.call_soon(config.relay.set_pausedBrightBackground, False)
-    elif self.pausedFlashingTimer > 1.0 and config.relay.pausedBrightBackground == False:
-      flx.loop.call_soon(config.relay.set_pausedBrightBackground, True)
-      self.pausedFlashingTimer = 0.0
+  def flash_pause(self):
+    if self.paused_flashing_timer > 0.5 and config.relay.paused_bright == True:
+      flx.loop.call_soon(config.relay.set_paused_bright, False)
+    elif self.paused_flashing_timer > 1.0 and config.relay.paused_bright == False:
+      flx.loop.call_soon(config.relay.set_paused_bright, True)
+      self.paused_flashing_timer = 0.0
         
-  def flashDisconnected(self):
-    if self.disconnectedFlashingTimer > 0.5 and config.relay.connectedBrightBackground == True:
-      flx.loop.call_soon(config.relay.set_connectedBrightBackground, False)
-    elif self.disconnectedFlashingTimer > 1.0 and config.relay.connectedBrightBackground == False:
-      flx.loop.call_soon(config.relay.set_connectedBrightBackground, True)
-      self.disconnectedFlashingTimer = 0.0
+  def flash_disconnected(self):
+    if self.disconnected_flashing_timer > 0.5 and config.relay.connected_bright == True:
+      flx.loop.call_soon(config.relay.set_connected_bright, False)
+    elif self.disconnected_flashing_timer > 1.0 and config.relay.connected_bright == False:
+      flx.loop.call_soon(config.relay.set_connected_bright, True)
+      self.disconnected_flashing_timer = 0.0
   
-  def selectWinningModifier(self):
+  def select_winning_modifier(self):
     tally = list(config.relay.votes)
-    if config.relay.votingType == 'Proportional':
-      totalVotes = sum(tally)
-      if totalVotes < 1:
+    if config.relay.voting_type == 'Proportional':
+      total_votes = sum(tally)
+      if total_votes < 1:
         for i in range(len(tally)):
           tally[i] += 1
-        totalVotes = sum(tally)
+        total_votes = sum(tally)
       
-      theChoice = np.random.uniform(0, totalVotes)
+      the_choice = np.random.uniform(0, total_votes)
       index = 0
       accumulator = 0
       for i in range(len(tally)):
         index = i
         accumulator += tally[i]
-        if accumulator >= theChoice:
+        if accumulator >= the_choice:
           break
       
-      logging.info(f"Winning Mod: '{config.relay.candidateMods[index]}' at {100.0 * float(tally[index])/float(totalVotes)}")
+      logging.info(f"Winning Mod: '{config.relay.candidate_mods[index]}' at {100.0 * float(tally[index])/float(total_votes)}")
 
     else:
       # get indices of all mods with the max number of votes, then randomly pick one
@@ -114,71 +106,77 @@ class ModifierSelection(EngineObserver):
           indices.append(ind)
       index = random.choice(indices)
 
-    newMod = config.relay.candidateMods[index]
+    newMod = config.relay.candidate_mods[index]
     return newMod
   
-  def loop(self):
-    beginTime = time.time() #0.0
-    now = beginTime
+  def _loop(self):
+    begin_time = time.time()
+    now = begin_time
     dTime = 1.0/config.relay.get_attribute('ui_rate')
-    priorTime = beginTime - dTime
+    priorTime = begin_time - dTime
     
     # Ping the engine for game information
-    self.requestGameInfo()
+    self.request_game_info()
 
-    self.pausedFlashingTimer = 0.0
+    self.paused_flashing_timer = 0.0
     self.pausedFlashingToggle = True
     
-    self.disconnectedFlashingTimer = 0.0
+    self.disconnected_flashing_timer = 0.0
     self.disconnectedFlashingToggle = True
 
-    while config.relay.keepGoing:
-      time.sleep(config.relay.sleepTime())
+    while config.relay.keep_going:
+      time.sleep(config.relay.sleep_time())
       priorTime = now
       now = time.time()
       dTime = now - priorTime
-      self.pausedFlashingTimer += dTime
-      self.disconnectedFlashingTimer += dTime
+      self.paused_flashing_timer += dTime
+      self.disconnected_flashing_timer += dTime
       
-#      self.updateChatCredentials()
+      # Start the chatbot running if we have entered good credentials. Otherwise we wait for them
+      # and then fire it up
+      #if (self.chatbot_started == False and is_config_valid()):
+      #  self.chatbot_started = True
+      #  self.chatbot.run_threaded()
+
       
       if config.relay.paused:
-        beginTime += dTime
+        begin_time += dTime
         dTime = 0
-        self.flashPause()
+        self.flash_pause()
           
-      if not config.relay.connected:
-        self.flashDisconnected()
+      if not config.relay.bot_connected:
+        self.flash_disconnected()
               
-      self.voteTime =  now - beginTime
+      self.vote_time =  now - begin_time
 
       if dTime > 0:
-        flx.loop.call_soon(config.relay.decrementVoteTimes, dTime)
+        flx.loop.call_soon(config.relay.decrement_vote_times, dTime)
         
-      if self.firstTime and config.relay.validData:
-        self.voteTime = config.relay.timePerVote() + 1
-        self.firstTime = False
+      if self.first_time and config.relay.valid_data:
+        # As soon as the data is ready, start the vote
+        self.vote_time = config.relay.time_per_vote() + 1
+        self.first_time = False
           
-      if self.voteTime >= config.relay.timePerVote():
-        # Vote time expired. Pick a winner
-        beginTime = now
-        
-        if not config.relay.validData or config.relay.votingType == 'DISABLE':
+      if self.vote_time >= config.relay.time_per_vote():
+        # Reset voting time expired
+        begin_time = now
+        # Skip voting if no data yet or voting is disabled
+        if not config.relay.valid_data or config.relay.voting_type == 'DISABLE':
           continue
         
         # Pick the winner
-        newMod = self.selectWinningModifier()
+        new_mod = self.select_winning_modifier()
         # Tell the engine
-        self.applyNewMod(newMod)
+        self.apply_new_mod(new_mod)
 
-        flx.loop.call_soon(config.relay.replaceMod, newMod)
+        flx.loop.call_soon(config.relay.replaceMod, new_mod)
           
         #self.announceMods()
         #self.announceVoting()
         
-      flx.loop.call_soon(config.relay.setTimePerVote, self.voteTime)
+      flx.loop.call_soon(config.relay.setTimePerVote, self.vote_time)
 
     # Exitiing loop: clean up
-    self.chaosCommunicator.stop()
+    self.chaos_communicator.stop()
 
     

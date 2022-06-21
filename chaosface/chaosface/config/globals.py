@@ -20,9 +20,9 @@
 from pathlib import Path
 from ..gui.ChaosRelay import ChaosRelay
 
-CHAOS_PATH = Path.home().name
-CHAOS_LOG_FILE = Path(CHAOS_PATH, "chaosface.log").name
-CHAOS_CONFIG_FILE = Path(CHAOS_PATH, "config", "chaosConfig.json").name
+CHAOS_PATH = Path.cwd()
+CHAOS_LOG_FILE = Path.home() / "chaosface.log"
+CHAOS_CONFIG_FILE = Path.cwd() / 'config' / 'chaosConfig.json'
 
 relay = ChaosRelay(CHAOS_CONFIG_FILE)
 

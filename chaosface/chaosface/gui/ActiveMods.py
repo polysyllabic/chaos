@@ -7,47 +7,45 @@ class ActiveMods(flx.PyWidget):
     self.chaosActiveView = ChaosActiveView()
     
   @config.relay.reaction('updateModTimes')
-  def _updateModTimes(self, *events):
+  def _update_mod_times(self, *events):
     for ev in events:
-      self.chaosActiveView.updateTime(ev.value)
+      self.chaosActiveView.update_time(ev.value)
       
   @config.relay.reaction('updateActiveMods')
   def _updateActiveMods(self, *events):
     for ev in events:
-      self.chaosActiveView.updateMods(ev.value)
+      self.chaosActiveView.update_mods(ev.value)
 
 class ChaosActiveView(flx.PyWidget):
-	def init(self):
-		super().init()
-		
-		self.label = []
-		self.progress = []
-		
-		styleModText = "color:white;text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;text-align:left;font-weight: bold; vertical-align: middle; line-height: 1.5; min-width:250px;"
-		styleTitleText = "color:white;text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;text-align:center;font-weight: bold; vertical-align: bottom; line-height: 1.5; min-width:250px;"
-		styleModProgress = " background-color:#808080; foreground-color:#808080; color:#FFFFFF; border-color:#000000; border-radius:5px; width:1050px;"
-		
-		with flx.VBox(flex=0):
-			with flx.HFix(flex=1):
-				self.voteLabel = flx.Label(flex=0,style=styleTitleText, text="Active Mods" )
-				self.blankLabel = flx.Label(flex=0,style=styleTitleText, text=" ")
-				
-			with flx.HFix(flex=1):
-				with flx.VFix(flex=1):
-					for i in range(3):
-						self.progress.append(flx.ProgressBar(flex=2, value=config.relay.modTimes[i], text='', style=styleModProgress))
-				with flx.VFix(flex=1):
-					for i in range(3):
-						self.label.append(flx.Label(flex=1,style=styleModText, text=config.relay.activeMods[i]))
+  def init(self):
+    super().init()
+    
+    self.label = []
+    self.progress = []
+    
+    mod_text_style = "color:white;text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;text-align:left;font-weight: bold; vertical-align: middle; line-height: 1.5; min-width:250px;"
+    title_text_style = "color:white;text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;text-align:center;font-weight: bold; vertical-align: bottom; line-height: 1.5; min-width:250px;"
+    progress_style = " background-color:#808080; foreground-color:#808080; color:#FFFFFF; border-color:#000000; border-radius:5px; width:1050px;"
+    
+    with flx.VBox(flex=0):
+      with flx.HFix(flex=1):
+        self.voteLabel = flx.Label(flex=0,style=title_text_style, text="Active Mods" )
+        self.blankLabel = flx.Label(flex=0,style=title_text_style, text=" ")
+        
+      with flx.HFix(flex=1):
+        with flx.VFix(flex=1):
+          for i in range(config.relay.num_active_mods):
+            self.progress.append(flx.ProgressBar(flex=2, value=config.relay.mod_times[i], text='', style=progress_style))
+        with flx.VFix(flex=1):
+          for i in range(config.relay.num_active_mods):
+            self.label.append(flx.Label(flex=1,style=mod_text_style, text=config.relay.active_mods[i]))
 
-	@flx.action
-	def updateMods(self, activeMods):
-		self.label[0].set_text(activeMods[0])
-		self.label[1].set_text(activeMods[1])
-		self.label[2].set_text(activeMods[2])
-		
-	@flx.action
-	def updateTime(self, modTimes):
-		self.progress[0].set_value(modTimes[0])
-		self.progress[1].set_value(modTimes[1])
-		self.progress[2].set_value(modTimes[2])
+  @flx.action
+  def update_mods(self, active_mods):
+    for i in range(config.relay.num_active_mods):
+      self.label[i].set_text(active_mods[i])
+    
+  @flx.action
+  def update_time(self, mod_times):
+    for i in range(config.relay.num_active_mods):
+      self.progress[i].set_value(mod_times[i])

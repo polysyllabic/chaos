@@ -18,14 +18,15 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from flexx import flx
+import logging
 import chaosface.config.globals as config
 
 class ConnectionSetup(flx.PyWidget):
   def init(self):
     super().init()
     
-    styleLabel = "text-align:right"
-    styleField = "background-color:#BBBBBB;text-align:center"
+    label_style = "text-align:right"
+    field_style = "background-color:#BBBBBB;text-align:center"
     
     with flx.VSplit(flex=1):
       flx.Label(style="font-weight: bold; text-align:center", text="Twitch Connection" )
@@ -34,13 +35,13 @@ class ConnectionSetup(flx.PyWidget):
         with flx.VBox(flex=1):
           flx.Widget(flex=1)
         with flx.VBox():
-          flx.Label(style=styleLabel, text="Twitch Bot Username:" )
-          flx.Label(style=styleLabel, text="Twitch Bot Oauth:" )
-          flx.Label(style=styleLabel, text="Your Channel Name:" )
+          flx.Label(style=label_style, text="Twitch Bot Username:" )
+          flx.Label(style=label_style, text="Twitch Bot Oauth:" )
+          flx.Label(style=label_style, text="Your Channel Name:" )
         with flx.VBox(flex=1):
-          self.bot_name = flx.LineEdit(style=styleField, placeholder_text=config.relay.bot_name)
-          self.bot_oauth = flx.LineEdit(style=styleField, placeholder_text=config.relay.bot_oauth, password_mode=True)
-          self.channel_name = flx.LineEdit(style=styleField, placeholder_text=config.relay.channel_name)
+          self.bot_name = flx.LineEdit(style=field_style, text=config.relay.bot_name)
+          self.bot_oauth = flx.LineEdit(style=field_style, text=config.relay.bot_oauth, password_mode=True)
+          self.channel_name = flx.LineEdit(style=field_style, text=config.relay.channel_name)
         with flx.VBox(flex=1):
           flx.Widget(flex=1)
       flx.Label(style="font-weight: bold; text-align:center", text="Chaos Engine Connection")
@@ -48,60 +49,90 @@ class ConnectionSetup(flx.PyWidget):
         with flx.VBox(flex=1):
           flx.Widget(flex=1)
         with flx.VBox():
-          flx.Label(style=styleLabel, text="Raspberry Pi Address:" )
-          flx.Label(style=styleLabel, text="Listen Port:" )
-          flx.Label(style=styleLabel, text="Talk Port:" )
+          flx.Label(style=label_style, text="Raspberry Pi Address:" )
+          flx.Label(style=label_style, text="Listen Port:" )
+          flx.Label(style=label_style, text="Talk Port:" )
         with flx.VBox(flex=1):
-          self.piHost = flx.LineEdit(style=styleField, placeholder_text=config.relay.piHost)
-          self.listenPort = flx.LineEdit(style=styleField, placeholder_text=str(config.relay.listenPort))
-          self.talkPort = flx.LineEdit(style=styleField, placeholder_text=str(config.relay.talkPort))
+          self.pi_host = flx.LineEdit(style=field_style, text=config.relay.pi_host)
+          self.listen_port = flx.LineEdit(style=field_style, text=str(config.relay.listen_port))
+          self.talk_port = flx.LineEdit(style=field_style, text=str(config.relay.talk_port))
         with flx.VBox(flex=1):
           flx.Widget(flex=1)
       with flx.HBox():
         flx.Widget(flex=1)
-        self.submitButton = flx.Button(flex=0,text="Submit")
+        self.save_button = flx.Button(flex=0,text="Save")
         flx.Widget(flex=1)
       with flx.HBox():
         flx.Widget(flex=1)
-        self.successLabel = flx.Label(style="text-align:center", text="" )
+        self.status_message = flx.Label(style="text-align:center", text="" )
         flx.Widget(flex=1)
-      flx.Label(flex=1,style="text-align:center", wrap=True, html="You may also use your own Twitch account if you do not have a secondary bot account.")
-      flx.Label(flex=1,style="text-align:center", wrap=True, html="Things like WizeBot/StreamElements will not work unless you own those accounts." )
-      flx.Label(flex=1,style="font-weight: bold; text-align:center", wrap=True, html="Twitch Chat Server Responses:" )
       
       with flx.VBox(minsize=450):
-        self.tmiResponse = flx.MultiLineEdit(flex=2, style="text-align:left; background-color:#CCCCCC;", text=config.relay.tmiResponse)
-      
-  @flx.reaction('submitButton.pointer_click')
-  def _button_clicked(self, *events):
-    ev = events[-1]
-    newData = False
-    if self.bot_oauth.text != "":
-      newData = True
-      config.relay.set_bot_oauth(self.bot_oauth.text)
-    if self.bot_name.text != "":
-      newData = True
-      config.relay.set_bot_name(self.bot_name.text)
-    if self.channel_name.text != "":
-      newData = True
-      config.relay.set_channel_name('#' + self.channel_name.text)
-    if self.piHost != "":
-      newData = True
-      config.relay.set_piHost(self.piHost)
-    if self.listenPort != "":
-      newData = True
-      config.relay.set_listenPort(int(self.listenPort))
-    if self.talkPort != "":
-      newData = True
-      config.relay.set_talkPort(int(self.talkPort))
-    if newData:
-      self.successLabel.set_text('Saved!')
-      #saveConfig()
-      config.relay.set_shouldSave(True)
+        self.status_box = flx.MultiLineEdit(flex=2, style="text-align:left; background-color:#CCCCCC;")
+
+  @flx.reaction('listen_port.text')
+  def _listen_port_changed(self, *events):
+    listen = self.validate_int(self.listen_port.text, 1, 65535, 'listen_port')
+    self.listen_port.set_text(str(listen))
+
+  @flx.reaction('talk_port.text')
+  def _talk_port_changed(self, *events):
+    talk = self.validate_int(self.talk_port.text, 1, 65535, 'talk_port')
+    self.talk_port.set_text(str(talk))
+
+  
+  def validate_int(self, field: str, minval=None, maxval=None, fallback=None):
+    good = True    
+    value = config.relay.get_attribute(fallback) if fallback is not None else 0
+    if not field.isdigit():
+      good = False      
     else:
-      self.successLabel.set_text('No Change')
+      value = int(field)
+      if minval is not None and value < minval:
+        value = minval
+        good = False
+      elif maxval is not None and value > maxval:
+        value = maxval
+        good = False
+    if good:
+      self.status_box.set_text('')
+    else:
+      if minval is None and maxval is None:      
+        self.status_box.set_text(f"Enter an integer.")
+      elif minval is None:
+        self.status_box.set_text(f"Enter an integer less than or equal to {maxval}.")
+      elif maxval is None:
+        self.status_box.set_text(f"Enter an integer greater than or equal to {minval}.")
+      else:
+        self.status_box.set_text(f"Enter an integer between {minval} and {maxval}.")
+    return value
+    
+
+  @flx.reaction('save_button.pointer_click')
+  def _button_clicked(self, *events):
+    need_save = False
+    if self.bot_name.text != config.relay.bot_name:
+      need_save = True
+      config.relay.change_bot_name(self.bot_name.text)
+    if self.bot_oauth.text != config.relay.bot_oauth:   
+      need_save = True   
+      config.relay.change_bot_oauth(self.bot_oauth.text)    
+    if self.channel_name.text != config.relay.channel_name:
+      need_save = True
+      config.relay.change_channel_name(self.channel_name.text)
+    if self.pi_host.text != config.relay.pi_host:
+      need_save = True
+      config.relay.change_pi_host(self.pi_host.text)
+    if int(self.listen_port.text) != config.relay.listen_port:
+      need_save = True
+      config.relay.change_listen_port(int(self.listen_port.text))
+    if int(self.talk_port.text) != config.relay.talk_port:
+      need_save = True
+      config.relay.change_talk_port(int(self.talk_port.text))
+    if need_save == True:
+      config.relay.save_settings()
+      self.status_message.set_text('Saved!')
+    else:
+      self.status_message.set_text('No Change')
 
 
-  @flx.action
-  def updateTmiResponse(self, text):
-    self.tmiResponse.set_text(text)

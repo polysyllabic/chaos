@@ -34,50 +34,51 @@ class StreamerInterfaceLayout(ui.HVLayout):
 class StreamerInterface(flx.PyWidget):
 
   def init(self):
-    with StreamerInterfaceLayout():
-      self.voteTimerView = VoteTimerView()
-      self.chaosActiveView = ChaosActiveView()
-      self.chaosConnectionView = ChaosConnectionView()
-      self.chaosPausedView = ChaosPausedView()
-      self.quitButton = flx.Button(flex=0, text="Quit")
+    
+    with flx.VBox():
+      self.vote_timer_view = VoteTimerView()
+      self.chaos_active_view = ChaosActiveView()
+      self.chaos_connection_view = ChaosConnectionView()
+      self.chaos_paused_view = ChaosPausedView()
+      self.quit_button = flx.Button(flex=0, text="Quit")
   
-  @flx.reaction('quitButton.pointer_click')
+  @flx.reaction('quit_button.pointer_click')
   def _quit_button_clicked(self, *events):
     ev = events[-1]
     # TODO: pop-up confirmation
-    config.relay.keepGoing = False
+    config.relay.keep_going = False
 
-  @config.relay.reaction('updateVoteTime')
-  def _updateVoteTime(self, *events):
+  @config.relay.reaction('update_vote_time')
+  def _update_vote_time(self, *events):
     for ev in events:
-      self.voteTimerView.updateTime(ev.value)
+      self.vote_timer_view.update_time(ev.value)
       
-  @config.relay.reaction('updateModTimes')
-  def _updateModTimes(self, *events):
+  @config.relay.reaction('update_mod_times')
+  def _update_mod_times(self, *events):
     for ev in events:
-      self.chaosActiveView.updateTime(ev.value)
+      self.chaos_active_view.update_time(ev.value)
       
-  @config.relay.reaction('updateActiveMods')
-  def _updateActiveMods(self, *events):
+  @config.relay.reaction('update_active_mods')
+  def _update_active_mods(self, *events):
     for ev in events:
-      self.chaosActiveView.updateMods(ev.value)
+      self.chaos_active_view.update_mods(ev.value)
       
-  @config.relay.reaction('updatePaused')
-  def _updatePaused(self, *events):
+  @config.relay.reaction('update_paused')
+  def _update_paused(self, *events):
     for ev in events:
-      self.chaosPausedView.updatePaused(ev.value)
+      self.chaos_paused_view.update_paused(ev.value)
       
-  @config.relay.reaction('updatePausedBrightBackground')
-  def _updatePausedBrightBackground(self, *events):
+  @config.relay.reaction('update_paused_bright')
+  def _update_paused_bright(self, *events):
     for ev in events:
-      self.chaosPausedView.updatePausedBrightBackground(ev.value)
+      self.chaos_paused_view.update_paused_bright(ev.value)
       
-  @config.relay.reaction('updateConnected')
+  @config.relay.reaction('update_connected')
   def _updateConnected(self, *events):
     for ev in events:
-      self.chaosConnectionView.updateConnected(ev.value)
+      self.chaos_connection_view.update_connected(ev.value)
       
-  @config.relay.reaction('updateConnectedBrightBackground')
+  @config.relay.reaction('update_connected_bright')
   def _updateConnectedBrightBackground(self, *events):
     for ev in events:
-      self.chaosConnectionView.updateConnectedBrightBackground(ev.value)
+      self.chaos_connection_view.update_connected_bright(ev.value)

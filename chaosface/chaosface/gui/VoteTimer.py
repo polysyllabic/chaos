@@ -6,21 +6,21 @@ class VoteTimerView(flx.PyWidget):
 	def init(self):
 		super().init()
 		
-		styleTime = " background-color:#808080; foreground-color:#808080; color:#000000; border-color:#000000; border-radius:5px"
-		self.progressTime = flx.ProgressBar(flex=1, value=config.relay.voteTime, text='', style=styleTime)
+		time_style = " background-color:#808080; foreground-color:#808080; color:#000000; border-color:#000000; border-radius:5px"
+		self.progress_time = flx.ProgressBar(flex=1, value=config.relay.vote_time, text='', style=time_style)
 		
 	@flx.action
-	def updateTime(self, voteTime):
-		self.progressTime.set_value(voteTime)
+	def update_time(self, vote_time):
+		self.progress_time.set_value(vote_time)
 
 class VoteTimer(flx.PyWidget):
   def init(self):
-    self.voteTimerView = VoteTimerView()
+    self.vote_timer_view = VoteTimerView()
       
-  @config.relay.reaction('updateVoteTime')
-  def _updateVoteTime(self, *events):
+  @config.relay.reaction('update_vote_time')
+  def _update_vote_time(self, *events):
     for ev in events:
-      self.voteTimerView.updateTime(ev.value)
+      self.vote_timer_view.update_time(ev.value)
 
 
 
