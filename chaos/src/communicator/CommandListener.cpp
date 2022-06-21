@@ -33,13 +33,19 @@ CommandListener::~CommandListener() {
   }
 }
 
-void CommandListener::setEndpoint(const std::string& endpoint) {
+void CommandListener::setEndpoint(const std::string& ep) {
+  endpoint = ep;
+  socket = createSocket();
+}
 
-  zmqpp::socket_type type = zmqpp::socket_type::reply;
-  socket = new zmqpp::socket(context, type);
-  // Bind to the socket
-  PLOG_DEBUG << "Binding reply socket to endpoint " << endpoint;
-  socket->bind(endpoint);
+zmq::socket_t* CommandListener::createSocket() {
+  PLOG_DEBUG << "Creating reply socket and binding to " << endpoint;
+  zmq::socket_t* s = new zmq::socket_t(context, zmq::socket_type::rep);
+  s->bind(endpoint);
+  // No waiting at close time
+  //int linger = 0;
+  //s->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
+  return s;
 }
 
 void CommandListener::setObserver(CommandObserver* observer ) {
@@ -47,13 +53,15 @@ void CommandListener::setObserver(CommandObserver* observer ) {
 }
 
 void CommandListener::doAction() {
-  zmqpp::message message;
+  zmq::message_t message;
+  zmq::message_t r(reply);
   // Wait for a message to arive. This call is blocking
-  socket->receive(message);	
-  std::string text;
-  message >> text;
-  PLOG_VERBOSE << "CommandListener received this message: " << text;
-  socket->send(reply.c_str());
+  auto res = socket->recv(message, zmq::recv_flags::none);	
+  std::string text = message.to_string();
+  PLOG_DEBUG << "CommandListener received this message: " << text;
+  // Send ACK response
+
+  auto ack = socket->send(r, zmq::send_flags::none);
 
   // Tell observer what we received
   if (observer != nullptr) {
@@ -62,6 +70,3 @@ void CommandListener::doAction() {
 
 }
 
-void CommandListener::setReply(const std::string& reply) {
-  this->reply = reply;
-}
