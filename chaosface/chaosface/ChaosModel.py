@@ -56,17 +56,12 @@ class ChaosModel(EngineObserver):
     return is_config_valid() and config.relay.channel_name != 'your_channel'
 
   def configure_bot(self):
-    # If we don't yet have good bot credentials, we enter a special configuration loop until they
-    # are entered. The regular voting loop only starts after we have a verified chat connection.
-    # Wait until user has entered everything we need to join the channel
+    # If we don't yet have good bot credentials, we enter a special waiting loop until they are
+    # entered. The regular voting loop only starts after we have a verified chat connection.
     while not self.complete_credentials():
       time.sleep(config.relay.sleep_time())
     # Start up the bot
     config.relay.chatbot.run_threaded()
-    # Wait until we're connected
-    #while not config.relay.bot_connected:
-    #  time.sleep(config.relay.sleep_time())
-
 
   # Ask the engine to tell us about the game we're playing
   # TODO: Request a list of available games
@@ -75,7 +70,8 @@ class ChaosModel(EngineObserver):
     logging.debug("Asking engine about the game")
     to_send = {'game': True}
     resp = self.chaos_communicator.send_message(json.dumps(to_send))
-    logging.debug(f"Socket response: {resp}")
+    if resp == False:
+      logging.warn(f"Engine is not responding. No game data available")
 
   def update_command(self, message) -> None:
     received = json.loads(message)
@@ -150,22 +146,28 @@ class ChaosModel(EngineObserver):
     begin_time = time.time()
     now = begin_time
     dTime = 1.0/config.relay.get_attribute('ui_rate')
-    priorTime = begin_time - dTime
-    
-    # Ping the engine for game information
-    self.request_game_info()
-
+    prior_time = begin_time - dTime
+    last_engine_request = 0.0
     self.paused_flashing_timer = 0.0
     self.disconnected_flashing_timer = 0.0
-    logging.debug(f'Loop sleep time: {config.relay.sleep_time()}')
+
     while config.relay.keep_going:
       time.sleep(config.relay.sleep_time())
-      priorTime = now
+      prior_time = now
       now = time.time()
-      dTime = now - priorTime
+      dTime = now - prior_time
       self.paused_flashing_timer += dTime
       self.disconnected_flashing_timer += dTime
       
+      # Ping the engine for game information. It's in the loop so that we'll retry periodically in
+      # the event that the engine is temporarily down. We retry every 30 seconds in that case.
+      if config.relay.valid_data == False:
+        if last_engine_request == 0.0:
+          self.request_game_info()
+        last_engine_request += dTime
+        if last_engine_request > 30.0:
+          last_engine_request = 0.0
+
       if config.relay.paused:
         begin_time += dTime
         dTime = 0

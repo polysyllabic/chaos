@@ -130,8 +130,8 @@ class ConnectionSetup(flx.PyWidget):
       need_save = True
       config.relay.change_talk_port(int(self.talk_port.text))
     if need_save == True:
-      config.relay.save_settings()
-      self.status_message.set_text('Saved!')
+      config.relay.set_need_save(True)
+      self.status_message.set_text('Updated!')
     else:
       self.status_message.set_text('No Change')
 

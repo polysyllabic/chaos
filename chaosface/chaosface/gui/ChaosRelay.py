@@ -114,11 +114,13 @@ class ChaosRelay(flx.Component):
   ui_rate = flx.FloatProp(settable=True)
   ui_port = flx.IntProp(settable=True)
   
+  need_save = flx.BoolProp(settable=True)
+
   def init(self, configfile: Path):
     self.chaos_config = {}
-    self.open_config(configfile)
+    self.load_settings(configfile)
     self.botConfig = {}
-    self.resetAll()
+    self.reset_all()
 
   def get_attribute(self, key):
     if key in self.chaos_config:
@@ -130,18 +132,30 @@ class ChaosRelay(flx.Component):
     logging.error(f"No default for '{key}'")
     return None
 
-  def open_config(self, configfile: Path):
+  def load_settings(self, configfile: Path):
     self.config_file = configfile.resolve()
     try:
       logging.info(f"Initializing settings from {self.config_file}")
       with open(self.config_file) as json_data_file:
-        ChaosRelay.chaos_config = json.load(json_data_file)
+        self.chaos_config = json.load(json_data_file)
     except Exception as e:
       logging.info(f"Could not read settings in {self.config_file}. Using defaults")
-      ChaosRelay.chaos_config = {}
+      self.chaos_config = {}
+
+  @flx.reaction('need_save')
+  def save_settings(self, *events):
+    for ev in events:
+      if ev.new_value == True:
+        logging.info(f"Saving settings to {self.config_file}")
+        with open(self.config_file, 'w') as outfile:
+          json.dump(self.chaos_config, outfile)
+        # save the bot's settings
+        logging.info("Saving bot configuration")
+        cfg.save()
+        self.set_need_save(False)
 
   @flx.action
-  def resetAll(self):
+  def reset_all(self):
     self.set_num_active_mods(self.get_attribute('active_modifiers'))
     self.set_time_per_modifier(self.get_attribute('modifier_time'))
     self.set_vote_options(self.get_attribute('vote_options'))
@@ -223,7 +237,7 @@ class ChaosRelay(flx.Component):
     self.set_candidate_mods([""]*self.vote_options)
     self.voted_users = []
 
-
+  
   @flx.action
   def tally_vote(self, index: int, user: str):
     if index >= 0 and index < self.get_attribute('vote_options') and not user in self.voted_users:
@@ -303,14 +317,6 @@ class ChaosRelay(flx.Component):
     # Reset votes since there is a new voting pool
     self.set_votes([0]*self.get_attribute('vote_options'))
 
-  def save_settings(self):
-    logging.info(f"Saving settings to {self.config_file}")
-    with open(self.config_file, 'w') as outfile:
-      json.dump(self.chaos_config, outfile)
-    # save the bot's settings
-    logging.info("Saving bot configuration")
-    cfg.save()
-      
 
   @flx.action
   def replace_mod(self, new_mod):

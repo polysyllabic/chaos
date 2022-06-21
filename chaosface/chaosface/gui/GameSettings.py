@@ -163,8 +163,6 @@ class GameSettings(flx.PyWidget):
       else:
         self.status_label.set_text(f"Enter an integer between {minval} and {maxval}.")
     return value
-    
-
 
   @flx.reaction('save_button.pointer_click')
   def _save_button_clicked(self, *events):
@@ -205,9 +203,8 @@ class GameSettings(flx.PyWidget):
     if (config.relay.redemption_cooldown != self.redemption_cooldown.text):
       config.relay.set_redemption_cooldown(int(self.redemption_cooldown.text))
     if need_save:
-      config.relay.save_settings()
-      self.status_label.set_text('Settings saved')
-      self.need_save = False
+      config.relay.set_need_save(True)
+      self.status_label.set_text('Settings updated')
     else:
       self.status_label.set_text('No settings were changed')
 
