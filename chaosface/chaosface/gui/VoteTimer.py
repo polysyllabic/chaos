@@ -1,4 +1,8 @@
-
+# This file is part of Twitch Controls Chaos, written by blegas78 and polysyl.
+# License: GPL 3 or greater. See LICENSE file for details.
+"""
+  Browser source showing the time remaining for the current voting round
+"""
 from flexx import flx
 import chaosface.config.globals as config
 

@@ -1,27 +1,15 @@
 #!/usr/bin/env python3
+# This file is part of Twitch Controls Chaos, written by blegas78 and polysyl.
+# License: GPL 3 or greater. See LICENSE file for details.
 """
-  Twitch Controls Chaos (TCC)
-  Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
-  file at the top-level directory of this distribution for details of the
-  contributers.
-
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  This is the main program to run the Chaos interface for Twitch Controls Chaos (TCC). It sets up
+  a chatbot that monitors votes and other commands in the streamer's channel, runs the voting and
+  other mod-selection processes, and communicates with the Chaos engine to tell it what mods to
+  apply.
 """
 
 import asyncio
 import logging
-import threading
 logging.basicConfig(level=logging.DEBUG)
 
 from flexx import flx

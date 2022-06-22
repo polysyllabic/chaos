@@ -1,3 +1,8 @@
+# This file is part of Twitch Controls Chaos, written by blegas78 and polysyl.
+# License: GPL 3 or greater. See LICENSE file for details.
+"""
+  Generates the source to show which modifiers are currently active and how much time remains for each.
+"""
 
 from flexx import flx
 import chaosface.config.globals as config

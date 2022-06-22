@@ -1,21 +1,10 @@
+# This file is part of Twitch Controls Chaos, written by blegas78 and polysyl.
+# License: GPL 3 or greater. See LICENSE file for details.
 """
-  Twitch Controls Chaos (TCC)
-  Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
-  file at the top-level directory of this distribution for details of the
-  contributers.
+  The ChaosRelay class provides a model-view connector. It's the central repository for data that
+  different components need to share.
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  The relay is initialized once and makes heavy use of flexx properties. It is safe
 """
 import logging
 import json
@@ -67,6 +56,8 @@ class ChaosRelay(flx.Component):
 
   modifier_data = {"1":{"desc":"","groups":""}, "2":{"desc":"","groups":""}, "3":{"desc":"","groups":""},
                   "4":{"desc":"","groups":""}, "5":{"desc":"","groups":""}, "6":{"desc":"","groups":""}}
+  all_mods = []
+  voted_users = []
 
   # Model-View bridge:
   game_name = flx.StringProp(settable=True)
@@ -78,7 +69,6 @@ class ChaosRelay(flx.Component):
 
   candidate_mods = flx.ListProp(settable=True)
   active_mods = flx.ListProp(settable=True)
-  all_mods = flx.ListProp(settable=True)
   paused = flx.BoolProp(settable=True)
   paused_bright = flx.BoolProp(settable=True)
   connected = flx.BoolProp(settable=True)
@@ -190,9 +180,7 @@ class ChaosRelay(flx.Component):
     self.set_active_mods([""]*self.get_attribute('active_modifiers'))
     self.set_votes([0]*self.get_attribute('vote_options'))
     self.set_candidate_mods([""]*self.get_attribute('vote_options'))
-    self.set_all_mods([])
     
-    self.voted_users = []
     
   def time_per_vote(self) -> float:
     return self.get_attribute('modifier_time')/float(self.get_attribute('active_modifiers'))
@@ -211,15 +199,13 @@ class ChaosRelay(flx.Component):
 
     logging.debug(f"Initializing modifier data:")
     self.modifier_data = {}
-    i = 0
-    for mod in gamedata["mods"]:
-      i = i+1
-      logging.debug(f"mod {i}: '{mod}'")
-      mod_name = mod["name"]
+    for mod in gamedata['mods']:
+      mod_name = mod['name']
       self.modifier_data[mod_name] = {}
-      self.modifier_data[mod_name]["desc"] = mod["desc"]
-      self.modifier_data[mod_name]["groups"] = mod["groups"]
-    self.set_all_mods (list(self.modifier_data.keys()))
+      self.modifier_data[mod_name]['desc'] = mod['desc']
+      self.modifier_data[mod_name]['groups'] = mod['groups']
+      self.modifier_data[mod_name]
+    self.all_mods = list(self.modifier_data.keys())
     self.reset_softmax()
     self.valid_data = True
 
@@ -240,11 +226,17 @@ class ChaosRelay(flx.Component):
   
   @flx.action
   def tally_vote(self, index: int, user: str):
-    if index >= 0 and index < self.get_attribute('vote_options') and not user in self.voted_users:
-      self.voted_users.append(user)
-      votes_counted = list(self.votes)
-      votes_counted[index] += 1
-      self.set_votes(votes_counted)
+    if index >= 0 and index < self.get_attribute('vote_options'):
+      if not user in self.voted_users:
+        self.voted_users.append(user)
+        votes_counted = list(self.votes)
+        votes_counted[index] += 1
+        self.set_votes(votes_counted)
+        logging.debug(f'User {user} voted for choice {index+1}, which now has {votes_counted[index]} votes')
+      else:
+        logging.debug(f'User {user} has already voted')
+    else:
+      logging.debug(f'Received an out of range vote ({index+1})')
 
   @flx.action
   def decrement_mod_times(self, dTime):

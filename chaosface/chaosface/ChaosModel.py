@@ -1,21 +1,11 @@
+#!/usr/bin/env python3
+# This file is part of Twitch Controls Chaos, written by blegas78 and polysyl.
+# License: GPL 3 or greater. See LICENSE file for details.
 """
-  Twitch Controls Chaos (TCC)
-  Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
-  file at the top-level directory of this distribution for details of the
-  contributers.
+  The ChaosModel contains the central loop for modifier selection and updating the UI.
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  Note that this event loop runs in a separate thread from the flexx UI, so we must schedule any
+  routines that change flexx parameters with a call to flx.loop.call_soon(<function>, *args)
 """
 import time
 import threading
@@ -29,10 +19,6 @@ import chaosface.config.globals as config
 from chaosface.communicator import EngineObserver
 from chaosface.communicator import ChaosCommunicator
 
-# Handles the main event loop for modifier selection (voting, etc.)
-# Note: This event loop runs in a separate thread from the flexx UI. It's safe to read the data in
-# the ChaosRelay class directly, but to change any values of flexx properties, we must schedule the
-# requisite action in the UI with a call to flx.loop.call_soon(<function>, *args)
 
 class ChaosModel(EngineObserver):
   def __init__(self):
