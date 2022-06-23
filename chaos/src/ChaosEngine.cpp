@@ -93,9 +93,7 @@ void ChaosEngine::reportGameStatus() {
   msg["errors"] = game.getErrors();
   msg["nmods"] = game.getNumActiveMods();
   msg["modtime"] = game.getTimePerModifier();
-  Json::Value mods = game.getModList();
-  PLOG_DEBUG << "mod data: " << mods;
-  msg["mods"] = mods;
+  msg["mods"] = game.getModList();
   chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
 }
 
