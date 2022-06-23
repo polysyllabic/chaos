@@ -31,7 +31,7 @@ namespace Chaos {
     zmq::socket_t *socket;
     std::string endpoint;
 
-    std::chrono::milliseconds request_timeout{2500};
+    std::chrono::milliseconds request_timeout{10000};
     int request_retries{3};
 
     zmq::socket_t* createSocket();
