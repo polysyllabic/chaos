@@ -55,7 +55,7 @@ void ChaosEngine::newCommand(const std::string& command) {
   if (root.isMember("winner")) {
     std::shared_ptr<Modifier> mod = game.getModifier(root["winner"].asString());
     if (mod != nullptr) {
-      PLOG_INFO << "Adding Modifier: " << typeid(*mod).name();
+      PLOG_INFO << "Adding Modifier: " << mod->getName();
       lock();
       modifiers.push_back(mod);
       modifiersThatNeedToStart.push(mod);
@@ -109,7 +109,8 @@ void ChaosEngine::doAction() {
   // initialize the mods that are waiting
   lock();
   while(!modifiersThatNeedToStart.empty()) {
-    modifiersThatNeedToStart.front()->begin();
+    PLOG_DEBUG << "Processing new modifiers";
+    modifiersThatNeedToStart.front()->_begin();
     modifiersThatNeedToStart.pop();
   }
   unlock();
@@ -126,7 +127,7 @@ void ChaosEngine::doAction() {
     std::shared_ptr<Modifier> front = modifiers.front();
     if ((front->lifespan() >= 0 && front->lifetime() > front->lifespan()) ||
 	      (front->lifespan()  < 0 && front->lifetime() > game.getTimePerModifier())) {
-      PLOG_INFO << "Removing modifier: " << typeid(*front).name();
+      PLOG_INFO << "Removing modifier: " << front->getName() << " lifetime = " << front->lifetime();
       lock();
       // Do cleanup for this mod, if necessary
       front->finish();

@@ -39,9 +39,7 @@ using namespace Chaos;
 
 void Modifier::initialize(toml::table& config, EngineInterface* e) {
   engine = e;
-  timer.initialize();
   parent = nullptr;
-  pauseTimeAccumulator = 0;
   totalLifespan = -1;    // An erroneous value that if set should be positive
   lock_while_busy = true;
   
@@ -120,6 +118,13 @@ void Modifier::_update(bool wasPaused) {
     pauseTimeAccumulator += timer.dTime();
   }
   update();
+}
+
+
+void Modifier::_begin() {
+  timer.initialize();
+  pauseTimeAccumulator = 0;
+  begin();
 }
 
 // Default implementations of virtual functions do nothing
