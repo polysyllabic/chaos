@@ -26,7 +26,7 @@ class EngineObserver(ABC):
 class ChaosCommunicator():
   _observers: List[EngineObserver] = []
   request_retries = 3
-  request_timeout = 2500
+  request_timeout = 30000
   socket_listen = None 
   socket_talk = None
 
@@ -82,13 +82,13 @@ class ChaosCommunicator():
     
   def _listen_loop(self):
     while self.keep_running:
-      #  Wait for next message from engine (this is blocking)
+      #  Wait for next message from engine. This call is blocking.
       message = self.socket_listen.recv()
-      logging.debug("Received from engine: " + message.decode("utf-8"))
       # Return acknowledgment
       self.socket_listen.send(b"Pong")
-      # Tell observers what we received
-      self.notify(message.decode("utf-8"))
+      # Tell observers what we received, if the message is non-empty
+      if message:
+        self.notify(message.decode("utf-8"))
   
   def send_message(self, message):
     logging.debug("Sending message: " + message)

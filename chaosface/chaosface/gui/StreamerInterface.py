@@ -8,22 +8,16 @@ import chaosface.config.globals as config
 
 from .ChaosPausedView import ChaosPausedView
 from .ChaosConnectionView import ChaosConnectionView
-from .ActiveMods import ChaosActiveView
-from .VoteTimer import VoteTimerView
-
-class StreamerInterfaceLayout(ui.HVLayout):
-  def init(self):
-    self.set_flex(1)
-    self.set_orientation('v')
-    self.apply_style('background:#000000;')
+from .ActiveMods import ActiveMods
+from .VoteTimer import VoteTimer
 
 class StreamerInterface(flx.PyWidget):
 
   def init(self):
     
     with flx.VBox():
-      self.vote_timer_view = VoteTimerView()
-      self.chaos_active_view = ChaosActiveView()
+      self.vote_timer_view = VoteTimer()
+      self.chaos_active_view = ActiveMods()
       self.chaos_connection_view = ChaosConnectionView()
       self.chaos_paused_view = ChaosPausedView()
       self.quit_button = flx.Button(flex=0, text="Quit")
@@ -34,20 +28,20 @@ class StreamerInterface(flx.PyWidget):
     # TODO: pop-up confirmation
     config.relay.keep_going = False
 
-  @config.relay.reaction('update_vote_time')
-  def _update_vote_time(self, *events):
-    for ev in events:
-      self.vote_timer_view.update_time(ev.value)
+  #@config.relay.reaction('update_vote_time')
+  #def _update_vote_time(self, *events):
+  #  for ev in events:
+  #    self.vote_timer_view.update_time(ev.value)
       
-  @config.relay.reaction('update_mod_times')
-  def _update_mod_times(self, *events):
-    for ev in events:
-      self.chaos_active_view.update_time(ev.value)
+  #@config.relay.reaction('update_mod_times')
+  #def _update_mod_times(self, *events):
+  #  for ev in events:
+  #    self.chaos_active_view.update_time(ev.value)
       
-  @config.relay.reaction('update_active_mods')
-  def _update_active_mods(self, *events):
-    for ev in events:
-      self.chaos_active_view.update_mods(ev.value)
+  #@config.relay.reaction('update_active_mods')
+  #def _update_active_mods(self, *events):
+  #  for ev in events:
+  #    self.chaos_active_view.update_mods(ev.value)
       
   @config.relay.reaction('update_paused')
   def _update_paused(self, *events):

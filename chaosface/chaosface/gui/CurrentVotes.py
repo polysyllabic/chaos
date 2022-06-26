@@ -8,21 +8,6 @@ import chaosface.config.globals as config
 
 class CurrentVotes(flx.PyWidget):
   def init(self):
-    self.vote_view = ChaosVoteView()
-    
-  @config.relay.reaction('update_candidate_mods')
-  def _update_candidates(self, *events):
-    for ev in events:
-      self.vote_view.update_candidates(ev.value)
-      
-  @config.relay.reaction('update_votes')
-  def _update_votes(self, *events):
-    for ev in events:
-      self.vote_view.update_voting(ev.value)
-  
-
-class ChaosVoteView(flx.PyWidget):
-  def init(self):
     super().init()
     
     self.label = []
@@ -50,10 +35,20 @@ class ChaosVoteView(flx.PyWidget):
           for i in range(len(config.relay.votes)):
             self.label.append(flx.Label(flex=1,style=mod_text_style, text=str(i+1) + " " + config.relay.candidate_mods[i]))
 
+  @config.relay.reaction('update_candidate_mods')
+  def _update_candidates(self, *events):
+    for ev in events:
+      self.update_candidates(ev.value)
+      
+  @config.relay.reaction('update_votes')
+  def _update_votes(self, *events):
+    for ev in events:
+      self.update_voting(ev.value)
+
   @flx.action
   def update_candidates(self, mods):
     for i in range(len(mods)):
-      self.label[i].set_text(f"{i} {mods[i]}")
+      self.label[i].set_text(f"{i+1} {mods[i]}")
   
   @flx.action
   def update_voting(self, votes):

@@ -4,9 +4,7 @@
 from pathlib import Path
 from ..gui.ChaosRelay import ChaosRelay
 
-CHAOS_PATH = Path.cwd()
 CHAOS_LOG_FILE = Path.home() / 'chaosface.log'
-CHAOS_CONFIG_FILE = Path.cwd() / 'chaosConfig.json'
 
-relay = ChaosRelay(CHAOS_CONFIG_FILE)
+relay = ChaosRelay()
 

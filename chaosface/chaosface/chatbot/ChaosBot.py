@@ -17,7 +17,7 @@ class ChaosBot(BaseBot):
   # All we do here is look for potential votes. Commands are dispatched by the parent class and
   # handled by the commands defined in the commands subdirectory
   async def on_privmsg_received(self, msg: Message):
-    if config.relay.bot_connected and config.relay.voting_type != 'DISABLED':
+    if config.relay.connected and config.relay.voting_type != 'DISABLED':
       logging.debug(f'Checking message {msg.content} for a vote')
       # A vote message must be a pure number
       if msg.content.isdigit():
