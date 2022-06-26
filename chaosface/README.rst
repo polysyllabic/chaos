@@ -158,6 +158,14 @@ admin permissions.
 
 Commands
 --------
+*Note:* The Twitch chat bot is built upon the PythonTwitchBotFramework package. This framework
+provides a full-featured framework that allows you to implement many other bot features beyond
+those that are implemented here, and most of those can be configured by means of chat commands.
+See the `PythonTwitchBotFramework documentation
+<https://github.com/sharkbound/PythonTwitchBotFramework>`_ if you're interested in those
+additional features, or if you want to reconfigure the default settings for features such as
+permission levels for commands.
+
 User commands
 * !chaos -- Get a general description of Twitch Controls Chaos
 * !chaos vote -- Get an explanation of the voting method
