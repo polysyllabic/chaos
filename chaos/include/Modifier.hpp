@@ -420,6 +420,7 @@ namespace Chaos {
      */
     double lifetime() { return timer.runningTime() - pauseTimeAccumulator; }
     double lifespan() { return totalLifespan; }
+
     /**
      * \brief Main entry point into the update loop
      * \param wasPaused Are we calling update for the first time after a pause?
@@ -429,6 +430,15 @@ namespace Chaos {
      */
     void _update(bool wasPaused);
   
+    /**
+     * \brief Common entry point into the begin function
+     *
+     * This function is called directly by the ChaosEngine class. We handle any common
+     * initialization required for all modifiers and then call the virtual begin function
+     * implemented by the concrete child class.
+     */
+    void _begin();
+
     /**
      * \brief Commands to execute when the mod is first applied. 
      */

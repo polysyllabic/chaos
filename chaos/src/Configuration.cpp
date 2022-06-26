@@ -49,7 +49,7 @@ Configuration::Configuration(const std::string& fname) {
     throw std::runtime_error("Missing chaos version identifier in TOML configuration file");
   }
 
-  log_path = configuration["log_dir"].value_or(".");
+  log_path = configuration["log_directory"].value_or(".");
   if (! std::filesystem::exists(log_path)) {
     // If this directory doesn't exist, create it
     std::filesystem::create_directory(log_path);
@@ -59,13 +59,15 @@ Configuration::Configuration(const std::string& fname) {
       std::cerr << "Log path '" << log_path.string() << "' is not a directory!";
     }
   }
-  // Initialize the logger
+
+  // Set up the main log
   std::filesystem::path logfile = configuration["log_file"].value_or("chaos.log");  
   logfile = log_path / logfile;
   
   bool overwrite = configuration["overwrite_log"].value_or(false);
 
   plog::Severity maxSeverity = (plog::Severity) configuration["log_verbosity"].value_or(3);
+
   size_t max_size = (size_t) configuration["max_log_size"].value_or(0);
   int max_logs = configuration["max_log_files"].value_or(8);  
   if (overwrite && std::filesystem::exists(logfile)) {
@@ -74,13 +76,38 @@ Configuration::Configuration(const std::string& fname) {
   plog::init(maxSeverity, logfile.c_str(), max_size, max_logs);
   PLOG_NONE << "Welcome to Chaos " << CHAOS_VERSION;
 
+  std::filesystem::path sniflog = configuration["sniffify_log"].value_or("");
+  sniflog = log_path / sniflog;
+
+  plog::Severity sniffifySeverity = (plog::Severity) configuration["sniffify_verbosity"].value_or(3);
+  // IF we've specified a separate sniffify log, set it up
+  //if (! sniflog.string().empty()) {
+  //  initializeSniffifyLog(sniffifySeverity, sniflog);
+  //}
+
   interface_addr = configuration["interface_addr"].value_or("localhost");
   interface_port = configuration["interface_port"].value_or(5556);
-  PLOG_DEBUG << "Sending messages to chaosface at endpoint " << getInterfaceAddress();
-  listener_port = configuration["listener_port"].value_or(5555);
-  PLOG_DEBUG << "Listening to messages from chaosface at endpoint " << getListenerAddress();
+  PLOG_VERBOSE << "chaosface talk endpoint: " << getInterfaceAddress();
 
+  listener_port = configuration["listener_port"].value_or(5555);
+  PLOG_VERBOSE << "chaosface listen endpoint: " << getListenerAddress();
+
+  game_directory = configuration["game_directory"].value_or(".");
+  // Error if directory does not exist, or the path contains an ordinary file
+  if (! std::filesystem::exists(game_directory)) {
+    PLOG_ERROR << "Game directory '" << game_directory.string() << "' does not exist!";
+    game_directory = ".";
+  } else if (! std::filesystem::is_directory(game_directory)) {
+    PLOG_ERROR << "Game directory '" << game_directory.string() << "' is not a directory!";
+    game_directory = ".";
+  }
+
+  // If the game configuration file doesn't specify a path, use the default games directory
   game_config = configuration["default_game"].value_or("");
+  if (! game_config.has_parent_path()) {
+    game_config = game_directory / game_config;
+  }
+
 }
 
 

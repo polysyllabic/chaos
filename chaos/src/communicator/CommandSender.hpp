@@ -20,23 +20,29 @@
 #pragma once
 #include <queue>
 #include <string>
-#include <zmqpp/zmqpp.hpp>
+#include <chrono>
+#include <zmq.hpp>
 
 namespace Chaos {
 
   class CommandSender {
   private:
-    zmqpp::socket *socket;
-    zmqpp::context context;	
-    std::string reply;
-	
+    zmq::context_t context;	
+    zmq::socket_t *socket;
+    std::string endpoint;
+
+    std::chrono::milliseconds request_timeout{10000};
+    int request_retries{3};
+
+    zmq::socket_t* createSocket();
+
   public:
     CommandSender();
     ~CommandSender();
 	
-    void setEndpoint(const std::string& endpoint);
+    void setEndpoint(const std::string& ep);
 
-    bool sendMessage(std::string message);
+    bool sendMessage(const std::string& message);
   };
 
 };

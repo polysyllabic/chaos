@@ -19,8 +19,7 @@
 #pragma once
 #include <string>
 #include <mogi/thread.h>
-#include <zmqpp/zmqpp.hpp>
-
+#include <zmq.hpp>
 #include "CommandObserver.hpp"
 
 namespace Chaos {
@@ -31,28 +30,32 @@ namespace Chaos {
    */
   class CommandListener : public Mogi::Thread {
   private:
-    zmqpp::socket *socket;
-    zmqpp::context context;
-    std::string reply;
+    zmq::context_t context;
+    zmq::socket_t *socket;
+    std::string endpoint;
+    std::string reply{"ACK"};
+
     CommandObserver* observer = nullptr;
-	
+
+    zmq::socket_t* createSocket();
+
     void doAction();
 	
   public:
     CommandListener();
     ~CommandListener();
 	
-    void setEndpoint(const std::string& endpoint);
+    void setEndpoint(const std::string& ep);
 	
     /**
      * \brief Set an observer for incomming messages
      * 
      * \param observer Pointer to the observer
      * 
-     * We only allow one observer at the moment.3
+     * We only allow one observer at the moment.
      */
     void setObserver(CommandObserver* observer);
-    void setReply(const std::string& reply);
+
   };
 
 };

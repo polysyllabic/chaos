@@ -10,21 +10,31 @@
 # game-configuraiton files.
 chaos_toml = "1.0"
 
+# Default directory where we look for games. This is used if no specific game file is specified on
+# the command line and the default game contains no path. Game configuration files put here can
+# also be reported to the chaos interface as available games
+game_directory = "./games/"
+
 # default_game: If no game file is specified on the command line, this is the game that we load.
-default_game = "./games/tlou2.toml"
+# If this string does not contain a path, we look for the file in the game directory.
+default_game = "tlou2.toml"
 
 # IP address/domain name of the computer running the chaos interface. Use 'localhost' if you're
 # running both the interface and the engine on the Raspberry Pi.
 interface_addr = "192.168.1.1"
+
 # Port to send outgoing messages to the chaos interface
 interface_port = 5556
+
 # Port to listen for incoming messages from the chaos interface
 listener_port = 5555
 
 # How long, in microseconds, should the engine sleep between executions of the main loop
 usleep_interval = 500
 
-# log_dir: Directory to keep logs and json files. This path can be relative or absolute.
+# log_directory: Directory to keep logs and json files. This path can be relative or absolute.
+log_directory = "."
+
 # The default is relative to the home directory of the user running the engine.
 # log_file: Name of the basic log file. Default = "chaos.log"
 log_file = "chaos.log"
@@ -32,8 +42,8 @@ log_file = "chaos.log"
 # overwrite_log: If true, we delete any existing log file when starting the program
 overwrite_log = true
 
-# log_verbosity: Level of message detail sent to the log file. Must be an integer from 0 to 6.
-# Higher numbers include all messages of the lower types.
+# log_verbosity: Level of message detail sent to the log file for the main program. Must be an
+# integer from 0 to 6. Higher numbers include all messages of the lower types.
 # 0 = NONE (logging disabled)
 # 1 = FATAL
 # 2 = ERROR
@@ -42,6 +52,18 @@ overwrite_log = true
 # 5 = DEBUG
 # 6 = VERBOSE
 log_verbosity = 5
+
+# Sniffify log not currently separate; this is a placeholder to remind me to get it working. To
+# see sniffify events currently, you need to set the log level to verbose.
+# Separate log file for events from the usb-sniffify library. If not set or set to an empty
+# string, usb events will be logged to the main log file at the severity level set in log_verbosity.
+# If you want to disable usb logging, keep a file name and set the verbosity to 0.
+sniffify_log = "sniffify.log"
+
+# snifity_verbosity: Level of message detail sent to the log file for messages from the
+# usb-sniffify library. Uses same numerical scale as the main program.
+snifify_verbosity = 4
+
 # max_log_size: Maximum log-file size in bytes
 max_log_size = 0
 # max_log_files: Maximum number of log files to keep (0 = disable log rolling)

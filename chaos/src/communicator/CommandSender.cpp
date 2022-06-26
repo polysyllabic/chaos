@@ -18,7 +18,6 @@
  */
 #include "CommandSender.hpp"
 #include <plog/Log.h>
-
 using namespace Chaos;
 
 CommandSender::CommandSender() {
@@ -30,20 +29,46 @@ CommandSender::~CommandSender() {
   }
 }
 
-void CommandSender::setEndpoint(const std::string& endpoint) {
-  // generate a pull socket
-  zmqpp::socket_type type = zmqpp::socket_type::request;
-  socket = new zmqpp::socket(context, type);
-  PLOG_DEBUG << "Connecting request socket to endpoint " << endpoint;
-  // bind to the socket
-  socket->connect(endpoint);
+void CommandSender::setEndpoint(const std::string& ep) {
+  endpoint = ep;
+  socket = createSocket();
 }
 
-bool CommandSender::sendMessage(std::string message) {
-  socket->send(message.c_str());
-  zmqpp::message msg;
-  // decompose the message
-  socket->receive(msg);	// Blocking
-  msg >> reply;
-  return true;
+zmq::socket_t* CommandSender::createSocket() {
+  PLOG_DEBUG << "Creating request socket and connecting to " << endpoint;
+  zmq::socket_t* s = new zmq::socket_t(context, zmq::socket_type::req);
+  s->connect(endpoint);
+  // No waiting at close time
+  s->set(zmq::sockopt::linger, 0);
+  return s;
+}
+
+bool CommandSender::sendMessage(const std::string& message) {
+  PLOG_DEBUG << "Sending message: " << message;
+  zmq::message_t msg(message);
+  zmq::message_t reply;
+
+  int retries = request_retries;
+  // Wait for reply. We use the lazy pirate pattern to try to recover from a failure of the
+  // interface. See https://zguide.zeromq.org/docs/chapter4/
+  while (retries > 0) {
+    socket->send(msg, zmq::send_flags::none);
+    // Poll socket for a reply, with timeout
+    zmq::pollitem_t items[] = { {*socket, 0, ZMQ_POLLIN, 0} };
+    zmq::poll (&items[0], 1, request_timeout);
+    // If we got a reply, process it
+    if (items[0].revents & ZMQ_POLLIN) {
+      auto res = socket->recv(reply, zmq::recv_flags::none);
+      PLOG_DEBUG << "received ack";
+      return true;
+    }
+    else {
+      --retries;
+      PLOG_DEBUG << "Timeout waiting for reply. Dropping old socket";
+      delete socket;
+      socket = createSocket();
+    }
+  }
+  PLOG_DEBUG << "Abandoning message";
+  return false;
 }

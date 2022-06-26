@@ -102,18 +102,15 @@ int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
   return parse_errors;
 }
 
-std::string ModifierTable::getModList() {
-  Json::Value root;
-  Json::Value& data = root["mods"];
+Json::Value ModifierTable::getModList() {
+  Json::Value mod;
   for (auto const& [key, val] : mod_map) {
     // Mods that are marked unlisted are not reported to the chatbot
     if (! val->isUnlisted()) {
-      data.append(val->toJsonObject());
+      mod.append(val->toJsonObject());
     }
-  }
-	
-  Json::StreamWriterBuilder builder;	
-  return Json::writeString(builder, root);
+  }	
+  return mod;
 }
 
 std::shared_ptr<Modifier> ModifierTable::getModifier(const std::string& name) {

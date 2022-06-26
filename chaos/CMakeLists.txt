@@ -78,9 +78,14 @@ FetchContent_Declare(
 	GIT_REPOSITORY https://github.com/mogillc/nico.git
 	GIT_TAG	       origin/master
 )
+#FetchContent_Declare(
+#	zmqpp
+#	GIT_REPOSITORY https://github.com/zeromq/zmqpp.git
+#	GIT_TAG	       origin/master
+#)
 FetchContent_Declare(
-	zmqpp
-	GIT_REPOSITORY https://github.com/zeromq/zmqpp.git
+	cppzmq
+	GIT_REPOSITORY https://github.com/zeromq/cppzmq.git
 	GIT_TAG	       origin/master
 )
 FetchContent_Declare(
@@ -102,7 +107,7 @@ if(NOT mogi_POPULATED)
   add_subdirectory(${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi)
 endif()
 
-FetchContent_MakeAvailable(tomlplusplus plog zmqpp sniffify raw-gadget)
+FetchContent_MakeAvailable(tomlplusplus plog cppzmq sniffify raw-gadget)
 
 find_package (Threads REQUIRED)
 find_package (LibJsoncpp REQUIRED)
@@ -190,7 +195,7 @@ target_include_directories (chaos PRIVATE include
 	${tomlplusplus_SOURCE_DIR}/include
 	${plog_SOURCE_DIR}/include
 	${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi/include
-	${zmqpp_SOURCE_DIR}/src
+	${cppzmq_SOURCE_DIR}
 	${sniffify_SOURCE_DIR}/include
 	${LIBJSONCPP_INCLUDE_DIRS}
 	${LIBUSB1_INCLUDE_DIRS}

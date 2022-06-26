@@ -20,6 +20,7 @@
 #pragma once
 #include <unordered_map>
 #include <string>
+#include <json/json.h>
 #include "Modifier.hpp"
 #include "EngineInterface.hpp"
 
@@ -56,7 +57,7 @@ namespace Chaos {
     /**
      * Return list of modifiers for the chat bot.
      */
-    std::string getModList();
+    Json::Value getModList();
 
   };
 };
