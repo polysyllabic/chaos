@@ -53,7 +53,15 @@ Installing Chaosface on Another Computer
 4. Configure the IP addresses for both the engine and the interface:
     - In the chaosconfig.toml file, set the address or domain name of the computer hosting the
       python interface program.
-    - From the interface program, set the address of the Raspberry Pi.
+    - From the interface program, set the address of the Raspberry Pi to 'raspberrypi.local'. If
+      that does not work, you will need to find the numeric address of the Pi (e.g., 192.168.1.232)
+      and enter that.
+    - Do not change the talk/listen ports unless you know what you are doing.
+
+5. Make sure your firewall isn't blocking the ports (5555 and 5556). If you are running the
+   interface on a Windows machine, and it is set to be on a private network, you should not have
+   any issues. If your computer is set to public network, you will have to manually open the
+   listen port (5556 by default) to incomming connections.
 
 Initial Setup
 -------------
@@ -150,6 +158,14 @@ admin permissions.
 
 Commands
 --------
+*Note:* The Twitch chat bot is built upon the PythonTwitchBotFramework package. This framework
+provides a full-featured framework that allows you to implement many other bot features beyond
+those that are implemented here, and most of those can be configured by means of chat commands.
+See the `PythonTwitchBotFramework documentation
+<https://github.com/sharkbound/PythonTwitchBotFramework>`_ if you're interested in those
+additional features, or if you want to reconfigure the default settings for features such as
+permission levels for commands.
+
 User commands
 * !chaos -- Get a general description of Twitch Controls Chaos
 * !chaos vote -- Get an explanation of the voting method

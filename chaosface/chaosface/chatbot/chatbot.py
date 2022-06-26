@@ -25,10 +25,11 @@ import queue
 import time
 
 from .utility import chat
-from .irctwitch import irc
+import chaosface.chatbot.irctwitch as irc
 
 import logging
 log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
 
 class Chatbot():
 
@@ -48,8 +49,8 @@ class Chatbot():
     self.host = "irc.twitch.tv"
     self.port = 6667
     self.bot_oauth = "oauth:"
-    self.bot_name = "bot-name"
-    self.channel_name = "your-channel"
+    self.bot_name = "your_bot"
+    self.channel_name = "your_channel"
     
     self.messageQueue = queue.Queue()
     self.qResponse = queue.Queue()
@@ -116,7 +117,7 @@ class Chatbot():
       self.fullyConnected = False
       while not self.connected and not getattr(thread, "kill", False):
         try:
-          log.info("Chatbot: Waiting " + str(self.reconnectTimeFalloff) + " seconds before reconnection attempt")
+          log.debug("Chatbot: Waiting " + str(self.reconnectTimeFalloff) + " seconds before reconnection attempt")
           time.sleep(self.reconnectTimeFalloff)
           if self.reconnectTimeFalloff == 0:
             self.reconnectTimeFalloff = 1
@@ -125,7 +126,6 @@ class Chatbot():
           
           self.s = socket.socket()
           self.s.settimeout(self.socketTimeout)
-#          self.s.connect((config.HOST, config.PORT))
           self.s.connect((self.host, self.port))
           
           log.info(f"Attempting to connect to {self.channel_name} as {self.bot_name}")
@@ -194,30 +194,30 @@ class Chatbot():
             continue
             
         response += incoming.decode("utf-8")
-        log.info(f"Raw Running Response: {response}")
+        log.debug(f"Raw Running Response: '{response}'")
           
-        if len(response) <= 0:
+        if len(response) == 0:
           continue
           
         try:
           responses = response.split("\r\n")
-          response = responses[ len(responses) - 1]            
+          response = responses[ len(responses) - 1]
           for i in range(len(responses)-1):
             self.handleResponseLine(responses[i])
         except Exception as e:
-          log.error(f"Error handling response(s) for {response}: {e}")
+          log.error(f"Error handling response(s) for '{response}': {e}")
           response = responses[ len(responses) - 1]
-          log.error(f" - Setting response to {response}")
+          log.error(f" - Setting response to '{response}'")
           continue
             
   def handleResponseLine(self, line):
-    #giftMessage = irc.getRewardMessage(notice)
+    log.debug(f"line = '{line}'")
     if len(line) == 0:
       log.warning("Length of response line is 0")
       return
     notice = irc.responseToDictionary(line)
     if not notice:
-      log.debug("This appears to be an invalid IRC response")
+      log.info("This appears to be an invalid IRC response")
       return True
 
     if "message" in notice.keys():
@@ -241,7 +241,7 @@ class Chatbot():
       # The following is definitely not good to check for a valid conenction:
       if self.waitingForWelcome and notice["user"] == "tmi":
         if notice["message"] == "Welcome, GLHF!":
-          log.debug("Connection successful!")
+          log.info("Connection successful!")
           self.fullyConnected = True
           self.waitingForWelcome = False
           self.reconnectTimeFalloff = 0
@@ -272,11 +272,11 @@ class Chatbot():
           # q.empty(), q.get(), q.qsize()
           notice = self.qResponse.get()
         
-          print("Sending response message: " + notice)
+          log.debug("Sending response message: " + notice)
           try:
             result = chat(self.s, notice, self.channel_name)
             if result:
-              log.info(f"chatResponseLoop() send result: {result}")
+              log.debug(f"chatResponseLoop() send result: {result}")
           except Exception as e:
             err = e.args[0]
             if err == 'timed out':

@@ -1,33 +1,22 @@
+# This file is part of Twitch Controls Chaos, written by blegas78 and polysyl.
+# License: GPL 3 or greater. See LICENSE file for details.
 """
-  Twitch Controls Chaos (TCC)
-  Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
-  file at the top-level directory of this distribution for details of the
-  contributers.
-
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  Browser source showing the time remaining for the current voting round
 """
-
 from flexx import flx
-import chaosface.config as config
-from .VoteTimerView import VoteTimerView
+import chaosface.config.globals as config
 
 class VoteTimer(flx.PyWidget):
   def init(self):
-    self.voteTimerView = VoteTimerView(self)
-      
-  @config.relay.reaction('updateVoteTime')
-  def _updateVoteTime(self, *events):
+    super().init()
+    time_style = " background-color:#808080; foreground-color:#808080; color:#000000; border-color:#000000; border-radius:5px"
+    self.progress_time = flx.ProgressBar(flex=1, text='{percent}', style=time_style)
+    
+  @config.relay.reaction('update_vote_time')
+  def _update_vote_time(self, *events):
     for ev in events:
-      self.voteTimerView.updateTime(ev.value)
+      self.progress_time.set_value(ev.value)
+
+
+
 

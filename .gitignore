@@ -36,13 +36,19 @@ __pycache__
 *.out
 *.app
 
-# Emacs backup files
+# Emacs backups, logs, and the generated json file
 *~
+*.log
+chaosConfig.json
 
 # VS Code directory
 .vscode/*
 settings.json
 chaos/.vscode/settings.json
 
+# generated json files
+*.json
+
 # virtual environments
 chaosface/venv/*
+chaosface/database.sqlite

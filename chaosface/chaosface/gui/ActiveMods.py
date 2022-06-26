@@ -1,38 +1,52 @@
+# This file is part of Twitch Controls Chaos, written by blegas78 and polysyl.
+# License: GPL 3 or greater. See LICENSE file for details.
 """
-  Twitch Controls Chaos (TCC)
-  Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
-  file at the top-level directory of this distribution for details of the
-  contributers.
-
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  Generates the source to show which modifiers are currently active and how much time remains for each.
 """
+
 from flexx import flx
-from .ActiveModsView import ActiveModsView
+import chaosface.config.globals as config
 
 class ActiveMods(flx.PyWidget):
-  def init(self, relay):
-    self.relay = relay
-    self.chaosActiveView = ActiveModsView()
+  def init(self):
+    super().init()
     
-  @relay.reaction('updateModTimes')
-  def _updateModTimes(self, *events):
+    self.label = []
+    self.progress = []
+    
+    mod_text_style = "color:white;text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;text-align:left;font-weight: bold; vertical-align: middle; line-height: 1.5; min-width:250px;"
+    title_text_style = "color:white;text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;text-align:center;font-weight: bold; vertical-align: bottom; line-height: 1.5; min-width:250px;"
+    progress_style = "background-color:#808080; foreground-color:#808080; color:#FFFFFF; border-color:#000000; border-radius:5px; width:1050px;"
+    
+    with flx.VBox(flex=0):
+      with flx.HFix(flex=1):
+        self.vote_label = flx.Label(flex=0,style=title_text_style, text="Active Mods" )
+        flx.Label(flex=0,style=title_text_style, text=" ")
+        
+      with flx.HFix(flex=1):
+        with flx.VFix(flex=1):
+          for i in range(config.relay.num_active_mods):
+            self.progress.append(flx.ProgressBar(flex=2, value=config.relay.mod_times[i], text='', style=progress_style))
+        with flx.VFix(flex=1):
+          for i in range(config.relay.num_active_mods):
+            self.label.append(flx.Label(flex=1,style=mod_text_style, text=config.relay.active_mods[i]))
+
+  @config.relay.reaction('update_mod_times')
+  def _update_mod_times(self, *events):
     for ev in events:
-      self.chaosActiveView.updateTime(ev.value)
+      self.update_time(ev.value)
       
-  @relay.reaction('updateActiveMods')
+  @config.relay.reaction('update_active_mods')
   def _updateActiveMods(self, *events):
     for ev in events:
-      self.chaosActiveView.updateMods(ev.value)
+      self.update_mods(ev.value)
 
-
+  @flx.action
+  def update_mods(self, active_mods):
+    for i in range(config.relay.num_active_mods):
+      self.label[i].set_text(active_mods[i])
+    
+  @flx.action
+  def update_time(self, mod_times):
+    for i in range(config.relay.num_active_mods):
+      self.progress[i].set_value(mod_times[i])
