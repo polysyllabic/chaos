@@ -65,6 +65,7 @@ void MenuModifier::begin() {
   sendBeginSequence();
 
   // Execute all menu actions
+  PLOG_DEBUG << "Doing menu actions for begin";
   for (auto const& [item, val] : menu_items) {
     engine->setMenuState(item, val);
   }
@@ -74,6 +75,7 @@ void MenuModifier::finish() {
   sendFinishSequence();
 
   if (reset_on_finish) {
+    PLOG_DEBUG << "Reset menu for finish";
     for (auto const& [item, val] : menu_items) {
       engine->restoreMenuState(item);
     }
