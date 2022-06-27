@@ -1,8 +1,18 @@
 
-# These are integration tests (do not add to unit test list) and run in conjunction with a python
-# test to ensure that both sides of the zmq socket can talk to each other
+# Integration tests (do not add to unit test list)
 add_executable(test_socket test_sockets.cpp)
 target_include_directories(test_socket PRIVATE chaos_communicator)
 target_link_libraries(test_socket chaos_communicator)
 
-
+add_executable(test_menu)
+target_sources(test_menu PRIVATE test_menu_sequences.cpp
+  ../src/GameMenu.cpp
+  ../src/MenuItem.cpp
+  ../src/Sequence.cpp
+  KeyboardController.cpp
+  KeyboardController.hpp
+)
+  
+target_include_directories(test_menu PRIVATE ../include
+${tomlplusplus_SOURCE_DIR}/include
+${plog_SOURCE_DIR}/include)
