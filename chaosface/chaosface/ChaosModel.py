@@ -24,6 +24,7 @@ class ChaosModel(EngineObserver):
   def __init__(self):
     self.thread = None
     self.first_time = True
+
     #  Socket to talk to server
     logging.info("Connecting to chaos server")
     self.chaos_communicator = ChaosCommunicator()
@@ -73,9 +74,9 @@ class ChaosModel(EngineObserver):
     else:
       logging.warn(f"Unprocessed message from engine: {received}")
         
-  def apply_new_mod(self, mod):
-    logging.debug("Winning mod: " + mod)
-    toSend = {"winner": mod,
+  def apply_new_mod(self, mod_name):
+    logging.debug("Winning mod: " + mod_name)
+    toSend = {"winner": mod_name,
               "time": config.relay.get_attribute('modifier_time')}
     message = self.chaos_communicator.send_message(json.dumps(toSend))
 
@@ -125,9 +126,20 @@ class ChaosModel(EngineObserver):
           indices.append(ind)
       index = random.choice(indices)
 
-    newMod = config.relay.candidate_mods[index]
-    return newMod
+    new_mod = config.relay.candidate_mods[index]
+    return new_mod
   
+  def replace_mod(self, mod_key):
+    # If this is the first time, the candidate pool will be empty. Skip in this case.
+    if mod_key and mod_key in config.relay.modifier_data:
+      mod_name = config.relay.modifier_data[mod_key]['name']
+      logging.debug(f'Telling engine about new mod {mod_name}')
+      # Tell the engine
+      self.apply_new_mod(mod_name)
+      flx.loop.call_soon(config.relay.replace_mod, mod_key)
+    # Pick new candidates
+    flx.loop.call_soon(config.relay.get_new_voting_pool)
+
   def _loop(self):
     begin_time = time.time()
     now = begin_time
@@ -136,7 +148,7 @@ class ChaosModel(EngineObserver):
     last_engine_request = 0.0
     self.paused_flashing_timer = 0.0
     self.disconnected_flashing_timer = 0.0
-    logging.debug(f'sleep time = {config.relay.sleep_time()} seconds; time per vote = {config.relay.time_per_vote()}')
+
     while config.relay.keep_going:
       time.sleep(config.relay.sleep_time())
       prior_time = now
@@ -161,7 +173,8 @@ class ChaosModel(EngineObserver):
           
       if config.relay.connected == False:
         self.flash_disconnected()
-              
+
+      # Update remaining time for modifiers if not paused      
       if delta_time > 0:
         flx.loop.call_soon(config.relay.decrement_mod_times, delta_time)
         
@@ -171,7 +184,12 @@ class ChaosModel(EngineObserver):
         # As soon as the data is ready, start the vote
         self.vote_time = config.relay.time_per_vote() + 1
         self.first_time = False
-          
+
+      # Check for an immediate mod insertion
+      if config.relay.force_mod:
+        self.replace_mod(config.relay.force_mod)
+        config.relay.force_mod = ''
+
       if self.vote_time >= config.relay.time_per_vote():
         # Reset voting time
         begin_time = now
@@ -181,17 +199,11 @@ class ChaosModel(EngineObserver):
         
         # Pick the winner
         new_mod = self.select_winning_modifier()
-        # If this is the first time, the candidate pool will be empty. Skip in this case.
-        if new_mod:
-          # Tell the engine
-          self.apply_new_mod(new_mod)
-          flx.loop.call_soon(config.relay.replace_mod, new_mod)
-        # Pick new candidates
-        flx.loop.call_soon(config.relay.get_new_voting_pool)
+        self.replace_mod(new_mod)
 
         #self.announceMods()
         #self.announceVoting()
-      #time_frac = self.vote_time/config.relay.time_per_vote()
+      # Update elapsed voting time
       flx.loop.call_soon(config.relay.set_vote_time, self.vote_time/config.relay.time_per_vote())
 
     # Exitiing loop: clean up

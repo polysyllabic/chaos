@@ -53,15 +53,17 @@ Installing Chaosface on Another Computer
 4. Configure the IP addresses for both the engine and the interface:
     - In the chaosconfig.toml file, set the address or domain name of the computer hosting the
       python interface program.
-    - From the interface program, set the address of the Raspberry Pi to 'raspberrypi.local'. If
-      that does not work, you will need to find the numeric address of the Pi (e.g., 192.168.1.232)
-      and enter that.
+    - Find the address of the Pi. From a terminal window, log in to the Pi and enter the
+      command `hostname -I`.
+    - In the `Connection Setup` tab of chaosface, set the address to the value you found above.
     - Do not change the talk/listen ports unless you know what you are doing.
 
-5. Make sure your firewall isn't blocking the ports (5555 and 5556). If you are running the
-   interface on a Windows machine, and it is set to be on a private network, you should not have
-   any issues. If your computer is set to public network, you will have to manually open the
-   listen port (5556 by default) to incomming connections.
+5. Make sure any firewall on your computer isn't blocking local network access to the talk and
+   listen ports (5555 and 5556). If you are running the interface on a Windows machine and it is
+   set to be on a private network, you should not have any issues. If your computer is set to
+   public network, you will have to manually open the listen port (5556 by default) to incomming
+   connections. Note that you do *not* need to open these ports on your router unless you are
+   trying to run the interface and the engine from different local networks.
 
 Initial Setup
 -------------
@@ -78,7 +80,7 @@ Font and color adjustments
 
 
 Operation
----------
+=========
 
 The default configuration sets things up to start both the chaos engine and
 interface automatically when power is applied to your Raspberry Pi. 
@@ -97,7 +99,6 @@ be selected with equal probability regardless of past use.
 The modifier selection can also be limited by their type. Each modifier is assigned to one or
 more groups (e.g., *render*, or *combat*). For each group, you can specify a maximum number of
 mods to select for a vote. For example, you can limit render mods to no more than 1 at a time.
-
 
 
 Voting Methods
@@ -142,12 +143,10 @@ completely new ones.
 
 Permission Levels
 -----------------
-By default, the chaos bot recognizes five user roles:
-- Admin: The streamer is automatically assigned this role
-- Moderator: Channel moderators are automatically assigned this role
-- VIP: Channel VIPs are automatically assigned this role
-- Subscriber
-- User: Anyone in chat
+Commands fall into two basic types: those that can be used by anyone who can type in chat and
+those that are restricted to specific permission categories.
+
+The streamer automatically has admin permission and can use all commands.
 
 Each command is associated with one or more permission levels, so you can change who is allowed
 to execute which commands.
@@ -158,6 +157,38 @@ admin permissions.
 
 Commands
 --------
+*Important Note:* By default, only the information commands can be used by anyone in chat. All
+commands to add modifiers, redeem credits, etc. are associated with specific permissions.
+To add these 
+
+
+No Permission Required:
+* !chaos -- Get a general description of Twitch Controls Chaos
+* !chaos vote -- Get an explanation of the voting method
+* !mod <mod name> -- Describe the function of a specific mod
+* !mods -- Link to list of available mods
+* !mods active -- List currently active mods
+* !mods voting -- List mods currently up for a vote
+
+* !credits -- Tells the user how many mod credits they currently have
+
+Requires 'apply_credits' permission
+* !apply <mod name> -- Apply a mod (requires mod credit)
+
+Requires 'join_raffles' permission:
+* !join -- Join an active raffle
+
+Requires 'apply_credits' permission:
+* !addcredit <username> -- Give a specific user a credit to redeem a mofidier
+
+Requires 'manage_raffles' permission:
+* !raffle [time open] -- Start a raffle for a mod credit (if time is omitted, default raffle time is used)
+* !scheduleraffle  [time open]
+
+* !addcounter <name> <pattern> -- Create a counter
+* !editcounter <name> <pattern> -- Change the pattern for an existing counter
+* !delcounter <name> -- Delete a counter
+
 *Note:* The Twitch chat bot is built upon the PythonTwitchBotFramework package. This framework
 provides a full-featured framework that allows you to implement many other bot features beyond
 those that are implemented here, and most of those can be configured by means of chat commands.
@@ -166,22 +197,12 @@ See the `PythonTwitchBotFramework documentation
 additional features, or if you want to reconfigure the default settings for features such as
 permission levels for commands.
 
-User commands
-* !chaos -- Get a general description of Twitch Controls Chaos
-* !chaos vote -- Get an explanation of the voting method
-* !mod <mod name> -- Describe the function of a specific mod
-* !mods -- Link to list of available mods
-* !mods active -- List currently active mods
-* !mods voting -- List mods currently up for a vote
-* !mods credit -- Tells the user how many mod credits they currently have
-* !apply <mod name> -- Apply a mod (requires mod credit)
-* !join -- Join an active raffle
 
-Admin commands
-* !addcredit <username> -- Give a specific user a credit to redeem a mofidier
-
-Mod Commands:
-* !raffle [time] -- Start a raffle for a mod credit
-* !addcounter <name> <pattern> -- Create a counter
-* !editcounter <name> <pattern> -- Change the pattern for an existing counter
-* !delcounter <name> -- Delete a counter
+TODO List
+=========
+* Enable/disable individual mods from the interface
+* Channel-point redemptions
+* Bits redemptions
+* Raffles
+* Installationt scrip with configuration options
+* Edit and load config files from the interface
