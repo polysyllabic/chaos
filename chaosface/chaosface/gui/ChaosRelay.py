@@ -18,6 +18,7 @@ import json
 import math
 import copy
 import numpy as np
+import queue
 from pathlib import Path
 from flexx import flx
 from twitchbot import BaseBot, cfg
@@ -62,6 +63,7 @@ chaos_defaults = {
   'raffles': False,
   'raffle_time': 60.0,
   'redemption_cooldown': 600.0,
+  'client_id': 'uic681f91dtxl3pdfyqxld2yvr82r1',
   'nick': "your_bot",
   'oauth': "oauth:",
   'owner': "bot_owner",
@@ -82,8 +84,10 @@ chaos_defaults = {
   'msg_no_multiple_credits': '{} or more',
   'msg_by_raffle': 'winning raffles',
   'msg_mod_not_found': "I can't find the modifier '{}'.",
+  'msg_mod_not_active': "The mod '{}' is currently disabled",
   'msg_active_mods': 'The currently active mods are ',
   'msg_candidate_mods': 'You can currently vote for the following mods: ',
+  'msg_in_cooldown': 'Cannot apply the mod yet. Use !queue to queue the mod for when the cooldown expires.',
 }
 
 CONFIG_PATH = Path.cwd() / 'configs'
@@ -96,8 +100,13 @@ class ChaosRelay(flx.Component):
   chatbot: BaseBot
 
   modifier_data = {}
+  #all_mods = []
   enabled_mods = []
   voted_users = []
+  active_keys = []
+  candidate_keys = []
+  force_mod:str = ''
+  insert_cooldown = 0.0
 
   # Model-View bridge:
   game_name = flx.StringProp(settable=True)
@@ -150,9 +159,11 @@ class ChaosRelay(flx.Component):
   need_save = flx.BoolProp(settable=True)
   new_game_data = flx.BoolProp(settable=True)
 
+
   def init(self):
     self.chaos_config = self.load_settings(CHAOS_CONFIG_FILE)
-    self.modifier_data = self.load_settings(CHAOS_MOD_FILE)
+    self.old_mod_data = self.load_settings(CHAOS_MOD_FILE)
+    self.modifier_data = {}
     self.reset_all()
 
   def get_attribute(self, key):
@@ -226,11 +237,13 @@ class ChaosRelay(flx.Component):
     self.set_connected(False)
     self.set_connected_bright(True)
     self.set_mod_times([0.0]*self.get_attribute('active_modifiers'))
-    self.set_active_mods([""]*self.get_attribute('active_modifiers'))
+    self.set_active_mods(['']*self.get_attribute('active_modifiers'))
     self.set_votes([0]*self.get_attribute('vote_options'))
-    self.set_candidate_mods([""]*self.get_attribute('vote_options'))
-    
-    
+    self.set_candidate_mods(['']*self.get_attribute('vote_options'))
+
+    self.active_keys = ['']*self.get_attribute('active_modifiers')
+    self.candidate_keys = ['']*self.get_attribute('vote_options')
+
   def time_per_vote(self) -> float:
     return float(self.get_attribute('modifier_time'))/float(self.get_attribute('active_modifiers'))
 
@@ -243,22 +256,20 @@ class ChaosRelay(flx.Component):
     self.set_time_per_modifier(float(gamedata['modtime']))
 
     logging.debug(f"Initializing modifier data:")
-    old_mod_data = copy.deepcopy(self.modifier_data)
     self.modifier_data = {}
-    all_mods = []
     self.enabled_mods = []
     for mod in gamedata['mods']:
-      mod_name = mod['name']
-      self.modifier_data[mod_name] = {}
-      self.modifier_data[mod_name]['desc'] = mod['desc']
-      self.modifier_data[mod_name]['groups'] = mod['groups']
-      if mod_name in old_mod_data:
-        self.modifier_data[mod_name]['active'] = old_mod_data[mod_name]['active'] 
+      mod_key = mod['name'].lower()
+      self.modifier_data[mod_key] = {}
+      self.modifier_data[mod_key]['name'] = mod['name']
+      self.modifier_data[mod_key]['desc'] = mod['desc']
+      self.modifier_data[mod_key]['groups'] = mod['groups']
+      if mod_key in self.old_mod_data:
+        self.modifier_data[mod_key]['active'] = self.old_mod_data[mod_key]['active'] 
       else:
-        self.modifier_data[mod_name]['active'] = True
-      all_mods.append(mod_name)
-      if self.modifier_data[mod_name]['active']:
-        self.enabled_mods.append(mod_name)
+        self.modifier_data[mod_key]['active'] = True
+      if self.modifier_data[mod_key]['active']:
+        self.enabled_mods.append(mod_key)
     self.reset_softmax()
     self.set_new_game_data(True)
     self.valid_data = True
@@ -266,12 +277,21 @@ class ChaosRelay(flx.Component):
   def sleep_time(self):
     return 1.0/self.get_attribute('ui_rate')
 
+  def mod_status(self, mod_key: str):
+    """
+    Returns 0 if not found, -1 if disabled, 1 if enabled
+    """
+    if mod_key in self.modifier_data:
+      return 1 if self.modifier_data[mod_key]['active'] else -1
+    else:
+      return 0
+
   def get_mod_description(self, mod: str):
-    modlower = mod.lower()
-    for key, value in self.modifier_data.items():
-      if modlower == key.lower():
-        return value['desc']
-    return self.get_attribute('msg_mod_not_found').format(mod)
+    key = mod.lower()
+    try:
+      return self.modifier_data[key]['desc']
+    except:
+      return self.get_attribute('msg_mod_not_found').format(mod)
   
   @flx.action
   def tally_vote(self, index: int, user: str):
@@ -298,26 +318,26 @@ class ChaosRelay(flx.Component):
   def reset_softmax(self):
     logging.info("Resetting SoftMax!")
     for mod in self.modifier_data:
-      self.modifier_data[mod]["count"] = 0
+      self.modifier_data[mod]['count'] = 0
 
   def get_softmax_divisor(self, data):
     # determine the sum for the softmax divisor:
     divisor = 0
     for key in data:
-      divisor += data[key]["contribution"]
+      divisor += data[key]['contribution']
     return divisor
 
   def update_softmax_probabilities(self, data):
     for mod in data:
-      data[mod]["contribution"] = math.exp(self.modifier_data[mod]["count"] *
+      data[mod]['contribution'] = math.exp(self.modifier_data[mod]['count'] *
           math.log(float(self.softmax_factor)/100.0))
     divisor = self.get_softmax_divisor(data)
     for mod in data:
-      data[mod]["p"] = data[mod]["contribution"]/divisor
+      data[mod]['p'] = data[mod]['contribution']/divisor
       
   def update_softmax(self, new_mod):
     if new_mod in self.modifier_data:
-      self.modifier_data[new_mod]["count"] += 1        
+      self.modifier_data[new_mod]['count'] += 1        
       # update all probabilities:
       self.update_softmax_probabilities(self.modifier_data)
     else:
@@ -325,8 +345,9 @@ class ChaosRelay(flx.Component):
 
   def get_new_voting_pool(self):
     # Ignore currently active mods:
-    inactive_mods = set(np.setdiff1d(self.enabled_mods, list(self.active_mods)))
-        
+    inactive_mods = set(np.setdiff1d(self.enabled_mods, list(self.active_keys)))
+
+    self.candidate_keys = []
     candidates = []
     for k in range(self.vote_options):
       # build a list of contributor for this selection:
@@ -337,19 +358,20 @@ class ChaosRelay(flx.Component):
       # Calculate the softmax probablities (must be done each time):
       self.update_softmax_probabilities(votableTracker)
       # make a decision:
-      theChoice = np.random.uniform(0,1)
+      choice_threshold = np.random.uniform(0,1)
       selectionTracker = 0
       for mod in votableTracker:
-        selectionTracker += votableTracker[mod]["p"]
-        if selectionTracker > theChoice:
-          candidates.append(mod)
+        selectionTracker += votableTracker[mod]['p']
+        if selectionTracker > choice_threshold:
+          self.candidate_keys.append(mod)
+          candidates.append(self.modifier_data[mod]['name'])
           inactive_mods.remove(mod)  #remove this to prevent a repeat
           break
     
     if logging.getLogger().isEnabledFor(logging.DEBUG):
       logging.debug("New Voting Round:")
-      for mod in candidates:
-        if "p" in self.modifier_data[mod]:
+      for mod in self.candidate_keys:
+        if 'p' in self.modifier_data[mod]:
           logging.debug(f" - {self.modifier_data[mod]['p']*100.0:0.2f}% {mod}")
         else:
           logging.debug(f" - 0.00% {mod}")
@@ -407,13 +429,13 @@ class ChaosRelay(flx.Component):
     return msg
 
   @flx.action
-  def replace_mod(self, new_mod):
-    self.update_softmax(new_mod)
+  def replace_mod(self, mod_key):
+    self.update_softmax(mod_key)
     mods = list(self.active_mods)
     # Find the oldest mod
     times = list(self.mod_times)
     finished_mod = times.index(min(times))
-    mods[finished_mod] = new_mod
+    mods[finished_mod] = self.modifier_data[mod_key]['name']
     times[finished_mod] = 1.0
     self.set_mod_times(times)
     self.set_active_mods(mods)

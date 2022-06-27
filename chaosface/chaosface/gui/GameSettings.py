@@ -67,7 +67,7 @@ class GameSettings(flx.PyWidget):
           flx.Label(style="text-align:left", text='Available Modifiers')
           with flx.TreeWidget(flex=1, max_selected=1, minsize=(300,300)) as self.available_modifiers:
             for mod, data in config.relay.modifier_data.items():
-              self.mod_items.append(flx.TreeItem(text=mod, checked=data['active']))
+              self.mod_items.append(flx.TreeItem(text=data['name'], checked=data['active']))
           with flx.HBox():
             with flx.VBox():
               flx.Label(text='Description:')
