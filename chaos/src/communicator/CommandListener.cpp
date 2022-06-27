@@ -58,9 +58,8 @@ void CommandListener::doAction() {
   // Wait for a message to arive. This call is blocking
   auto res = socket->recv(message, zmq::recv_flags::none);	
   std::string text = message.to_string();
-  PLOG_DEBUG << "CommandListener received this message: " << text;
+  PLOG_VERBOSE << "CommandListener received this message: " << text;
   // Send ACK response
-
   auto ack = socket->send(r, zmq::send_flags::none);
 
   // Tell observer what we received
