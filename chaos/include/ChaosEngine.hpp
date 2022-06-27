@@ -138,6 +138,7 @@ namespace Chaos {
      * The menu item must be settable (i.e., not a submenu)
      */
     void setMenuState(std::shared_ptr<MenuItem> item, unsigned int new_val) {
+      PLOG_DEBUG << "Setting menu state";
       game.getMenu().setState(item, new_val, controller);
     }
 

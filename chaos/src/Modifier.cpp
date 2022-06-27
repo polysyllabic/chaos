@@ -122,6 +122,7 @@ void Modifier::_update(bool wasPaused) {
 
 
 void Modifier::_begin() {
+  PLOG_DEBUG << "resetting timer for " << name;
   timer.initialize();
   pauseTimeAccumulator = 0;
   begin();
@@ -141,7 +142,9 @@ bool Modifier::tweak( DeviceEvent& event ) {
 }
 
 void Modifier::sendBeginSequence() { 
+  PLOG_DEBUG << "Checking beginning sequence for " << name;
   if (! on_begin->empty()) {
+    PLOG_DEBUG << "Sending beginning sequence for " << name;
     in_sequence = lock_while_busy;
     on_begin->send();
     in_sequence = false;
@@ -150,6 +153,7 @@ void Modifier::sendBeginSequence() {
 
 void Modifier::sendFinishSequence() { 
   if (! on_finish->empty()) {
+    PLOG_DEBUG << "Sending beginning sequence for " << name;
     in_sequence = lock_while_busy;
     on_finish->send();
     in_sequence = false;

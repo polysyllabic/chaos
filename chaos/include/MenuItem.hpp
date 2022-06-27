@@ -109,7 +109,7 @@ namespace Chaos {
    *
    * \todo Allow shortcut commands to invoke menus
    */
-  class MenuItem : std::enable_shared_from_this<MenuItem> {
+  class MenuItem : public std::enable_shared_from_this<MenuItem> {
   protected:
     MenuInterface& menu_items;
 
@@ -258,12 +258,11 @@ namespace Chaos {
      * \brief Adds commands to moves to item within a single menu
      * 
      * \param seq The sequence to which the necessary commands will be appended
-     * \param delta The number of steps to scroll in the menu to reach the appropriate item
      *
      * If the item is a menu, it will be selected. If it is an option, the cursor will be positioned
      * at this item but not set.
      */
-    void selectItem(Sequence& seq, short delta);
+    void selectItem(Sequence& seq);
 
     /**
      * \brief Get the offset between this menu item and the top object

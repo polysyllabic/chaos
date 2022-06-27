@@ -27,7 +27,6 @@
 #include "GameMenu.hpp"
 #include "TOMLUtils.hpp"
 #include "MenuOption.hpp"
-#include "SubMenu.hpp"
 #include "MenuSelect.hpp"
 #include "Controller.hpp"
 #include "Sequence.hpp"
@@ -94,7 +93,7 @@ std::shared_ptr<MenuItem> GameMenu::getMenuItem(toml::table& config, const std::
 }
 
 void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, Controller& controller) {
-  PLOG_VERBOSE << "Creating set menu sequence";
+  PLOG_DEBUG << "Creating set menu sequence";
   Sequence seq{controller};
 
   // We build a sequence to open the main menu, navigate to the option, and perform the appropriate
@@ -109,7 +108,7 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, Co
 }
 
 void GameMenu::restoreState(std::shared_ptr<MenuItem> item, Controller& controller) {
-  PLOG_VERBOSE << "Creating restore menu sequence";
+  PLOG_DEBUG << "Creating restore menu sequence";
   Sequence seq(controller);
   defined_sequences->addSequence(seq, "disable all");
   seq.addDelay(disable_delay);
@@ -124,24 +123,26 @@ void GameMenu::correctOffset(std::shared_ptr<MenuItem> changed) {
   // direction of the correction depends on whether the changed item is now hidden or revealed, and
   // on whether the offset is positive or negative
   int adjustment = (changed->isHidden() ? -1 : 1) * (changed->getOffset() < 0 ? -1 : 1);
-  PLOG_VERBOSE << "Adjusting offset " << changed->getOffset() << " by " << adjustment;
+  PLOG_DEBUG << "Adjusting offset " << changed->getOffset() << " by " << adjustment;
   for (auto& [name, entry] : menu) {
     // Process all other items sharing the same parent and tab group
     if (entry->getParent() == changed->getParent() && entry->getptr() != changed->getptr() &&
         entry->getTab() == changed->getTab()) {
       if (abs(entry->getOffset()) > abs(changed->getOffset())) {
         entry->adjustOffset(adjustment);
-        PLOG_VERBOSE << " - adjustOffset: " << adjustment;
+        PLOG_DEBUG << " - adjustOffset: " << adjustment;
       }
     }
   }
 }
 
 void GameMenu::addSequence(Sequence& sequence, const std::string& name) {
+  PLOG_DEBUG << "adding sequence " << name;
   defined_sequences->addSequence(sequence, name);
 }
 
 void GameMenu::addSelectDelay(Sequence& sequence) {
+  PLOG_DEBUG << "adding select delay";
   defined_sequences->addDelay(sequence, select_delay);
 }
 
