@@ -106,7 +106,7 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, Co
   std::stack<std::shared_ptr<MenuItem>> menu_stack;
   std::shared_ptr<MenuItem> s;
   for (s = item->getParent(); s != nullptr; s = s->getParent()) {
-    PLOG_DEBUG << "Push " << s->getName() << " on stack";
+    PLOG_VERBOSE << "Push " << s->getName() << " on stack";
     menu_stack.push(s);
   }
 

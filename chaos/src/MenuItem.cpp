@@ -62,6 +62,7 @@ void MenuItem::decrementCounter() {
 void MenuItem::selectItem(Sequence& seq) {
     // navigate left or right through tab groups
     int delta = offset;
+    PLOG_DEBUG << name << " menu offset = " << offset;
     for (int i = 0; i < tab_group; i++) {
       menu_items.addSequence(seq, "tab right");
     }
@@ -70,8 +71,10 @@ void MenuItem::selectItem(Sequence& seq) {
     }
 
     // If this item is guarded, make sure the guard is enabled
-    PLOG_DEBUG << "- scroll " << delta;
     if (guard && guard->getState() == 0) {
+      // navigate to the guard
+      guard->selectItem(seq);
+      // enable guard item
       guard->setState(seq, 1);
       // adjust delta for the steps we've already made to get to the guard
       delta -= guard->getOffset();
@@ -114,7 +117,7 @@ void MenuItem::navigateBack(Sequence& seq) {
 }
 
 void MenuItem::setState(Sequence& seq, unsigned int new_val) {
-  PLOG_DEBUG << "setState to " << new_val;
+  PLOG_DEBUG << "Set state of " << name << " to " << new_val;
 
   if (is_option) {
     setMenuOption(seq, new_val);
@@ -130,7 +133,7 @@ void MenuItem::setState(Sequence& seq, unsigned int new_val) {
   // Increment the counter, if set
   if (sibling_counter) {
     sibling_counter->incrementCounter();
-    PLOG_DEBUG << "Incrementing sibling counter";
+    PLOG_DEBUG << "Incrementing sibling counter " << sibling_counter->getName();
   }
 }
 
