@@ -65,7 +65,7 @@ void MenuItem::moveTo(Sequence& seq) {
 
   // Create a stack of all the parent menus of this option
   std::stack<std::shared_ptr<MenuItem>> menu_stack;
-  for (auto s =  getptr(); s->parent != nullptr; s = s->parent) {
+  for (std::shared_ptr<MenuItem> s = parent; s != nullptr; s = s->parent) {
     PLOG_DEBUG << "Push " << s->name << " on stack";
     menu_stack.push(s);
   }
@@ -74,15 +74,19 @@ void MenuItem::moveTo(Sequence& seq) {
   // top-level menu and works down to the terminal leaf.
   PLOG_DEBUG << "Navigation commands for " << name;
   std::shared_ptr<MenuItem> item;
+  // navigation through the parent menus
   while (!menu_stack.empty()) {
     item = menu_stack.top();
-    item->selectItem(seq, offset);
+    item->selectItem(seq);
     menu_stack.pop();
   }
+  // navigation through the final leaf
+  selectItem(seq);  
 }
 
-void MenuItem::selectItem(Sequence& seq, short delta) {
+void MenuItem::selectItem(Sequence& seq) {
     // navigate left or right through tab groups
+    int delta = offset;
     for (int i = 0; i < tab_group; i++) {
       PLOG_DEBUG << "tab right";
       menu_items.addSequence(seq, "tab right");
