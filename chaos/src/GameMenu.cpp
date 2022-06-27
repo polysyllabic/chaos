@@ -27,11 +27,10 @@
 
 #include "GameMenu.hpp"
 #include "TOMLUtils.hpp"
-#include "MenuOption.hpp"
-#include "MenuSelect.hpp"
 #include "Controller.hpp"
 #include "Sequence.hpp"
 #include "SequenceTable.hpp"
+#include "MenuItem.hpp"
 
 using namespace Chaos;
 

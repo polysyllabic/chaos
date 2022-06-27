@@ -85,9 +85,10 @@ void Sequence::addDelay(unsigned int delay) {
 
 
 void Sequence::send() {
+  PLOG_DEBUG << "Sending sequence";
   for (std::vector<DeviceEvent>::iterator it = events.begin(); it != events.end(); it++) {
     DeviceEvent& event = (*it);
-    PLOG_VERBOSE << "Sending event for button " << (int) event.type << ": " << (int) event.id
+    PLOG_DEBUG << "Sending event for button " << (int) event.type << ": " << (int) event.id
 	       << ":" << (int) event.value << "; sleeping for " << (int) event.time << " microseconds";
     controller.applyEvent(event);
     if (event.time) {
@@ -99,7 +100,7 @@ void Sequence::send() {
 bool Sequence::sendParallel(double sequenceTime) {
   unsigned int elapsed = (unsigned int) sequenceTime * 1000000;
   for (DeviceEvent& e = events[current_step]; current_step <= events.size(); e = events[++current_step]) {
-    PLOG_VERBOSE << "parallel sent step " << current_step;
+    PLOG_DEBUG << "Sending parallel step " << current_step << " type = " << e.type << " value = " << e.value;
     if (e.isDelay()) {
       wait_until += e.time;
       // return until delay expires, then move to the next step
@@ -111,6 +112,7 @@ bool Sequence::sendParallel(double sequenceTime) {
       controller.applyEvent(e);
     }
   }
+  PLOG_DEBUG << "parallel send finished";
   // We're at the end of the sequence. Reset the steps and time for the next iteration
   current_step = 0;
   wait_until = 0;
