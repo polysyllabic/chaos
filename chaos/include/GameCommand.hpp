@@ -50,7 +50,7 @@ namespace Chaos {
    * signal. This allows for aliases, in case you want to use different command names in different
    * contexts.
    */
-  class GameCommand : std::enable_shared_from_this<GameCommand> {
+  class GameCommand : public std::enable_shared_from_this<GameCommand> {
   private:
     /**
      * \brief The name of the command as used in the TOML file

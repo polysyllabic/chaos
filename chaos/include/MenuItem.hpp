@@ -109,7 +109,7 @@ namespace Chaos {
    *
    * \todo Allow shortcut commands to invoke menus
    */
-  class MenuItem : std::enable_shared_from_this<MenuItem> {
+  class MenuItem : public std::enable_shared_from_this<MenuItem> {
   protected:
     MenuInterface& menu_items;
 

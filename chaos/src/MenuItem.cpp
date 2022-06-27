@@ -88,11 +88,9 @@ void MenuItem::selectItem(Sequence& seq) {
     // navigate left or right through tab groups
     int delta = offset;
     for (int i = 0; i < tab_group; i++) {
-      PLOG_DEBUG << "tab right";
       menu_items.addSequence(seq, "tab right");
     }
     for (int i = 0; i > tab_group; i++) {
-      PLOG_DEBUG << "tab left";
       menu_items.addSequence(seq, "tab left");
     }
 
@@ -107,19 +105,16 @@ void MenuItem::selectItem(Sequence& seq) {
 
     // navigate down for positive offsets
     for (int i = 0; i < delta; i++) {
-      PLOG_DEBUG << "down";
       menu_items.addSequence(seq, "menu down");
     }
 
     // navigate up for negative offsets
     for (int i = 0; i > delta; i--) {
-      PLOG_DEBUG << "up ";
       menu_items.addSequence(seq, "menu up");
     }
 
     // Submenus and select option items items require a button press
     if (isSelectable()) {
-      PLOG_DEBUG << "select";
       menu_items.addSequence(seq, "menu select");
       menu_items.addSelectDelay(seq);
     }
@@ -132,19 +127,15 @@ void MenuItem::navigateBack(Sequence& seq) {
   std::shared_ptr<MenuItem> item = getptr();
   do {
     for (int i = 0; i < item->getOffset(); i++) {
-      PLOG_DEBUG << " up ";
       menu_items.addSequence(seq, "menu up");
     }
     for (int i = 0; i > item->getOffset(); i--) {
-      PLOG_DEBUG << " down ";
       menu_items.addSequence(seq, "menu down");
     }
     for (int i = 0; i < item->getTab(); i++) {
-      PLOG_DEBUG << " tab left ";
       menu_items.addSequence(seq, "tab left");
     }
     for (int i = 0; i > item->getTab(); i++) {
-      PLOG_DEBUG << " tab right ";
       menu_items.addSequence(seq, "tab right");
     }
     menu_items.addSequence(seq, "menu exit");
