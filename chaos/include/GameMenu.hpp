@@ -79,6 +79,15 @@ namespace Chaos {
      */
     unsigned int select_delay;
 
+    /**
+     * \brief Add commands necessary to navigate to this item from the top of main menu
+     * 
+     * \param seq Sequence to which the commands should be appended
+     *
+     * This only creates the commands to move to the menu item. It does not select or set it.
+     */
+    void moveTo(Sequence& seq);
+
   public:
     GameMenu() {}
 

@@ -236,15 +236,6 @@ namespace Chaos {
     std::shared_ptr<MenuItem> getParent() { return parent; }
 
     /**
-     * \brief Add commands necessary to navigate to this item from the top of main menu
-     * 
-     * \param seq Sequence to which the commands should be appended
-     *
-     * This only creates the commands to move to the menu item. It does not select or set it.
-     */
-    void moveTo(Sequence& seq);
-
-    /**
      * \brief Add commands necessary to navigate back to the top of the menu after selecting
      * 
      * \param seq Sequence to which the commands should be appended
@@ -264,6 +255,8 @@ namespace Chaos {
      */
     void selectItem(Sequence& seq);
 
+    std::string& getName() { return name; }
+    
     /**
      * \brief Get the offset between this menu item and the top object
      * 
