@@ -25,9 +25,6 @@
 #include <toml++/toml.h>
 
 #include "MenuInterface.hpp"
-//#include "MenuItem.hpp"
-//#include "Sequence.hpp"
-//#include "SequenceTable.hpp"
 
 namespace Chaos {
   

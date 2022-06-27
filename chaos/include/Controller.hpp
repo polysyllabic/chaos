@@ -21,9 +21,6 @@
 #include <deque>
 #include <memory>
 
-#include <mogi/thread.h>
-#include <raw-gadget.hpp>
-
 #include "config.hpp"
 #include "DeviceEvent.hpp"
 #include "ControllerInjector.hpp"
