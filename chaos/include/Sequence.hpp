@@ -18,9 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <unordered_map>
+#include <memory>
 #include <vector>
-#include <toml++/toml.h>
 #include "DeviceEvent.hpp"
 
 namespace Chaos {

@@ -21,12 +21,8 @@
 #include <plog/Log.h>
 
 #include "Sequence.hpp"
-#include "TOMLUtils.hpp"
-#include "MenuItem.hpp"
 #include "Controller.hpp"
 #include "ControllerInput.hpp"
-#include "GameCommand.hpp"
-#include "Game.hpp"
 
 using namespace Chaos;
 
