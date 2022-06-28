@@ -134,14 +134,12 @@ bool Sequence::empty() {
   return events.empty();
 }
 
-void Sequence::setPressTime(unsigned int time) {
-  PLOG_DEBUG << "Setting button press time to " << time;
-  press_time = time;
+void Sequence::setPressTime(double time) {
+  press_time = (unsigned int) (time * SEC_TO_MICROSEC);
 }
 
-void Sequence::setReleaseTime(unsigned int time) {
-  PLOG_DEBUG << "Setting button release time to " << time;
-  release_time = time;
+void Sequence::setReleaseTime(double time) {
+  release_time = (unsigned int) (time * SEC_TO_MICROSEC);
 }
 
 
