@@ -48,30 +48,43 @@ void Sequence::addPress(std::shared_ptr<ControllerInput> signal, short value) {
 void Sequence::addHold(std::shared_ptr<ControllerInput> signal, short value, unsigned int hold_time) {
   assert(signal);
   short int hybrid_value;
-
+  unsigned int hybrid_hold;
   // If a value is passed for a hybrid signal (L2/R2), it applies to the axis signal. The button
   // signal will just use 1.
   if (signal->getType() == ControllerSignalType::HYBRID) {
     hybrid_value = (value == 0) ? JOYSTICK_MAX : value;
     value = 1;
+    hybrid_hold = hold_time;
+    hold_time = 0;
   } else if (value == 0) {
     // For other types, if value not set, we use the maximum value for that signal type.
     value = (signal->getType() == ControllerSignalType::BUTTON ||
 	     signal->getType() == ControllerSignalType::THREE_STATE) ? 1 : JOYSTICK_MAX;
   }
-  
+  PLOG_DEBUG << "Adding hold: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
+    << ":" << value << " for " << hold_time << " microseconds";
   events.push_back({hold_time, value, (uint8_t) signal->getButtonType(), signal->getID()});
   if (signal->getType() == ControllerSignalType::HYBRID) {
-    events.push_back( {hold_time, hybrid_value, TYPE_AXIS, signal->getHybridAxis()} );
+    events.push_back( {hybrid_hold, hybrid_value, TYPE_AXIS, signal->getHybridAxis()} );
+    PLOG_DEBUG << "Adding hold: " << (int) TYPE_AXIS << ": " << (int) signal->getHybridAxis()
+      << ":" << hybrid_value << " for " << hybrid_hold << " microseconds";
   }
 }
 
 void Sequence::addRelease(std::shared_ptr<ControllerInput> signal, unsigned int release_time) {
   assert(signal);
-
+  unsigned int hybrid_release;
+  if (signal->getType() == ControllerSignalType::HYBRID) {
+    hybrid_release = release_time;
+    release_time = 0;
+  }
+  PLOG_DEBUG << "Adding release: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
+    << " for " << release_time << " microseconds";
   events.push_back({release_time, 0, (uint8_t) signal->getButtonType(), signal->getID()});
   if (signal->getType() == ControllerSignalType::HYBRID) {
-    events.push_back( {release_time, JOYSTICK_MIN, TYPE_AXIS, signal->getHybridAxis()} );
+    PLOG_DEBUG << "Adding release: " << TYPE_AXIS << ": " << (int) signal->getHybridAxis()
+      << " for " << hybrid_release << " microseconds";
+    events.push_back( {hybrid_release, JOYSTICK_MIN, TYPE_AXIS, signal->getHybridAxis()} );
   }
 }
 
@@ -79,11 +92,9 @@ void Sequence::addDelay(unsigned int delay) {
   events.push_back( {delay, 0, 255, 255} );
 }
 
-
 void Sequence::send() {
   PLOG_DEBUG << "Sending sequence";
-  for (std::vector<DeviceEvent>::iterator it = events.begin(); it != events.end(); it++) {
-    DeviceEvent& event = (*it);
+  for (auto& event : events) {
     PLOG_DEBUG << "Sending event for button " << (int) event.type << ": " << (int) event.id
 	       << ":" << (int) event.value << "; sleeping for " << (int) event.time << " microseconds";
     controller.applyEvent(event);
@@ -124,12 +135,12 @@ bool Sequence::empty() {
 }
 
 void Sequence::setPressTime(unsigned int time) {
-  PLOG_VERBOSE << "Setting button press time to " << time;
+  PLOG_DEBUG << "Setting button press time to " << time;
   press_time = time;
 }
 
 void Sequence::setReleaseTime(unsigned int time) {
-  PLOG_VERBOSE << "Setting button release time to " << time;
+  PLOG_DEBUG << "Setting button release time to " << time;
   release_time = time;
 }
 
