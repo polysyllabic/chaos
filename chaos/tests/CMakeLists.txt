@@ -14,5 +14,5 @@ target_sources(test_menu PRIVATE test_menu_sequences.cpp
 )
   
 target_include_directories(test_menu PRIVATE ../include
-${tomlplusplus_SOURCE_DIR}/include
-${plog_SOURCE_DIR}/include)
+  ${tomlplusplus_SOURCE_DIR}/include
+  ${plog_SOURCE_DIR}/include)
