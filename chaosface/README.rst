@@ -24,39 +24,36 @@ another computer.
 Installation and Setup
 ======================
 
-Installation differs if you are running chaosface on the Raspberry Pi or on a separate computer.
-
-*This section is just a skeleton with some guesses about the process. Actual instructions to be
-added once we have a stable system.*
-
-Installing Chaosface on the Raspberry Pi
-----------------------------------------
-
-If you chose to install chaosface on the Pi when installing TCC, you should not need to
-do anything further. Chaosface should have been set up to run automatically. If you originally
-chose to skip installing chaosface on the Pi and now want to add it, use the following steps:
-
-*some configuration steps here*
+The default installation of chaosface is performed will run it from the Raspberry Pi, along with
+the engine. See the main TCC documentation for those steps. This section explains the steps
+you need to take if you plan to run chaosface on a separate computer.
 
 Installing Chaosface on Another Computer
 ----------------------------------------
 
-1.  Configure the Pi:
-    - If this is the initial setup on the Pi, choose to *skip* installing chaosface.
-    - If you originally installed chaosface on the Pi and want to switch to using it on a
-      separate computer, log in to the Pi and run the following script: *some script*.
+Configure the Pi:
 
-2. Make sure Python 3 is installed on your computer
+1. From a terminal window, log in to the Pi.
+2. Stop the Pi from starting chaosface automatically with the following commands:
+        `sudo systemctl stop chaosface`
+        `sudo systemctl disable chaosface`
+3. Next, we must edit a configuration file to tell the engine where to find chaosface. Open the
+    file in an editor, for example, with the command `nano chaosconfig.toml` and edit the key
+    `interface_addr` to contain the IP address of the computer running chaosface. **UPDATE WHEN WE 
+    HAVE THE FINAL DIRECTORY FOR THE CONFIG FILE**
+4. Make a note of the Pi's IP address. You can get it with the command `hostname -I`.
 
-3. Install the Chatbot somewhere useful
+Setup the Computer for Chaosface:
 
-4. Configure the IP addresses for both the engine and the interface:
-    - In the chaosconfig.toml file, set the address or domain name of the computer hosting the
-      python interface program.
-    - Find the address of the Pi. From a terminal window, log in to the Pi and enter the
-      command `hostname -I`.
-    - In the `Connection Setup` tab of chaosface, set the address to the value you found above.
-    - Do not change the talk/listen ports unless you know what you are doing.
+1. Next, make sure Python 3 is installed on the computer you will use for chaosface.
+
+2. Install the Chatbot somewhere useful and run it. **ADD INSTRUCTIONS**
+
+3. Open a tab in your browser and navigate to the main page. If you're running chaosface from the
+   same computer as the web browser, this will be `http://localhost/Chaos`
+
+4. In the `Connection Setup` tab of chaosface, set the address for the Pi to the value you found
+   above. Do not change the talk/listen ports unless you know what you are doing.
 
 5. Make sure any firewall on your computer isn't blocking local network access to the talk and
    listen ports (5555 and 5556). If you are running the interface on a Windows machine and it is
@@ -65,25 +62,43 @@ Installing Chaosface on Another Computer
    connections. Note that you do *not* need to open these ports on your router unless you are
    trying to run the interface and the engine from different local networks.
 
-Initial Setup
--------------
+Running for the First Time
+--------------------------
+The first time you run chaosface, you need to authorize it in your channel. You can run the bot
+through a dedicated bot account that you control or through your main streamer account. Note that
+whichever you choose, the bot will write messages in chat from that account.
 
-Entering your credentials
+1. If you're using a bot account, sign in to Twitch with that account.
 
-Getting an Oauth key
+2. Start chaosface. If you are using the default setup, this involves simply applying power to
+   the Raspberry Pi and waiting for it to boot up.
 
-Subscribing to pubsub events
+3. Open a browser and navigate to the Chaos page:
+   - If you're running chaosface on the Pi: http://raspberrypi.local/Chaos.
+   - If you're running chaosface on the same computer as the browser, go to http://localhost/Chaos.
+
+4. Enter your bot name and channel name.
+
+4. On the "Connection Setup" tab, you will find a button labeled "Generate Token." Clicking that
+   link that will take you to a Twitch authorization page. Twitch will ask you to grant permissions
+   to "TCC Chaos Interfaceface." After you grant permission, you will be redirected to a page that
+   shows you an Oauth token. Copy the complete token (including the 'oauth:' prefix) and paste it
+   into the "Oauth Token" field in the setup page.  
+
+5. Save the settings. If this is your first time entering credentials, the bot will attempt to connect.
+   If you have already entered credentials, you will need to restart chaosface after saving in order to
+   re-initialize the bot.
+
 
 Configuring sources in OBS
+--------------------------
 
 Font and color adjustments
-
+--------------------------
 
 Operation
 =========
 
-The default configuration sets things up to start both the chaos engine and
-interface automatically when power is applied to your Raspberry Pi. 
 
 Modifer Selections
 ------------------

@@ -231,3 +231,5 @@ class GameSettings(flx.PyWidget):
     ev = events[-1]
     config.relay.reset_softmax()
     self.status_label.set_text('Modifier history reset')
+
+  

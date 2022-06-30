@@ -14,7 +14,7 @@ import json
 import random
 import numpy as np
 from flexx import flx
-from twitchbot import is_config_valid
+from twitchbot import is_config_valid, cfg
 import chaosface.config.globals as config
 from chaosface.communicator import EngineObserver
 from chaosface.communicator import ChaosCommunicator
@@ -45,6 +45,8 @@ class ChaosModel(EngineObserver):
   def configure_bot(self):
     # If we don't yet have good bot credentials, we enter a special waiting loop until they are
     # entered. The regular voting loop only starts after we have a verified chat connection.
+    if cfg['client_id'] == 'CLIENT_ID':
+      cfg['client_id'] = config.relay.get_attribute('client_id')
     while not self.complete_credentials():
       time.sleep(config.relay.sleep_time())
     # Start up the bot
@@ -96,6 +98,7 @@ class ChaosModel(EngineObserver):
   
   def select_winning_modifier(self):
     tally = list(config.relay.votes)
+    index = 0
     if config.relay.voting_type == 'Proportional':
       total_votes = sum(tally)
       if total_votes < 1:
@@ -104,7 +107,6 @@ class ChaosModel(EngineObserver):
         total_votes = sum(tally)
       
       the_choice = np.random.uniform(0, total_votes)
-      index = 0
       accumulator = 0
       for i in range(len(tally)):
         index = i
@@ -112,7 +114,7 @@ class ChaosModel(EngineObserver):
         if accumulator >= the_choice:
           break
       
-      logging.info(f"Winning Mod: '{config.relay.candidate_mods[index]}' at {100.0 * float(tally[index])/float(total_votes)}")
+      #logging.info(f"Winning Mod: '{config.relay.candidate_mods[index]}' at {100.0 * float(tally[index])/float(total_votes)}")
 
     else:
       # get indices of all mods with the max number of votes, then randomly pick one
@@ -126,8 +128,9 @@ class ChaosModel(EngineObserver):
           indices.append(ind)
       index = random.choice(indices)
 
-    new_mod = config.relay.candidate_mods[index]
-    return new_mod
+    new_mod_key = config.relay.candidate_keys[index]
+    logging.info(f'Winning Mod: #{index+1} {new_mod_key}')
+    return new_mod_key
   
   def replace_mod(self, mod_key):
     # If this is the first time, the candidate pool will be empty. Skip in this case.
@@ -137,6 +140,8 @@ class ChaosModel(EngineObserver):
       # Tell the engine
       self.apply_new_mod(mod_name)
       flx.loop.call_soon(config.relay.replace_mod, mod_key)
+    else:
+      logging.debug(f'Mod key "{mod_key}" not in list (not sent)')
     # Pick new candidates
     flx.loop.call_soon(config.relay.get_new_voting_pool)
 
@@ -148,6 +153,7 @@ class ChaosModel(EngineObserver):
     last_engine_request = 0.0
     self.paused_flashing_timer = 0.0
     self.disconnected_flashing_timer = 0.0
+    self.request_game_info()
 
     while config.relay.keep_going:
       time.sleep(config.relay.sleep_time())
@@ -157,13 +163,11 @@ class ChaosModel(EngineObserver):
       self.paused_flashing_timer += delta_time
       self.disconnected_flashing_timer += delta_time
       
-      # Ping the engine for game information. It's in the loop so that we'll retry periodically in
-      # the event that the engine is temporarily down. We retry every 30 seconds in that case.
+      # If we haven't yet received the game info, retry periodically
       if config.relay.valid_data == False:
-        if last_engine_request == 0.0:
-          self.request_game_info()
         last_engine_request += delta_time
         if last_engine_request > 30.0:
+          self.request_game_info()
           last_engine_request = 0.0
 
       if config.relay.paused:
@@ -191,6 +195,7 @@ class ChaosModel(EngineObserver):
         config.relay.force_mod = ''
 
       if self.vote_time >= config.relay.time_per_vote():
+        logging.debug('Vote time expired')
         # Reset voting time
         begin_time = now
         # Skip voting if no data yet or voting is disabled
@@ -198,8 +203,8 @@ class ChaosModel(EngineObserver):
           continue
         
         # Pick the winner
-        new_mod = self.select_winning_modifier()
-        self.replace_mod(new_mod)
+        mod_key = self.select_winning_modifier()
+        self.replace_mod(mod_key)
 
         #self.announceMods()
         #self.announceVoting()

@@ -3,8 +3,13 @@
 """
   View for settings to connect to Twitch and to the Chaos engine
 """
+import logging
 from flexx import flx
 import chaosface.config.globals as config
+import chaosface.config.token_utils as util
+from twitchbot import cfg
+
+REDIRECT_URL = 'https://twitchapps.com/tmi/'
 
 class ConnectionSetup(flx.PyWidget):
   def init(self):
@@ -12,48 +17,53 @@ class ConnectionSetup(flx.PyWidget):
     
     label_style = "text-align:right"
     field_style = "background-color:#BBBBBB;text-align:center"
-    
-    with flx.VSplit(flex=1):
-      flx.Label(style="font-weight: bold; text-align:center", text="Twitch Connection" )
-      flx.Label(style="text-align:center", wrap=True, html='<a href="https://twitchapps.com/tmi/" target="_blank">Click here to get your bot\'s OAuth Token</a>.  You must be logged in as your bot.' )
-      with flx.HBox():
-        with flx.VBox(flex=1):
-          flx.Widget(flex=1)
+    bot_oauth = util.generate_irc_oauth(cfg['client_id'])
+    logging.debug(f'Bot oauth url={bot_oauth}')
+    pubsub_oauth = util.generate_auth_url(cfg['client_id'], util.Scopes.PUBSUB_CHANNEL_POINTS)
+    logging.debug(f'Pubsub oauth url={pubsub_oauth}')
+    instructions=('To get the bot\'s OAuth token,  '
+      '<a href="{bot}" target="_blank">log in as your bot and then click here.</a> ' 
+      'Paste the generated token into the Bot OAuth field. '
+      'To use points redemptions, you must also get a separate OAuth token. Log in with your '
+      'streamer\'s account <a href="{pubsub}"target="_blank">and click here.</a>.')
+
+    with flx.VBox():
+      with flx.GroupWidget(flex=1, title="Twitch Connection"):
         with flx.VBox():
-          flx.Label(style=label_style, text="Twitch Bot Username:" )
-          flx.Label(style=label_style, text="Twitch Bot Oauth:" )
-          flx.Label(style=label_style, text="Your Channel Name:" )
-        with flx.VBox(flex=1):
-          self.bot_name = flx.LineEdit(style=field_style, text=config.relay.bot_name)
-          self.bot_oauth = flx.LineEdit(style=field_style, text=config.relay.bot_oauth, password_mode=True)
-          self.channel_name = flx.LineEdit(style=field_style, text=config.relay.channel_name)
-        with flx.VBox(flex=1):
-          flx.Widget(flex=1)
-      flx.Label(style="font-weight: bold; text-align:center", text="Chaos Engine Connection")
-      with flx.HBox():
-        with flx.VBox(flex=1):
-          flx.Widget(flex=1)
-        with flx.VBox():
-          flx.Label(style=label_style, text="Raspberry Pi Address:" )
-          flx.Label(style=label_style, text="Listen Port:" )
-          flx.Label(style=label_style, text="Talk Port:" )
-        with flx.VBox(flex=1):
-          self.pi_host = flx.LineEdit(style=field_style, text=config.relay.pi_host)
-          self.listen_port = flx.LineEdit(style=field_style, text=str(config.relay.listen_port))
-          self.talk_port = flx.LineEdit(style=field_style, text=str(config.relay.talk_port))
-        with flx.VBox(flex=1):
-          flx.Widget(flex=1)
+          with flx.HBox():
+            with flx.VBox():
+              flx.Label(style=label_style, text="Streamer Channel:")
+              flx.Label(style=label_style, text="Bot Name:")
+              flx.Label(style=label_style, text="Bot Oauth Token:")
+              flx.Label(style=label_style, text="PubSub Oauth Token:")
+            with flx.VBox(flex=1):
+              self.channel_name = flx.LineEdit(style=field_style, text=config.relay.channel_name)
+              self.bot_name = flx.LineEdit(style=field_style, text=config.relay.bot_name)
+              self.bot_oauth = flx.LineEdit(style=field_style, text=config.relay.bot_oauth, password_mode=True)
+              self.pubsub_oauth = flx.LineEdit(style=field_style, text=config.relay.pubsub_oauth, password_mode=True)
+          flx.Label(flex=1, wrap=True, html=instructions.format(bot=bot_oauth, pubsub=pubsub_oauth))  
+      with flx.GroupWidget(flex=1, title="Chaos Engine Connection"):
+        with flx.HBox():
+          with flx.VBox(flex=1):
+            flx.Widget(flex=1)
+          with flx.VBox():
+            flx.Label(style=label_style, text="Raspberry Pi Address:")
+            flx.Label(style=label_style, text="Listen Port:") 
+            flx.Label(style=label_style, text="Talk Port:")
+          with flx.VBox(flex=1):
+            self.pi_host = flx.LineEdit(style=field_style, text=config.relay.pi_host)
+            self.listen_port = flx.LineEdit(style=field_style, text=str(config.relay.listen_port))
+            self.talk_port = flx.LineEdit(style=field_style, text=str(config.relay.talk_port))
+          with flx.VBox(flex=1):
+            flx.Widget(flex=1)
       with flx.HBox():
         flx.Widget(flex=1)
-        self.save_button = flx.Button(flex=0,text="Save")
-        flx.Widget(flex=1)
-      with flx.HBox():
-        flx.Widget(flex=1)
-        self.status_message = flx.Label(style="text-align:center", text="" )
+        self.save_button = flx.Button(flex=0, text="Save")
+        self.status_message = flx.Label(text="")
         flx.Widget(flex=1)
       
       with flx.VBox(minsize=450):
-        self.status_box = flx.MultiLineEdit(flex=2, style="text-align:left; background-color:#CCCCCC;")
+        self.status_message = flx.MultiLineEdit(flex=2, style="text-align:left; background-color:#CCCCCC;")
 
   @flx.reaction('listen_port.text')
   def _listen_port_changed(self, *events):
@@ -80,16 +90,16 @@ class ConnectionSetup(flx.PyWidget):
         value = maxval
         good = False
     if good:
-      self.status_box.set_text('')
+      self.status_message.set_text('')
     else:
       if minval is None and maxval is None:      
-        self.status_box.set_text(f"Enter an integer.")
+        self.status_message.set_text(f"Enter an integer.")
       elif minval is None:
-        self.status_box.set_text(f"Enter an integer less than or equal to {maxval}.")
+        self.status_message.set_text(f"Enter an integer less than or equal to {maxval}.")
       elif maxval is None:
-        self.status_box.set_text(f"Enter an integer greater than or equal to {minval}.")
+        self.status_message.set_text(f"Enter an integer greater than or equal to {minval}.")
       else:
-        self.status_box.set_text(f"Enter an integer between {minval} and {maxval}.")
+        self.status_message.set_text(f"Enter an integer between {minval} and {maxval}.")
     return value
     
 
@@ -99,9 +109,12 @@ class ConnectionSetup(flx.PyWidget):
     if self.bot_name.text != config.relay.bot_name:
       need_save = True
       config.relay.change_bot_name(self.bot_name.text)
-    if self.bot_oauth.text != config.relay.bot_oauth:   
+    if self.bot_oauth.text != config.relay.bot_oauth:
       need_save = True   
       config.relay.change_bot_oauth(self.bot_oauth.text)    
+    if self.pubsub_oauth.text != config.relay.pubsub_oauth:
+      need_save = True   
+      config.relay.change_pubsub_oauth(self.pubsub_oauth.text)    
     if self.channel_name.text != config.relay.channel_name:
       need_save = True
       config.relay.change_channel_name(self.channel_name.text)
@@ -120,4 +133,9 @@ class ConnectionSetup(flx.PyWidget):
     else:
       self.status_message.set_text('No Change')
 
+#  @flx.reaction('generate_token_button.pointer_click')
+#  def on_generate_token(self, *events):
+#    oauth = util.generate_irc_oauth(cfg['client_id'])
+#    logging.debug(f'oauth url = {oauth}')
+    
 

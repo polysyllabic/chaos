@@ -10,7 +10,7 @@ class VoteTimer(flx.PyWidget):
   def init(self):
     super().init()
     time_style = " background-color:#808080; foreground-color:#808080; color:#000000; border-color:#000000; border-radius:5px"
-    self.progress_time = flx.ProgressBar(flex=1, text='{percent}', style=time_style)
+    self.progress_time = flx.ProgressBar(flex=1, text='', style=time_style)
     
   @config.relay.reaction('update_vote_time')
   def _update_vote_time(self, *events):

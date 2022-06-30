@@ -59,13 +59,14 @@ chaos_defaults = {
   'bits_per_credit': 100,
   'multiple_credits': True,
   'points_redemptions': False,
-  'points_reward_title': '',
+  'points_reward_title': 'Chaos Credit',
   'raffles': False,
   'raffle_time': 60.0,
   'redemption_cooldown': 600.0,
   'client_id': 'uic681f91dtxl3pdfyqxld2yvr82r1',
   'nick': "your_bot",
   'oauth': "oauth:",
+  'pubsub_oauth': 'oauth:',
   'owner': "bot_owner",
   'channel': 'your_channel',
   'info_cmd_cooldown': 5.0,
@@ -88,11 +89,14 @@ chaos_defaults = {
   'msg_active_mods': 'The currently active mods are ',
   'msg_candidate_mods': 'You can currently vote for the following mods: ',
   'msg_in_cooldown': 'Cannot apply the mod yet. Use !queue to queue the mod for when the cooldown expires.',
+  'msg_user_balance': '@{} You currently have {} modifier credits.',
+  'msg_mod_applied': 'Modifier applied',
 }
 
 CONFIG_PATH = Path.cwd() / 'configs'
 CHAOS_CONFIG_FILE = CONFIG_PATH / 'chaos_config.json'
 CHAOS_MOD_FILE = CONFIG_PATH / 'chaos_mods.json'
+CHAOS_CREDIT_FILE = CONFIG_PATH / 'chaos_credits.json'
 
 class ChaosRelay(flx.Component):
   keep_going = True
@@ -139,9 +143,10 @@ class ChaosRelay(flx.Component):
   redemption_cooldown = flx.IntProp(settable=True)
 
   # Chat Bot Configuration  
+  channel_name = flx.StringProp(settable=True)
   bot_name = flx.StringProp(settable=True)
   bot_oauth = flx.StringProp(settable=True)
-  channel_name = flx.StringProp(settable=True)
+  pubsub_oauth = flx.StringProp(settable=True)
   chat_rate = flx.FloatProp(settable=True)
 
   # Engine Settings
@@ -162,7 +167,17 @@ class ChaosRelay(flx.Component):
 
   def init(self):
     self.chaos_config = self.load_settings(CHAOS_CONFIG_FILE)
+    # Check that all default keys are present
+    need_save = False
+    for k, v in chaos_defaults.items():
+      if k not in self.chaos_config:
+        self.chaos_config[k] = v
+        need_save = True
+    if need_save:
+      self.save_config_info()
+
     self.old_mod_data = self.load_settings(CHAOS_MOD_FILE)
+    self.user_credits = self.load_settings(CHAOS_CREDIT_FILE)
     self.modifier_data = {}
     self.reset_all()
 
@@ -194,14 +209,22 @@ class ChaosRelay(flx.Component):
     logging.info(f"Saving settings to {CHAOS_CONFIG_FILE.resolve()}")    
     for ev in events:
       if ev.new_value == True:
-        with CHAOS_CONFIG_FILE.open('w') as outfile:
-          json.dump(self.chaos_config, outfile)
-        with CHAOS_MOD_FILE.open('w') as modfile:
-          json.dump(self.modifier_data, modfile)
-        # save the bot's settings
-        logging.info("Saving bot configuration")
+        self.save_config_info()
         cfg.save()
         self.set_need_save(False)
+
+  def save_config_info(self):
+    logging.debug('Saving config file')
+    with CHAOS_CONFIG_FILE.open('w') as outfile:
+      json.dump(self.chaos_config, outfile, indent=2, sort_keys=True)
+
+  def save_mod_info(self):
+    with CHAOS_MOD_FILE.open('w') as modfile:
+      json.dump(self.modifier_data, modfile, indent=2, sort_keys=True)
+
+  def save_credit_info(self):
+    with CHAOS_CREDIT_FILE.open('w') as creditfile:
+      json.dump(self.user_credits, creditfile, indent=2, sort_keys=True)
 
   @flx.action
   def reset_all(self):
@@ -218,6 +241,7 @@ class ChaosRelay(flx.Component):
     self.set_talk_port(self.get_attribute('talk_port'))
     self.set_bot_name(self.get_attribute('nick'))
     self.set_bot_oauth(self.get_attribute('oauth'))
+    self.set_pubsub_oauth(self.get_attribute('pubsub_oauth'))
     self.set_channel_name(self.get_attribute('channel'))
     self.set_bits_redemptions(self.get_attribute('bits_redemptions'))
     self.set_bits_per_credit(self.get_attribute('bits_per_credit'))
@@ -271,6 +295,7 @@ class ChaosRelay(flx.Component):
       if self.modifier_data[mod_key]['active']:
         self.enabled_mods.append(mod_key)
     self.reset_softmax()
+    self.save_mod_info()
     self.set_new_game_data(True)
     self.valid_data = True
 
@@ -293,6 +318,21 @@ class ChaosRelay(flx.Component):
     except:
       return self.get_attribute('msg_mod_not_found').format(mod)
   
+  def get_balance(self, user: str):
+    if user not in self.user_credits:
+      return 0
+    else:
+      return self.user_credits[user]
+  
+  def step_balance(self, user: str, delta: int):
+    balance = self.get_balance(user) + delta
+    if balance < 0:
+      balance = 0
+    self.user_credits[user] = balance
+    self.save_credit_info()
+    return balance
+
+
   @flx.action
   def tally_vote(self, index: int, user: str):
     if index >= 0 and index < self.get_attribute('vote_options'):
@@ -377,8 +417,9 @@ class ChaosRelay(flx.Component):
           logging.debug(f" - 0.00% {mod}")
 
     self.set_candidate_mods(candidates)
-    # Reset votes since there is a new voting pool
+    # Reset votes and user-voted list, since there is a new voting pool
     self.set_votes([0]*self.get_attribute('vote_options'))
+    self.voted_users = []
 
   def about_tcc(self):
     return self.get_attribute('msg_chaos_description')
@@ -536,7 +577,13 @@ class ChaosRelay(flx.Component):
     self.chaos_config["oauth"] = new_value
     cfg['oauth'] = new_value
     self.set_bot_oauth(new_value)
-  
+
+  @flx.action
+  def change_pubsub_oauth(self, new_value):
+    logging.debug('Changing pubsub oauth')
+    self.chaos_config["pubsub_oauth"] = new_value
+    self.set_pubsub_oauth(new_value)
+
   @flx.action
   def change_channel_name(self, new_value):
     logging.debug(f'Changing channel to {new_value}')
