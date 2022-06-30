@@ -30,14 +30,14 @@ using namespace Chaos;
 
 int SequenceTable::buildSequenceList(toml::table& config, GameCommandTable& commands,
                                      Controller& controller) {
-  PLOG_VERBOSE << "Initializing list of defined sequences";
+  PLOG_DEBUG << "Initializing list of defined sequences";
   int parse_errors = 0;
   // global parameters for sequences
   Sequence::setPressTime(config["controller"]["button_press_time"].value_or(0.0625));
   Sequence::setReleaseTime(config["controller"]["button_release_time"].value_or(0.0625));
   
   if (sequence_map.size() > 0) {
-    PLOG_VERBOSE << "Clearing existing Sequence data";
+    PLOG_DEBUG << "Clearing existing Sequence data";
     sequence_map.clear();
   }
 

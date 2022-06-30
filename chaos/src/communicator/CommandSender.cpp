@@ -35,7 +35,7 @@ void CommandSender::setEndpoint(const std::string& ep) {
 }
 
 zmq::socket_t* CommandSender::createSocket() {
-  PLOG_DEBUG << "Creating request socket and connecting to " << endpoint;
+  PLOG_VERBOSE << "Creating request socket and connecting to " << endpoint;
   zmq::socket_t* s = new zmq::socket_t(context, zmq::socket_type::req);
   s->connect(endpoint);
   // No waiting at close time
@@ -44,7 +44,7 @@ zmq::socket_t* CommandSender::createSocket() {
 }
 
 bool CommandSender::sendMessage(const std::string& message) {
-  PLOG_DEBUG << "Sending message: " << message;
+  PLOG_VERBOSE << "Sending message: " << message;
   zmq::message_t msg(message);
   zmq::message_t reply;
 

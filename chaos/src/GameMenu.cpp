@@ -22,15 +22,15 @@
 
 #include <stdexcept>
 #include <cmath>
+#include <stack>
 #include <plog/Log.h>
 
 #include "GameMenu.hpp"
 #include "TOMLUtils.hpp"
-#include "MenuOption.hpp"
-#include "MenuSelect.hpp"
 #include "Controller.hpp"
 #include "Sequence.hpp"
 #include "SequenceTable.hpp"
+#include "MenuItem.hpp"
 
 using namespace Chaos;
 
@@ -92,31 +92,47 @@ std::shared_ptr<MenuItem> GameMenu::getMenuItem(toml::table& config, const std::
   return item;
 }
 
+
 void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, Controller& controller) {
   PLOG_DEBUG << "Creating set menu sequence";
   Sequence seq{controller};
 
-  // We build a sequence to open the main menu, navigate to the option, and perform the appropriate
-  // action on the item.
   defined_sequences->addSequence(seq, "disable all");
   seq.addDelay(disable_delay);
   defined_sequences->addSequence(seq, "open menu");
+
+  // Create a stack of all the parent menus of this option
+  std::stack<std::shared_ptr<MenuItem>> menu_stack;
+  std::shared_ptr<MenuItem> s;
+  for (s = item->getParent(); s != nullptr; s = s->getParent()) {
+    PLOG_VERBOSE << "Push " << s->getName() << " on stack";
+    menu_stack.push(s);
+  }
+
+  // Now create the navigation commands. Popping from the top of the stack starts us with the
+  // top-level menu and works down to the terminal leaf.
+  PLOG_DEBUG << "Navigation commands for " << item->getName();
+  // Navigate through the parent menus
+  while (!menu_stack.empty()) {
+    s = menu_stack.top();
+    s->selectItem(seq);
+    menu_stack.pop();
+  }
+  // navigation through the final leaf
+  item->selectItem(seq);  
   item->setState(seq, new_val);
+  PLOG_DEBUG << "Constructing reverse navigation";
   item->navigateBack(seq);
-  defined_sequences->addSequence(seq, "menu exit");
+  // Back out, leaving all the parent menus in their default state
+  for (s = item->getParent(); s != nullptr; s = s->getParent()) {
+    s->navigateBack(seq);
+  }
   seq.send();
 }
 
 void GameMenu::restoreState(std::shared_ptr<MenuItem> item, Controller& controller) {
   PLOG_DEBUG << "Creating restore menu sequence";
-  Sequence seq(controller);
-  defined_sequences->addSequence(seq, "disable all");
-  seq.addDelay(disable_delay);
-  defined_sequences->addSequence(seq, "open menu");
-  item->restoreState(seq);
-  item->navigateBack(seq);
-  defined_sequences->addSequence(seq, "menu exit");
-  seq.send();
+  setState(item, item->getDefault(), controller);
 }
 
 void GameMenu::correctOffset(std::shared_ptr<MenuItem> changed) {

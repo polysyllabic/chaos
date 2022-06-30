@@ -25,9 +25,6 @@
 #include <toml++/toml.h>
 
 #include "MenuInterface.hpp"
-//#include "MenuItem.hpp"
-//#include "Sequence.hpp"
-//#include "SequenceTable.hpp"
 
 namespace Chaos {
   
@@ -78,6 +75,15 @@ namespace Chaos {
      * Time to wait, in microseconds after selecting a menu item before issuing the next comand
      */
     unsigned int select_delay;
+
+    /**
+     * \brief Add commands necessary to navigate to this item from the top of main menu
+     * 
+     * \param seq Sequence to which the commands should be appended
+     *
+     * This only creates the commands to move to the menu item. It does not select or set it.
+     */
+    void moveTo(Sequence& seq);
 
   public:
     GameMenu() {}

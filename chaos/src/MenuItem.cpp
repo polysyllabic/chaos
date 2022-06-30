@@ -17,7 +17,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdexcept>
-#include <stack>
 #include <toml++/toml.h>
 #include <plog/Log.h>
 
@@ -60,33 +59,10 @@ void MenuItem::decrementCounter() {
   }
 }
 
-void MenuItem::moveTo(Sequence& seq) {
-  PLOG_DEBUG << "Building moveTo sequence";
-
-  // Create a stack of all the parent menus of this option
-  std::stack<std::shared_ptr<MenuItem>> menu_stack;
-  for (std::shared_ptr<MenuItem> s = parent; s != nullptr; s = s->parent) {
-    PLOG_DEBUG << "Push " << s->name << " on stack";
-    menu_stack.push(s);
-  }
-
-  // Now create the navigation commands. Popping from the top of the stack starts us with the
-  // top-level menu and works down to the terminal leaf.
-  PLOG_DEBUG << "Navigation commands for " << name;
-  std::shared_ptr<MenuItem> item;
-  // navigation through the parent menus
-  while (!menu_stack.empty()) {
-    item = menu_stack.top();
-    item->selectItem(seq);
-    menu_stack.pop();
-  }
-  // navigation through the final leaf
-  selectItem(seq);  
-}
-
 void MenuItem::selectItem(Sequence& seq) {
     // navigate left or right through tab groups
     int delta = offset;
+    PLOG_DEBUG << name << " menu offset = " << offset;
     for (int i = 0; i < tab_group; i++) {
       menu_items.addSequence(seq, "tab right");
     }
@@ -95,8 +71,10 @@ void MenuItem::selectItem(Sequence& seq) {
     }
 
     // If this item is guarded, make sure the guard is enabled
-    PLOG_DEBUG << "- scroll " << delta;
     if (guard && guard->getState() == 0) {
+      // navigate to the guard
+      guard->selectItem(seq);
+      // enable guard item
       guard->setState(seq, 1);
       // adjust delta for the steps we've already made to get to the guard
       delta -= guard->getOffset();
@@ -121,32 +99,25 @@ void MenuItem::selectItem(Sequence& seq) {
 }
 
 void MenuItem::navigateBack(Sequence& seq) {
-  // starting from the selected option, we reverse to navigate to top of each submenu and leave it
-  // in a consistent state for the next time we open the menu
-  PLOG_DEBUG << "navigateBack: ";
-  std::shared_ptr<MenuItem> item = getptr();
-  do {
-    for (int i = 0; i < item->getOffset(); i++) {
-      menu_items.addSequence(seq, "menu up");
-    }
-    for (int i = 0; i > item->getOffset(); i--) {
-      menu_items.addSequence(seq, "menu down");
-    }
-    for (int i = 0; i < item->getTab(); i++) {
-      menu_items.addSequence(seq, "tab left");
-    }
-    for (int i = 0; i > item->getTab(); i++) {
-      menu_items.addSequence(seq, "tab right");
-    }
-    menu_items.addSequence(seq, "menu exit");
-    item = parent;
-  } while (item != nullptr);
-
+  // starting from the selected option, we reverse to navigate to top of the menu and
+  // back out
+  for (int i = 0; i < offset; i++) {
+    menu_items.addSequence(seq, "menu up");
+  }
+  for (int i = 0; i > offset; i--) {
+    menu_items.addSequence(seq, "menu down");
+  }
+  for (int i = 0; i < tab_group; i++) {
+    menu_items.addSequence(seq, "tab left");
+  }
+  for (int i = 0; i > tab_group; i++) {
+    menu_items.addSequence(seq, "tab right");
+  }
+  menu_items.addSequence(seq, "menu exit");
 }
 
 void MenuItem::setState(Sequence& seq, unsigned int new_val) {
-  PLOG_DEBUG << "setState to " << new_val;
-  moveTo(seq);
+  PLOG_DEBUG << "Set state of " << name << " to " << new_val;
 
   if (is_option) {
     setMenuOption(seq, new_val);
@@ -162,9 +133,8 @@ void MenuItem::setState(Sequence& seq, unsigned int new_val) {
   // Increment the counter, if set
   if (sibling_counter) {
     sibling_counter->incrementCounter();
-    PLOG_DEBUG << "Incrementing sibling counter";
+    PLOG_DEBUG << "Incrementing sibling counter " << sibling_counter->getName();
   }
-  navigateBack(seq);
 }
 
 void MenuItem::restoreState(Sequence& seq) {
@@ -188,8 +158,5 @@ void MenuItem::setMenuOption(Sequence& seq, unsigned int new_val) {
   }
   for (int i = 0; i > difference; i--) {
     menu_items.addSequence(seq, "option less");
-  }
-  if (confirm) {
-    menu_items.addSequence(seq, "confirm");
   }
 }

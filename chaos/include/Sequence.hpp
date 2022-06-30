@@ -18,9 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <unordered_map>
+#include <memory>
 #include <vector>
-#include <toml++/toml.h>
 #include "DeviceEvent.hpp"
 
 namespace Chaos {
@@ -36,6 +35,8 @@ namespace Chaos {
    * The valid keys within each sequence step are the following:
    * - event: The type of signal event.
    * - command: The command that should be sent.
+   * 
+   * \todo: Use the chrono library to ensure our time units are consistent
    */
   class Sequence {
   protected:
@@ -56,8 +57,8 @@ namespace Chaos {
   public:
     Sequence(Controller& c);
 
-    static void setPressTime(unsigned int time);
-    static void setReleaseTime(unsigned int time);
+    static void setPressTime(double time);
+    static void setReleaseTime(double time);
 
     /**
      * \brief Directly add an individual event to the sequence stack

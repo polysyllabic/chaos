@@ -21,15 +21,11 @@
 #include <deque>
 #include <memory>
 
-#include <mogi/thread.h>
-#include <raw-gadget.hpp>
-
 #include "config.hpp"
 #include "DeviceEvent.hpp"
 #include "ControllerInjector.hpp"
 #include "ControllerState.hpp"
 #include "signals.hpp"
-#include "Touchpad.hpp"
 
 namespace Chaos {
 
@@ -63,7 +59,6 @@ namespace Chaos {
 	
     ControllerInjector* controllerInjector = nullptr;
 
-    //Touchpad touchpad;
   public:
     Controller();
     
