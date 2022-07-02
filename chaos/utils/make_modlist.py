@@ -16,21 +16,6 @@ parser.add_argument("infile", nargs='?', type=argparse.FileType('r'), default=sy
 parser.add_argument("outfile", nargs='?', type=argparse.FileType('w'), default=sys.stdin)
 parser.add_argument("-g", "--groups", action='store_true', help='Add a list of modules by group to the end')
 
-def unique_everseen(iterable, key=None):
-  "List unique elements, preserving order. Remember all elements ever seen."
-  seen = set()
-  seen_add = seen.add
-  if key is None:
-    for element in filterfalse(seen.__contains__, iterable):
-      seen_add(element)
-      yield element
-  else:
-    for element in iterable:
-      k = key(element)
-      if k not in seen:
-        seen_add(k)
-        yield element
-
 if __name__ == '__main__':
   try:
     args = parser.parse_args()
@@ -47,6 +32,8 @@ if __name__ == '__main__':
   mod_list = {}
   group_list = {}
   for mod in doc['modifier']:
+    if 'unlisted' in mod and mod['unlisted']:
+      continue
     mod_list[mod['name']] = mod['description']
     if args.groups:
       this_mods_groups = [mod['type']]

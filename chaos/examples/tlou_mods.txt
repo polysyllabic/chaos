@@ -36,130 +36,128 @@ The following modifiers are available for The Last of Us Part II:
 34. Drug Zone: Render Mode
 35. Drunk: Random joystick motion. Also don't push things too far, or you may stumble (go prone)
 36. Dungeon: Render Mode
-37. Enable Navigation Assistance: Turn on navigation assistance
-38. Enemies Do Not Flank: Very effective on infected Kappa
-39. Enhanced Dodge: I wish I knew what this does (built-in option)
-40. Enhanced Listen Mode: Press some buttons while in listen mode to find loot
-41. Factions Pro: Keeping things toxic with teabagging
-42. Fire: Render Mode
-43. Force Aiming: The aiming button is held
-44. Force Running: To move is to run (mostly)
-45. Graphic: Render Mode
-46. Gridlocked: Render Mode
-47. Headache: Render Mode
-48. Helium Audio: Audio mode.  Incompatible with Xenon
-49. High Contrast Display: Render mode, but overrides any other render mode
-50. Inferno: Render Mode
-51. Infinite Ammo: The strimmer responds with <3
-52. Infinite Breath: Yup, very useful and is the most OP perk...
-53. Infinite Crafting: Molotovs for everyone!
-54. Infinite Hugging: Grabbed enemies do not escape
-55. Infinite Listen Range: There used to be a limit?
-56. Infinite Melee Durability: Finally, realistic durability.
-57. Input Delay: Introduces a 0.2 second delay to the controller
-58. Inverted: Inverts the vertical axis for aiming
-59. Invisible While Prone: Proning is now even more OP
-60. Joystick Delay: Introduces a 0.2 second delay to movement and aiming.
-61. Jump Delay: Introduces a 2.0 second delay to jump presses
-62. Keep Dodging: Repeaated dodges. Don't stand too near a ledge
-63. Keep Jumping: Repeated presses of jump
-64. Keep Proning: Proning at inconvenient times
-65. Kleptomania: Picking up items at inconvenient times. Turns on auto pick-up
-66. Large HUD: HUD like in a game from the 1990s
-67. Large Subtitles: The ability to read subtitles even at 160p.
-68. Leeroy Jenkins: Alright let's do this! LEEEEROOOOOY NNNJEEEENNKIINNS!!! (Holds forward and sprint)
-69. Max Sensitivity: Goodbye precision aiming. Joystick postions multiplied by 5.
-70. Mega Scope Sway: Good luck landing shots
-71. Melee Delay: Introduces a 0.5 second delay to melee presses
-72. Melee Only: No shooting and no throwables
-73. Min Sensitivity: It's like slomo, but not for the enemies. Joystick positions divided by 2.5.
-74. Mirror On Death: Mirror World on Death. Can result in permanent Mirror World.
-75. Mirror World: Wait, where do we go?
-76. Mono Audio: No more stereo. Where did that gunshot come from?
-77. Moonlight: Render Mode
-78. Moonwalk: Be like Michael Jackson! Trying to walk forward will actually make you go backward.
-79. Moose: The moose is dead. The moose does not move. (Disables movement)
-80. Motion Control Aiming: No more aiming with the joystick. Tilt the controller to aim/look instead.
-81. Motion Control Movement: No more movement with the joystick. Tilt the controller to move instead.
-82. Musical Combat: Add some music to combat prompts with Combat Audio Cues
-83. Musical Traversal: Add some music to climbable objects with Traversal Audio Cues
-84. Mute Dialogue: Sorry Shannon :(
-85. Mute Music: The music is too intense, let's turn it off!
-86. Mute Sound Effects: Gunshots hurt our ears :(
-87. Mystery: Applies a random modifier
-88. Nascar: There is no going right in Nascar. Right movement/camera disabled
-89. Navigation Assistance: Keeps pointing camera in direction of story progression
-90. No Aim Movement: Movement is disabled if aiming
-91. No Aiming: At least reloading is still possible, along with throwables and melee
-92. No Aiming Camera: Camera is disabled if aiming
-93. No Arc Throw Paths: The trajectory of your throwable will now be based on feel.
-94. No Awareness Indicators: Stealth strats have no visual feedback
-95. No Backward Movement: Moving backwards is not allowed
-96. No Climbing/Jumping: No climbing or jumping
-97. No Consumables: Selecting a brick, bottle, med kit, molly, etc. is disabled.
-98. No Crouch/Prone: And you thought you were going to sneak through this area
-99. No Damage Indicators: Locating the source of damage will be harder.
-100. No Forward Movement: Moving forward is not allowed
-101. No Grab: Swiper no swiping! No looting, stealth grabbing, opening doors. Say goodbye to the everything button.
-102. No Gun Selection: No picking a new gun
-103. No Health HUD: The health and weapon HUD is disabled.
-104. No Hit Markers: No feedback on connected shots
-105. No Horizontal Aim: The horizontal camera is disabled
-106. No Inventory HUD: Want to know what weapons or throwables you're selecting? Think again.
-107. No Long Guns: D-Pad Left Disabled
-108. No Melee: Disable melee attacks and stealth kills
-109. No Plus Signs: Speedrunners need this.  Allies do not get grabbed.
-110. No Reloading: You can still shoot, but you can't reload.
-111. No Reticle: Headshots just got trickier.
-112. No Run/Dodge: Better hope you're not being chased.
-113. No Scoping: No scopes! Aiming is still allowed
-114. No Short Guns: D-Pad Right Disabled
-115. No Shoulder Swap: While aiming, Square is disabled
-116. No Strafing: Forwards/back movement is disabled. Only side-to-side motion is allowed.
-117. Noir: Render Mode
-118. One Shot: Golden guns activated: one-shot kills.
-119. Only Aim Movement: Movement is disabled if not aiming
-120. Only Prone Diving: RIP elbows and knees. Any movement results in a prone dive.
-121. Only Strafe Movement: Side-to-side movement is disabled. Only forward/back motion is allowed.
-122. Pacifist%: No shooting, throwing, or melee. Good luck, NPC friends!
-123. Pdub It: RIP bricks and bottles
-124. Periodic Listen Mode: Stop, look, listen to your heart, hear what it's saying.
-125. Periodic Navigation Assistance: Keeps pointing camera in direction of story progression
-126. Pop Poster: Stream Destroyer.  This kills the bitrate
-127. Potato Enemies: Enemies shoot less accurately. Does not work on melee.
-128. Pusher: Render Mode
-129. Rachy Flail: The only way to melee is to follow the master techniques of RachyMonster
-130. Random Remap: Randomly remaps buttons (square, circle, triangle, X, L1, R1, L2, R2, L3, R3)
-131. Reduced Enemy Perception: Finally, clickers are truly blind.
-132. Restart Checkpoint: Best served prior to the end of a long encounter.
-133. Rubbernecking: Woah! What's behind you? Invokes a periodic, 180-degree quick turn.
-134. Select Delay: Introduces a 5 second delay to selecting weapons or consumables
-135. Sepia: Render Mode
-136. Shape Shuffle: Randomly remaps the shape buttons (square, circle, triangle, X)
-137. Shooting Delay: Introduces a 0.5 second delay to shooting and throwing
-138. Show Pickups: Enables the HUD that shows notifications on ammo, crafting, and other pickups
-139. Sideways Moonwalk: Go left to go right and go right to go left
-140. Slow Motion: The speed-run killer
-141. Snapshot: You can only aim for 1 second at a time, so take that shot quickly.
-142. Swap D-Pad/Left Joystick: Retro-style motion and an odd analog inventory selector
-143. Swap Joysticks: You may want to cross your thumbs to work with your muscle memory
-144. Swap Shapes/Right Joystick: Analog actions and digital camera movement
-145. TLOU1 Run Glitch: Is this an Any% speedrun of TLOU1? Rapid D-pad circular presses. Try moving while prone.
-146. Terminated: Render Mode
-147. Toss A Molly/Bomb: Time to riot. Chucks a molly (for Ellie) or bomb (for Abby).
-148. Touch Of Death: Golden fists activated: one-hit enemy deaths
-149. Touchpad Aiming: No more aiming with the joystick. Finally making use of the touchpad!
-150. Traversal Assistance: Climb when you really do not want to
-151. Trigger Remap: Randomly remaps trigger/bumper buttons (L1, R1, L2, R2)
-152. Trinity: Render Mode
-153. Use Items: Shoots or throws 6 of whatever item is currently equipped. No effect for medkits.
-154. Vibrant: Render Mode
-155. Vintage: Render Mode
-156. Void: Render Mode
-157. Warm: Render Mode
-158. Water Color: Render Mode
-159. Xenon Audio: Audio mode.  Incompatible with Helium
-160. Zoolander: We are not an ambiturner, but at least we can look right. Left movement/camera disabled.
+37. Enemies Do Not Flank: Very effective on infected Kappa
+38. Enhanced Dodge: I wish I knew what this does (built-in option)
+39. Enhanced Listen Mode: Press some buttons while in listen mode to find loot
+40. Factions Pro: Keeping things toxic with teabagging
+41. Fire: Render Mode
+42. Force Aiming: The aiming button is held
+43. Force Running: To move is to run (mostly)
+44. Graphic: Render Mode
+45. Gridlocked: Render Mode
+46. Headache: Render Mode
+47. Helium Audio: Audio mode.  Incompatible with Xenon
+48. High Contrast Display: Render mode, but overrides any other render mode
+49. Inferno: Render Mode
+50. Infinite Ammo: The strimmer responds with <3
+51. Infinite Breath: Yup, very useful and is the most OP perk...
+52. Infinite Crafting: Molotovs for everyone!
+53. Infinite Hugging: Grabbed enemies do not escape
+54. Infinite Listen Range: There used to be a limit?
+55. Infinite Melee Durability: Finally, realistic durability.
+56. Input Delay: Introduces a 0.2 second delay to the controller
+57. Inverted: Inverts the vertical axis for aiming
+58. Invisible While Prone: Proning is now even more OP
+59. Joystick Delay: Introduces a 0.2 second delay to movement and aiming.
+60. Jump Delay: Introduces a 2.0 second delay to jump presses
+61. Keep Dodging: Repeaated dodges. Don't stand too near a ledge
+62. Keep Jumping: Repeated presses of jump
+63. Keep Proning: Proning at inconvenient times
+64. Kleptomania: Picking up items at inconvenient times. Turns on auto pick-up
+65. Large HUD: HUD like in a game from the 1990s
+66. Large Subtitles: The ability to read subtitles even at 160p.
+67. Leeroy Jenkins: Alright let's do this! LEEEEROOOOOY NNNJEEEENNKIINNS!!! (Holds forward and sprint)
+68. Max Sensitivity: Goodbye precision aiming. Joystick postions multiplied by 5.
+69. Mega Scope Sway: Good luck landing shots
+70. Melee Delay: Introduces a 0.5 second delay to melee presses
+71. Melee Only: No shooting and no throwables
+72. Min Sensitivity: It's like slomo, but not for the enemies. Joystick positions divided by 2.5.
+73. Mirror On Death: Mirror World on Death. Can result in permanent Mirror World.
+74. Mirror World: Wait, where do we go?
+75. Mono Audio: No more stereo. Where did that gunshot come from?
+76. Moonlight: Render Mode
+77. Moonwalk: Be like Michael Jackson! Trying to walk forward will actually make you go backward.
+78. Moose: The moose is dead. The moose does not move. (Disables movement)
+79. Motion Control Aiming: No more aiming with the joystick. Tilt the controller to aim/look instead.
+80. Motion Control Movement: No more movement with the joystick. Tilt the controller to move instead.
+81. Musical Combat: Add some music to combat prompts with Combat Audio Cues
+82. Musical Traversal: Add some music to climbable objects with Traversal Audio Cues
+83. Mute Dialogue: Sorry Shannon :(
+84. Mute Music: The music is too intense, let's turn it off!
+85. Mute Sound Effects: Gunshots hurt our ears :(
+86. Mystery: Applies a random modifier
+87. Nascar: There is no going right in Nascar. Right movement/camera disabled
+88. Navigation Assistance: Keeps pointing camera in direction of story progression
+89. No Aim Movement: Movement is disabled if aiming
+90. No Aiming: At least reloading is still possible, along with throwables and melee
+91. No Aiming Camera: Camera is disabled if aiming
+92. No Arc Throw Paths: The trajectory of your throwable will now be based on feel.
+93. No Awareness Indicators: Stealth strats have no visual feedback
+94. No Backward Movement: Moving backwards is not allowed
+95. No Climbing/Jumping: No climbing or jumping
+96. No Consumables: Selecting a brick, bottle, med kit, molly, etc. is disabled.
+97. No Crouch/Prone: And you thought you were going to sneak through this area
+98. No Damage Indicators: Locating the source of damage will be harder.
+99. No Forward Movement: Moving forward is not allowed
+100. No Grab: Swiper no swiping! No looting, stealth grabbing, opening doors. Say goodbye to the everything button.
+101. No Gun Selection: No picking a new gun
+102. No Health HUD: The health and weapon HUD is disabled.
+103. No Hit Markers: No feedback on connected shots
+104. No Horizontal Aim: The horizontal camera is disabled
+105. No Inventory HUD: Want to know what weapons or throwables you're selecting? Think again.
+106. No Long Guns: D-Pad Left Disabled
+107. No Melee: Disable melee attacks and stealth kills
+108. No Plus Signs: Speedrunners need this.  Allies do not get grabbed.
+109. No Reloading: You can still shoot, but you can't reload.
+110. No Reticle: Headshots just got trickier.
+111. No Run/Dodge: Better hope you're not being chased.
+112. No Scoping: No scopes! Aiming is still allowed
+113. No Short Guns: D-Pad Right Disabled
+114. No Shoulder Swap: While aiming, Square is disabled
+115. No Strafing: Forwards/back movement is disabled. Only side-to-side motion is allowed.
+116. Noir: Render Mode
+117. One Shot: Golden guns activated: one-shot kills.
+118. Only Aim Movement: Movement is disabled if not aiming
+119. Only Prone Diving: RIP elbows and knees. Any movement results in a prone dive.
+120. Only Strafe Movement: Side-to-side movement is disabled. Only forward/back motion is allowed.
+121. Pacifist%: No shooting, throwing, or melee. Good luck, NPC friends!
+122. Pdub It: RIP bricks and bottles
+123. Periodic Listen Mode: Stop, look, listen to your heart, hear what it's saying.
+124. Pop Poster: Stream Destroyer.  This kills the bitrate
+125. Potato Enemies: Enemies shoot less accurately. Does not work on melee.
+126. Pusher: Render Mode
+127. Rachy Flail: The only way to melee is to follow the master techniques of RachyMonster
+128. Random Remap: Randomly remaps buttons (square, circle, triangle, X, L1, R1, L2, R2, L3, R3)
+129. Reduced Enemy Perception: Finally, clickers are truly blind.
+130. Restart Checkpoint: Best served prior to the end of a long encounter.
+131. Rubbernecking: Woah! What's behind you? Invokes a periodic, 180-degree quick turn.
+132. Select Delay: Introduces a 5 second delay to selecting weapons or consumables
+133. Sepia: Render Mode
+134. Shape Shuffle: Randomly remaps the shape buttons (square, circle, triangle, X)
+135. Shooting Delay: Introduces a 0.5 second delay to shooting and throwing
+136. Show Pickups: Enables the HUD that shows notifications on ammo, crafting, and other pickups
+137. Sideways Moonwalk: Go left to go right and go right to go left
+138. Slow Motion: The speed-run killer
+139. Snapshot: You can only aim for 1 second at a time, so take that shot quickly.
+140. Swap D-Pad/Left Joystick: Retro-style motion and an odd analog inventory selector
+141. Swap Joysticks: You may want to cross your thumbs to work with your muscle memory
+142. Swap Shapes/Right Joystick: Analog actions and digital camera movement
+143. TLOU1 Run Glitch: Is this an Any% speedrun of TLOU1? Rapid D-pad circular presses. Try moving while prone.
+144. Terminated: Render Mode
+145. Toss A Molly/Bomb: Time to riot. Chucks a molly (for Ellie) or bomb (for Abby).
+146. Touch Of Death: Golden fists activated: one-hit enemy deaths
+147. Touchpad Aiming: No more aiming with the joystick. Finally making use of the touchpad!
+148. Traversal Assistance: Climb when you really do not want to
+149. Trigger Remap: Randomly remaps trigger/bumper buttons (L1, R1, L2, R2)
+150. Trinity: Render Mode
+151. Use Items: Shoots or throws 6 of whatever item is currently equipped. No effect for medkits.
+152. Vibrant: Render Mode
+153. Vintage: Render Mode
+154. Void: Render Mode
+155. Warm: Render Mode
+156. Water Color: Render Mode
+157. Xenon Audio: Audio mode.  Incompatible with Helium
+158. Zoolander: We are not an ambiturner, but at least we can look right. Left movement/camera disabled.
 
 
 Modifiers By Group:
@@ -399,7 +397,6 @@ Mute Sound Effects
 Mute Music
 Mute Dialogue
 Mono Audio
-Enable Navigation Assistance
 
 
 [movement]:
@@ -511,7 +508,6 @@ Periodic Listen Mode
 Force Running
 Leeroy Jenkins
 Force Aiming
-Periodic Navigation Assistance
 
 
 [sequence]:
