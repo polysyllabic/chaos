@@ -254,7 +254,7 @@ trueOn = [ "aiming" ]
 
 [[condition]]
 name = "shooting"
-trueOn = [ "aiming", "reload/toss" ]
+trueOn = [ "aiming", "shoot" ]
 
 [[condition]]
 name = "movement"

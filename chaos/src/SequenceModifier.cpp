@@ -78,12 +78,14 @@ void SequenceModifier::update() {
         // delay before starting the sequence
         sequence_state = SequenceState::STARTING;
       }
+      PLOG_DEBUG << "Condition met after waiting " << sequence_time;
       sequence_time = 0;
     }
     break;
   case SequenceState::STARTING:
     // In the starting state, we wait for any initial delay before the sequence starts
     if (sequence_time >= start_delay) {
+      PLOG_DEBUG << "Waiting " << start_delay << " to start sequence";
       sequence_state = SequenceState::IN_SEQUENCE;
       sequence_time = 0;
     }
@@ -92,13 +94,16 @@ case SequenceState::IN_SEQUENCE:
     // The sequence of actions here are not exclusive (other things can be happening while these
     // commands are in train. 
     if (repeat_sequence->sendParallel(sequence_time)) {
+      PLOG_DEBUG << "Sent complete sequence";
       sequence_state = SequenceState::ENDING;
       sequence_time = 0;
     }
     break;
   case SequenceState::ENDING:
     // After the sequence, we wait for the delay amount before resetting the trigger
+    PLOG_DEBUG << "sequence_time=" << sequence_time << "; repeat_delay=" << repeat_delay;
     if (sequence_time >= repeat_delay) {
+      PLOG_DEBUG << "Resetting trigger";
       sequence_state = SequenceState::UNTRIGGERED;
       sequence_time = 0;
       sequence_step = 0;

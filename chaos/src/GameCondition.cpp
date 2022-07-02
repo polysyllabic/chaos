@@ -101,6 +101,7 @@ bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> command) {
   // for that remapped signal.
   short curval = command->getState();
   short threshold = getSignalThreshold(command);
+  
   switch (threshold_type) {
     case ThresholdType::GREATER:
       return curval > threshold;
@@ -148,7 +149,9 @@ bool GameCondition::testConditions(std::vector<std::shared_ptr<GameCommand>> com
     assert(command_list.size() == 2);
     short x = command_list[0]->getState();
     short y = command_list[1]->getState();
-    return x*x + y*y > std::pow(getSignalThreshold(command_list[0]),2);
+    int square_dist = std::pow(getSignalThreshold(command_list[0]),2);
+    PLOG_DEBUG << "x = " << x << "; y = " << y << "x^2+y^2 = " << (x*x +y*y) << "; dist^2 = " << square_dist;
+    return x*x + y*y > square_dist;
   }
 
   // We can check whether all, any, or none of the gamestates are true

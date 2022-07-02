@@ -44,5 +44,7 @@ std::shared_ptr<ControllerInput> GameCommand::getRemappedSignal() {
 }
 
 short GameCommand::getState() {
-  return binding->getRemappedState();
+  short state = binding->getRemappedState();
+  PLOG_DEBUG << "Current state of " << name << " = " << state;
+  return state;
 }
