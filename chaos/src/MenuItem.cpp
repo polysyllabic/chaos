@@ -91,8 +91,8 @@ void MenuItem::selectItem(Sequence& seq) {
       menu_items.addSequence(seq, "menu up");
     }
 
-    // Submenus and select option items items require a button press
-    if (isSelectable()) {
+    // Submenus require a button press
+    if (! isOption()) {
       menu_items.addSequence(seq, "menu select");
       menu_items.addSelectDelay(seq);
     }

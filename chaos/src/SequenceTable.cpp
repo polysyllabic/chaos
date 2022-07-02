@@ -161,8 +161,8 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
 	      if (repeat > 1) {
 	        PLOG_WARNING << "Repeat is not supported with 'hold' and will be ignored.";
     	  }
-	      seq->addHold(signal, value, 0);
-        PLOG_VERBOSE << "Hold " << signal->getName();
+	      seq->addHold(signal, value, delay_time);
+        PLOG_VERBOSE << "Hold " << signal->getName() << " for " << delay_time << " microseconds";
       } else if (*event == "press") {
 	      for (int i = 0; i < repeat; i++) {
 	        seq->addPress(signal, value);
