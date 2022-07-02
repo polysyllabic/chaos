@@ -1,7 +1,3 @@
-New Chaos Bot Features
-
-Old bot framework (from scratch) -> PythonTwitchBotFramework
-Old GUI: flexx -> PySimpleGUIWeb (w/ Remi)
 
 Commands in chat:
 
@@ -12,7 +8,7 @@ Info:
 !mods voting: list mods currently being voted on
 
 Mod Redemption
-!mods redeem <mod name>: Apply credit for 1 mod Redemption
+!apply <mod name>: Apply credit for 1 mod Redemption
 
 Cooldown length: time between redemptions? 15 minutes
 

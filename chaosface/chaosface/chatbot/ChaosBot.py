@@ -25,9 +25,6 @@ class ChaosBot(BaseBot):
         if vote_num >= 0:
           flx.loop.call_soon(config.relay.tally_vote, vote_num, msg.author)
 
-#  async def on_bits_donated(self, msg: Message, bits: int):
-#    logging.debug(f'{msg.author} donated {bits} bits')
-
   async def on_connected(self):
     flx.loop.call_soon(config.relay.set_connected, True)
 

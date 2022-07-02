@@ -8,11 +8,13 @@ from twitchbot import Command, SubCommand, Message
 
 import chaosface.config.globals as config
 
-# General description of TCC and how it works
 @Command('chaos',
          help='How Twitch Controls Chaos works',
          cooldown=config.relay.get_attribute('info_cmd_cooldown'))
 async def cmd_chaos(msg: Message, *args):
+  """
+  Provide a general description of TCC and how it works
+  """
   if not args:
     await msg.reply(config.relay.about_tcc())
 
@@ -45,13 +47,11 @@ async def cmd_mod(msg: Message, *args):
     logging.debug('Asking for description of {mod}')
     await msg.reply(config.relay.get_mod_description(mod))
 
-# TODO: Give a link to all mods
-# This is currently disabled because a fixed list of all mods won't be particularly useful when
-# we are chaging around what mods are available per game. Ideally, we will generate the active mods
-# list on the fly and put it somehwere that is publicly accessible
 @Command('mods')
 async def cmd_mods(msg: Message, *args):
-  pass
+  link = config.relay.get_attribute('mod_list_link')
+  if link:
+    await msg.reply(config.relay('msg_mod_list').format(link))
 
 # List currently active mods
 @SubCommand(cmd_mods, 'active')

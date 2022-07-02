@@ -3,7 +3,7 @@
 """
   View for chaos settings that control the gameplay
 """
-import logging
+#import logging
 from flexx import flx
 import chaosface.config.globals as config
 
@@ -62,20 +62,15 @@ class GameSettings(flx.PyWidget):
                 self.bits_per_credit = flx.LineEdit(style=field_style, text=str(config.relay.bits_per_credit))
                 self.points_reward_title = flx.LineEdit(style=field_style, text=str(config.relay.points_reward_title))
                 self.raffle_time = flx.LineEdit(style=field_style, text=str(config.relay.raffle_time))
-              flx.Widget(flex=1)
+              with flx.VBox():
+                flx.Label(style=label_style, text=' ')
+                self.multiple_credits = flx.CheckBox(text='Allow multiple credits per cheer', checked=config.relay.multiple_credits, style="text-align:left")
+                flx.Label(style=label_style, text=' ')
+                flx.Label(style=label_style, text=' ')
         with flx.VBox(flex=1):
-          flx.Label(style="text-align:left", text='Available Modifiers')
-          with flx.TreeWidget(flex=1, max_selected=1, minsize=(300,300)) as self.available_modifiers:
-            for mod, data in config.relay.modifier_data.items():
-              self.mod_items.append(flx.TreeItem(text=data['name'], checked=data['active']))
           with flx.HBox():
-            with flx.VBox():
-              flx.Label(text='Description:')
-              flx.Label(text='Groups')
-            with flx.VBox(flex=2):
-              self.mod_description = flx.LineEdit(flex=2)
-              self.mod_groups = flx.LineEdit(flex=2)
-            flx.Widget(flex=1)
+            flx.Label(style="text-align:left", text='Available Modifiers')
+            self.available_mods = ModifierView()
         # End of HSplit
       with flx.HBox():
         self.save_button = flx.Button(text="Save")
@@ -84,20 +79,7 @@ class GameSettings(flx.PyWidget):
         flx.Widget(flex=1)
       flx.Widget(flex=1)
 
-  # This is a brute-force way to do it. Update only what's necessary?
-  @flx.reaction('new_game_data')
-  def _rebuild_mod_tree(self, *events):
-    # Remove old tree items
-    logging.debug('Removing existing tree items')
-    for item in self.mod_items:
-      item.set_parent(None)
-      item.dispose()
-    # Rebuild list
-    logging.debug('Rebuilding tree items with new data')
-    self.mod_items = []
-    for mod, data in config.relay.modifier_data.items():
-      self.mod_items.append(flx.TreeItem(text=mod, checked=data['active']))
-
+    self.available_mods.set_data(config.relay.modifier_data)
 
   # Validation when changed
   @flx.reaction('num_active_mods.text')
@@ -170,6 +152,7 @@ class GameSettings(flx.PyWidget):
         self.status_label.set_text(f"Enter an integer between {minval} and {maxval}.")
     return value
 
+
   @flx.reaction('save_button.pointer_click')
   def _save_button_clicked(self, *events):
     need_save = False
@@ -183,7 +166,8 @@ class GameSettings(flx.PyWidget):
       config.relay.set_softmax_factor(self.softmax_factor.value)
       need_save = True
     if (config.relay.vote_options != int(self.vote_options.text)):
-      config.relay.set_vote_options(int(self.vote_options.text))
+      temp = int(self.vote_options.text)
+      config.relay.set_vote_options(temp)
       need_save = True
     if (config.relay.voting_type != self.voting_type.text):
       config.relay.set_voting_type(self.voting_type.text)
@@ -196,6 +180,9 @@ class GameSettings(flx.PyWidget):
       need_save = True
     if (config.relay.bits_redemptions != self.bits_redemptions.checked):
       config.relay.set_bits_redemptions(self.bits_redemptions.checked)
+      need_save = True
+    if (config.relay.multiple_credits != self.multiple_credits.checked):
+      config.relay.set_multiple_credits(self.multiple_credits.checked)
       need_save = True
     if (config.relay.bits_per_credit != int(self.bits_per_credit.text)):
       config.relay.set_bits_per_credit(int(self.bits_per_credit.text))
@@ -228,8 +215,54 @@ class GameSettings(flx.PyWidget):
 
   @flx.reaction('reset_button.pointer_click')
   def _reset_button_clicked(self, *events):
-    ev = events[-1]
     config.relay.reset_softmax()
     self.status_label.set_text('Modifier history reset')
+
+
+class ModifierView(flx.VBox):
+
+  def init(self):
+    with flx.HBox():
+      flx.Label(style="text-align:left", text='Available Modifiers')
+      self.enable_all = flx.Button(text='Enable All')
+      self.disable_all = flx.Button(text='Disable All')
+      flx.Label(flex=1, text=' ')
+    with flx.TreeWidget(flex=1, max_selected=1, minsize=(300,300)) as self.tree:
+      if len(config.relay.modifier_data) > 0:
+        for mod, data in config.relay.modifier_data.items():
+          self.mod_items.append(flx.TreeItem(text=data['name'], checked=data['active']))
+        else:
+          for i in range(4):
+            self.mod_items.append(flx.TreeItem(text='Modifier ' + str(i+1), checked=False))
+    self.debug_line = flx.Label(text='')
+
+  @flx.action
+  def set_data(self, data):
+    # This is a brute-force way to do it. Update only what's necessary?
+    # Remove old tree items
+    for item in self.tree.children:
+      item.set_parent(None)
+      item.dispose()
+    for mod, mod_data in data:
+      with self.tree:
+        flx.TreeItem(text=mod, checked=mod_data['active'])
+
+  @flx.reaction('enable_all.pointer_click')
+  def _enable_all_button_clicked(self, *events):
+    pass
+
+  @flx.reaction('disable_all.pointer_click')
+  def _disable_all_button_clicked(self, *events):
+    pass
+  
+  @flx.reaction('tree.children**.checked')
+  def on_tree_checked(self, *events):
+    for ev in events:
+      key = ev.source.text.lower()
+      if key in config.relay.modifier_data:
+        config.relay.modifier_data[key]['active'] = ev.new_data
+        self.debug_line.set_text('Modifier ' + ev.source.text + ' active = ' + ev.new_data)
+      else:
+        self.debug_line.set_text('Fake Modifier ' + ev.source.text + ' active = ' + ev.new_data)
 
   

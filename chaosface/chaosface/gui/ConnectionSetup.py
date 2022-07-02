@@ -19,7 +19,7 @@ class ConnectionSetup(flx.PyWidget):
     field_style = "background-color:#BBBBBB;text-align:center"
     bot_oauth = util.generate_irc_oauth(cfg['client_id'])
     logging.debug(f'Bot oauth url={bot_oauth}')
-    pubsub_oauth = util.generate_auth_url(cfg['client_id'], util.Scopes.PUBSUB_CHANNEL_POINTS)
+    pubsub_oauth = util.generate_auth_url(cfg['client_id'], util.Scopes.PUBSUB_CHANNEL_POINTS, util.Scopes.PUBSUB_BITS)
     logging.debug(f'Pubsub oauth url={pubsub_oauth}')
     instructions=('To get the bot\'s OAuth token,  '
       '<a href="{bot}" target="_blank">log in as your bot and then click here.</a> ' 

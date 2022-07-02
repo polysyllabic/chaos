@@ -18,7 +18,7 @@ import json
 import math
 import copy
 import numpy as np
-import queue
+from copy import deepcopy
 from pathlib import Path
 from flexx import flx
 from twitchbot import BaseBot, cfg
@@ -88,9 +88,14 @@ chaos_defaults = {
   'msg_mod_not_active': "The mod '{}' is currently disabled",
   'msg_active_mods': 'The currently active mods are ',
   'msg_candidate_mods': 'You can currently vote for the following mods: ',
-  'msg_in_cooldown': 'Cannot apply the mod yet. Use !queue to queue the mod for when the cooldown expires.',
-  'msg_user_balance': '@{} You currently have {} modifier credits.',
+  'msg_in_cooldown': 'Cannot apply the mod yet.',
+  'msg_no_credits': 'You need a modifier credit to do that.',
+  'msg_user_balance': '@{} currently has {} modifier credit{}.',
   'msg_mod_applied': 'Modifier applied',
+  'msg_mod_status': "The modifier '{}' is now {}",
+  'msg_credit_transfer': '@{} has given @{} 1 mod credit',
+  'msg_mod_list': 'A list of the available mods for this game can be found here: {}',
+  'mod_list_link': '',
 }
 
 CONFIG_PATH = Path.cwd() / 'configs'
@@ -104,7 +109,6 @@ class ChaosRelay(flx.Component):
   chatbot: BaseBot
 
   modifier_data = {}
-  #all_mods = []
   enabled_mods = []
   voted_users = []
   active_keys = []
@@ -147,8 +151,7 @@ class ChaosRelay(flx.Component):
   bot_name = flx.StringProp(settable=True)
   bot_oauth = flx.StringProp(settable=True)
   pubsub_oauth = flx.StringProp(settable=True)
-  chat_rate = flx.FloatProp(settable=True)
-
+  
   # Engine Settings
   pi_host = flx.StringProp(settable=True)
   listen_port = flx.IntProp(settable=True)
@@ -176,9 +179,9 @@ class ChaosRelay(flx.Component):
     if need_save:
       self.save_config_info()
 
-    self.old_mod_data = self.load_settings(CHAOS_MOD_FILE)
+    self.modifier_data = self.load_settings(CHAOS_MOD_FILE)
     self.user_credits = self.load_settings(CHAOS_CREDIT_FILE)
-    self.modifier_data = {}
+    self.old_mod_data = deepcopy(self.modifier_data)
     self.reset_all()
 
   def get_attribute(self, key):
@@ -302,28 +305,61 @@ class ChaosRelay(flx.Component):
   def sleep_time(self):
     return 1.0/self.get_attribute('ui_rate')
 
-  def mod_status(self, mod_key: str):
+  def mod_enabled(self, mod: str):
     """
-    Returns 0 if not found, -1 if disabled, 1 if enabled
+    Returns a modifier's enabled status: (True/False) or None if not found.
     """
-    if mod_key in self.modifier_data:
-      return 1 if self.modifier_data[mod_key]['active'] else -1
+    key = mod.lower()
+    if key in self.modifier_data:
+      return self.modifier_data[key]['active']
     else:
-      return 0
+      return None
+
+  def set_mod_enabled(self, mod:str, enabled: bool) -> str:
+    """
+    Sets the modifier's enabled status (True/False). Returns a message intended to be sent to chat
+    explaining the result.
+    """
+    status = self.mod_enabled(key)
+    if status is None:
+      ack: str = self.get_attribute('msg_mod_not_found').format(mod)
+    else:
+      key = mod.lower()
+      self.modifier_data[key]['active'] = enabled
+      status = 'active' if enabled else 'inactive'
+      ack: str = self.get_attribute('msg_mod_status').format(mod, status)
+    return ack
 
   def get_mod_description(self, mod: str):
+    """
+    Get a description of the modifier.
+    """
     key = mod.lower()
     try:
       return self.modifier_data[key]['desc']
     except:
       return self.get_attribute('msg_mod_not_found').format(mod)
-  
+
+  def get_balance_message(self, user:str):
+    balance = self.get_balance(user)
+    plural = 's' if balance == 1 else ''
+    msg = self.get_attribute('msg_user_balance')
+    return msg.format(user, balance, plural)
+
   def get_balance(self, user: str):
     if user not in self.user_credits:
       return 0
     else:
       return self.user_credits[user]
   
+  def set_balance(self, user:str, balance: int):
+    if balance < 0:
+      balance = 0
+    self.user_credits[user] = balance
+    self.save_credit_info()
+    return balance
+
+    
   def step_balance(self, user: str, delta: int):
     balance = self.get_balance(user) + delta
     if balance < 0:
@@ -470,6 +506,11 @@ class ChaosRelay(flx.Component):
     return msg
 
   @flx.action
+  def enable_mod(self, mod_key, value):
+    if mod_key in self.modifier_data:
+      self.modifier_data[mod_key]['active'] = value
+
+  @flx.action
   def replace_mod(self, mod_key):
     self.update_softmax(mod_key)
     mods = list(self.active_mods)
@@ -480,12 +521,6 @@ class ChaosRelay(flx.Component):
     times[finished_mod] = 1.0
     self.set_mod_times(times)
     self.set_active_mods(mods)
-
-
-  @flx.reaction('game_name')
-  def on_game_name(self, *events):
-    for ev in events:
-      self.chaos_config['current_game'] = ev.new_value
 
   @flx.action
   def reset_current_mods(self):
@@ -498,26 +533,17 @@ class ChaosRelay(flx.Component):
     self.set_candidate_mods(['']*self.vote_options)
     self.voted_users = []
 
-  @flx.reaction('num_active_mods')
-  def on_num_active_mods(self, *events):
+  @flx.reaction('game_name')
+  def on_game_name(self, *events):
     for ev in events:
-      self.chaos_config['active_modifiers'] = ev.new_value
-      
-  @flx.reaction('time_per_modifier')
-  def on_time_per_modifier(self, *events):
-    for ev in events:
-      self.chaos_config['modifier_time']  = ev.new_value
-      
-  @flx.reaction('softmax_factor')
-  def on_softmax_factor(self, *events):
-    for ev in events:
-      self.chaos_config['softmax_factor']  = ev.new_value
+      self.chaos_config['current_game'] = ev.new_value
+      self.update_game_name(ev.new_value)
 
-  @flx.reaction('vote_options')
-  def on_vote_options(self, *events):
+  @flx.reaction('game_errors')
+  def in_game_errors(self, *events):
     for ev in events:
-      self.chaos_config['vote_options'] = ev.new_value
-      self.reset_voting()
+      self.chaos_config['game_errors'] = ev.new_value
+      self.update_game_errors(ev.new_value)
 
   @flx.reaction('vote_time')
   def on_vote_time(self, *events):
@@ -564,116 +590,162 @@ class ChaosRelay(flx.Component):
     for ev in events:
       self.update_connected_bright(ev.new_value)
       
-  @flx.action
-  def change_bot_name(self, new_value):
-    logging.debug(f'Setting bot nick to {new_value}')
-    self.chaos_config["nick"] = new_value
-    cfg['nick'] = new_value
-    self.set_bot_name(new_value)
+  @flx.reaction('num_active_mods')
+  def on_num_active_mods(self, *events):
+    for ev in events:
+      self.chaos_config['active_modifiers'] = ev.new_value
+      self.update_num_active_mods(ev.new_value)
       
-  @flx.action
-  def change_bot_oauth(self, new_value):
-    logging.debug('Changing oauth')
-    self.chaos_config["oauth"] = new_value
-    cfg['oauth'] = new_value
-    self.set_bot_oauth(new_value)
+  @flx.reaction('time_per_modifier')
+  def on_time_per_modifier(self, *events):
+    for ev in events:
+      self.chaos_config['modifier_time']  = ev.new_value
+      self.update_time_per_modifier(ev.new_value)
+      
+  @flx.reaction('softmax_factor')
+  def on_softmax_factor(self, *events):
+    for ev in events:
+      self.chaos_config['softmax_factor']  = ev.new_value
+      self.update_softmax_factor(ev.new_value)
 
-  @flx.action
-  def change_pubsub_oauth(self, new_value):
-    logging.debug('Changing pubsub oauth')
-    self.chaos_config["pubsub_oauth"] = new_value
-    self.set_pubsub_oauth(new_value)
-
-  @flx.action
-  def change_channel_name(self, new_value):
-    logging.debug(f'Changing channel to {new_value}')
-    self.chaos_config["channel"] = new_value
-    cfg['owner'] = new_value
-    cfg['channels'] = [new_value]
-    self.set_channel_name(new_value)
+  @flx.reaction('vote_options')
+  def on_vote_options(self, *events):
+    for ev in events:
+      self.chaos_config['vote_options'] = ev.new_value
+      self.reset_voting()
+      self.update_vote_options(ev.new_value)
 
   @flx.reaction('voting_type')
   def on_voting_type(self, *events):
     for ev in events:
       self.chaos_config['voting_type']  = ev.new_value
-
-  @flx.reaction('announce_candidates')
-  def on_announce_candidates(self, *events):
-    for ev in events:
-      self.chaos_config['announce_candidates'] = ev.new_value
-
-  @flx.reaction('announce_winner')
-  def on_announce_winner(self, *events):
-    for ev in events:
-      self.chaos_config['announce_winner'] = ev.new_value
+      self.update_voting_type(ev.new_value)
 
   @flx.reaction('bits_redemptions')
   def on_bits_redemptions(self, *events):
     for ev in events:
       self.chaos_config['bits_redemptions'] = ev.new_value
+      self.update_bits_redemptions(ev.new_value)
 
   @flx.reaction('bits_per_credit')
   def on_bits_per_credit(self, *events):
     for ev in events:
       self.chaos_config['bits_per_credit'] = ev.new_value
+      self.update_bits_per_credit(ev.new_value)
 
   @flx.reaction('multiple_credits')
   def on_multiple_credits(self, *events):
     for ev in events:
       self.chaos_config['multiple_credits'] = ev.new_value
+      self.update_multiple_credits(ev.new_value)
 
   @flx.reaction('points_redemptions')
   def on_points_redemptions(self, *events):
     for ev in events:
       self.chaos_config['points_redemptions'] = ev.new_value
+      self.update_points_redemptions(ev.new_value)
 
   @flx.reaction('raffles')
   def on_raffles(self, *events):
     for ev in events:
       self.chaos_config['raffles'] = ev.new_value
+      self.update_raffles(ev.new_value)
 
   @flx.reaction('raffle_time')
   def on_raffle_time(self, *events):
     for ev in events:
       self.chaos_config['raffle_time'] = ev.new_value
+      self.update_raffle_time(ev.new_value)
 
   @flx.reaction('redemption_cooldown')
   def on_redemption_cooldown(self, *events):
     for ev in events:
       self.chaos_config['redemption_cooldown'] = ev.new_value
+      self.update_redemption_cooldown(ev.new_value)
+
+  @flx.reaction('channel_name')
+  def on_channel_name(self, *events):
+    for ev in events:
+      self.chaos_config['channel'] = ev.new_value
+      cfg['owner'] = ev.new_value
+      cfg['channels'] = [ev.new_value]
+      self.update_channel_name(ev.new_value)
+
+  @flx.reaction('bot_name')
+  def on_bot_name(self, *events):
+    for ev in events:
+      self.chaos_config["nick"] = ev.new_value
+      cfg['nick'] = ev.new_value
+      self.update_bot_name(ev.new_value)
+      
+  @flx.reaction('bot_oauth')
+  def on_bot_oauth(self, *events):
+    for ev in events:
+      self.chaos_config["oauth"] = ev.new_value
+      cfg['oauth'] = ev.new_value
+      self.update_bot_oauth(ev.new_value)
+      
+  @flx.reaction('pubsub_oauth')
+  def on_pubsub_oauth(self, *events):
+    for ev in events:
+      self.chaos_config["pubsub_oauth"] = ev.new_value
+      self.update_pubsub_oauth(ev.new_value)
+
+  @flx.reaction('pi_host')
+  def on_pi_host(self, *events):
+    for ev in events:
+      self.chaos_config['pi_host']  = ev.new_value
+      self.update_pi_host(ev.new_value)
+
+  @flx.reaction('listen_port')
+  def change_listen_port(self, *events):
+    for ev in events:
+      self.chaos_config['listen_port']  = ev.new_value
+      self.update_listen_port(ev.new_value)
+
+  @flx.reaction('talk_port')
+  def change_talk_port(self, *events):
+    for ev in events:
+      self.chaos_config['talk_port']  = ev.new_value
+      self.update_talk_port(ev.new_value)
+
+  @flx.reaction('announce_candidates')
+  def on_announce_candidates(self, *events):
+    for ev in events:
+      self.chaos_config['announce_candidates'] = ev.new_value
+      self.update_announce_candidates(ev.new_value)
+
+  @flx.reaction('announce_winner')
+  def on_announce_winner(self, *events):
+    for ev in events:
+      self.chaos_config['announce_winner'] = ev.new_value
+      self.update_announce_winner(ev.new_value)
+
+  @flx.reaction('obs_overlays')
+  def on_obs_overlays(self, *events):
+    for ev in events:
+      self.chaos_config['obs_overlays'] = ev.new_value
+      self.update_obs_overlays(ev.new_value)
 
   @flx.reaction('ui_rate')
   def on_ui_rate(self, *events):
     for ev in events:
       self.chaos_config["ui_rate"]  = ev.new_value
+      self.update_ui_rate(ev.new_value)
       
   @flx.reaction('ui_port')
   def on_ui_port(self, *events):
     for ev in events:
       self.chaos_config['ui_port']  = ev.new_value
-
-  @flx.action
-  def change_pi_host(self, new_value):
-    logging.debug(f'Changing pi host address to {new_value}')
-    self.chaos_config['pi_host']  = new_value
-    self.set_pi_host(new_value)
-
-  @flx.action
-  def change_listen_port(self, new_value):
-    logging.debug(f'Changing chaos engine listen port to {new_value}')
-    self.chaos_config['listen_port']  = new_value
-    self.set_listen_port(new_value)
-
-  @flx.action
-  def change_talk_port(self, new_value):
-    logging.debug(f'Changing chaos engine talk port to {new_value}')
-    self.chaos_config['talk_port']  = new_value
-    self.set_talk_port(new_value)
+      self.update_ui_port(ev.new_value)
 
   # Emitters to relay events to all participants.
+  @flx.emitter
+  def update_game_name(self, value):
+    return dict(value=value)
 
   @flx.emitter
-  def update_mod_times(self, value):
+  def update_game_errors(self, value):
     return dict(value=value)
 
   @flx.emitter
@@ -683,7 +755,7 @@ class ChaosRelay(flx.Component):
   @flx.emitter
   def update_mod_times(self, value):
     return dict(value=value)
-    
+
   @flx.emitter
   def update_votes(self, value):
     return dict(value=value)
@@ -712,4 +784,114 @@ class ChaosRelay(flx.Component):
   def update_connected_bright(self, value):
     return dict(value=value)
     
+  @flx.emitter
+  def update_num_active_mods(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_time_per_modifier(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_softmax_factor(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_vote_options(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_voting_type(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_bits_redemptions(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_bits_per_credit(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_multiple_credits(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_points_redemptions(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_points_reward_title(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_raffles(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_raffle_time(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_redemption_cooldown(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_channel_name(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_bot_name(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_bot_oauth(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_pubsub_oauth(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_vote_time(self, value):
+    return dict(value=value)
+    
+  @flx.emitter
+  def update_pi_host(self, value):
+    return dict(value=value)
 
+  @flx.emitter
+  def update_listen_port(self, value):
+    return dict(value=value)
+
+  @flx.emitter
+  def update_talk_port(self, value):
+    return dict(value=value)
+
+  @flx.emitter
+  def update_announce_candidates(self, value):
+    return dict(value=value)
+
+  @flx.emitter
+  def update_announce_winner(self, value):
+    return dict(value=value)
+
+  @flx.emitter
+  def update_obs_overlays(self, value):
+    return dict(value=value)
+
+  @flx.emitter
+  def update_ui_rate(self, value):
+    return dict(value=value)
+
+  @flx.emitter
+  def update_ui_port(self, value):
+    return dict(value=value)
+
+  @flx.emitter
+  def update_need_save(self, value):
+    return dict(value=value)
+
+  @flx.emitter
+  def update_new_game_data(self, value):
+    return dict(value=value)
