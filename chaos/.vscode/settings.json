@@ -75,7 +75,8 @@
     "typeinfo": "cpp",
     "variant": "cpp",
     "*.ipp": "cpp",
-    "regex": "cpp"
+    "regex": "cpp",
+    "forward_list": "cpp"
   },
   "search.exclude": {
     "**/_deps": true

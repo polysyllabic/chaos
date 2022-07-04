@@ -27,19 +27,42 @@
 namespace Chaos {
   class Game;
   /**
-   * A modifier that enables child modifiers, either from a specific list or randomly selected.
+   * \brief A modifier that enables child modifiers, either from a specific list or randomly selected.
+   * 
+   * The following keys are defined for this class of modifier:
+   *
+   * - name: A unique string identifying this mod. (_Required_)
+   * - description: An explanatation of the mod for use by the chat bot. (_Required_)
+   * - type = "parent" (_Required_)
+   * - groups: A list of functional groups to classify the mod for voting. (_Optional_)
+   * - children: A list of specific child modifiers
+   * - random: A boolean. If true, selects value number of child mods at random
+   * 
+   * Notes:
+   * During the lifetime of the mod, child modifiers listed in _children_ will be processed in the order
+   * that they are specified in the TOML file. If both specific child mods and random mods are specified,
+   * the random mods will be processed after the explicit child mods.
    */
   class ParentModifier : public Modifier::Registrar<ParentModifier> {
   protected:
-    std::vector<Modifier*> children;
+    std::vector<std::shared_ptr<Modifier>> fixed_children;
+    std::vector<std::shared_ptr<Modifier>> random_children;
     
+    bool random_selection;
+    short num_randos;
+
+    void buildRandomList();
   public:
     ParentModifier(toml::table& config, EngineInterface* e);
 
     static const std::string mod_type;
     const std::string& getModType() { return mod_type; }
 
+    bool randomSelection() { return random_selection; }
+    
     void begin();
-
+    void update();
+    void finish();
+    bool tweak(DeviceEvent& event);
   };
 };

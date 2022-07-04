@@ -105,6 +105,13 @@ namespace Chaos {
     } 
 
     /**
+     * \brief Get the list of mods that are currently active
+     * 
+     * \return std::list<std::shared_ptr<Modifier>> 
+     */
+    std::list<std::shared_ptr<Modifier>>& getActiveMods() { return modifiers; }
+
+    /**
      * \brief Insert a new event into the event queue
      * 
      * \param event The fake event to insert
@@ -132,6 +139,14 @@ namespace Chaos {
     
     void setOn(std::shared_ptr<GameCommand> command) {
       controller.setOn(command);
+    }
+
+    std::shared_ptr<Modifier> getModifier(const std::string& name) {
+      return game.getModifier(name);
+    }
+
+    std::unordered_map<std::string, std::shared_ptr<Modifier>>& getModifierMap() {
+      return game.getModifierMap();
     }
 
     std::shared_ptr<MenuItem> getMenuItem(const std::string& name) {

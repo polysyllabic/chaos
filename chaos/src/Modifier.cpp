@@ -42,7 +42,7 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
   parent = nullptr;
   totalLifespan = -1;    // An erroneous value that if set should be positive
   lock_while_busy = true;
-  
+  allow_recursion = true;
   name = config["name"].value_or("NAME NOT FOUND");
 
   description = config["description"].value_or("Description not available");

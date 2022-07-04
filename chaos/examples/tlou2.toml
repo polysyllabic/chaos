@@ -2100,6 +2100,15 @@ type = "menu"
 menu_items = [{entry = "navigation assistance", value=1 }]
 unlisted = true
 
+# === Delay Modifiers ===
+#
+# Delay modifiers introduce a delay between when the controller input is pressed and when
+# it is passed on to the console
+#
+# In addition to the general parameters required for all modules, the following parameters are
+# defined:
+# - delay: The delay time in seconds
+#
 [[modifier]]
 name = "Input Delay"
 description = "Introduces a 0.2 second delay to the controller"
@@ -2164,6 +2173,27 @@ groups = [ "debuff", "movement", "view" ]
 appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
 delay = 0.2
 
+# === Parent Modifiers ===
+#
+# Parent modifiers are container mods that execute a series of child modifiers, either from a
+# specific list, randomly selected, or both.
+#
+# In addition to the keys defined for all modifiers, the following keys are recognized for this
+# type:
+#
+# - children: A list of specific child modifiers.
+# - random: A boolean. If true, selects value number of child mods at random
+# - value: Number of random mods to select.
+#
+# Notes:
+# A new set of random mods is selected each time the modifier is applied.
+#
+# During the lifetime of the mod, child modifiers listed in _children_ will be processed in the order
+# that they are specified in the TOML file. If both specific child mods and random mods are specified,
+# the random mods will be processed after the explicit child mods.
+#
+# If you have specific child modifiers that should only be used as part of a parent mod, you can mark
+# those children as 'unlisted' so they do not appear for selection for voting.
 [[modifier]]
 name = "Mystery"
 description = "Applies a random modifier"

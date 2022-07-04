@@ -325,6 +325,11 @@ namespace Chaos {
      */
     double totalLifespan;
     
+    /**
+     * \brief Should this mod be allowed as a child modifier
+     */
+    bool allow_recursion;
+
     EngineInterface* engine;
 
     /**
@@ -561,6 +566,9 @@ namespace Chaos {
      * If the #unless_conditions list is empty, always returns false.
      */
     bool inUnless();
+    
+    bool allowRecursion() { return allow_recursion; }
+    void setRecursion(bool recursion) { allow_recursion = recursion; }
     
     /**
      * \brief Get the metadata about this mod as a Json object

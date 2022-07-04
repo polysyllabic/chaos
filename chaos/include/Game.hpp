@@ -87,6 +87,10 @@ namespace Chaos {
      */
     std::shared_ptr<Modifier> getModifier(const std::string& name) { return modifiers.getModifier(name); }
 
+    int getNumModifiers() { return modifiers.getNumModifiers(); } 
+
+    std::unordered_map<std::string, std::shared_ptr<Modifier>>& getModifierMap() { return modifiers.getModMap();}
+
     Json::Value getModList() { return modifiers.getModList(); }
 
     GameCommandTable& getGameCommandTable() { return game_commands; }

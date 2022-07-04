@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <list>
 #include "DeviceEvent.hpp"
 
 // This gathers all the various data into a single facade run through the engine
@@ -37,12 +38,18 @@ namespace Chaos {
   
   class EngineInterface {
   public:
+    // Engine status
+    virtual bool isPaused() = 0;
     virtual void fakePipelinedEvent(DeviceEvent& event, std::shared_ptr<Modifier> sourceMod) = 0;
     // These functions access the controller
     virtual short getState(uint8_t id, uint8_t type) = 0;
     virtual bool eventMatches(const DeviceEvent& event, std::shared_ptr<GameCommand> command) = 0;
     virtual void setOff(std::shared_ptr<GameCommand> command) = 0;
     virtual void setOn(std::shared_ptr<GameCommand> command) = 0 ;
+    // Functions to get modifier data
+    virtual std::shared_ptr<Modifier> getModifier(const std::string& name) = 0;
+    virtual std::unordered_map<std::string, std::shared_ptr<Modifier>>& getModifierMap() = 0;
+    virtual std::list<std::shared_ptr<Modifier>>& getActiveMods() = 0;
     // These functions access the menu system
     virtual std::shared_ptr<MenuItem> getMenuItem(const std::string& name) = 0;
     virtual void setMenuState(std::shared_ptr<MenuItem> item, unsigned int new_val) = 0;

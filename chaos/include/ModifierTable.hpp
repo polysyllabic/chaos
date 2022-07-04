@@ -54,6 +54,10 @@ namespace Chaos {
      */
     std::shared_ptr<Modifier> getModifier(const std::string& name);
 
+    std::unordered_map<std::string, std::shared_ptr<Modifier>>& getModMap() { return mod_map; }
+
+    int getNumModifiers() { return mod_map.size(); }
+
     /**
      * Return list of modifiers for the chat bot.
      */

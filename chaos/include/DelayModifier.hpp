@@ -36,13 +36,13 @@ namespace Chaos {
    * passed to the controller.
    *
    * Example TOML definition:
-   * [[modifier]]
-   * name = "Shooting Delay"
-   * description = "Introduces a 0.5 second delay to shooting and throwing"
-   * type = "delay"
-   * groups = [ "debuff", "combat" ]
-   * appliesTo = [ "shoot/throw" ]	
-   * delay = 0.5
+   *     [[modifier]]
+   *     name = "Shooting Delay"
+   *     description = "Introduces a 0.5 second delay to shooting and throwing"
+   *     type = "delay"
+   *     groups = [ "debuff", "combat" ]
+   *     appliesTo = [ "shoot/throw" ]	
+   *     delay = 0.5
    *
    * The following keys are defined for this class of modifier:
    *
