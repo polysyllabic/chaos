@@ -141,7 +141,6 @@ add_executable(chaos include/config.hpp
   include/GameCondition.hpp
   include/GameConditionTable.hpp
   include/GameMenu.hpp
-  include/InvertModifier.hpp
   include/MenuInterface.hpp
   include/MenuItem.hpp
   include/MenuModifier.hpp
@@ -150,6 +149,7 @@ add_executable(chaos include/config.hpp
   include/ParentModifier.hpp 
   include/RemapModifier.hpp
   include/RepeatModifier.hpp
+  include/ScalingModifier.hpp
   include/Sequence.hpp
   include/SequenceModifier.hpp
   include/SequenceTable.hpp
@@ -174,7 +174,6 @@ add_executable(chaos include/config.hpp
   src/GameCondition.cpp
   src/GameConditionTable.cpp
   src/GameMenu.cpp
-  src/InvertModifier.cpp
   src/MenuItem.cpp
   src/MenuModifier.cpp
   src/Modifier.cpp
@@ -182,6 +181,7 @@ add_executable(chaos include/config.hpp
   src/ParentModifier.cpp
   src/RemapModifier.cpp
   src/RepeatModifier.cpp
+  src/ScalingModifier.cpp
   src/Sequence.cpp
   src/SequenceModifier.cpp
   src/SequenceTable.cpp

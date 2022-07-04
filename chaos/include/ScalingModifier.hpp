@@ -28,28 +28,33 @@
 namespace Chaos {
   class Game;
   /** 
-   * \brief A modifier that inverts an axis-based command.
+   * \brief A modifier that modifies incomming signals according to a linear formula.
    *
-   * The following fields are used to define an invert modifier in the TOML file:
-   *
+   * The incoming signal, x, will be transformed to $amplitude * x + offset$ and clipped to the
+   * min/max values of the signal.
+   * 
    * The following keys are defined for this class of modifier:
    *
    * - name: A unique string identifying this mod. (_Required_)
    * - description: An explanatation of the mod for use by the chat bot. (_Required_)
-   * - type = "cooldown" (_Required_)
+   * - type = "scaling" (_Required_)
    * - groups: A list of functional groups to classify the mod for voting. (_Optional_)
    * - appliesTo: A commands affected by the mod. (_Required_)
-   * - type = "disable"
-   * - disableOnStart: A boolean value that, if true, sends a disable signal to any commands in the
-   * appliesTo list during the begin() routine. (_Optional_)
-   * - disableOnFinish: A boolean value that, if true, sends a disable signal to any commands in the
-   * appliesTo list during the finish() routine. (_Optional_)
+   * - amplitude: Amount to multiply the incoming signal by (_Optional. Default = 1_)
+   * - offset: Ammount to add to the incomming signal (_Optional. Default = 0_)
+   * - beginSequence: A sequence of button presses to apply during the begin() routine. (_Optional_)
+   * - finishSequence: A sequence of button presses to apply during the finish() routine. (_Optional_)
+   * - unlisted: A boolian that, if true, will cause the mod not to be reported to the chaos interface (_Optional_)
    */
-  class InvertModifier : public Modifier::Registrar<InvertModifier> {
-
+  class ScalingModifier : public Modifier::Registrar<ScalingModifier> {
+  private:
+    float amplitude;
+    float offset;
+    short sign_tweak;
+    
   public:
     
-    InvertModifier(toml::table& config, EngineInterface* e);
+    ScalingModifier(toml::table& config, EngineInterface* e);
 
     static const std::string mod_type;
     const std::string& getModType() { return mod_type; }

@@ -17,33 +17,39 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdexcept>
+#include <cmath>
 #include <plog/Log.h>
 #include <toml++/toml.h>
 
-#include "InvertModifier.hpp"
+#include "config.hpp"
+#include "ScalingModifier.hpp"
 #include "EngineInterface.hpp"
 #include "TOMLUtils.hpp"
 
 using namespace Chaos;
 
-const std::string InvertModifier::mod_type = "invert";
+const std::string ScalingModifier::mod_type = "scaling";
 
-InvertModifier::InvertModifier(toml::table& config, EngineInterface* e) {
+ScalingModifier::ScalingModifier(toml::table& config, EngineInterface* e) {
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence", "unlisted"});
+      "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence",
+      "unlisted", "amplitude", "offset"});
   initialize(config, e);
 
   if (commands.empty()) {
     throw std::runtime_error("No commands defined in appliesTo");
   }
 
+  amplitude = config["amplitude"].value_or(1.0);
+  offset = config["offset"].value_or(0.0);
+  sign_tweak = (amplitude < 0.0) ? 1 : 0;
 }
 
-bool InvertModifier::tweak(DeviceEvent& event) {
+bool ScalingModifier::tweak(DeviceEvent& event) {
   // Traverse the list of affected commands
   for (auto& cmd : commands) {
-    if (engine->eventMatches(event, cmd)) {
-      event.value = -((int)event.value+1);
+    if (engine->eventMatches(event, cmd)) {     
+      event.value = fmin(fmax((int)(amplitude * (event.value+sign_tweak) + offset), JOYSTICK_MIN), JOYSTICK_MAX);
       break;
     }
   }
