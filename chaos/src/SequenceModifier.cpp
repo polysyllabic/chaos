@@ -57,7 +57,6 @@ void SequenceModifier::begin() {
   sequence_time = 0;
   sequence_step = 0;
   sequence_state = SequenceState::UNTRIGGERED;
-  sendBeginSequence();
 }
 
 void SequenceModifier::update() {
@@ -71,21 +70,16 @@ void SequenceModifier::update() {
   case SequenceState::UNTRIGGERED:
     // If there is no condition, this will also return true
     if (inCondition()) {
-      if (start_delay == 0) {
-        // go straight into the sequence
-        sequence_state = SequenceState::IN_SEQUENCE;
-      } else {
-        // delay before starting the sequence
-        sequence_state = SequenceState::STARTING;
-      }
-      PLOG_DEBUG << "Condition met after waiting " << sequence_time;
+      // go straight into the sequence if no delay
+      sequence_state = (start_delay == 0) ? SequenceState::IN_SEQUENCE :
+                                            SequenceState::STARTING;
+      PLOG_DEBUG << "Condition met after waiting " << sequence_time << " seconds";
       sequence_time = 0;
     }
-    break;
   case SequenceState::STARTING:
     // In the starting state, we wait for any initial delay before the sequence starts
     if (sequence_time >= start_delay) {
-      PLOG_DEBUG << "Waiting " << start_delay << " to start sequence";
+      PLOG_DEBUG << "Waiting " << start_delay << " seconds to start sequence";
       sequence_state = SequenceState::IN_SEQUENCE;
       sequence_time = 0;
     }
@@ -107,21 +101,28 @@ case SequenceState::IN_SEQUENCE:
       sequence_state = SequenceState::UNTRIGGERED;
       sequence_time = 0;
       sequence_step = 0;
+            
     }
   }
 }
 
-void SequenceModifier::finish() {
-  sendFinishSequence();
-}
-
 bool SequenceModifier::tweak(DeviceEvent& event) {
+
+  if (sequence_state == SequenceState::UNTRIGGERED) {
+    // If there is no condition, this will also return true
+    if (inCondition()) {
+      // go straight into the sequence if no delay
+      sequence_state = (start_delay == 0) ? SequenceState::IN_SEQUENCE :
+                                            SequenceState::STARTING;
+      PLOG_DEBUG << "Condition met after waiting " << sequence_time << " seconds";
+      sequence_time = 0;
+    }
+  }
+  // While in sequence, drop selected signals
   if (sequence_state == SequenceState::IN_SEQUENCE) {
     if (lock_all) {
-      // drop all signals while in sequence
       return false;
     } else {
-      // while in the sequence, block the commands in the while-busy list
       for (auto& cmd : block_while) {
         if (engine->eventMatches(event, cmd)) {
           return false;

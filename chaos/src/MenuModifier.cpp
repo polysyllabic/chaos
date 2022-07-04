@@ -61,9 +61,6 @@ MenuModifier::MenuModifier(toml::table& config, EngineInterface* e) {
 }
 
 void MenuModifier::begin() {
-  // Perform any non-menu-related actions
-  sendBeginSequence();
-
   // Execute all menu actions
   PLOG_DEBUG << "Doing menu actions for begin";
   for (auto const& [item, val] : menu_items) {
@@ -72,8 +69,6 @@ void MenuModifier::begin() {
 }
 
 void MenuModifier::finish() {
-  sendFinishSequence();
-
   if (reset_on_finish) {
     PLOG_DEBUG << "Reset menu for finish";
     for (auto const& [item, val] : menu_items) {

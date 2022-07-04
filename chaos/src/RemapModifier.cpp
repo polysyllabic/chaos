@@ -152,10 +152,9 @@ void RemapModifier::begin() {
     value.to_console =  *it;
     buttons.erase(it);
   }
+  // apply our remaps to the main remap table
   apply();
-  sendBeginSequence();
 }
-
 
 // Apply our remaps to the main remap table. This routine is called both in begin() and whenever
 // another mod is removed from the active list in order to make sure that we can remove our remaps
@@ -170,6 +169,5 @@ void RemapModifier::finish() {
   // When we remove ourselves, we reset the *entire* remap table to nothing. Any remaining remap
   // mods that are active will then reapply themselves when their apply functions are called.
   engine->clearRemaps();
-  sendFinishSequence();
 }
 

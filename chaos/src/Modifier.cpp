@@ -110,8 +110,20 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
   on_finish = engine->createSequence(config, "finishSequence", false);  
 }
 
-// The chaos engine calls this routine directly, and we dispatch to the appropriate
-// update routine here.
+// The chaos engine calls the underscored routines directly, giving us a chance to perform general
+// actions for all mods. From there we dispatch to the appropriate child routine by invoking the
+// virtual functions.
+void Modifier::_begin() {
+  PLOG_DEBUG << "Resetting timer for " << name;
+  timer.initialize();
+  pauseTimeAccumulator = 0;
+  begin();
+  sendBeginSequence();
+}
+
+// Default implementations of virtual functions do nothing
+void Modifier::begin() {}
+
 void Modifier::_update(bool wasPaused) {
   timer.update();
   if (wasPaused) {
@@ -120,24 +132,38 @@ void Modifier::_update(bool wasPaused) {
   update();
 }
 
-
-void Modifier::_begin() {
-  PLOG_DEBUG << "resetting timer for " << name;
-  timer.initialize();
-  pauseTimeAccumulator = 0;
-  begin();
-}
-
-// Default implementations of virtual functions do nothing
-void Modifier::begin() {}
-
 void Modifier::update() {}
+
+void Modifier::_finish() {
+  sendFinishSequence();
+  finish();
+}
 
 void Modifier::finish() {}
 
+void Modifier::_apply() {
+  apply();
+}
+
 void Modifier::apply() {}
 
-bool Modifier::tweak( DeviceEvent& event ) {
+bool Modifier::_tweak(DeviceEvent& event) {
+  // Traverse the list of persistent game conditions and see if the event matches an on or off
+  // event. If it does, we update the game state accordingly
+  if (!conditions.empty()) {
+    for (auto& c : conditions) {
+      c->updateState(event);
+    }
+  }
+  if (!unless_conditions.empty()) {
+    for (auto& c : unless_conditions) {
+      c->updateState(event);
+    }
+  }
+  return tweak(event);
+}
+
+bool Modifier::tweak(DeviceEvent& event) {
    return true;
 }
 
@@ -160,20 +186,6 @@ void Modifier::sendFinishSequence() {
   }
 }
 
-// Traverse the list of persistent game conditions and see if the event matches an on or off
-// event. If it does, we update the game state accordingly
-void Modifier::updatePersistent() {
-  if (!conditions.empty()) {
-    for (auto& c : conditions) {
-      c->updateState();
-    }
-  }
-  if (!unless_conditions.empty()) {
-    for (auto& c : unless_conditions) {
-      c->updateState();
-    }
-  }
-}
 
 ConditionCheck Modifier::getConditionTest(const toml::table& config, const std::string& key) {
   std::optional<std::string_view> ttype = config[key].value<std::string_view>();

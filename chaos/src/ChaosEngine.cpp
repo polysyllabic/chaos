@@ -130,12 +130,12 @@ void ChaosEngine::doAction() {
       PLOG_INFO << "Removing modifier: " << front->getName() << " lifetime = " << front->lifetime();
       lock();
       // Do cleanup for this mod, if necessary
-      front->finish();
+      front->_finish();
       // delete front;
       modifiers.pop_front();
       // Execute apply() on remaining modifiers for post-removal actions
       for (auto& m : modifiers) {
-	      m->apply();
+	      m->_apply();
       }
       unlock();
     }
@@ -177,7 +177,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
     valid = remapEvent(output);
     if (valid) {
       for (auto& mod : modifiers) {
-	      valid = (*mod).tweak(output);
+	      valid = (*mod)._tweak(output);
 	      if (!valid) {
 	        break;
 	      }
@@ -201,7 +201,7 @@ void ChaosEngine::fakePipelinedEvent(DeviceEvent& event, std::shared_ptr<Modifie
     
     // iterate from the next element till the end and apply any tweaks
     for ( mod++; mod != modifiers.end(); mod++) {
-      valid = (*mod)->tweak(event);
+      valid = (*mod)->_tweak(event);
       if (!valid) {
 	      break;
       }

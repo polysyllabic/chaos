@@ -45,10 +45,6 @@ DelayModifier::DelayModifier(toml::table& config, EngineInterface* e) {
   PLOG_VERBOSE << " - delay: " << delayTime;
 }
 
-void DelayModifier::begin() {
-  sendBeginSequence();
-}
-
 void DelayModifier::update() {
   while ( !eventQueue.empty() ) {
     if( (timer.runningTime() - eventQueue.front().time) >= delayTime ) {
@@ -79,8 +75,4 @@ bool DelayModifier::tweak(DeviceEvent& event) {
     }
   }
   return true;
-}
-
-void DelayModifier::finish() {
-  sendFinishSequence();
 }

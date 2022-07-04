@@ -382,14 +382,6 @@ namespace Chaos {
      */
     bool testConditions(std::vector<std::shared_ptr<GameCondition>> conditions, ConditionCheck cond_type);
 
-    /**
-     * \brief Update the state of any persistent game conditions.
-     * 
-     * This function should be called from the tweak routines of child modifiers that can track
-     * persistent states.
-     */
-    void updatePersistent();
-
   public:
     /**
      * Get name of this mod type will be identified in the TOML file
@@ -422,15 +414,6 @@ namespace Chaos {
     double lifespan() { return totalLifespan; }
 
     /**
-     * \brief Main entry point into the update loop
-     * \param wasPaused Are we calling update for the first time after a pause?
-     *
-     * This function is called directly by the ChaosEngine class. We handle the timer housekeeping
-     * and then call the virtual update function implemented by the concrete child class.
-     */
-    void _update(bool wasPaused);
-  
-    /**
      * \brief Common entry point into the begin function
      *
      * This function is called directly by the ChaosEngine class. We handle any common
@@ -441,25 +424,87 @@ namespace Chaos {
 
     /**
      * \brief Commands to execute when the mod is first applied. 
+     * 
+     * Child classes implement this function to handle type-specific initialization.
      */
     virtual void begin();
+
+    /**
+     * \brief Main entry point into the update loop
+     * \param wasPaused Are we calling update() for the first time after a pause?
+     *
+     * This function is called directly by the ChaosEngine class. We handle the timer housekeeping
+     * and then call the virtual update() function implemented by the concrete child class. This
+     * routine also sends out any defined begin sequences _after_ invoking the virtual function,
+     * so child routines should not send that out themselves.
+     */
+    void _update(bool wasPaused);
+  
     /**
      * \brief Commands to execute at fixed intervals throughout the lifetime of the mod.
      */
     virtual void update();
+
+    /**
+     * \brief Common entry point into the finish function
+     *
+     * This function is called directly by the ChaosEngine class when a mod is being removed from
+     * the list. It gives a place to handle any common tasks required for all modifiers, after which
+     * we call the virtual finish() function implemented by the concrete child class. Note in
+     * particular that this routine will send out any defined finish sequences _before_ invoking the
+     * virtual function.
+     */
+    void _finish();
+
     /**
      * \brief Commands to execute when removing the mod from the active-mod list.
+     * 
+     * Child classes implement this function to handle type-specific initialization.
      */
     virtual void finish();
 
     /**
-     * \brief Commands to execute after another mod has executed its finish() routine and been
-     * removed from the stack of active mods.
+     * \brief Common entry point into the apply function
      *
-     * This is currently used only by remap mods to clean up the remap table in the event that
-     * more than one active mod is remapping things.
+     * This function is called directly by the ChaosEngine class after a mod has being removed from
+     * the list. It gives a place to handle any common tasks required for all modifiers, after which
+     * we call the virtual apply() function implemented by the concrete child class.
+     */
+    void _apply();
+
+    /**
+     * \brief Commands to execute after another mod has executed its finish() routine.
+     *
+     * This routine will be executed for active mods _after_ another mod is removed from the
+     * stack. It can be used to regenerate states that might be affected by that other mod. For
+     * example, it is used by remap mods to rebuild the remap table in the event that more than
+     * one active mod is remapping things.
      */ 
     virtual void apply();
+
+    /**
+     * \brief Common entry point into the tweak function
+     * \param[in,out] event The event coming from the controller to test/alter.
+     * \return true if the event is valid and should be passed on to other mods and the controller
+     * \return false if the event should be dropped and not sent to other mods or the controller
+     *
+     * This function is called directly by the ChaosEngine class for each incomming event. It
+     * gives a place to handle any common tasks required for all modifiers, such as tracking
+     * persistent states, after which we call the virtual tweak() function implemented by the
+     * concrete child class.
+     */
+    bool _tweak(DeviceEvent& event);
+    
+    /**
+     * \brief Commands to test (and potentially alter) events as necessary.
+     * \param[in,out] event The event coming from the controller to test/alter.
+     * \return true if the event is valid and should be passed on to other mods and the controller
+     * \return false if the event should be dropped and not sent to other mods or the controller
+     *
+     * This command will be called for every event coming from the controller after any events have
+     * been remapped.
+     */
+    virtual bool tweak(DeviceEvent& event);
 
     /**
      * \brief Get the name of this mod as defined in the TOML file
@@ -484,17 +529,6 @@ namespace Chaos {
     Json::Value getGroups();
     
     /**
-     * \brief Commands to test (and potentially alter) events as necessary.
-     * \param[in,out] event The event coming from the controller to test/alter.
-     * \return true if the event is valid and should be passed on to other mods and the controller
-     * \return false if the event should be dropped and not sent to other mods or the controller
-     *
-     * This command will be called for every event coming from the controller after any events have
-     * been remapped.
-     */
-    virtual bool tweak(DeviceEvent& event);
-
-    /**
      * \brief Checks the list of game conditions 
      * 
      * \return true if we're in the defined state, or if the list is empty
@@ -508,7 +542,7 @@ namespace Chaos {
      */
     bool inCondition();
     
-    /**
+        /**
      * \brief Checks the list of negative game conditions 
      * 
      * \return true if we're in the defined state

@@ -57,5 +57,7 @@ namespace Chaos {
 
     void addToVector(const toml::table& config, const std::string& key,
                      std::vector<std::shared_ptr<GameCommand>>& vec);
+    void addToMap(const toml::table& config, const std::string& key,
+                     std::unordered_map<std::shared_ptr<GameCommand>, bool>& map);
   };
 };

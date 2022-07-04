@@ -66,8 +66,6 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
 void RepeatModifier::begin() {
   press_time = 0;
   repeat_count = 0;
-  // Signals that we set to arbitrary values
-  sendBeginSequence();
 }
 
 void RepeatModifier::update() {
@@ -103,8 +101,4 @@ bool RepeatModifier::tweak(DeviceEvent& event) {
     }
   }
   return true;
-}
-
-void RepeatModifier::finish() {
-  sendFinishSequence();
 }

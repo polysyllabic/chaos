@@ -39,14 +39,6 @@ InvertModifier::InvertModifier(toml::table& config, EngineInterface* e) {
 
 }
 
-void InvertModifier::begin() {  
-  sendBeginSequence();
-}
-
-void InvertModifier::finish() {  
-  sendFinishSequence();
-}
-
 bool InvertModifier::tweak(DeviceEvent& event) {
   // Traverse the list of affected commands
   for (auto& cmd : commands) {

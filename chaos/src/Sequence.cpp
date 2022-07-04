@@ -61,12 +61,12 @@ void Sequence::addHold(std::shared_ptr<ControllerInput> signal, short value, uns
     value = (signal->getType() == ControllerSignalType::BUTTON ||
 	     signal->getType() == ControllerSignalType::THREE_STATE) ? 1 : JOYSTICK_MAX;
   }
-  PLOG_DEBUG << "Adding hold: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
+  PLOG_VERBOSE << "Adding hold: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
     << ":" << value << " for " << hold_time << " microseconds";
   events.push_back({hold_time, value, (uint8_t) signal->getButtonType(), signal->getID()});
   if (signal->getType() == ControllerSignalType::HYBRID) {
     events.push_back( {hybrid_hold, hybrid_value, TYPE_AXIS, signal->getHybridAxis()} );
-    PLOG_DEBUG << "Adding hold: " << (int) TYPE_AXIS << ": " << (int) signal->getHybridAxis()
+    PLOG_VERBOSE << "Adding hold: " << (int) TYPE_AXIS << ": " << (int) signal->getHybridAxis()
       << ":" << hybrid_value << " for " << hybrid_hold << " microseconds";
   }
 }
@@ -78,11 +78,11 @@ void Sequence::addRelease(std::shared_ptr<ControllerInput> signal, unsigned int 
     hybrid_release = release_time;
     release_time = 0;
   }
-  PLOG_DEBUG << "Adding release: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
+  PLOG_VERBOSE << "Adding release: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
     << " for " << release_time << " microseconds";
   events.push_back({release_time, 0, (uint8_t) signal->getButtonType(), signal->getID()});
   if (signal->getType() == ControllerSignalType::HYBRID) {
-    PLOG_DEBUG << "Adding release: " << TYPE_AXIS << ": " << (int) signal->getHybridAxis()
+    PLOG_VERBOSE << "Adding release: " << TYPE_AXIS << ": " << (int) signal->getHybridAxis()
       << " for " << hybrid_release << " microseconds";
     events.push_back( {hybrid_release, JOYSTICK_MIN, TYPE_AXIS, signal->getHybridAxis()} );
   }
@@ -105,9 +105,9 @@ void Sequence::send() {
 }
 
 bool Sequence::sendParallel(double sequenceTime) {
-  unsigned int elapsed = (unsigned int) sequenceTime * 1000000;
+  unsigned int elapsed = (unsigned int) sequenceTime * SEC_TO_MICROSEC;
   for (DeviceEvent& e = events[current_step]; current_step <= events.size(); e = events[++current_step]) {
-    PLOG_DEBUG << "Sending parallel step " << current_step << " type = " << e.type << " value = " << e.value;
+    PLOG_DEBUG << "Sending parallel step " << current_step << " type = " << (int) e.type << " value = " << e.value;
     if (e.isDelay()) {
       wait_until += e.time;
       // return until delay expires, then move to the next step

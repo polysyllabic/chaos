@@ -75,16 +75,7 @@ DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
   PLOG_VERBOSE << "FilterThreshold: " << filterThreshold;
 }
 
-void DisableModifier::begin() {
-  sendBeginSequence();
-}
-
-void DisableModifier::finish() {
-  sendFinishSequence();
-}
-
 bool DisableModifier::tweak (DeviceEvent& event) {
-  updatePersistent();
 
   // If the condition test returns false, or the unless test returns true, do not block
   if (inCondition() == false || inUnless() == true) {

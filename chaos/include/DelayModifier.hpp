@@ -48,7 +48,7 @@ namespace Chaos {
    *
    * - name: A unique string identifying this mod. (_Required_)
    * - description: An explanatation of the mod for use by the chat bot. (_Required_)
-   * - type = "cooldown" (_Required_)
+   * - type = "delay" (_Required_)
    * - groups: A list of functional groups to classify the mod for voting. (_Optional_)
    * - appliesTo: A list of commands affected by the mod. (_Required_)
    * - delay: Time in seconds to delay the listed commands. (_Required_)
@@ -66,10 +66,8 @@ namespace Chaos {
     static const std::string mod_type;
     const std::string& getModType() { return mod_type; }
 
-    void begin();
     void update();
     bool tweak(DeviceEvent& event);
-    void finish();
   };
 };
 

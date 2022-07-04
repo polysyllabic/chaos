@@ -96,7 +96,6 @@ namespace Chaos {
 
     void begin();
     void update();
-    void finish();
     bool tweak(DeviceEvent& event);
   };
 };

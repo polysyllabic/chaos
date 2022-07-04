@@ -119,3 +119,27 @@ void GameCommandTable::addToVector(const toml::table& config, const std::string&
   }      
 }
 
+void GameCommandTable::addToMap(const toml::table& config, const std::string& key,
+                                   std::unordered_map<std::shared_ptr<GameCommand>, bool>& map) {
+      
+  if (config.contains(key)) {
+    const toml::array* cmd_list = config.get(key)->as_array();
+    if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
+      throw std::runtime_error(key + " must be an array of strings");
+   	}
+	
+    for (auto& elem : *cmd_list) {
+      std::optional<std::string> cmd = elem.value<std::string>();
+      assert(cmd);
+      // check that the string matches the name of a previously defined object
+   	  std::shared_ptr<GameCommand> item = getCommand(*cmd);
+      if (item) {
+        map.insert({item, false});
+        PLOG_VERBOSE << "Added '" + *cmd + "' to the " + key + " map.";
+      } else {
+        throw std::runtime_error("Unrecognized command: " + *cmd + " in " + key);
+     	}
+    }
+  }      
+}
+

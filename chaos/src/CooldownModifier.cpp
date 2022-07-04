@@ -63,7 +63,6 @@ void CooldownModifier::begin() {
   pressedState = engine->getState(cooldownCommand.id, cooldownCommand.type);
   cooldownTimer = 0.0;
   inCooldown = false;
-  sendBeginSequence();
 }
 
 void CooldownModifier::update() {
@@ -96,8 +95,4 @@ bool CooldownModifier::tweak(DeviceEvent& event) {
     return inCooldown == false;
   }
   return true;
-}
-
-void CooldownModifier::finish() {
-  sendFinishSequence();
 }

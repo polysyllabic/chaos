@@ -61,7 +61,7 @@ touchpad_skew = 30
 # can intercept and modify. This gives a game-specific semantic interpretation to the signals
 # that the game expects to receive. For example, you can associate "interact" with TRIANGLE.
 # Note that these commands are currently always simple. They associate one button press or axis
-# event with one command. They do not currently support associating simultaneous presses of
+# event with one command. To model more complex sequences, They do not currently support associating simultaneous presses of
 # controls with one command. Currently, those states are modeled by checking for a condition
 # when a particular signal comes in. For example, "shoot" in TLOU2 is equivalent to "reload/toss"
 # with the condition "aiming".
@@ -201,27 +201,33 @@ binding = "DY"
 #--------------------------------------------------------------------------------------------------
 # Game Conditions
 #
-# Tests the state of the game for particular conditions. Conditions can be transient, reflecting
-# the real-time state of the controller, or persistent. Persistent conditions remember previous
-# controller actions, such as selecting a weapon, that may not be reflected in the current state of
-# the controller. Because conditions are defined in terms of game commands rather the raw buttons,
-# conditions account for remapping of inputs performed by some mods.
+# Conditions are used to test the state of the game for particular controller states. For example,
+# aiming a weapon is a common condition that occurs with other events and changes the meaning of an
+# incomming signal, e.g., you shoot the weapon when aiming but reload it when not aiming.
 #
 # The following keys are defined:
 # - name: The name by which the condition is identified in the TOML file. (Required)
-# - persistent: Boolean value to indicate whether the condition's state persists after being
-# triggered. (Optional, default = false)
-# - trueOn: An array of commands that will be tested to determine if the condition is true. The
-# commands must be in an array even if there is only one command. Persistent commands set a game
-# state to true when this command state transitions from false to true. Non-persistent commands
-# test the current state of the controller for this command. (Required)
-# - trueOff: For persistent conditions, an array of commands that will be tested to determine
-# when the condition is reset to false. (Optional)
+# - trigger_on: A condition that sets a state variable that can function as a trigger. If the
+#   'clear_on' list is defined, this state persists as true until either the clear_on conditions
+#   are met. Otherwise, the state automatically resets after the trigger has been processed. If
+#   more than one command is in the 'trigger_on' list, all incomming events must be received before
+#   the event triggers, and a partially triggered condition will be canceled if new incomming events
+#   undo the earlier partial trigger. If 'trigger_on' is not defined, either 'while' or 'while_not'
+#   must be, and vice versa. (Optional)
+# - clear_on: A condition that sets the state variable to false. This can contain different commands
+#   from those in 'trigger_on'. If used, trigger_on must also be defined. (Optional)
+# - while: A list of commands that must be true according to the real-time state of the controller,
+#   potentially in addition to the conditions defined in 'trigger_on'. If 'trigger_on' is not
+#   defined, 'while' or 'while_not' must be, and vice versa. If both while/while_not and
+#   'trigger_on' are defined, the while conditions are tested at the point where all conditions in
+#   'trigger_on' are met. (Optional)
+# - while_not: A list of commands that must be FALSE according to the real-time status of the
+#   controller. This can be used together with or independently of 'while'. (Optional)
 # - threshold: The proportion of the maximum value for the particular command being tested.
-# The legal range of values is $0 \le x \le 1$. The sign of the incoming signal is accounted for
-# in the test type. Note that a threshold is really only relevant for signals that are different
-# types of axes. The states of the pure buttons are only 0 or 1.
-# - thresholdType: Defines the test applied to the threshold. The following tests are available:
+#   The legal range of values is $0 \le x \le 1$. The sign of the incoming signal is accounted for
+#   in the test type. Note that a threshold is really only relevant for signals that are different
+#   types of axes. The states of the pure buttons are only 0 or 1.
+# - threshold_type: Defines the test applied to the threshold. The following tests are available:
 #     - greater: A positive signal greater than the threshold triggers the signal. The shortcut ">"
 #       can also be used for this type.
 #     - greater_equal: A positive signal greater than or equal to the threshold triggers the signal.
@@ -234,51 +240,46 @@ binding = "DY"
 #     - distance: Calculates the Pythagorean distance of the first two signals in the condition
 #       list (this assumes that they are axes). The condition is true if this distance exceeds the
 #       threshold.
-# - testType: For a thresholdType other than DISTANCE, the logical relationship required for the
-# individual conditions. The possible values are:
-#     - ALL: All commands in the array must be past the threshold simultaneously. (Default)
-#     - ANY: One or more of the commands in the array must be past the threshold.
-#     - NONE: Note of the commands in the array must be past the threshold.
 # 
 # Notes:
-# The default threshold and thresholdType settings have the effect of returning a true condition
-# on any non-zero signal from the specified game commands.
-#
-# The commands used in conditions must be those defined without conditions of their own. This
-# requirement is both for speed of processing the conditions and to avoid the possibility of
-# infinite recursion.
+# The default threshold and threshold_type settings have the effect of returning a true condition
+# on any non-zero signal from the specified game commands. Distance thresholds currently work
+# for while/while_not and not persistent triggers.
 # 
+# Currently, the same threshold is used to test all command lists.
+#
 [[condition]]
 name = "aiming"
-trueOn = [ "aiming" ]
+while = [ "aiming" ]
 
 [[condition]]
-name = "shooting"
-trueOn = [ "aiming", "shoot" ]
+name = "shot taken"
+trigger_on = [ "shoot" ]
+while = [ "aiming" ]
 
 [[condition]]
 name = "movement"
-trueOn = [ "move forward/back", "move sideways" ]  
+while = [ "move forward/back", "move sideways" ]  
 threshold = 0.2
-thresholdType = "distance"
+threshold_type = "distance"
 
 [[condition]]
 name = "camera"
-trueOn = [ "horizontal camera", "vertical camera" ]  
+while = [ "horizontal camera", "vertical camera" ]  
 threshold = 0.2
-thresholdType = "distance"
+threshold_type = "distance"
 
 [[condition]]
 name = "gun selected"
-persistent = true
-trueOn = [ "select weapon" ]
-falseOn = [ "select consumable" ]
+trigger_on = [ "select weapon" ]
+clear_on = [ "select consumable" ]
 
 [[condition]]
 name = "consumable selected"
-persistent = true
-trueOn = [ "select consumable" ]
-falseOn = [ "select weapon" ]
+trigger_on = [ "select consumable" ]
+clear_on = [ "select weapon" ]
+
+
 
 #--------------------------------------------------------------------------------------------------
 # Sequences
@@ -297,9 +298,9 @@ falseOn = [ "select weapon" ]
 # we take control of the controller.
 [[sequence]]
 name = "disable all"
-sequence = [{ event="release", command = "interact" },       # TRIANGLE
+sequence = [{ event="release", command = "interact" },            # TRIANGLE
             { event="release", command = "crouch/prone" },        # CIRCLE
-            { event="release", command = "jump" },          # X
+            { event="release", command = "jump" },                # X
             { event="release", command = "melee" },               # SQUARE
             { event="release", command = "dodge/sprint" },        # L1
             { event="release", command = "aiming" },              # L2
@@ -1183,6 +1184,7 @@ unlisted = true
 # In addition to the general parameters required for all modules, the following parameters are
 # defined:
 #
+# disableSignals: 
 # remap: an array of inline tables defining the remapping. The following keys are defined:
 #   - from: The signal as received from the controller
 #   - to: The signal that will be sent to the console in place of the 'from' signal. If an
@@ -1193,6 +1195,24 @@ unlisted = true
 #   - threshold: Proportion of maximum axis signal before sending the signal to a button.
 #   - invert: Boolean. If true, the sign of the signal is flipped (e.g., -1 becomes 1, etc.)
 #   - sensitivity: A scaling factor. The from signal is divided by this factor during remapping
+#
+# signals: An array of signals (expected to be axes) that the remap needs to process.
+#
+# disableSignals: If true, all the signals lised in the signals list will all receive a 0 signal
+# when the mod is initialized.
+#
+# random_remap: A list of controls that will be randomly remapped among one another.
+#
+# Notes:
+# A remap modifier may specify *either* a fixed list of remaps with the "remap" key *or* a list
+# of controls that will be randomly scrambled with the "random_remap" key, but not both.
+#
+# When using random_remap, note that you can only scramble signals within the same basic class:
+# buttons or axes. Trying to scramble across input types will almost certainly break things,
+# since an axis must map to two buttons and vice versa.
+#
+# Setting 'to' or 'to_neg' to NOTHING has the effect of blocking the signal from reaching the
+# console.
 [[modifier]]
 name = "D-pad Rotate"
 description = "Rotates the D-pad inputs clockwise"
@@ -1336,6 +1356,9 @@ description = "Randomly remaps trigger/bumper buttons (L1, R1, L2, R2)"
 type = "remap"  
 random_remap = [ "L1", "L2", "R1", "R2" ]
 
+# == Formula Modifiers ==
+#
+
 [[modifier]]
 name = "Max Sensitivity"
 description = "Goodbye precision aiming. Joystick postions multiplied by 5."
@@ -1385,6 +1408,10 @@ timerAmp = 3.0
 #
 # Sequence modifiers execute an arbitrary sequence of commands, either once (at the start or end of
 # the mod's lifetime), or in a cycle.
+#
+# In addition to the general parameters required for all modules, the following parameters are
+# defined:
+#
 [[modifier]]
 name = "Desk Pop"
 description = "We honor the flag, and you crap on it when you don't shoot your gun https://www.youtube.com/watch?v=wWZTTtE5_zQ"
@@ -1403,8 +1430,8 @@ name = "Double Tap"
 description = "It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins."
 type = "sequence"
 groups = [ "combat" ]
-blockWhileBusy = [ "shoot" ]
-condition = [ "shooting" ]
+blockWhileBusy = [ "aiming", "shoot" ]
+triggers = [ "shot taken" ]
 startDelay = 0.2
 repeatSequence = [
   { event = "release", command = "shoot", delay = 1.0 },
@@ -1482,7 +1509,7 @@ description = "RIP elbows and knees. Any movement results in a prone dive."
 type = "sequence"
 groups = [ "movement" ]
 blockWhileBusy = [ "dodge/sprint", "crouch/prone" ]
-condition = [ "movement" ]
+trigger = [ "movement" ]
 cycleDelay = 1.4
 repeatSequence = [
   { event = "press", command = "dodge/sprint", delay = 0.1 },

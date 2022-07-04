@@ -86,8 +86,6 @@ namespace Chaos {
     const std::string& getModType() { return mod_type; }
 
     // virtual routines we need to override
-    void begin();
-    void finish();
     bool tweak(DeviceEvent& event);
 
   };

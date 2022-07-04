@@ -54,8 +54,6 @@ namespace Chaos {
     static const std::string mod_type;
     const std::string& getModType() { return mod_type; }
 
-    void begin();
-    void finish();
     bool tweak(DeviceEvent& event);
 
   };
