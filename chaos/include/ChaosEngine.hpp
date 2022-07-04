@@ -65,7 +65,8 @@ namespace Chaos {
     bool pause = true;
     bool pausePrimer = false;
     bool pausedPrior = false;
-
+    int primary_mods = 0;
+    
     // overridden from ControllerInjector
     bool sniffify(const DeviceEvent& input, DeviceEvent& output);
 
@@ -89,6 +90,8 @@ namespace Chaos {
      */
     void disableTPAxis(ControllerSignal tp_axis);
 
+    void removeMod(std::shared_ptr<Modifier> mod);
+
   public:
     ChaosEngine(Controller& c, const std::string& listener_endpoint,
                 const std::string& talker_endpoint);
@@ -111,6 +114,11 @@ namespace Chaos {
      * active list can also act on it.
      */
     void fakePipelinedEvent(DeviceEvent& event, std::shared_ptr<Modifier> sourceMod);
+
+    /**
+     * \brief Remove mod with the least time remaining
+     */
+    void removeOldestMod();
 
     short getState(uint8_t id, uint8_t type) { return controller.getState(id, type); }
 

@@ -59,6 +59,11 @@ void ChaosEngine::newCommand(const std::string& command) {
       lock();
       modifiers.push_back(mod);
       modifiersThatNeedToStart.push(mod);
+      // We track the mod count manually because the mod list length isn't a reliable indication of the number
+      // of active primary mods, since it may contain child mods.
+      if (++primary_mods > game.getNumActiveMods()) {
+        removeOldestMod();
+      }
       unlock();
     } else {
       PLOG_ERROR << "ERROR: Modifier not found: " << command;
@@ -106,7 +111,7 @@ void ChaosEngine::doAction() {
     return;    
   }
 
-  // initialize the mods that are waiting
+  // Initialize the mods that are waiting
   lock();
   while(!modifiersThatNeedToStart.empty()) {
     PLOG_DEBUG << "Processing new modifiers";
@@ -122,24 +127,43 @@ void ChaosEngine::doAction() {
   pausedPrior = false;
   unlock();
 	
-  // Check front element.  If timer ran out, remove it.
+  // Check front element for expiration. 
   if (modifiers.size() > 0) {
     std::shared_ptr<Modifier> front = modifiers.front();
     if ((front->lifespan() >= 0 && front->lifetime() > front->lifespan()) ||
 	      (front->lifespan()  < 0 && front->lifetime() > game.getTimePerModifier())) {
-      PLOG_INFO << "Removing modifier: " << front->getName() << " lifetime = " << front->lifetime();
-      lock();
-      // Do cleanup for this mod, if necessary
-      front->_finish();
-      // delete front;
-      modifiers.pop_front();
-      // Execute apply() on remaining modifiers for post-removal actions
-      for (auto& m : modifiers) {
-	      m->_apply();
-      }
-      unlock();
+      removeMod(front);
     }
   }
+}
+
+// Remove oldest mod whether or not it's expired. This keeps manually inserted mods from
+// going beyond the specified modifier count.
+void ChaosEngine::removeOldestMod() {
+  PLOG_DEBUG << "Finding oldest mod";
+  if (modifiers.size() > 0) {
+    std::shared_ptr<Modifier> oldest = nullptr;
+    for (auto& mod : modifiers) {
+      if (!oldest || oldest->lifetime() < mod->lifetime()) {
+        oldest = mod;
+      }
+    }
+    removeMod(oldest);
+  }
+}
+
+void ChaosEngine::removeMod(std::shared_ptr<Modifier> to_remove) {
+  PLOG_INFO << "Removing modifier: " << to_remove->getName() << " lifetime = " << to_remove->lifetime();
+  lock();
+  // Do cleanup for this mod, if necessary
+  to_remove->_finish();
+  modifiers.remove(to_remove);
+  // Execute apply() on remaining modifiers for post-removal actions
+  for (auto& mod : modifiers) {
+    mod->_apply();
+  }
+  --primary_mods;
+  unlock();
 }
 
 // Tweak the event based on modifiers
