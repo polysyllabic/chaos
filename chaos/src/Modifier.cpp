@@ -136,6 +136,7 @@ void Modifier::update() {}
 
 void Modifier::_finish() {
   sendFinishSequence();
+  PLOG_DEBUG << "Calling virtual finish function for mod " << name;
   finish();
 }
 
@@ -179,7 +180,7 @@ void Modifier::sendBeginSequence() {
 
 void Modifier::sendFinishSequence() { 
   if (! on_finish->empty()) {
-    PLOG_DEBUG << "Sending beginning sequence for " << name;
+    PLOG_DEBUG << "Sending finishing sequence for " << name;
     in_sequence = lock_while_busy;
     on_finish->send();
     in_sequence = false;

@@ -59,11 +59,6 @@ void ChaosEngine::newCommand(const std::string& command) {
       lock();
       modifiers.push_back(mod);
       modifiersThatNeedToStart.push(mod);
-      // We track the mod count manually because the mod list length isn't a reliable indication of the number
-      // of active primary mods, since it may contain child mods.
-      if (++primary_mods > game.getNumActiveMods()) {
-        removeOldestMod();
-      }
       unlock();
     } else {
       PLOG_ERROR << "ERROR: Modifier not found: " << command;
@@ -114,7 +109,7 @@ void ChaosEngine::doAction() {
   // Initialize the mods that are waiting
   lock();
   while(!modifiersThatNeedToStart.empty()) {
-    PLOG_DEBUG << "Processing new modifiers";
+    PLOG_DEBUG << "Processing new modifier.";
     modifiersThatNeedToStart.front()->_begin();
     modifiersThatNeedToStart.pop();
   }
@@ -135,13 +130,18 @@ void ChaosEngine::doAction() {
       removeMod(front);
     }
   }
+  // If we have too many mods as the result of a manual apply, remove the oldest one
+  if (modifiers.size() > game.getNumActiveMods()) {
+    removeOldestMod();
+  }
+
 }
 
 // Remove oldest mod whether or not it's expired. This keeps manually inserted mods from
 // going beyond the specified modifier count.
 void ChaosEngine::removeOldestMod() {
-  PLOG_DEBUG << "Finding oldest mod";
   if (modifiers.size() > 0) {
+    PLOG_DEBUG << "Finding oldest mod";
     std::shared_ptr<Modifier> oldest = nullptr;
     for (auto& mod : modifiers) {
       if (!oldest || oldest->lifetime() < mod->lifetime()) {
@@ -157,12 +157,14 @@ void ChaosEngine::removeMod(std::shared_ptr<Modifier> to_remove) {
   lock();
   // Do cleanup for this mod, if necessary
   to_remove->_finish();
+  PLOG_DEBUG << "Removing modifier " << to_remove->getName() << " from active mod list";
   modifiers.remove(to_remove);
+  PLOG_DEBUG << "Removed modifier " << to_remove->getName() << " from active mod list";
   // Execute apply() on remaining modifiers for post-removal actions
   for (auto& mod : modifiers) {
+    PLOG_DEBUG << "Calling _apply()" << " for " << mod->getName();
     mod->_apply();
   }
-  --primary_mods;
   unlock();
 }
 
