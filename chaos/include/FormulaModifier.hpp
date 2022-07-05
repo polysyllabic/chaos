@@ -19,6 +19,7 @@
  */
 #pragma once
 #include <string>
+#include <unordered_map>
 #include <toml++/toml.h>
 
 #include "Modifier.hpp"
@@ -26,19 +27,42 @@
 
 namespace Chaos {
 
+  enum class FormulaTypes {
+    CIRCLE, EIGHT_CURVE, JANKY
+  };
+
   /**
    * \brief Modifier that alters the signal through a formula.
    *
-   * Currently, I have not implemented a general-purpose formula parser, so the
-   * available formula types are fixed, with their parameters being set from the
-   * config file.
+   * Formula modifiers apply an offset to incoming signals according to a specified, time-dependent
+   * formula. Currently, we don't have the ability to parse a general formula, so you must select
+   * from a pre-defined formula types.
+   * 
+   * The following keys are defined for this class of modifier:
+   *
+   * - name: A unique string identifying this mod. (_Required_)
+   * - description: An explanatation of the mod for use by the chat bot. (_Required_)
+   * - type = "formula" (_Required_)
+   * - groups: A list of functional groups to classify the mod for voting. (_Optional_)
+   * - appliesTo: A commands affected by the mod. (_Required_)
+   * - amplitude: Proportion of the maximum  signal by (_Optional. Default = 1_)
+   * - period_length: Time in seconds before the formula completes its cycle (_Optional. Default = 1_)
+   * - beginSequence: A sequence of button presses to apply during the begin() routine. (_Optional_)
+   * - finishSequence: A sequence of button presses to apply during the finish() routine. (_Optional_)
+   * - unlisted: A boolian that, if true, will cause the mod not to be reported to the chaos interface (_Optional_)
+   * 
+   * Notes:
+   * Commands altered by formula modifiers should be axes only.
    */
   class FormulaModifier : public Modifier::Registrar<FormulaModifier> {
 
-  protected:
-    std::string type;
-    double magnitude;
-    double period;
+  private:
+    FormulaTypes formula_type;
+    double amplitude;
+    double period_length;
+
+    std::unordered_map<std::shared_ptr<GameCommand>, int> command_value;
+    std::unordered_map<std::shared_ptr<GameCommand>, int> command_offset;
 
   public:
     FormulaModifier(toml::table& config, EngineInterface* e);
@@ -48,6 +72,8 @@ namespace Chaos {
 
     void begin();
     void update();
+    void finish();
+    bool tweak(DeviceEvent& event);
   };
 };
 

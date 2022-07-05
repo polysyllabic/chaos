@@ -264,6 +264,12 @@ threshold = 0.2
 threshold_type = "distance"
 
 [[condition]]
+name = "fast movement"
+while = [ "move forward/back", "move sideways" ]  
+threshold = 0.75
+threshold_type = "distance"
+
+[[condition]]
 name = "camera"
 while = [ "horizontal camera", "vertical camera" ]  
 threshold = 0.2
@@ -708,12 +714,12 @@ layout = [
 # - cooldown: Allow a command for a set time then force a recharge period before it can be used again.
 # - delay: Wait for a set amount of time before sending a command.
 # - disable: Block commands from being sent to the console.
-# - formula: Alter the magnitude and/or offset of the signal through a formula
-# - invert: Invert the sign of the signal.
+# - formula: Alter the signal through a time-dependant formula
 # - menu: Apply a setting from the game's menus.
 # - parent: A mod that contains other mods as children.
 # - remap: Change which controls issue which commands.
 # - repeat: Repeat a particular command at intervals.
+# - scaling: Scale the signal through a linear formula.
 # - sequence: Issue an arbitrary sequence of actions.
 #
 # - group: A classification of that can be used by the chat bot for voting (e.g., to ensure that)
@@ -986,28 +992,70 @@ appliesTo = [ "select consumable" ]
 beginSequence = [ { event = "release", command = "select consumable" },
                   { event= "press", command = "select weapon" } ]
 
-# == Invert Modifiers
+# == Scaling Modifiers ==
 #
+# Scaling modifiers alter signals according to a linear formula, y = amplitude * x + offset,
+# where x is the true signal and y is what is sent to the console.
+#
+# In addition to the parameters defined for all modifier types, the following parameters are
+# implemented for formula modifiers.
+#
+# - amplitude: The scale factor to multiply the signal by. Default = 1.
+# - offset: A fixed offset to add to the signal. Default = 0.
+#
+# Notes: 
+# At least one of amplitude or offset must be defined.
+#
+# After transformation, the output signal is clipped to the maximum value for that signal.
+#
+# The same formula is applied to each command in the appliesTo list.
 [[modifier]]
 name = "Inverted"
 description = "Inverts the vertical axis for aiming"
-type = "invert"
+type = "scaling"
 groups = [ "view" ]
 appliesTo = [ "vertical camera" ]
+amplitude = -1
 
 [[modifier]]
 name = "Moonwalk"
 description = "Be like Michael Jackson! Trying to walk forward will actually make you go backward."
-type = "invert"
+type = "scaling"
 groups = [ "movement" ]
 appliesTo = [ "move forward/back" ]
+amplitude = -1
 
 [[modifier]]
 name = "Sideways Moonwalk"
 description = "Go left to go right and go right to go left"
-type = "invert"
+type = "scaling"
 groups = [ "movement" ]
 appliesTo = [ "move sideways" ]
+amplitude = -1
+
+[[modifier]]
+name = "Max Sensitivity"
+description = "Goodbye precision aiming. Joystick postions multiplied by 5."
+type = "scaling"
+groups = [ "movement", "view" ]
+appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
+amplitude = 5.0
+
+[[modifier]]
+name = "Min Sensitivity"
+description = "It's like slomo, but not for the enemies. Joystick positions divided by 2.5."
+type = "scaling"
+groups = [ "movement", "view" ]
+appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
+amplitude = 0.4
+
+[[modifier]]
+name = "Drift Left"
+description = "You've now got controller drift"
+type = "scaling"
+groups = ["movement"]
+appliesTo = [ "move sideways" ]
+offset = -24
 
 # == Cooldown Modifiers ==
 # A cooldown modifier allows an action for a set period of time and then blocks it until a set
@@ -1358,33 +1406,71 @@ random_remap = [ "L1", "L2", "R1", "R2" ]
 
 # == Formula Modifiers ==
 #
-
+# Formula modifiers apply an offset to incoming signals according to a specified, time-dependent formula.
+# Currently, we don't have the ability to parse a general formula, so you must select from a pre-defined
+# formula types.
+#
+# In addition to the parameters defined for all modifier types, the following parameters are
+# implemented for formula modifiers.
+#
+# - formula_type: Which type of formula to apply. (Required) The options currently implemented are:
+#    - circle: Ofsets trace a circle
+#    - eight_curve: Offsets form a figure-8 curve (Geronimo lemniscate)
+#    - janky: offsets produce an apparently unsteady (but cyclic) variation
+#
+# - period_length: Time in seconds for a complete period
+# - amplitude: Proportion of the maximum signal value
+#
+# Notes:
+# These formulas derive an x and y component to the offset, which will be applied in turn to each command in
+# the list. That is, the odd numbered items in the list will receive the x component of the formula, and the
+# even numbered components will receive the y component.
+#
 [[modifier]]
-name = "Max Sensitivity"
-description = "Goodbye precision aiming. Joystick postions multiplied by 5."
+name = "Mega Scope Sway"
+description = "Good luck landing shots"
 type = "formula"
-groups = [ "movement", "view" ]
-appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
-scaling = 5.0
-
-[[modifier]]
-name = "Min Sensitivity"
-description = "It's like slomo, but not for the enemies. Joystick positions divided by 2.5."
-type = "formula"
-groups = [ "movement", "view" ]
-appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
-scaling = 0.4
+groups = [ "combat", "view" ]
+appliesTo = [ "horizontal camera", "vertical camera" ]
+condition =  [ "aiming" ]
+formula_type = "eight curve"
+period_length = 0.5 
+amplitude = 0.5
 
 [[modifier]]
 name = "Drunk"
 description = "Random joystick motion. Also don't push things too far, or you may stumble (go prone)"
+type = "parent"
+groups = [ "movement", "view" ]
+children = ["Random Movement", "Stumblebum"]
+
+[[modifier]]
+name = "Random Movement"
+description = "Random joystick motion."
 type = "formula"
 appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
 groups = [ "movement", "view" ]
-offsetMagnitute = 78
-offsetPeriod = 2.0
-onMinMax = [ "crouch/prone" ]
-minMaxLength = 1.0
+amplitude = 78
+preiod_length = 2.0
+
+[[modifier]]
+name = "Stumblebum"
+description = "Fast movement will make you go prone"
+type = "sequence"
+groups = [ "movement"]
+blockWhileBusy = [ "dodge/sprint", "crouch/prone" ]
+trigger = [ "fast movement" ]
+cycleDelay = 0.5
+repeatSequence = [
+  { event = "press", command = "dodge/sprint", delay = 0.1 },
+  { event = "press", command = "crouch/prone", delay = 0.8 },
+  { event = "release", command = "crouch/prone"},
+  { event = "release", command = "dodge/sprint"}
+  ]
+beginSequence = [ { event = "release", command = "dodge/sprint" },
+                  { event = "release", command = "crouch/prone" }]
+finishSequence = [{ event = "release", command = "dodge/sprint" },
+                  { event = "release", command = "crouch/prone" }]
 
 [[modifier]]
 name = "TLOU1 Run Glitch"
@@ -1393,16 +1479,6 @@ type = "formula"
 groups = [ "movement", "inventory" ]
 offsetMagnitute = 1.5
 #appliesTo = [ "DX", "DY" ]
-
-[[modifier]]
-name = "Mega Scope Sway"
-description = "Good luck landing shots"
-type = "formula"
-groups = [ "combat", "view" ]
-appliesTo = [ "horizontal camera", "vertical camera" ]
-condition =  [ "aiming" ]
-offsetMagnitude = 4.0 # sin(((t+1.6)*i )*4.0) * JOYSTICK_MAX
-timerAmp = 3.0
 
 # === Sequence Modifier ===
 #
