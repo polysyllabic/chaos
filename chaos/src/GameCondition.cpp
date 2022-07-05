@@ -38,7 +38,7 @@ GameCondition::GameCondition(toml::table& config, GameCommandTable& commands) {
   PLOG_VERBOSE << "Initializing game condition " << config["name"];
   
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "while", "while_not" "trigger_on", "clear_on", "threshold", "threshold_type",
+      "name", "while", "while_not", "trigger_on", "clear_on", "threshold", "threshold_type",
       "test_type"});
   
   commands.addToMap(config, "trigger_on", trigger_on);
