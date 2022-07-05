@@ -1445,7 +1445,7 @@ groups = [ "movement", "inventory" ]
 appliesTo = [ "select weapon", "select consumable" ]
 formula_type = "circle"
 period_length = 0.25
-amplitude = 1.5
+amplitude = 1.0
 
 [[modifier]]
 name = "Random Movement"
