@@ -1447,14 +1447,6 @@ formula_type = "circle"
 period_length = 0.25
 amplitude = 1.5
 
-
-[[modifier]]
-name = "Drunk"
-description = "Random joystick motion. Also don't push things too far, or you may stumble (go prone)"
-type = "parent"
-groups = [ "movement", "view" ]
-children = ["Random Movement", "Stumblebum"]
-
 [[modifier]]
 name = "Random Movement"
 description = "Random joystick motion."
@@ -1483,6 +1475,14 @@ beginSequence = [ { event = "release", command = "dodge/sprint" },
                   { event = "release", command = "crouch/prone" }]
 finishSequence = [{ event = "release", command = "dodge/sprint" },
                   { event = "release", command = "crouch/prone" }]
+
+[[modifier]]
+name = "Drunk"
+description = "Random joystick motion. Also don't push things too far, or you may stumble (go prone)"
+type = "parent"
+groups = [ "movement", "view" ]
+children = ["Random Movement", "Stumblebum"]
+
 
 # === Sequence Modifier ===
 #
