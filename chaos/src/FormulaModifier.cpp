@@ -31,7 +31,7 @@ const std::string FormulaModifier::mod_type = "formula";
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence",
-      "formula_type", "amplitude", "period_length", "unlisted"});
+      "condition", "formula_type", "amplitude", "period_length", "unlisted"});
   initialize(config, e);
 
   if (commands.empty()) {
@@ -68,11 +68,11 @@ const std::string FormulaModifier::mod_type = "formula";
 }
 
 void FormulaModifier::begin() {
-  command_value.empty();
+  command_value.clear();
   for (auto& cmd : commands) {
     command_value[cmd] = cmd->getState();
   }
-  command_offset.empty();
+  command_offset.clear();
   for (auto& cmd : commands) {
     command_offset[cmd] = 0;
   }

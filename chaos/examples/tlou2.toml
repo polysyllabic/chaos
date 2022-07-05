@@ -1433,9 +1433,20 @@ type = "formula"
 groups = [ "combat", "view" ]
 appliesTo = [ "horizontal camera", "vertical camera" ]
 condition =  [ "aiming" ]
-formula_type = "eight curve"
+formula_type = "eight_curve"
 period_length = 0.5 
 amplitude = 0.5
+
+[[modifier]]
+name = "TLOU1 Run Glitch"
+description = "Is this an Any% speedrun of TLOU1? Rapid D-pad circular presses. Try moving while prone."
+type = "formula"
+groups = [ "movement", "inventory" ]
+appliesTo = [ "select weapons", "select consumable" ]
+formula_type = "circle"
+period_length = 0.25
+amplitude = 1.5
+
 
 [[modifier]]
 name = "Drunk"
@@ -1450,8 +1461,9 @@ description = "Random joystick motion."
 type = "formula"
 appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
 groups = [ "movement", "view" ]
-amplitude = 78
-preiod_length = 2.0
+formula_type = "janky"
+amplitude = 0.6
+period_length = 5.0
 
 [[modifier]]
 name = "Stumblebum"
@@ -1459,7 +1471,7 @@ description = "Fast movement will make you go prone"
 type = "sequence"
 groups = [ "movement"]
 blockWhileBusy = [ "dodge/sprint", "crouch/prone" ]
-trigger = [ "fast movement" ]
+condition = [ "fast movement" ]
 cycleDelay = 0.5
 repeatSequence = [
   { event = "press", command = "dodge/sprint", delay = 0.1 },
@@ -1471,14 +1483,6 @@ beginSequence = [ { event = "release", command = "dodge/sprint" },
                   { event = "release", command = "crouch/prone" }]
 finishSequence = [{ event = "release", command = "dodge/sprint" },
                   { event = "release", command = "crouch/prone" }]
-
-[[modifier]]
-name = "TLOU1 Run Glitch"
-description = "Is this an Any% speedrun of TLOU1? Rapid D-pad circular presses. Try moving while prone."
-type = "formula"
-groups = [ "movement", "inventory" ]
-offsetMagnitute = 1.5
-#appliesTo = [ "DX", "DY" ]
 
 # === Sequence Modifier ===
 #
@@ -1507,7 +1511,7 @@ description = "It's Rule #2. Everytime a shot is fired, another occurs in quick 
 type = "sequence"
 groups = [ "combat" ]
 blockWhileBusy = [ "aiming", "shoot" ]
-triggers = [ "shot taken" ]
+condition = [ "shot taken" ]
 startDelay = 0.2
 repeatSequence = [
   { event = "release", command = "shoot", delay = 1.0 },
@@ -1585,7 +1589,7 @@ description = "RIP elbows and knees. Any movement results in a prone dive."
 type = "sequence"
 groups = [ "movement" ]
 blockWhileBusy = [ "dodge/sprint", "crouch/prone" ]
-trigger = [ "movement" ]
+condition = [ "movement" ]
 cycleDelay = 1.4
 repeatSequence = [
   { event = "press", command = "dodge/sprint", delay = 0.1 },
