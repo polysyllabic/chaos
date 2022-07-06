@@ -75,12 +75,15 @@ void CooldownModifier::update() {
     cooldownTimer -= deltaT;
     if (cooldownTimer < 0.0) {
       cooldownTimer = 0.0;
+      inCooldown = false;
+      PLOG_DEBUG << "Cooldown expired";
     }
   } else {
-    if (engine->getState(cooldownCommand.id, cooldownCommand.type)) {
+    if (engine->getState(cooldownCommand.id, cooldownCommand.type)) {      
       // increment cooldown timer until time_on exceeded
       cooldownTimer += deltaT;
       if (cooldownTimer > time_on) {
+        PLOG_DEBUG << "Cooldown started";
 	      cooldownTimer = time_off;
 	      inCooldown = true;
 	      // Disable event

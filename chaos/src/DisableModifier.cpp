@@ -89,15 +89,15 @@ bool DisableModifier::tweak (DeviceEvent& event) {
         ? JOYSTICK_MIN : 0;
       switch (filter) {
       case DisableFilter::ALL:
-        PLOG_DEBUG << "Blocking " << cmd->getName() << "(" << event.type << "." << event.id << ") min_val=" << min_val;
+        PLOG_VERBOSE << "Blocking " << cmd->getName() << "(" << (int) event.type << "." << (int) event.id << ") min_val=" << min_val;
 	      event.value = min_val;
         break;
       case DisableFilter::ABOVE_THRESHOLD:
-        PLOG_DEBUG << "+ Filter of " << cmd->getName() << "(" << event.type << "." << event.id << ") min_val=" << min_val;
+        PLOG_VERBOSE << "+ Filter of " << cmd->getName() << "(" << (int)  event.type << "." << (int)  event.id << ") min_val=" << min_val;
       	event.value = (event.value > filterThreshold) ? min_val : event.value;
       	break;
       case DisableFilter::BELOW_THRESHOLD:
-        PLOG_DEBUG << "- Filter of " << cmd->getName() << "(" << event.type << "." << event.id << ") min_val=" << min_val;
+        PLOG_VERBOSE << "- Filter of " << cmd->getName() << "(" << (int)  event.type << "." << (int)  event.id << ") min_val=" << min_val;
       	event.value = (event.value < filterThreshold) ? min_val : event.value;
       }
       // No need to keep searching after a match

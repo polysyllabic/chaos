@@ -124,7 +124,7 @@ bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> command) {
   // need to check the threshold for that remapped signal.
   short threshold = getSignalThreshold(command);
   short curval = command->getState();
-  PLOG_DEBUG << "threshold for " << command->getName() << ": " << threshold << "; state = " << curval;
+  PLOG_VERBOSE << "threshold for " << command->getName() << ": " << threshold << "; state = " << curval;
   return thresholdComparison(curval, threshold);
 }
 
@@ -228,6 +228,6 @@ bool GameCondition::inCondition() {
   if (! while_not_conditions.empty()) {
     unless_state = testConditions(while_not_conditions, true);
   }
-  PLOG_DEBUG << "persistent = " << persistent_state << "; while = " << while_state << "; unless = " << unless_state;
+  PLOG_VERBOSE << "persistent = " << persistent_state << "; while = " << while_state << "; unless = " << unless_state;
   return persistent_state && while_state && unless_state;
 }

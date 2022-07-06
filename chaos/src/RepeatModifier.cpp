@@ -81,6 +81,7 @@ void RepeatModifier::update() {
       press_time = 0;
     }
   } else if (press_time > cycle_delay) {
+    PLOG_DEBUG << "resetting repeat cycle";
     repeat_count = 0;
     press_time = 0;
   }
