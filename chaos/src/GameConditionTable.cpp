@@ -92,7 +92,10 @@ void GameConditionTable::addToVector(const toml::table& config, const std::strin
       // check that the string matches the name of a previously defined object
    	  std::shared_ptr<GameCondition> item = getCondition(*cmd);
       if (item) {
-        vec.push_back(item);
+        // Make a new copy of the reference condition rather than reusing the same pointer, so that each
+        // mod has its own separate copy of the conditions' states.
+        std::shared_ptr<GameCondition> copy(new GameCondition(*item));
+        vec.push_back(copy);
         PLOG_VERBOSE << "Added '" + *cmd + "' to the " + key + " vector.";
       } else {
         throw std::runtime_error("Unrecognized condition: " + *cmd + " in " + key);

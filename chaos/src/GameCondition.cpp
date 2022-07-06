@@ -88,6 +88,7 @@ void GameCondition::reset() {
   if (trigger_on.empty()) {
     persistent_state = true;
   } else {
+    persistent_state = false;
     for (auto& it : trigger_on) {
       it.second = false;
     }

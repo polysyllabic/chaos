@@ -114,9 +114,14 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
 // actions for all mods. From there we dispatch to the appropriate child routine by invoking the
 // virtual functions.
 void Modifier::_begin() {
-  PLOG_DEBUG << "Resetting timer for " << name;
   timer.initialize();
   pauseTimeAccumulator = 0;
+  for (auto& cond : conditions) {
+    cond->reset();
+  }
+  for (auto& cond : unless_conditions) {
+    cond->reset();
+  }
   begin();
   sendBeginSequence();
 }
