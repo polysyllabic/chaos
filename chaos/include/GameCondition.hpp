@@ -155,6 +155,8 @@ namespace Chaos {
     /**
      * \brief The proportion that the threshold rule uses to test.
      * 
+     * Default is 1, i.e., maximum value.
+     * 
      * Although it would be faster to pre-convert this proportion to an integer, we need to account
      * for the possibility that a signal is remapped from one signal type to another with a
      * different maximum value.

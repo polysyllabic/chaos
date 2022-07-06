@@ -55,7 +55,7 @@ GameCondition::GameCondition(toml::table& config, GameCommandTable& commands) {
     }
   }
 
-  threshold = config["threshold"].value_or(0.0);
+  threshold = config["threshold"].value_or(1.0);
   if (threshold < 0 || threshold > 1) {
     throw std::runtime_error("Condition threshold must be between 0 and 1");
   }
@@ -124,13 +124,13 @@ bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> command) {
   // need to check the threshold for that remapped signal.
   short threshold = getSignalThreshold(command);
   short curval = command->getState();
+  PLOG_DEBUG << "threshold for " << command->getName() << ": " << threshold << "; state = " << curval;
   return thresholdComparison(curval, threshold);
 }
 
 short int GameCondition::getSignalThreshold(std::shared_ptr<GameCommand> signal) {
   // Check the threshold for the remapped control in case signals are swapped between signal classes
   std::shared_ptr<ControllerInput> remapped = signal->getRemappedSignal();
-  PLOG_DEBUG << "checking " << signal->getName() << " read on " << remapped->getName();
   return getSignalThreshold(remapped);
 }
 
@@ -141,7 +141,6 @@ short int GameCondition::getSignalThreshold(std::shared_ptr<ControllerInput> inp
   // Proportions only make sense for axes. If we've remapped from an axis to one of these and have
   // a proportion < 1, we ignore that and just use the extreme value. For the hybrid triggers, we look at the button signal.
   ControllerSignalType t = input->getType();
-  PLOG_DEBUG << "threshold for " << input->getName() << ": " << extreme;
   switch (t) {
     case ControllerSignalType::BUTTON:
     case ControllerSignalType::THREE_STATE:
