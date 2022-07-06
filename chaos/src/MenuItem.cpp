@@ -62,7 +62,7 @@ void MenuItem::decrementCounter() {
 void MenuItem::selectItem(Sequence& seq) {
     // navigate left or right through tab groups
     int delta = offset;
-    PLOG_DEBUG << name << " menu offset = " << offset;
+    PLOG_VERBOSE << name << " menu offset = " << offset;
     for (int i = 0; i < tab_group; i++) {
       menu_items.addSequence(seq, "tab right");
     }
@@ -78,7 +78,7 @@ void MenuItem::selectItem(Sequence& seq) {
       guard->setState(seq, 1);
       // adjust delta for the steps we've already made to get to the guard
       delta -= guard->getOffset();
-      PLOG_DEBUG << " - delta to guard: " << guard->getOffset() << " new delta:: " << delta;
+      PLOG_VERBOSE << " - delta to guard: " << guard->getOffset() << " new delta:: " << delta;
     }
 
     // navigate down for positive offsets

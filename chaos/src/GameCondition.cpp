@@ -103,7 +103,6 @@ bool GameCondition::thresholdComparison(short value, short threshold) {
   // This function tests only one signal at a time. It's a programming error to call us
   // if the type is DISTANCE
   assert(threshold_type != ThresholdType::DISTANCE);
-  PLOG_DEBUG << name << " value = " << value << " threshold = " << threshold;
   switch (threshold_type) {
     case ThresholdType::GREATER:
       return value > threshold;
@@ -130,6 +129,7 @@ bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> command) {
 short int GameCondition::getSignalThreshold(std::shared_ptr<GameCommand> signal) {
   // Check the threshold for the remapped control in case signals are swapped between signal classes
   std::shared_ptr<ControllerInput> remapped = signal->getRemappedSignal();
+  PLOG_DEBUG << "checking " << signal->getName() << " read on " << remapped->getName();
   return getSignalThreshold(remapped);
 }
 
@@ -140,6 +140,7 @@ short int GameCondition::getSignalThreshold(std::shared_ptr<ControllerInput> inp
   // Proportions only make sense for axes. If we've remapped from an axis to one of these and have
   // a proportion < 1, we ignore that and just use the extreme value. For the hybrid triggers, we look at the button signal.
   ControllerSignalType t = input->getType();
+  PLOG_DEBUG << "threshold for " << input->getName() << ": " << extreme;
   switch (t) {
     case ControllerSignalType::BUTTON:
     case ControllerSignalType::THREE_STATE:
@@ -227,5 +228,6 @@ bool GameCondition::inCondition() {
   if (! while_not_conditions.empty()) {
     unless_state = testConditions(while_not_conditions, true);
   }
+  PLOG_DEBUG << "persistent = " << persistent_state << "; while = " << while_state << "; unless = " << unless_state;
   return persistent_state && while_state && unless_state;
 }

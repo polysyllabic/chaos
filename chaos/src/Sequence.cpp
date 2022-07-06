@@ -93,9 +93,9 @@ void Sequence::addDelay(unsigned int delay) {
 }
 
 void Sequence::send() {
-  PLOG_DEBUG << "Sending sequence";
+  PLOG_VERBOSE << "Sending sequence";
   for (auto& event : events) {
-    PLOG_DEBUG << "Sending event for input (" << (int) event.type << ":" << (int) event.id
+    PLOG_VERBOSE << "Sending event for input (" << (int) event.type << ":" << (int) event.id
 	       << ") value=" << (int) event.value << "; sleeping for " << (int) event.time << " microseconds";
     controller.applyEvent(event);
     if (event.time) {

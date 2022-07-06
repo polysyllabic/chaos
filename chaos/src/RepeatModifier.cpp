@@ -69,15 +69,15 @@ void RepeatModifier::begin() {
 }
 
 void RepeatModifier::update() {
-
+  std::shared_ptr<GameCommand> cmd = commands.front();
   press_time += timer.dTime();
   if (repeat_count < num_cycles) {
-    if (press_time > time_on && commands[0]->getState()) {
-      engine->setOff(commands[0]);
+    if (press_time > time_on && cmd->getState()) {
+      engine->setOff(cmd);
       press_time = 0;
       repeat_count++;
     } else if (press_time > time_off && ! commands[0]->getState()) {
-      engine->setOn(commands[0]);
+      engine->setOn(cmd);
       press_time = 0;
     }
   } else if (press_time > cycle_delay) {

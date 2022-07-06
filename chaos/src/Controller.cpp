@@ -81,6 +81,7 @@ bool Controller::matches(const DeviceEvent& event, std::shared_ptr<GameCommand> 
 // Send a new event to turn off the command.
 void Controller::setOff(std::shared_ptr<GameCommand> command) {
   DeviceEvent event;
+  PLOG_DEBUG << "Turning " << command->getName() << " off";
   switch (command->getInput()->getType()) {
   case ControllerSignalType::BUTTON:
     event = {0, 0, TYPE_BUTTON, command->getInput()->getID()};
@@ -99,6 +100,7 @@ void Controller::setOff(std::shared_ptr<GameCommand> command) {
 // Send a new event to turn the command to its maximum value.
 void Controller::setOn(std::shared_ptr<GameCommand> command) {
   DeviceEvent event;
+  PLOG_DEBUG << "Turning " << command->getName() << " on";
   switch (command->getInput()->getType()) {
   case ControllerSignalType::BUTTON:
     event = {0, 1, TYPE_BUTTON, command->getInput()->getID()};
