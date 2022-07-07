@@ -193,6 +193,7 @@ class ChaosModel(EngineObserver):
       if config.relay.force_mod:
         self.replace_mod(config.relay.force_mod)
         config.relay.force_mod = ''
+        begin_time = now
 
       if self.vote_time >= config.relay.time_per_vote():
         logging.debug('Vote time expired')

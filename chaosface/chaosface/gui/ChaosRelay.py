@@ -303,7 +303,10 @@ class ChaosRelay(flx.Component):
     self.valid_data = True
 
   def sleep_time(self):
-    return 1.0/self.get_attribute('ui_rate')
+    rate = self.get_attribute('ui_rate')
+    if rate <= 0.0:
+      rate = 20.0
+    return 1.0/rate
 
   def mod_enabled(self, mod: str):
     """
