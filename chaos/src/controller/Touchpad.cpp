@@ -23,7 +23,6 @@
 
 #include "signals.hpp"
 #include "Touchpad.hpp"
-#include "GameCondition.hpp"
 
 using namespace Chaos;
 

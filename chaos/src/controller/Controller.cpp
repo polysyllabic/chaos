@@ -24,8 +24,6 @@
 
 #include "Controller.hpp"
 #include "ControllerInput.hpp"
-#include "GameCommand.hpp"
-#include "GameCondition.hpp"
 
 using namespace Chaos;
 
@@ -68,50 +66,44 @@ void Controller::addInjector(ControllerInjector* injector) {
   this->controllerInjector = injector;
 }
 
-/*
-bool Controller::matches(const DeviceEvent& event, ControllerSignal signal) {
-  std::shared_ptr<ControllerInput> sig = ControllerInput::get(signal);
-  return (event.type == sig->getButtonType() && event.id == sig->getID());
-} */
-
-bool Controller::matches(const DeviceEvent& event, std::shared_ptr<GameCommand> command) {
-  return (event.type == command->getInput()->getButtonType() && event.id == command->getInput()->getID());
+bool Controller::matches(const DeviceEvent& event, std::shared_ptr<ControllerInput> signal) {
+  return (event.type == signal->getButtonType() && event.id == signal->getID());
 }
 
 // Send a new event to turn off the command.
-void Controller::setOff(std::shared_ptr<GameCommand> command) {
+void Controller::setOff(std::shared_ptr<ControllerInput> signal) {
   DeviceEvent event;
-  PLOG_DEBUG << "Turning " << command->getName() << " off";
-  switch (command->getInput()->getType()) {
+  PLOG_DEBUG << "Turning " << signal->getName() << " off";
+  switch (signal->getType()) {
   case ControllerSignalType::BUTTON:
-    event = {0, 0, TYPE_BUTTON, command->getInput()->getID()};
+    event = {0, 0, TYPE_BUTTON, signal->getID()};
     break;
   case ControllerSignalType::HYBRID:
-    event = {0, 0, TYPE_BUTTON, command->getInput()->getID()};
+    event = {0, 0, TYPE_BUTTON, signal->getID()};
     applyEvent(event);
-    event = {0, JOYSTICK_MIN, TYPE_AXIS, command->getInput()->getHybridAxis()};
+    event = {0, JOYSTICK_MIN, TYPE_AXIS, signal->getHybridAxis()};
     break;
   default:
-    event = {0, 0, TYPE_AXIS, command->getInput()->getID()};
+    event = {0, 0, TYPE_AXIS, signal->getID()};
   }
   applyEvent(event);
 }
 
 // Send a new event to turn the command to its maximum value.
-void Controller::setOn(std::shared_ptr<GameCommand> command) {
+void Controller::setOn(std::shared_ptr<ControllerInput> signal) {
   DeviceEvent event;
-  PLOG_DEBUG << "Turning " << command->getName() << " on";
-  switch (command->getInput()->getType()) {
+  PLOG_DEBUG << "Turning " << signal->getName() << " on";
+  switch (signal->getType()) {
   case ControllerSignalType::BUTTON:
-    event = {0, 1, TYPE_BUTTON, command->getInput()->getID()};
+    event = {0, 1, TYPE_BUTTON, signal->getID()};
     break;
   case ControllerSignalType::HYBRID:
-    event = {0, 1, TYPE_BUTTON, command->getInput()->getID()};
+    event = {0, 1, TYPE_BUTTON, signal->getID()};
     applyEvent(event);
-    event = {0, JOYSTICK_MAX, TYPE_AXIS, command->getInput()->getHybridAxis()};
+    event = {0, JOYSTICK_MAX, TYPE_AXIS, signal->getHybridAxis()};
     break;
   default:
-    event = {0, JOYSTICK_MAX, TYPE_AXIS, command->getInput()->getID()};
+    event = {0, JOYSTICK_MAX, TYPE_AXIS, signal->getID()};
   }
   applyEvent(event);
 }

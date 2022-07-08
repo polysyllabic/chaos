@@ -56,7 +56,7 @@ namespace Chaos {
    * trigger the remapping.
    *   - to_min (optional): When mapping buttons-to-axis, if true, the axis is set to the joystick
    * minimum. If false, it is set to the joystick maximum.
-   *   - scale (optional): A divisor that scales the incomming accelerometer signal down.
+   *   - sensitivity (optional): A divisor that scales the incomming accelerometer signal down.
    *   .
    * - random_remap: A list of controls that will be randomly remapped among one another.
    * 
@@ -70,6 +70,7 @@ namespace Chaos {
    * Note that remapping is done by controller signal, not game command. Setting 'to' or 'to_neg' to
    * NOTHING has the effect of blocking the signal from reaching the console.
    * 
+   * \todo Scale touchpad remapping differently while aiming
    * 
    */
   class RemapModifier : public Modifier::Registrar<RemapModifier> {

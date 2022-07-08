@@ -96,7 +96,7 @@
 #include <iostream>
 #include <ControllerInjector.hpp>
 #include <DeviceEvent.hpp>
-//#include <ControllerInputTable.hpp>
+#include <ControllerInputTable.hpp>
 #include <timer.hpp>
 
 class TestInjector : public Chaos::ControllerInjector {
@@ -113,7 +113,4 @@ class TestInjector : public Chaos::ControllerInjector {
 
 int main(int argc, char const* argv[]) {
 
-  double delay = 0.333333;
-  auto usdelay = std::chrono::duration<double, std::micro>(delay);
-  unsigned int rval = usdelay.count();
 }

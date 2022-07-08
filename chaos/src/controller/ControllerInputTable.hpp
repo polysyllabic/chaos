@@ -26,14 +26,13 @@
 #include "Touchpad.hpp"
 #include "DeviceEvent.hpp"
 //#include "ControllerInput.hpp"
-#include "GameConditionTable.hpp"
 
 namespace Chaos {
   class Controller;
   class ControllerInput;
 
   /**
-   * \brief Class holding the global table of all controller signal information, including remaps
+   * \brief Class holding the table of all controller signal information, including remaps
    * 
    */
   class ControllerInputTable {
@@ -117,13 +116,8 @@ namespace Chaos {
     Touchpad& getTouchpad() { return touchpad; }
     double getTouchpadScale() { return touchpad_scale; }
     void setTouchpadScale(double scale) { touchpad_scale = scale; }
-    double getTouchpadScaleIf() { return touchpad_scale_if; }
-    void setTouchpadScaleIf(double scale) { touchpad_scale_if = scale; }
     int getTouchpadSkew() { return touchpad_skew; }
     void setTouchpadSkew(int skew) { touchpad_skew = skew; }
-
-    std::shared_ptr<GameCondition> getTouchpadCondition() { return touchpad_condition; }
-    void setTouchpadCondition(std::shared_ptr<GameCondition> condition) { touchpad_condition = condition; }
 
     /**
      * \brief Convert the touchpad signal to an axis signal
@@ -134,7 +128,7 @@ namespace Chaos {
      */
     short touchpadToAxis(ControllerSignal tp_axis, short value);
 
-    int initializeInputs(const toml::table& config, GameConditionTable& conditions);
+    int initializeInputs(const toml::table& config);
 
     void addToVector(const toml::table& config, const std::string& key,
                      std::vector<std::shared_ptr<ControllerInput>>& vec);
@@ -169,24 +163,6 @@ namespace Chaos {
      * factor applied if there is no touchpad condition or that condition is false.
      */
     double touchpad_scale;
-
-     /**
-      * \brief Condition under which to use an alternate scaling factor
-      *
-      * If the is defined, the engine will check the if this condition is currently met, and if it is,
-      * the derivative will be multiplied by the value of touchpad_scale_if instead of the default.
-      */
-    std::shared_ptr<GameCondition> touchpad_condition;
-
-    /**
-     * \brief The alternate scaling applied to convert touchpad input to axis events.
-     * 
-     * The touchpad parameters control the formula to convert from touchpad to axis events based on
-     * the change in axis value over time (derivative). The formula is scale * derivative + skew.
-     * This result is then clipped to the limits of the joystick value. This is the alternate scaling
-     * factor applied if the ouchpad condition is true.
-     */
-    double touchpad_scale_if;
 
     /**
      * \brief Offset to apply to the axis value when the derivative is non-zero.

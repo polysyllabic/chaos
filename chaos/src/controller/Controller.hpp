@@ -21,7 +21,6 @@
 #include <deque>
 #include <memory>
 
-#include "config.hpp"
 #include "DeviceEvent.hpp"
 #include "ControllerInjector.hpp"
 #include "ControllerState.hpp"
@@ -31,7 +30,6 @@ namespace Chaos {
 
   // Forward references
   class ControllerInput;
-  class GameCommand;
 
   /**
    * \brief Abstract class to manage the gamepad controller.
@@ -106,19 +104,19 @@ namespace Chaos {
      * This tests both that the event against the defined signal and that any defined condition
      * is also in effect.
      */
-    bool matches(const DeviceEvent& event, std::shared_ptr<GameCommand> command);
+    bool matches(const DeviceEvent& event, std::shared_ptr<ControllerInput> signal);
     
     /**
-     * Turns off the button/axis associated with a command.
-     * \param[in] The command that we're disabling.
+     * Turns off the button/axis for the associated input signal.
+     * \param[in] The signal that we're disabling.
      */
-    void setOff(std::shared_ptr<GameCommand> command);
+    void setOff(std::shared_ptr<ControllerInput> signal);
 
     /**
-     * Sets the button/axis associated with a command to its maximum.
+     * Turns on the button/axis for the associated input signal.
      * \param[in] The command that we're turning on.
      */
-    void setOn(std::shared_ptr<GameCommand> command);
+    void setOn(std::shared_ptr<ControllerInput> signal);
     
     void addInjector(ControllerInjector* injector);
 

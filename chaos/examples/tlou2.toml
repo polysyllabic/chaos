@@ -15,7 +15,7 @@ chaos_toml = "1.0"
 # game: User-friendly name of the game this configuration file defines.
 game = "The Last of Us Part II"
 
-# General controller settings
+# General controller "settings"
 [controller]
 # Default time, in seconds, to hold down a button when issuing a command in a sequence.
 button_press_time = 0.0625
@@ -36,22 +36,15 @@ time_per_modifier = 180.0
 # class of signal to another
 [remapping]
 # The touchpad parameters control the formula to convert from touchpad to axis events based on the
-# change in axis value over time (derivative). The formula is scale * derivative + skew. This
-# result is then clipped to the limits of the joystick value.
+# change in axis value over time (derivative). The basic formula is scale * derivative + skew.
+# This result is then clipped to the limits of the joystick value. Individual modifiers can apply
+# further scaling during the remapping process.
+#
 # touchpad_scale defines the default scaling applied.
 touchpad_scale = 0.12
-# touchpad_condition specifies a condition for which an alternate scaling is defined. If the
-# condition is defined, the engine will check the if this condition is currently met, and if it is,
-# the derivative will be multiplied by the value of touchpad_scale_if. If the condition is false,
-# or if touchpad_condition is not defined, then touchpad_scale is used. The touchpad_condition
-# value must be a defined command. If you want the same scaling to apply to all states, comment out
-# both the scale_on and the scale_if lines.
-touchpad_condition = "aiming"
-# touchpad_scale_if is the scaling factor used when touchpad_condition is true
-touchpad_scale_if = 0.04
-# An offset to apply to the axis value when the derivative is non-zero. The sign of the skew is
-# the same as the sign of the derivative. In other words, if the derivative is positive, the skew
-# is added to the result, and the derivative is negative, the skew is subtractecd.
+# touchpad_skey defines an offset to apply to the axis value when the derivative is non-zero. The
+# sign of the skew is the same as the sign of the derivative. In other words, if the derivative is
+# positive, the skew is added to the result, and the derivative is negative, the skew is subtractecd.
 touchpad_skew = 30
 
 #--------------------------------------------------------------------------------------------------
@@ -1290,7 +1283,7 @@ remap = [
       {from = "LY", to = "RX"} ]
 
 [[modifier]]
-name = "Swap D-Pad/Left Joystick"
+name = "Swap D-pad/Left Joystick"
 description = "Retro-style motion and an odd analog inventory selector"
 type = "remap"
 signals = [ "LX", "LY" ]

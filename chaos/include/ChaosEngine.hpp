@@ -130,17 +130,11 @@ namespace Chaos {
 
     short getState(uint8_t id, uint8_t type) { return controller.getState(id, type); }
 
-    bool eventMatches(const DeviceEvent& event, std::shared_ptr<GameCommand> command) { 
-      return controller.matches(event, command); 
-    }
+    bool eventMatches(const DeviceEvent& event, std::shared_ptr<GameCommand> command);
 
-    void setOff(std::shared_ptr<GameCommand> command) {
-      controller.setOff(command);
-    }
+    void setOff(std::shared_ptr<GameCommand> command);
     
-    void setOn(std::shared_ptr<GameCommand> command) {
-      controller.setOn(command);
-    }
+    void setOn(std::shared_ptr<GameCommand> command);
 
     std::shared_ptr<Modifier> getModifier(const std::string& name) {
       return game.getModifier(name);

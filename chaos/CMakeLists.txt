@@ -85,14 +85,14 @@ FetchContent_Declare(
 	GIT_TAG	       origin/main
 )
 FetchContent_Declare(
-	raw-gadget
+	rawgadget
 	GIT_REPOSITORY https://github.com/polysyllabic/raw-gadget.git
 	GIT_TAG	       origin/master
   CONFIGURE_COMMAND ""
   BUILD_COMMAND ""
 )
 
-FetchContent_MakeAvailable(tomlplusplus plog cppzmq sniffify raw-gadget)
+FetchContent_MakeAvailable(tomlplusplus plog cppzmq sniffify rawgadget)
 
 find_package (Threads REQUIRED)
 find_package (Libusb1 REQUIRED)
@@ -104,17 +104,17 @@ set_required_build_settings_for_GCC8()
 add_executable(chaos include/config.hpp
 	include/ChaosEngine.hpp
 	include/Configuration.hpp
-  include/Controller.hpp
-  include/ControllerInjector.hpp
-  include/ControllerInput.hpp
-  include/ControllerInputTable.hpp
-  include/ControllerRaw.hpp
-	include/ControllerState.hpp
+  #include/Controller.hpp
+  #include/ControllerInjector.hpp
+  #include/ControllerInput.hpp
+  #include/ControllerInputTable.hpp
+  #include/ControllerRaw.hpp
+	#include/ControllerState.hpp
   include/CooldownModifier.hpp
   include/DelayModifier.hpp
-  include/DeviceEvent.hpp
+  #include/DeviceEvent.hpp
   include/DisableModifier.hpp
-	include/Dualshock.hpp
+	#include/Dualshock.hpp
   include/EngineInterface.hpp
   include/enumerations.hpp
 	include/factory.hpp
@@ -137,20 +137,20 @@ add_executable(chaos include/config.hpp
   include/Sequence.hpp
   include/SequenceModifier.hpp
   include/SequenceTable.hpp
-  include/signals.hpp
-  include/TOMLUtils.hpp
-	include/Touchpad.hpp
+  #include/signals.hpp
+  #include/TOMLUtils.hpp
+	#include/Touchpad.hpp
 	src/ChaosEngine.cpp
 	src/Configuration.cpp
-	src/Controller.cpp
-  src/ControllerInput.cpp
-  src/ControllerInputTable.cpp
-  src/ControllerRaw.cpp
-	src/ControllerState.cpp
+	#src/Controller.cpp
+  #src/ControllerInput.cpp
+  #src/ControllerInputTable.cpp
+  #src/ControllerRaw.cpp
+	#src/ControllerState.cpp
   src/CooldownModifier.cpp
   src/DelayModifier.cpp
   src/DisableModifier.cpp
-	src/Dualshock.cpp
+	#src/Dualshock.cpp
   src/FormulaModifier.cpp
   src/Game.cpp
 	src/GameCommand.cpp
@@ -169,16 +169,16 @@ add_executable(chaos include/config.hpp
   src/Sequence.cpp
   src/SequenceModifier.cpp
   src/SequenceTable.cpp
-	src/Touchpad.cpp
-  src/TOMLUtils.cpp
+	#src/Touchpad.cpp
+  #src/TOMLUtils.cpp
 	src/main.cpp)
 
 target_compile_features(chaos PRIVATE cxx_std_17)
 
 add_subdirectory(src/utils)
 add_subdirectory(src/communicator)
+add_subdirectory(src/controller)
 #add_subdirectory(src/signals)
-#add_subdirectory(src/controller)
 #add_subdirectory(src/menu)
 #add_subdirectory(src/mods)
 #add_subdirectory(src/engine)
@@ -186,14 +186,14 @@ add_subdirectory(src/communicator)
 target_include_directories (chaos PRIVATE include 
 	${tomlplusplus_SOURCE_DIR}/include
 	${plog_SOURCE_DIR}/include
-	${rapidjson_INCLUDE_DIRS}
 	${cppzmq_SOURCE_DIR}
 	${sniffify_SOURCE_DIR}/include
 	${LIBUSB1_INCLUDE_DIRS}
 )
 
 target_link_libraries(chaos	PUBLIC chaos_communicator
-    chaos_utils #chaos_controller chaos_engine chaos_menus chaos_mods
+    chaos_utils
+    chaos_controller #chaos_engine chaos_menus chaos_mods
 		sniffify
 		${LIBUSB_LIBRARIES})
 

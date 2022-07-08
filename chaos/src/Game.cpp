@@ -88,7 +88,7 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
   parse_errors += game_conditions.buildConditionList(configuration, game_commands);
 
   // Initialize the remapping table
-  parse_errors += signal_table.initializeInputs(configuration, game_conditions);
+  parse_errors += signal_table.initializeInputs(configuration);
 
   assert(sequences);
   // Initialize defined sequences and static parameters for sequences

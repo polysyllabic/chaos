@@ -22,6 +22,9 @@
 #include <string>
 #include <memory>
 
+#define JOYSTICK_MIN (-128)
+#define JOYSTICK_MAX (127)
+
 namespace Chaos {
 
   enum ButtonID {

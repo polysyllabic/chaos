@@ -26,7 +26,7 @@
 #include <toml++/toml.h>
 
 #include "ChaosEngine.hpp"
-#include "ControllerInput.hpp"
+#include <ControllerInput.hpp>
 #include "Sequence.hpp"
 
 using namespace Chaos;
@@ -346,3 +346,17 @@ void ChaosEngine::disableTPAxis(ControllerSignal tp_axis) {
   }
 }
 
+bool ChaosEngine::eventMatches(const DeviceEvent& event, std::shared_ptr<GameCommand> command) { 
+  std::shared_ptr<ControllerInput> signal = command->getInput();
+  return controller.matches(event, signal); 
+}
+
+void ChaosEngine::setOff(std::shared_ptr<GameCommand> command) {
+  std::shared_ptr<ControllerInput> signal = command->getInput();
+  controller.setOff(signal);
+}
+    
+void ChaosEngine::setOn(std::shared_ptr<GameCommand> command) {
+  std::shared_ptr<ControllerInput> signal = command->getInput();
+  controller.setOn(signal);
+}
