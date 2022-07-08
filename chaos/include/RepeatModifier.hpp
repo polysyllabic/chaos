@@ -19,7 +19,7 @@
 #pragma once
 #include <queue>
 #include <toml++/toml.h>
-
+#include <timer.hpp>
 #include "Modifier.hpp"
 #include "EngineInterface.hpp"
 
@@ -61,25 +61,31 @@ namespace Chaos {
 
   protected:
     
-    double press_time;
+    dseconds press_time;
+
     /**
      * Time in seconds to keep the command on.
      */
-    double time_on;
+    dseconds time_on;
+
     /**
      * Time in seconds to leave the command off.
      */
-    double time_off;
+
+    dseconds time_off;
+
     int repeat_count;
     int num_cycles = 1;
     /**
      * Time in seconds to wait after one cycle ends before repeating the sequence.
      */
-    double cycle_delay;
+    dseconds cycle_delay;
+
     /**
      * If any incoming events try to turn the signal off, force them back on.
      */
     bool force_on;
+    
     /**
      * \brief Any commands in this list are blocked while the mod is active.
      *

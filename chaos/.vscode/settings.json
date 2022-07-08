@@ -76,9 +76,13 @@
     "variant": "cpp",
     "*.ipp": "cpp",
     "regex": "cpp",
-    "forward_list": "cpp"
+    "forward_list": "cpp",
+    "valarray": "cpp"
   },
   "search.exclude": {
     "**/_deps": true
-  }
+  },
+  "githubPullRequests.ignoredPullRequestBranches": [
+    "main"
+  ]
 }

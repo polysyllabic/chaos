@@ -92,7 +92,8 @@ void ChaosEngine::reportGameStatus() {
   msg["game"] = game.getName();
   msg["errors"] = game.getErrors();
   msg["nmods"] = game.getNumActiveMods();
-  msg["modtime"] = game.getTimePerModifier();
+  double t = std::chrono::duration<double>(game.getTimePerModifier()).count();
+  msg["modtime"] = t;
   msg["mods"] = game.getModList();
   chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
 }
@@ -125,8 +126,8 @@ void ChaosEngine::doAction() {
   // Check front element for expiration. 
   if (modifiers.size() > 0) {
     std::shared_ptr<Modifier> front = modifiers.front();
-    if ((front->lifespan() >= 0 && front->lifetime() > front->lifespan()) ||
-	      (front->lifespan()  < 0 && front->lifetime() > game.getTimePerModifier())) {
+    if ((front->lifespan() != dseconds::min() && front->lifetime() > front->lifespan()) ||
+	      (front->lifespan() == dseconds::min() && front->lifetime() > game.getTimePerModifier())) {
       removeMod(front);
     }
   }
@@ -153,7 +154,7 @@ void ChaosEngine::removeOldestMod() {
 }
 
 void ChaosEngine::removeMod(std::shared_ptr<Modifier> to_remove) {
-  PLOG_INFO << "Removing modifier: " << to_remove->getName() << " lifetime = " << to_remove->lifetime();
+  PLOG_INFO << "Removing modifier: " << to_remove->getName() << " lifetime = " << to_remove->getLifetime();
   lock();
   // Do cleanup for this mod, if necessary
   to_remove->_finish();

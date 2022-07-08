@@ -19,7 +19,8 @@
  */
 #include <list>
 #include <plog/Log.h>
-#include <mogi/math/systems.h>
+#include <random.hpp>
+
 #include "RemapModifier.hpp"
 #include "TOMLUtils.hpp"
 #include "EngineInterface.hpp"
@@ -138,7 +139,7 @@ std::shared_ptr<ControllerInput> RemapModifier::lookupInput(const toml::table& c
 }
 
 void RemapModifier::begin() {
-  Mogi::Math::Random rng;
+  Random rng;
   std::vector<std::shared_ptr<ControllerInput>> buttons;
   // Collect a list of the signals that we're going to remap
   for (auto& [key, value] : remaps) {

@@ -92,3 +92,28 @@
  * Table B and C (a removed)
  * 
  */
+#include <string>
+#include <iostream>
+#include <ControllerInjector.hpp>
+#include <DeviceEvent.hpp>
+//#include <ControllerInputTable.hpp>
+#include <timer.hpp>
+
+class TestInjector : public Chaos::ControllerInjector {
+
+  public:
+    bool sniffify(const Chaos::DeviceEvent& input, Chaos::DeviceEvent& output) {
+      output = input;
+      bool valid = true;
+
+      return valid;
+    }
+};
+
+
+int main(int argc, char const* argv[]) {
+
+  double delay = 0.333333;
+  auto usdelay = std::chrono::duration<double, std::micro>(delay);
+  unsigned int rval = usdelay.count();
+}

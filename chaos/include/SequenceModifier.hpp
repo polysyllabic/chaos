@@ -18,6 +18,7 @@
  */
 #pragma once
 #include <toml++/toml.h>
+#include <timer.hpp>
 
 #include "Modifier.hpp"
 #include "Sequence.hpp"
@@ -119,15 +120,15 @@ namespace Chaos {
     /**
      * Time in seconds to wait after a cycle begins before issuing the repeat_sequence.
      */
-    double start_delay;
+    dseconds start_delay;
     /**
      * Repeat the cycle after this amount of time (in seconds).
      */
-    double repeat_delay;
+    dseconds repeat_delay;
 
     std::vector<std::shared_ptr<GameCommand>> block_while;
     
-    double sequence_time;
+    dseconds sequence_time;
     short sequence_step;
 
     void processSequence(Sequence& seq);

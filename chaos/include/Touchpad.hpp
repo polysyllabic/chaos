@@ -20,7 +20,7 @@
 #pragma once
 
 #include <toml++/toml.h>
-#include <mogi/math/systems.h>
+#include <timer.hpp>
 #include "signals.hpp"
 
 namespace Chaos {
@@ -45,7 +45,7 @@ namespace Chaos {
     
     typedef struct _DerivData {
       short prior[5];
-      double timestampPrior[5];
+      dseconds timestampPrior[5];
       bool priorActive;
     } DerivData;
 
@@ -80,9 +80,9 @@ namespace Chaos {
      * \param timestamp 
      * \return double 
      */
-    double derivative(DerivData* d, short current, double timestamp);
+    double derivative(DerivData* d, short current, dseconds timestamp);
 
-    Mogi::Math::Time timer;
+    Timer timer;
     
   public:
     Touchpad();

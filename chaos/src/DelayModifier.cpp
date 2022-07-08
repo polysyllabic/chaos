@@ -38,11 +38,13 @@ DelayModifier::DelayModifier(toml::table& config, EngineInterface* e) {
     throw std::runtime_error("No command(s) specified with 'appliesTo'");
   }
   
-  delayTime = config["delay"].value_or(0.0);
-  if (delayTime <= 0) {
+  double t = config["delay"].value_or(0.0);
+  delayTime = dseconds(t);
+
+  if (delayTime <= dseconds::zero()) {
     throw std::runtime_error("Bad or missing delay time. The 'delay' parameter must be positive.");
   }
-  PLOG_VERBOSE << " - delay: " << delayTime;
+  PLOG_VERBOSE << " - delay: " << delayTime.count();
 }
 
 void DelayModifier::update() {

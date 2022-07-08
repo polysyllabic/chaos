@@ -19,7 +19,7 @@
  */
 #include <filesystem>
 #include <stdexcept>
-
+#include <iostream>
 #include <plog/Log.h>
 #include <plog/Initializers/RollingFileInitializer.h>
 

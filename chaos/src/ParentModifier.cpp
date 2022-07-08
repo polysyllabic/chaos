@@ -18,7 +18,7 @@
  */
 #include "ParentModifier.hpp"
 #include "TOMLUtils.hpp"
-#include <mogi/math/systems.h>
+#include <random.hpp>
 #include <unordered_map>
 #include <list>
 
@@ -64,7 +64,7 @@ ParentModifier::ParentModifier(toml::table& config, EngineInterface* e) {
 }
 
 void ParentModifier::buildRandomList() {
-  Mogi::Math::Random rng;
+  Random rng;
   auto all_mods = engine->getModifierMap();
   // Make a copy of the active modifiers
   auto used_mods = std::list<std::shared_ptr<Modifier>>(engine->getActiveMods());

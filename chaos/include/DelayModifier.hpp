@@ -20,6 +20,7 @@
 #pragma once
 #include <queue>
 #include <toml++/toml.h>
+#include <timer.hpp>
 
 #include "Modifier.hpp"
 #include "EngineInterface.hpp"
@@ -27,7 +28,7 @@
 namespace Chaos {
 
   typedef struct _TimeAndEvent{
-    double time;
+    dseconds time;
     DeviceEvent event;
   } TimeAndEvent;
 
@@ -57,7 +58,7 @@ namespace Chaos {
   class DelayModifier : public Modifier::Registrar<DelayModifier> {
   protected:
     std::queue<TimeAndEvent> eventQueue;
-    double delayTime;
+    dseconds delayTime;
     
   public:
     

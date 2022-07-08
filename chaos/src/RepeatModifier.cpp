@@ -39,10 +39,10 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
     PLOG_WARNING << "More than one command in 'appliesTo' -- extra commands will be ignored.";
   }
   
-  time_on = config["timeOn"].value_or(0.0);
-  time_off = config["timeOff"].value_or(0.0);
+  time_on = dseconds(config["timeOn"].value_or(0.0));
+  time_off = dseconds(config["timeOff"].value_or(0.0));
   repeat_count = config["repeat"].value_or(1);
-  cycle_delay = config["cycleDelay"].value_or(0.0);
+  cycle_delay = dseconds(config["cycleDelay"].value_or(0.0));
   force_on = config["forceOn"].value_or(false);
 
     // Allow "ALL" as a shortcut to avoid enumerating all signals
@@ -52,7 +52,7 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
     engine->addGameCommands(config, "blockWhileBusy", block_while);
   }
 
-  PLOG_VERBOSE << " - timeOn: " << time_on << "; timeOff: " << time_off << "; cycleDelay: " << cycle_delay;
+  PLOG_VERBOSE << " - timeOn: " << time_on.count() << "; timeOff: " << time_off.count() << "; cycleDelay: " << cycle_delay.count();
   PLOG_VERBOSE << " - repeat: " << repeat_count << "; forceOn: " << (force_on ? "true" : "false");
   if (block_while.empty()) {
     PLOG_VERBOSE << " - blockWhileBusy: NONE";
@@ -64,7 +64,7 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
 }
 
 void RepeatModifier::begin() {
-  press_time = 0;
+  press_time = dseconds::zero();
   repeat_count = 0;
 }
 
@@ -74,16 +74,16 @@ void RepeatModifier::update() {
   if (repeat_count < num_cycles) {
     if (press_time > time_on && cmd->getState()) {
       engine->setOff(cmd);
-      press_time = 0;
+      press_time = dseconds::zero();
       repeat_count++;
     } else if (press_time > time_off && ! commands[0]->getState()) {
       engine->setOn(cmd);
-      press_time = 0;
+      press_time = dseconds::zero();
     }
   } else if (press_time > cycle_delay) {
     PLOG_DEBUG << "resetting repeat cycle";
     repeat_count = 0;
-    press_time = 0;
+    press_time = dseconds::zero();
   }
 }
 

@@ -18,12 +18,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <mogi/thread.h>
+#include <thread.hpp>
 #include <memory>
 #include <list>
 #include <string>
 #include <queue>
 #include <json/json.h>
+#include <timer.hpp>
 
 #include "ChaosInterface.hpp"
 #include "Controller.hpp"
@@ -40,13 +41,13 @@ namespace Chaos {
    * the chaos engine will remove the modifier.
    */
   class ChaosEngine : public CommandObserver, public ControllerInjector,
-                      public Mogi::Thread, public EngineInterface {
+                      public Thread, public EngineInterface {
   private:
     ChaosInterface chaosInterface;
 
     Controller& controller;	
 
-    Mogi::Math::Time time;
+    Timer time;
 
     // Data for the game we're playing
     Game game;
@@ -70,7 +71,7 @@ namespace Chaos {
     // overridden from ControllerInjector
     bool sniffify(const DeviceEvent& input, DeviceEvent& output);
 
-    // overridden from Mogi::Thread
+    // overridden from Thread
     void doAction();
 
     Json::CharReaderBuilder jsonReaderBuilder;
@@ -161,7 +162,6 @@ namespace Chaos {
      * The menu item must be settable (i.e., not a submenu)
      */
     void setMenuState(std::shared_ptr<MenuItem> item, unsigned int new_val) {
-      PLOG_DEBUG << "Setting menu state";
       game.getMenu().setState(item, new_val, controller);
     }
 

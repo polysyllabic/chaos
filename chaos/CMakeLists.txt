@@ -62,7 +62,7 @@ include(FetchContent)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/")
 
-# tomlplusplus and plog are header-only libraries
+# Header-only libraries
 FetchContent_Declare(
 	tomlplusplus
 	GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
@@ -73,16 +73,7 @@ FetchContent_Declare(
 	GIT_REPOSITORY https://github.com/SergiusTheBest/plog.git
 	GIT_TAG	       origin/master
 )
-FetchContent_Declare(
-	mogi
-	GIT_REPOSITORY https://github.com/mogillc/nico.git
-	GIT_TAG	       origin/master
-)
-#FetchContent_Declare(
-#	zmqpp
-#	GIT_REPOSITORY https://github.com/zeromq/zmqpp.git
-#	GIT_TAG	       origin/master
-#)
+# Ordinary libraries
 FetchContent_Declare(
 	cppzmq
 	GIT_REPOSITORY https://github.com/zeromq/cppzmq.git
@@ -101,16 +92,9 @@ FetchContent_Declare(
   BUILD_COMMAND ""
 )
 
-# Life would be easier if the Raspberry OS cmake were 3.18 or greater
-if(NOT mogi_POPULATED)
-	FetchContent_Populate(mogi)
-  add_subdirectory(${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi)
-endif()
-
 FetchContent_MakeAvailable(tomlplusplus plog cppzmq sniffify raw-gadget)
 
 find_package (Threads REQUIRED)
-find_package (LibJsoncpp REQUIRED)
 find_package (Libusb1 REQUIRED)
 
 # This should make the old GCC 8 compiler on the Pi do the right thing while still being ignored
@@ -191,16 +175,7 @@ add_executable(chaos include/config.hpp
 
 target_compile_features(chaos PRIVATE cxx_std_17)
 
-target_include_directories (chaos PRIVATE include 
-	${tomlplusplus_SOURCE_DIR}/include
-	${plog_SOURCE_DIR}/include
-	${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi/include
-	${cppzmq_SOURCE_DIR}
-	${sniffify_SOURCE_DIR}/include
-	${LIBJSONCPP_INCLUDE_DIRS}
-	${LIBUSB1_INCLUDE_DIRS}
-)
-
+add_subdirectory(src/utils)
 add_subdirectory(src/communicator)
 #add_subdirectory(src/signals)
 #add_subdirectory(src/controller)
@@ -208,9 +183,18 @@ add_subdirectory(src/communicator)
 #add_subdirectory(src/mods)
 #add_subdirectory(src/engine)
 
-target_link_libraries(chaos	PUBLIC chaos_communicator #chaos_controller chaos_engine chaos_menus chaos_mods
-		sniffify 
-		mogi 
+target_include_directories (chaos PRIVATE include 
+	${tomlplusplus_SOURCE_DIR}/include
+	${plog_SOURCE_DIR}/include
+	${rapidjson_INCLUDE_DIRS}
+	${cppzmq_SOURCE_DIR}
+	${sniffify_SOURCE_DIR}/include
+	${LIBUSB1_INCLUDE_DIRS}
+)
+
+target_link_libraries(chaos	PUBLIC chaos_communicator
+    chaos_utils #chaos_controller chaos_engine chaos_menus chaos_mods
+		sniffify
 		${LIBUSB_LIBRARIES})
 
 #find_package(Doxygen)

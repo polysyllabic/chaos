@@ -16,37 +16,22 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * 
+ * This file contains code derived from the mogillc/nico library by Matt Bunting, Copyright 2016 by
+ * Mogi, LLC and distributed under the LGPL library version 2 license.
+ * The original version can be found here: https://github.com/mogillc/nico
+ * 
+ * TO DO: Replace this with something from the C++ <random> library
  */
 #pragma once
-#include <queue>
-#include <string>
-#include <thread.hpp>
-
-#include "CommandListener.hpp"
-#include "CommandSender.hpp"
 
 namespace Chaos {
 
-  /**
-   * \brief Communication interface between the engine and the chatbot
-   * 
-   * The interface combines both a server (to receive messages) and a client (to send them).
-   * We need both because messages can be initiated from either end.
-   */
-  class ChaosInterface : public Thread {
-  private:
-    CommandListener listener;
-    CommandSender talker;
-
-    std::queue<std::string> outgoingQueue;
-
-    void doAction();
-
+  class Random {
   public:
-    ChaosInterface();
-    void setupInterface(const std::string& listener_endpoint, const std::string& talker_endpoint);
-    bool sendMessage(std::string message);
-    void setObserver(CommandObserver* observer);
+    Random();
+    double uniform(double min, double max);
+    double normal(double mean, double variance);
   };
 
 };

@@ -104,8 +104,8 @@ void Sequence::send() {
   }
 }
 
-bool Sequence::sendParallel(double sequenceTime) {
-  unsigned int elapsed = (unsigned int) sequenceTime * SEC_TO_MICROSEC;
+bool Sequence::sendParallel(dseconds sequenceTime) {
+  unsigned int elapsed = usec(sequenceTime).count();
   for (DeviceEvent& e = events[current_step]; current_step <= events.size(); e = events[++current_step]) {
     PLOG_DEBUG << "Sending parallel step " << current_step << " type = " << (int) e.type << " value = " << e.value;
     if (e.isDelay()) {
@@ -134,12 +134,12 @@ bool Sequence::empty() {
   return events.empty();
 }
 
-void Sequence::setPressTime(double time) {
-  press_time = (unsigned int) (time * SEC_TO_MICROSEC);
+void Sequence::setPressTime(dseconds time) {
+  press_time = usec(time).count();
 }
 
-void Sequence::setReleaseTime(double time) {
-  release_time = (unsigned int) (time * SEC_TO_MICROSEC);
+void Sequence::setReleaseTime(dseconds time) {
+  release_time = usec(time).count();
 }
 
 

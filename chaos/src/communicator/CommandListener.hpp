@@ -18,8 +18,8 @@
  */
 #pragma once
 #include <string>
-#include <mogi/thread.h>
 #include <zmq.hpp>
+#include <thread.hpp>
 #include "CommandObserver.hpp"
 
 namespace Chaos {
@@ -28,7 +28,7 @@ namespace Chaos {
    * \brief A ZMQ server to receive messages from the chaosface client
    * 
    */
-  class CommandListener : public Mogi::Thread {
+  class CommandListener : public Thread {
   private:
     zmq::context_t context;
     zmq::socket_t *socket;

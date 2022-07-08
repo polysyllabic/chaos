@@ -20,7 +20,7 @@
 #pragma once
 #include <array>
 
-#include <mogi/thread.h>
+#include <thread.hpp>
 #include <raw-gadget.hpp> // for EndpointObserver and RawGadgetPassthrough
 
 #include "DeviceEvent.hpp"
@@ -36,7 +36,7 @@ namespace Chaos {
    * GPIO cable, but I haven't ported that over, since it seems like an obsolete interface now that
    * USB interception is available.
    */
-  class ControllerRaw : public Controller, public EndpointObserver, public Mogi::Thread {
+  class ControllerRaw : public Controller, public EndpointObserver, public Thread {
   private:
 	  ControllerState* mControllerState;
 

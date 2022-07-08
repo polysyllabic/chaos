@@ -16,37 +16,39 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * 
+ * This file contains code derived from the mogillc/nico library by Matt Bunting, Copyright 2016 by
+ * Mogi, LLC and distributed under the LGPL library version 2 license.
+ * The original version can be found here: https://github.com/mogillc/nico
+ * 
  */
-#pragma once
-#include <queue>
-#include <string>
-#include <thread.hpp>
+#include "timer.hpp"
 
-#include "CommandListener.hpp"
-#include "CommandSender.hpp"
+using namespace Chaos;
 
-namespace Chaos {
+Timer::Timer() {}
 
-  /**
-   * \brief Communication interface between the engine and the chatbot
-   * 
-   * The interface combines both a server (to receive messages) and a client (to send them).
-   * We need both because messages can be initiated from either end.
-   */
-  class ChaosInterface : public Thread {
-  private:
-    CommandListener listener;
-    CommandSender talker;
+void Timer::initialize() {
+	timecycle = chr::time_point_cast<dseconds>(chr::steady_clock::now());
+	runningtime = dseconds::zero();
+}
 
-    std::queue<std::string> outgoingQueue;
+void Timer::update() {
+  // Store the old time
+	oldtimecycle = timecycle;
+  // Grab the current time
+	timecycle = chr::time_point_cast<dseconds>(chr::steady_clock::now());
+	dtime = timecycle - oldtimecycle;
+}
 
-    void doAction();
+void Timer::reset() {
+	initialize();
+}
 
-  public:
-    ChaosInterface();
-    void setupInterface(const std::string& listener_endpoint, const std::string& talker_endpoint);
-    bool sendMessage(std::string message);
-    void setObserver(CommandObserver* observer);
-  };
+dseconds Timer::runningTime() {
+	return runningtime;
+}
 
-};
+dseconds Timer::dTime() {
+	return dtime;
+}

@@ -19,7 +19,7 @@
  */
 #pragma once
 #include <toml++/toml.h>
-
+#include <timer.hpp>
 #include "Sequence.hpp"
 #include "GameCommandTable.hpp"
 
@@ -61,7 +61,7 @@ namespace Chaos {
      */
     void addSequence(Sequence& seq, const std::string& name);
 
-    void addDelay(Sequence& sequence, unsigned int delay) { sequence.addDelay(delay); }
+    void addDelay(Sequence& sequence, usec delay) { sequence.addDelay(delay.count()); }
     
   };
 };

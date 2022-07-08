@@ -8,11 +8,11 @@ add_library (chaos_communicator
     CommandSender.hpp
     ChaosInterface.hpp
 )
-target_include_directories(chaos_communicator 
+target_include_directories(chaos_communicator
   PRIVATE
   	${plog_SOURCE_DIR}/include
   PUBLIC
+    ${chaos_utils_SOURCE_DIR}
     ${cppzmq_SOURCE_DIR}
-    ${mogi_SOURCE_DIR}/edisonLibmogiPackage/libmogi/include
     ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(chaos_communicator cppzmq mogi)
+target_link_libraries(chaos_communicator chaos_utils cppzmq)

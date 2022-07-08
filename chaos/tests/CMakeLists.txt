@@ -16,3 +16,10 @@ target_sources(test_menu PRIVATE test_menu_sequences.cpp
 target_include_directories(test_menu PRIVATE ../include
   ${tomlplusplus_SOURCE_DIR}/include
   ${plog_SOURCE_DIR}/include)
+
+  add_executable(test_remapping)
+  target_sources(test_remapping PRIVATE test_remapping.cpp)
+  target_include_directories(test_remapping PRIVATE ../include
+  ${tomlplusplus_SOURCE_DIR}/include
+  )
+  target_link_libraries(test_remapping chaos_utils)

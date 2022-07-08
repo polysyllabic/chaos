@@ -23,6 +23,7 @@
 #include <cassert>
 #include <unordered_map>
 #include <toml++/toml.h>
+#include <timer.hpp>
 
 #include "MenuInterface.hpp"
 
@@ -69,12 +70,12 @@ namespace Chaos {
     /**
      * Time to wait, in microseconds, after disabling all control inputs
      */
-    unsigned int disable_delay;
+    usec disable_delay;
 
     /**
      * Time to wait, in microseconds after selecting a menu item before issuing the next comand
      */
-    unsigned int select_delay;
+    usec select_delay;
 
     /**
      * \brief Add commands necessary to navigate to this item from the top of main menu
@@ -106,7 +107,7 @@ namespace Chaos {
      */
     std::shared_ptr<MenuItem> getMenuItem(const std::string& name);
 
-    unsigned int getSelectDelay() { return select_delay; }
+    unsigned int getSelectDelay() { return select_delay.count(); }
 
     /**
      * \brief Sets a menu item to the specified value
