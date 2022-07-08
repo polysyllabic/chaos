@@ -154,9 +154,11 @@ void ControllerInputTable::setCascadingRemap(std::unordered_map<std::shared_ptr<
       // The signal isn't currently being remapped.
       std::shared_ptr<ControllerInput> source = r.first;
       r.first->setRemap(r.second);
+      PLOG_DEBUG << "New remap of " << r.first->getName() << " to_console = " << r.second.to_console;
     } else {
       // To-signal already remapped. Apply the remap to the signal whose to_console value is currently
       // the from value we're trying to remap
+      PLOG_DEBUG << "Cascading remap of " << r.first->getName() << " to_console = " << r.second.to_console;
       it->second->setRemap(r.second);
     }
   }

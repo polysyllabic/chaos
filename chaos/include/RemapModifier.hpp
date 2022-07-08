@@ -79,9 +79,17 @@ namespace Chaos {
     //ControllerInputTable& remap_table;
 
     /**
-     * The list of remappings set by this mod.
+     * \brief The list of remappings set by this mod.
+     * 
+     * If #random is true, the to portion of the list is regenerated each time.
      */
     std::unordered_map<std::shared_ptr<ControllerInput>, SignalRemap> remaps;
+
+    /**
+     * \brief Randomly scramble the signals in the remaps list
+     * 
+     */
+    bool random;
 
     /**
      * If true, sends events to zero out the button on initialization.

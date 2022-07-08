@@ -22,8 +22,8 @@
 #include <random.hpp>
 
 #include "RemapModifier.hpp"
-#include "TOMLUtils.hpp"
-#include "EngineInterface.hpp"
+#include <EngineInterface.hpp>
+#include <TOMLUtils.hpp>
 
 using namespace Chaos;
 
@@ -45,6 +45,7 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
     if (config.contains("random_remap")) {
       throw std::runtime_error("Use either the 'remap' or 'random_remap' keys, not both.");
     }
+    random = false;
     const toml::array* remap_list = config.get("remap")->as_array();
     if (! remap_list) {
       throw std::runtime_error("Expect 'remap' to contain an array of remappings.");
@@ -107,6 +108,7 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
   // Note: Random remapping mmay break if axes and buttons are included in the same list.
   // Currently we don't check for this.
   if (config.contains("randomRemap")) {
+    random = true;
     const toml::array* remap_list = config.get("randomRemap")-> as_array();
     if (! remap_list || !remap_list->is_homogeneous(toml::node_type::string)) {
       throw std::runtime_error("randomRemap must be an array of strings");
@@ -139,22 +141,24 @@ std::shared_ptr<ControllerInput> RemapModifier::lookupInput(const toml::table& c
 }
 
 void RemapModifier::begin() {
-  Random rng;
-  std::vector<std::shared_ptr<ControllerInput>> buttons;
-  // Collect a list of the signals that we're going to remap
-  for (auto& [key, value] : remaps) {
-    buttons.push_back(key);
+  if (random) {
+    // Generate a new remapping
+    Random rng;
+    std::vector<std::shared_ptr<ControllerInput>> buttons;
+    // Collect a list of the signals that we're going to remap
+    for (auto& [key, value] : remaps) {
+      buttons.push_back(key);
+    }
+    // Iterate through the list of signals we're remapping and assign a random signal to it
+    for (auto& [key, value] : remaps) {
+      int index = floor(rng.uniform(0, buttons.size()-0.01));
+      auto it = buttons.begin();
+      std::advance(it, index);
+      value.to_console =  *it;
+      buttons.erase(it);
+    } 
   }
-  // Iterate through the list of signals we're remapping and assign a random signal to it
-  for (auto& [key, value] : remaps) {
-    int index = floor(rng.uniform(0, buttons.size()-0.01));
-    auto it = buttons.begin();
-    std::advance(it, index);
-    value.to_console =  *it;
-    buttons.erase(it);
-  }
-  // apply our remaps to the main remap table
-  apply();
+  _apply();
 }
 
 // Apply our remaps to the main remap table. This routine is called both in begin() and whenever
