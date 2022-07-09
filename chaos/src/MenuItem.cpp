@@ -62,7 +62,7 @@ void MenuItem::decrementCounter() {
 void MenuItem::selectItem(Sequence& seq) {
     // navigate left or right through tab groups
     int delta = offset;
-    PLOG_VERBOSE << name << " menu offset = " << offset;
+    PLOG_DEBUG << name << " menu offset = " << offset;
     for (int i = 0; i < tab_group; i++) {
       menu_items.addSequence(seq, "tab right");
     }
@@ -75,7 +75,7 @@ void MenuItem::selectItem(Sequence& seq) {
       // navigate to the guard
       guard->selectItem(seq);
       // enable guard item
-      guard->setState(seq, 1);
+      guard->setState(seq, 1, false);
       // adjust delta for the steps we've already made to get to the guard
       delta -= guard->getOffset();
       PLOG_VERBOSE << " - delta to guard: " << guard->getOffset() << " new delta:: " << delta;
@@ -101,6 +101,7 @@ void MenuItem::selectItem(Sequence& seq) {
 void MenuItem::navigateBack(Sequence& seq) {
   // starting from the selected option, we reverse to navigate to top of the menu and
   // back out
+  PLOG_DEBUG << "Navigate back offset " << offset;
   for (int i = 0; i < offset; i++) {
     menu_items.addSequence(seq, "menu up");
   }
@@ -116,7 +117,7 @@ void MenuItem::navigateBack(Sequence& seq) {
   menu_items.addSequence(seq, "menu exit");
 }
 
-void MenuItem::setState(Sequence& seq, unsigned int new_val) {
+void MenuItem::setState(Sequence& seq, unsigned int new_val, bool restore) {
   PLOG_DEBUG << "Set state of " << name << " to " << new_val;
 
   if (is_option) {
@@ -132,21 +133,14 @@ void MenuItem::setState(Sequence& seq, unsigned int new_val) {
 
   // Increment the counter, if set
   if (sibling_counter) {
-    sibling_counter->incrementCounter();
-    PLOG_DEBUG << "Incrementing sibling counter " << sibling_counter->getName();
+    if (restore) {
+      sibling_counter->decrementCounter();
+      PLOG_DEBUG << "Decrementing sibling counter " << sibling_counter->getName();
+    } else {
+      sibling_counter->incrementCounter();
+      PLOG_DEBUG << "Incrementing sibling counter " << sibling_counter->getName();
+    }
   }
-}
-
-void MenuItem::restoreState(Sequence& seq) {
-  PLOG_DEBUG << "restoring state of " << name;
-  setMenuOption(seq, default_state);
-  current_state = default_state;
-  // Decrement the counter, if set
-  if (sibling_counter) {
-    sibling_counter->decrementCounter();
-    PLOG_DEBUG << "Decrementing sibling counter";
-  }
-  navigateBack(seq);
 }
 
 void MenuItem::setMenuOption(Sequence& seq, unsigned int new_val) {
