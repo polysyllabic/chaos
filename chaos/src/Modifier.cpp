@@ -40,7 +40,7 @@ using namespace Chaos;
 void Modifier::initialize(toml::table& config, EngineInterface* e) {
   engine = e;
   parent = nullptr;
-  totalLifespan = -1;    // An erroneous value that if set should be positive
+  totalLifespan = dseconds::min();    // An erroneous value that if set should be positive
   lock_while_busy = true;
   allow_recursion = true;
   name = config["name"].value_or("NAME NOT FOUND");
@@ -114,9 +114,14 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
 // actions for all mods. From there we dispatch to the appropriate child routine by invoking the
 // virtual functions.
 void Modifier::_begin() {
-  PLOG_DEBUG << "Resetting timer for " << name;
   timer.initialize();
-  pauseTimeAccumulator = 0;
+  pauseTimeAccumulator = dseconds::zero();
+  for (auto& cond : conditions) {
+    cond->reset();
+  }
+  for (auto& cond : unless_conditions) {
+    cond->reset();
+  }
   begin();
   sendBeginSequence();
 }
@@ -136,6 +141,7 @@ void Modifier::update() {}
 
 void Modifier::_finish() {
   sendFinishSequence();
+  PLOG_DEBUG << "Calling virtual finish function for mod " << name;
   finish();
 }
 
@@ -146,6 +152,14 @@ void Modifier::_apply() {
 }
 
 void Modifier::apply() {}
+
+bool Modifier::_remap(DeviceEvent& event) {
+  return remap(event);
+}
+
+bool Modifier::remap(DeviceEvent& event) {
+  return true;
+}
 
 bool Modifier::_tweak(DeviceEvent& event) {
   // Traverse the list of persistent game conditions and see if the event matches an on or off
@@ -179,7 +193,7 @@ void Modifier::sendBeginSequence() {
 
 void Modifier::sendFinishSequence() { 
   if (! on_finish->empty()) {
-    PLOG_DEBUG << "Sending beginning sequence for " << name;
+    PLOG_DEBUG << "Sending finishing sequence for " << name;
     in_sequence = lock_while_busy;
     on_finish->send();
     in_sequence = false;
@@ -240,7 +254,7 @@ Json::Value Modifier::toJsonObject() {
   result["name"] = getName();
   result["desc"] = getDescription();
   result["groups"] = getGroups();
-  result["lifespan"] = lifespan();
+  result["lifespan"] = getLifespan();
   return result;
 }
 

@@ -23,12 +23,12 @@
 #include <toml++/toml.h>
 
 #include "Modifier.hpp"
-#include "ControllerInput.hpp"
-#include "ControllerInputTable.hpp"
+#include <ControllerInput.hpp>
+#include <Touchpad.hpp>
 #include "EngineInterface.hpp"
 
 namespace Chaos {
-  class Game;
+  
   /** 
    * \brief A modifier that remaps the game commands to different inputs from the controller.
    *
@@ -56,7 +56,7 @@ namespace Chaos {
    * trigger the remapping.
    *   - to_min (optional): When mapping buttons-to-axis, if true, the axis is set to the joystick
    * minimum. If false, it is set to the joystick maximum.
-   *   - scale (optional): A divisor that scales the incomming accelerometer signal down.
+   *   - sensitivity (optional): A divisor that scales the incomming accelerometer signal down.
    *   .
    * - random_remap: A list of controls that will be randomly remapped among one another.
    * 
@@ -70,17 +70,25 @@ namespace Chaos {
    * Note that remapping is done by controller signal, not game command. Setting 'to' or 'to_neg' to
    * NOTHING has the effect of blocking the signal from reaching the console.
    * 
+   * \todo Scale touchpad remapping differently while aiming
    * 
    */
   class RemapModifier : public Modifier::Registrar<RemapModifier> {
 
   private:
-    //ControllerInputTable& remap_table;
 
     /**
-     * The list of remappings set by this mod.
+     * \brief The list of remappings set by this mod.
+     * 
+     * If #random is true, the to portion of the list is regenerated each time we start.
      */
     std::unordered_map<std::shared_ptr<ControllerInput>, SignalRemap> remaps;
+
+    /**
+     * \brief Randomly scramble the signals in the remaps list
+     * 
+     */
+    bool random;
 
     /**
      * If true, sends events to zero out the button on initialization.
@@ -94,8 +102,23 @@ namespace Chaos {
      */
     std::vector<std::shared_ptr<ControllerInput>> signals;
     
+    /**
+     * Helper class to manage velocity calculations
+     */
+    Touchpad touchpad;
+
+    /**
+     * \brief Convert the touchpad signal to an axis signal
+     * 
+     * \param tp_axis The axis of the touchpad to convert
+     * \param value The value of the incoming raw touchpad event
+     * \return short Converted axis value
+     */
+    short touchpadToAxis(ControllerSignal signal, short value);
+
     std::shared_ptr<ControllerInput> lookupInput(const toml::table& config, const std::string& key, bool required);
 
+    
   public:
     RemapModifier(toml::table& config, EngineInterface* e);
 
@@ -103,9 +126,7 @@ namespace Chaos {
     const std::string& getModType() { return mod_type; }
 
     void begin();
-    void apply();
-    void finish();
-
+    bool remap(DeviceEvent& event);
   };
 };
 

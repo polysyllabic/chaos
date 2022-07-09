@@ -47,14 +47,14 @@ SequenceModifier::SequenceModifier(toml::table& config, EngineInterface* e) {
     engine->addGameCommands(config, "blockWhileBusy", block_while);
   }
 
-  start_delay = config["startDelay"].value_or(0.0);
-  repeat_delay = config["cycleDelay"].value_or(0.0);
+  start_delay = dseconds(config["startDelay"].value_or(0.0));
+  repeat_delay = dseconds(config["cycleDelay"].value_or(0.0));
 
-  PLOG_VERBOSE << "- startDelay: " << start_delay << "; cycleDelay: " << repeat_delay;
+  PLOG_VERBOSE << "- startDelay: " << start_delay.count() << "; cycleDelay: " << repeat_delay.count();
 }
 
 void SequenceModifier::begin() {
-  sequence_time = 0;
+  sequence_time = dseconds::zero();
   sequence_step = 0;
   sequence_state = SequenceState::UNTRIGGERED;
 }
@@ -71,17 +71,17 @@ void SequenceModifier::update() {
     // If there is no condition, this will also return true
     if (inCondition()) {
       // go straight into the sequence if no delay
-      sequence_state = (start_delay == 0) ? SequenceState::IN_SEQUENCE :
+      sequence_state = (start_delay == dseconds::zero()) ? SequenceState::IN_SEQUENCE :
                                             SequenceState::STARTING;
-      PLOG_DEBUG << "Condition met after waiting " << sequence_time << " seconds";
-      sequence_time = 0;
+      PLOG_DEBUG << "Condition met after waiting " << sequence_time.count() << " seconds";
+      sequence_time = dseconds::zero();
     }
   case SequenceState::STARTING:
     // In the starting state, we wait for any initial delay before the sequence starts
     if (sequence_time >= start_delay) {
-      PLOG_DEBUG << "Waiting " << start_delay << " seconds to start sequence";
+      PLOG_DEBUG << "Waiting " << start_delay.count() << " seconds to start sequence";
       sequence_state = SequenceState::IN_SEQUENCE;
-      sequence_time = 0;
+      sequence_time = dseconds::zero();
     }
     break;
 case SequenceState::IN_SEQUENCE:
@@ -90,16 +90,16 @@ case SequenceState::IN_SEQUENCE:
     if (repeat_sequence->sendParallel(sequence_time)) {
       PLOG_DEBUG << "Sent complete sequence";
       sequence_state = SequenceState::ENDING;
-      sequence_time = 0;
+      sequence_time = dseconds::zero();
     }
     break;
   case SequenceState::ENDING:
     // After the sequence, we wait for the delay amount before resetting the trigger
-    PLOG_DEBUG << "sequence_time=" << sequence_time << "; repeat_delay=" << repeat_delay;
+    PLOG_DEBUG << "sequence_time=" << sequence_time.count() << "; repeat_delay=" << repeat_delay.count();
     if (sequence_time >= repeat_delay) {
       PLOG_DEBUG << "Resetting trigger";
       sequence_state = SequenceState::UNTRIGGERED;
-      sequence_time = 0;
+      sequence_time = dseconds::zero();
       sequence_step = 0;
             
     }
@@ -112,10 +112,10 @@ bool SequenceModifier::tweak(DeviceEvent& event) {
     // If there is no condition, this will also return true
     if (inCondition()) {
       // go straight into the sequence if no delay
-      sequence_state = (start_delay == 0) ? SequenceState::IN_SEQUENCE :
+      sequence_state = (start_delay == dseconds::zero()) ? SequenceState::IN_SEQUENCE :
                                             SequenceState::STARTING;
-      PLOG_DEBUG << "Condition met after waiting " << sequence_time << " seconds";
-      sequence_time = 0;
+      PLOG_DEBUG << "Condition met after waiting " << sequence_time.count() << " seconds";
+      sequence_time = dseconds::zero();
     }
   }
   // While in sequence, drop selected signals

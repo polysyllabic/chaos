@@ -22,6 +22,9 @@
 #include <string>
 #include <memory>
 
+#define JOYSTICK_MIN (-128)
+#define JOYSTICK_MAX (127)
+
 namespace Chaos {
 
   enum ButtonID {
@@ -125,15 +128,14 @@ namespace Chaos {
     uint8_t hybrid_id;
   };
 
+  class ControllerInput;
+  
   /**
    * Contains the information to remap signals between the controller and the console.
    */
-  class ControllerInput;
-  
   struct SignalRemap {
     /**
-     * \brief The input type that the controller to which the input will be altered before it is
-     * sent to the console.
+     * \brief The input type to which the input will be altered before it is sent to the console.
      *
      * If no remapping is defined, this will be set to from_controller. ControllerSignal::NOTHING is a
      * remapping that drops the signal. For remapping of an axis to multiple buttons, this contains

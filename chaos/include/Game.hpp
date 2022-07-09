@@ -22,6 +22,7 @@
 #include <memory>
 #include <unordered_map>
 #include <json/json.h>
+#include <timer.hpp>
 
 #include "GameMenu.hpp"
 #include "ControllerInputTable.hpp"
@@ -70,7 +71,7 @@ namespace Chaos {
 
     int getNumActiveMods() { return active_modifiers; }
 
-    double getTimePerModifier() { return time_per_modifier; }
+    dseconds getTimePerModifier() { return time_per_modifier; }
 
     /**
      * \brief Get the number of errors encountered loading the game-configuration file
@@ -180,7 +181,7 @@ namespace Chaos {
     /**
     * Time in seconds modifiers last before they are removed from the queue.
     */
-    double time_per_modifier;
+    dseconds time_per_modifier;
 
     /**
      * Controller signal status, including remapping

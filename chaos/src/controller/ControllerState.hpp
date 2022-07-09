@@ -22,7 +22,7 @@
 #include <cstdint>
 #include <map>
 
-#include "DeviceEvent.hpp"
+#include <DeviceEvent.hpp>
 
 namespace Chaos {
   

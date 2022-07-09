@@ -23,9 +23,6 @@
 #include <toml++/toml.h>
 #include <plog/Log.h>
 
-#include "signals.hpp"
-//#include "sequence.hpp"
-
 namespace Chaos {
 
   class TOMLUtils {

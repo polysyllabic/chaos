@@ -20,7 +20,7 @@
 #pragma once
 
 #include <toml++/toml.h>
-#include <mogi/math/systems.h>
+#include <timer.hpp>
 #include "signals.hpp"
 
 namespace Chaos {
@@ -45,7 +45,7 @@ namespace Chaos {
     
     typedef struct _DerivData {
       short prior[5];
-      double timestampPrior[5];
+      dseconds timestampPrior[5];
       bool priorActive;
     } DerivData;
 
@@ -80,17 +80,37 @@ namespace Chaos {
      * \param timestamp 
      * \return double 
      */
-    double derivative(DerivData* d, short current, double timestamp);
+    double derivative(DerivData* d, short current, dseconds timestamp);
 
-    Mogi::Math::Time timer;
-    
+    Timer timer;
+
+    /**
+     * \brief The default scaling applied to convert touchpad input to axis events.
+     * 
+     * The touchpad parameters control the formula to convert from touchpad to axis events based on
+     * the change in axis value over time (derivative). The formula is scale * derivative + skew.
+     * This result is then clipped to the limits of the joystick value. This is the default scaling
+     * factor applied if there is no touchpad condition or that condition is false.
+     */
+    double scale;
+    static double default_scale;
+
+    /**
+     * \brief Offset to apply to the axis value when the derivative is non-zero.
+     * 
+     * The sign of the skew is the same as the sign of the derivative. In other words, if the derivative
+     * is positive, the skew is added to the result, and the derivative is negative, the skew is subtracted.
+     */
+    short skew;
+    static short default_skew;
+
   public:
     Touchpad();
 
     /**
      * \brief Reset touchpad's priorActive status 
      */
-    void clearActive();
+    void clearPrior();
 
     /**
      * Query whether the touchpad is currently in use
@@ -113,7 +133,14 @@ namespace Chaos {
      * the last 5 calls to the function.
      */
     short getVelocity(ControllerSignal tp_axis, short value);
-    
+
+    double getScale() { return scale; }
+    void setScale(double new_scale) { scale = new_scale; }
+    static void setDefaultScale(double scale) { default_scale = scale; }
+
+    short getSkew() { return skew; }
+    void setSkew(short new_skew) { skew = new_skew; }
+    static void setDefaultSkew(short skew) { default_skew = skew; }
   };
   
 };

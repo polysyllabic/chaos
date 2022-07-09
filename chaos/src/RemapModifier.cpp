@@ -19,10 +19,11 @@
  */
 #include <list>
 #include <plog/Log.h>
-#include <mogi/math/systems.h>
+#include <random.hpp>
+
 #include "RemapModifier.hpp"
-#include "TOMLUtils.hpp"
-#include "EngineInterface.hpp"
+#include <EngineInterface.hpp>
+#include <TOMLUtils.hpp>
 
 using namespace Chaos;
 
@@ -35,6 +36,7 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
 
   initialize(config, e);
   
+  PLOG_DEBUG << "Adding signals";
   engine->addControllerInputs(config, "signals", signals);
 
   disable_signals = config["disableSignals"].value_or(false);
@@ -44,11 +46,12 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
     if (config.contains("random_remap")) {
       throw std::runtime_error("Use either the 'remap' or 'random_remap' keys, not both.");
     }
+    random = false;
     const toml::array* remap_list = config.get("remap")->as_array();
     if (! remap_list) {
       throw std::runtime_error("Expect 'remap' to contain an array of remappings.");
     }
-    PLOG_VERBOSE << "Processing remap list";
+    PLOG_DEBUG << "Processing remap list";
     for (auto& elem : *remap_list) {
       const toml::table* remapping = elem.as_table();
       if (! remapping) {
@@ -58,30 +61,33 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
                  "threshold", "sensitivity"}, "remap config");
       
       std::shared_ptr<ControllerInput> from = lookupInput(*remapping, "from", true);
+      ControllerSignalType from_type = from->getType();
 
       std::shared_ptr<ControllerInput> to = lookupInput(*remapping, "to", true);
+      ControllerSignalType to_type = to->getType();
 
       std::shared_ptr<ControllerInput> to_neg = lookupInput(*remapping, "to_neg", false);
+
       // Check for unsupported remappings
-      if (from->getType() == ControllerSignalType::DUMMY) {
+      if (from_type == ControllerSignalType::DUMMY) {
         throw std::runtime_error("Cannot map from NONE or NOTHING");
-      } else if (from->getType() != to->getType()) {
-        if ((to->getType() == ControllerSignalType::ACCELEROMETER ||
-            to->getType() == ControllerSignalType::GYROSCOPE || 
-            to->getType() == ControllerSignalType::TOUCHPAD) || (to_neg && (
+      } else if (from_type != to_type) {
+        if ((to_type == ControllerSignalType::ACCELEROMETER ||
+            to_type == ControllerSignalType::GYROSCOPE || 
+            to_type == ControllerSignalType::TOUCHPAD) || (to_neg && (
             to_neg->getType() == ControllerSignalType::ACCELEROMETER || 
             to_neg->getType() == ControllerSignalType::GYROSCOPE || 
             to_neg->getType() == ControllerSignalType::TOUCHPAD
             ))) {
           throw std::runtime_error("Cross-type remapping not supported going to the accelerometer, gyroscope, or touchpad.");
         }
-        if (to_neg && to_neg->getType() != ControllerSignalType::DUMMY && to_neg->getType() != to->getType()) {
+        if (to_neg && to_neg->getType() != ControllerSignalType::DUMMY && to_neg->getType() != to_type) {
           PLOG_WARNING << "The 'to' and 'to_neg' signals belong to different classes. Are you sure this is what you want?";
         }
       }
       bool to_min = (*remapping)["to_min"].value_or(false);
       bool invert = (*remapping)["invert"].value_or(false);
-      if (invert && (from->getType() == ControllerSignalType::BUTTON || from->getType() == ControllerSignalType::HYBRID)) {
+      if (invert && (from_type == ControllerSignalType::BUTTON || from_type == ControllerSignalType::HYBRID)) {
         PLOG_WARNING << "Inverting the signal only makes sense for axes. Ignored.";
         invert = false;
       }
@@ -106,10 +112,12 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
   // Note: Random remapping mmay break if axes and buttons are included in the same list.
   // Currently we don't check for this.
   if (config.contains("randomRemap")) {
+    random = true;
     const toml::array* remap_list = config.get("randomRemap")-> as_array();
     if (! remap_list || !remap_list->is_homogeneous(toml::node_type::string)) {
       throw std::runtime_error("randomRemap must be an array of strings");
     }
+    PLOG_VERBOSE << "Adding list of random remaps for " << name;
     for (auto& elem : *remap_list) {
       std::optional<std::string> signame = elem.value<std::string>();
       // the is_homogenous test above should ensure that signame always has a value
@@ -138,36 +146,122 @@ std::shared_ptr<ControllerInput> RemapModifier::lookupInput(const toml::table& c
 }
 
 void RemapModifier::begin() {
-  Mogi::Math::Random rng;
-  std::vector<std::shared_ptr<ControllerInput>> buttons;
-  // Collect a list of the signals that we're going to remap
-  for (auto& [key, value] : remaps) {
-    buttons.push_back(key);
+  if (random) {
+    // Generate a new remapping
+    Random rng;
+    std::vector<std::shared_ptr<ControllerInput>> buttons;
+    // Collect a list of the signals that we're going to remap
+    for (auto& [key, value] : remaps) {
+      buttons.push_back(key);
+    }
+    // Iterate through the list of signals we're remapping and assign a random signal to it
+    for (auto& [key, value] : remaps) {
+      int index = floor(rng.uniform(0, buttons.size()-0.01));
+      auto it = buttons.begin();
+      std::advance(it, index);
+      value.to_console =  *it;
+      buttons.erase(it);
+    }
   }
-  // Iterate through the list of signals we're remapping and assign a random signal to it
-  for (auto& [key, value] : remaps) {
-    int index = floor(rng.uniform(0, buttons.size()-0.01));
-    auto it = buttons.begin();
-    std::advance(it, index);
-    value.to_console =  *it;
-    buttons.erase(it);
+}
+
+bool RemapModifier::remap(DeviceEvent& event) {
+  DeviceEvent new_event;
+  auto signal = engine->getInput(event);
+
+  // Is this event in our list of remaps?
+  if (auto it{remaps.find(signal)}; it != std::end(remaps)) {
+    const auto[from, remap]{*it};
+
+    // Touchpad active requires special setup and tear-down
+    if (from->getSignal() == ControllerSignal::TOUCHPAD_ACTIVE) {
+      if (! touchpad.isActive() && event.value == 0) {
+        PLOG_DEBUG << "Begin touchpad use";
+        touchpad.clearPrior();
+        touchpad.setActive(true);
+      } else if (touchpad.isActive() && event.value) {
+        PLOG_DEBUG << "End touchpad use";
+        touchpad.setActive(false);
+        // We're stopping touchpad use. Zero out all axes in use.
+        // NB: If we ever do support other controllers, we'll need to get the indirect signal type, not
+        // this low-level value
+        for (auto s : signals) {
+          new_event = {0, 0, s->getID(), TYPE_AXIS};
+          engine->fakePipelinedEvent(new_event, getptr());
+        }
+      }
+      return true;
+    }
+
+    auto to_console = remap.to_console;
+    // When mapping from any type of axis to buttons/hybrids, the choice of button is determined
+    // by the sign of the value.
+    if (event.value < 0 && event.id == TYPE_AXIS && to_console->getButtonType() == TYPE_BUTTON) {
+      to_console = remap.to_negative;
+      if (!to_console) {
+        PLOG_ERROR << name << " is missing remap for negative values of " << from->getName();
+        return true;
+      }
+    }
+
+    // If we are remapping to NOTHING, we drop this signal.
+    if (to_console->getSignal() == ControllerSignal::NOTHING) {
+      PLOG_DEBUG << name << " remapping " << from->getName() << " to NOTHING";
+      return false;
+    }
+
+    // Now handle cases that require additional actions
+    switch (from->getType()) {
+    case ControllerSignalType::HYBRID:
+      // Going from hybrid to button, we drop the axis component
+      if (to_console->getType() == ControllerSignalType::BUTTON && event.type == TYPE_AXIS) {
+ 	      return false;
+      }
+    case ControllerSignalType::BUTTON:
+      // From button to hybrid, we need to insert a new event for the axis
+      if (to_console->getType() == ControllerSignalType::HYBRID) {
+   	    new_event.id = to_console->getHybridAxis();
+        new_event.type = TYPE_AXIS;
+   	    new_event.value = event.value ? JOYSTICK_MAX : JOYSTICK_MIN;
+        engine->applyEvent(new_event);
+      }
+      break;
+    case ControllerSignalType::AXIS:
+      // From axis to button, we need a new event to zero out the second button when the value is
+      // below the threshold. The first button will get a 0 value from the changed regular value
+      // At this point, to_console has been set with the negative remap value.
+      if (to_console->getButtonType() == TYPE_BUTTON && abs(event.value) < remap.threshold) {
+        new_event.id = to_console->getID();
+        new_event.value = 0;
+        new_event.type = TYPE_BUTTON;
+        engine->applyEvent(new_event);
+      }
+    } // end switch
+
+    // Update the event
+    event.type = to_console->getButtonType();
+    event.id = to_console->getID(event.type);
+
+    // If we're remapping across button classes, we also need to update the value
+    event.value = (from->getType() == ControllerSignalType::TOUCHPAD) ?
+      touchpadToAxis(from->getSignal(), event.value) : 
+      from->remapValue(to_console, event.value);
+
   }
-  // apply our remaps to the main remap table
-  apply();
+  return true;
 }
 
-// Apply our remaps to the main remap table. This routine is called both in begin() and whenever
-// another mod is removed from the active list in order to make sure that we can remove our remaps
-// without trashing any that may be applied by a mod later in the queue.
-void RemapModifier::apply() {
-  PLOG_DEBUG << "Updating remaps for " << name;
-  engine->setCascadingRemap(remaps);
-}
+short RemapModifier::touchpadToAxis(ControllerSignal tp_axis, short value) {
+  short ret;
+  // Use the touchpad value to update the running derivative count
+  short derivativeValue = touchpad.getVelocity(tp_axis, value) * touchpad.getScale();
 
-// Undo the remapping
-void RemapModifier::finish() {
-  // When we remove ourselves, we reset the *entire* remap table to nothing. Any remaining remap
-  // mods that are active will then reapply themselves when their apply functions are called.
-  engine->clearRemaps();
+  if (derivativeValue > 0) {
+    ret = derivativeValue + touchpad.getSkew();
+  }
+  else if (derivativeValue < 0) {
+    ret = derivativeValue - touchpad.getSkew();
+  }
+  PLOG_DEBUG << "Derivative: " << derivativeValue << ", skew = " << touchpad.getSkew() << ", returning " << ret;
+  return ret;
 }
-

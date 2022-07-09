@@ -23,15 +23,19 @@
 
 #include "signals.hpp"
 #include "Touchpad.hpp"
-#include "GameCondition.hpp"
 
 using namespace Chaos;
 
+double Touchpad::default_scale;
+short Touchpad::default_skew;
+
 Touchpad::Touchpad() {
   timer.initialize();
+  scale = default_scale;
+  skew = default_skew;
 }
 
-void Touchpad::clearActive() {
+void Touchpad::clearPrior() {
   dX.priorActive = false;
   dY.priorActive = false;
   dX_2.priorActive = false;
@@ -62,11 +66,13 @@ short Touchpad::getVelocity(ControllerSignal tp_axis, short value) {
   return derivative(dd, value, timer.runningTime());
 }
 
-double Touchpad::derivative(DerivData* d, short current, double timestamp) {
+double Touchpad::derivative(DerivData* d, short current, dseconds timestamp) {
   double ret = 0;
   if (d->priorActive) {
     if (timestamp != d->timestampPrior[0]) {
-      ret = ((double)(current - d->prior[0]))/(timestamp - d->timestampPrior[0]);
+      double denom = dseconds(timestamp - d->timestampPrior[0]).count();
+      PLOG_DEBUG << "deriv denom = " << denom;
+      ret = ((double)(current - d->prior[0]))/(denom);
     }	
   } else {
     d->priorActive = true;

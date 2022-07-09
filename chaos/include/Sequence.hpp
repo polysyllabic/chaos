@@ -20,6 +20,7 @@
 #pragma once
 #include <memory>
 #include <vector>
+#include <timer.hpp>
 #include "DeviceEvent.hpp"
 
 namespace Chaos {
@@ -45,7 +46,9 @@ namespace Chaos {
 
     // to track current stage for sending the sequence in parallel
     short current_step;
-    // running tracker of elapsed time to wait before sending the next sequence in parallel
+
+    // running tracker of elapsed time in microseconds to wait before sending the next sequence
+    // in parallel
     unsigned int wait_until;
 
     // Time in microseconds to hold down a signal for a button press
@@ -57,8 +60,8 @@ namespace Chaos {
   public:
     Sequence(Controller& c);
 
-    static void setPressTime(double time);
-    static void setReleaseTime(double time);
+    static void setPressTime(dseconds time);
+    static void setReleaseTime(dseconds time);
 
     /**
      * \brief Directly add an individual event to the sequence stack
@@ -100,7 +103,7 @@ namespace Chaos {
     void addRelease(std::shared_ptr<ControllerInput> signal, unsigned int release_time);
     /**
      * \brief Add a delay
-     * \param delay Time to delay in microseconds.
+     * \param delay Time to delay
      *
      */
     void addDelay(unsigned int delay);
@@ -129,7 +132,7 @@ namespace Chaos {
      * \return true if sequence is done
      * \return false if sequence is still in progress
      */
-    bool sendParallel(double sequenceTime);
+    bool sendParallel(dseconds sequenceTime);
     
   };
 

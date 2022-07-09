@@ -21,6 +21,7 @@
 #include <queue>
 #include <memory>
 #include <toml++/toml.h>
+#include <timer.hpp>
 
 #include "Modifier.hpp"
 #include "Game.hpp"
@@ -61,17 +62,17 @@ namespace Chaos {
   protected:
     DeviceEvent cooldownCommand;
     bool pressedState;
-    double cooldownTimer;
+    dseconds cooldownTimer;
     bool inCooldown;
     
     /**
      * Time that the event is allowed before we block it
      */
-    double time_on;
+    dseconds time_on;
     /**
      * Time that the event is held in cooldown before re-enabled.
      */
-    double time_off;
+    dseconds time_off;
 
   public:
     CooldownModifier(toml::table& config, EngineInterface* e);

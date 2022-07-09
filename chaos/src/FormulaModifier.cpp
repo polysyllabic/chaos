@@ -84,7 +84,7 @@ void FormulaModifier::update() {
 
   bool apply_formula = inCondition();
 
-  double t = timer.runningTime() * period_length;
+  double t = std::chrono::duration<double>(timer.runningTime()).count() * period_length;
   int i = 0;
 
   for (auto& cmd : commands) {

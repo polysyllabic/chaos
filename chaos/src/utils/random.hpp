@@ -16,34 +16,22 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * 
+ * This file contains code derived from the mogillc/nico library by Matt Bunting, Copyright 2016 by
+ * Mogi, LLC and distributed under the LGPL library version 2 license.
+ * The original version can be found here: https://github.com/mogillc/nico
+ * 
+ * TO DO: Replace this with something from the C++ <random> library
  */
-#include <string>
-#include <toml++/toml.h>
-#include <plog/Log.h>
+#pragma once
 
-#include "GameCommand.hpp"
-#include "GameCondition.hpp"
-#include "ControllerInput.hpp"
+namespace Chaos {
 
-using namespace Chaos;
+  class Random {
+  public:
+    Random();
+    double uniform(double min, double max);
+    double normal(double mean, double variance);
+  };
 
-GameCommand::GameCommand(const std::string& cmd, std::shared_ptr<ControllerInput> bind) :
-                         name{cmd}, binding{bind} {
-}
-
-std::shared_ptr<ControllerInput> GameCommand::getRemappedSignal() {
-  // If not remapping, return the actual signal
-  if (binding->getRemap() == nullptr) {
-    return binding;
-  }
-  // If remapping to dev/null, return null
-  if (binding->getRemap()->getSignal() == ControllerSignal::NOTHING) {
-    return nullptr;
-  }
-  return binding->getRemap();
-}
-
-short GameCommand::getState() {
-  short state = binding->getRemappedState();
-  return state;
-}
+};

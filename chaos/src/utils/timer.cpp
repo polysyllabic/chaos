@@ -16,34 +16,39 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * 
+ * This file contains code derived from the mogillc/nico library by Matt Bunting, Copyright 2016 by
+ * Mogi, LLC and distributed under the LGPL library version 2 license.
+ * The original version can be found here: https://github.com/mogillc/nico
+ * 
  */
-#include <string>
-#include <toml++/toml.h>
-#include <plog/Log.h>
-
-#include "GameCommand.hpp"
-#include "GameCondition.hpp"
-#include "ControllerInput.hpp"
+#include "timer.hpp"
 
 using namespace Chaos;
 
-GameCommand::GameCommand(const std::string& cmd, std::shared_ptr<ControllerInput> bind) :
-                         name{cmd}, binding{bind} {
+Timer::Timer() {}
+
+void Timer::initialize() {
+	timecycle = chr::time_point_cast<dseconds>(chr::steady_clock::now());
+	runningtime = dseconds::zero();
 }
 
-std::shared_ptr<ControllerInput> GameCommand::getRemappedSignal() {
-  // If not remapping, return the actual signal
-  if (binding->getRemap() == nullptr) {
-    return binding;
-  }
-  // If remapping to dev/null, return null
-  if (binding->getRemap()->getSignal() == ControllerSignal::NOTHING) {
-    return nullptr;
-  }
-  return binding->getRemap();
+void Timer::update() {
+  // Store the old time
+	oldtimecycle = timecycle;
+  // Grab the current time
+	timecycle = chr::time_point_cast<dseconds>(chr::steady_clock::now());
+	dtime = timecycle - oldtimecycle;
 }
 
-short GameCommand::getState() {
-  short state = binding->getRemappedState();
-  return state;
+void Timer::reset() {
+	initialize();
+}
+
+dseconds Timer::runningTime() {
+	return runningtime;
+}
+
+dseconds Timer::dTime() {
+	return dtime;
 }

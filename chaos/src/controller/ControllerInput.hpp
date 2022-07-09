@@ -25,7 +25,6 @@
 #include <toml++/toml.h>
 #include <plog/Log.h>
 
-#include "config.hpp"
 #include "DeviceEvent.hpp"
 #include "signals.hpp"
 #include "Touchpad.hpp"

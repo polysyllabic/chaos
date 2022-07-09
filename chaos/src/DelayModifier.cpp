@@ -38,17 +38,20 @@ DelayModifier::DelayModifier(toml::table& config, EngineInterface* e) {
     throw std::runtime_error("No command(s) specified with 'appliesTo'");
   }
   
-  delayTime = config["delay"].value_or(0.0);
-  if (delayTime <= 0) {
+  double t = config["delay"].value_or(0.0);
+  delayTime = dseconds(t);
+
+  if (delayTime <= dseconds::zero()) {
     throw std::runtime_error("Bad or missing delay time. The 'delay' parameter must be positive.");
   }
-  PLOG_VERBOSE << " - delay: " << delayTime;
+  PLOG_VERBOSE << " - delay: " << delayTime.count();
 }
 
 void DelayModifier::update() {
   while ( !eventQueue.empty() ) {
     if( (timer.runningTime() - eventQueue.front().time) >= delayTime ) {
       // Reintroduce the event.
+      PLOG_DEBUG << "Defered event sent: " << eventQueue.front().event.type << "." << eventQueue.front().event.id;
       engine->fakePipelinedEvent(eventQueue.front().event, getptr());
       eventQueue.pop();
     }
@@ -63,14 +66,16 @@ void DelayModifier::update() {
 bool DelayModifier::tweak(DeviceEvent& event) {
   // Shortcut if we're working on all commands
   if (applies_to_all) {
+    PLOG_DEBUG << "Incoming event (" << event.type << "." << event.id << ") queued";
     eventQueue.push ({this->timer.runningTime(), event});
     return false;
   }
   else {
     for (auto cmd : commands) {
       if (engine->eventMatches(event, cmd)) {
-	eventQueue.push ({this->timer.runningTime(), event});
-	return false;
+        PLOG_DEBUG << "Incoming event (" << event.type << "." << event.id << ") queued";
+      	eventQueue.push ({this->timer.runningTime(), event});
+	      return false;
       }
     }
   }

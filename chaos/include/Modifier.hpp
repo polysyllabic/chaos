@@ -24,8 +24,9 @@
 #include <unordered_set>
 
 #include <json/json.h>
-#include <mogi/math/systems.h>
 #include <toml++/toml.h>
+
+#include <timer.hpp>
 
 #include "factory.hpp"
 #include "enumerations.hpp"
@@ -220,7 +221,7 @@ namespace Chaos {
     /**
      * \brief Running count of how long this mod has been active.
      */
-    Mogi::Math::Time timer;
+    Timer timer;
 
     /**
      * \brief The list of specific commands affected by this mod.
@@ -318,12 +319,12 @@ namespace Chaos {
     /**
      * \brief Amount of time the engine has been paused.
      */
-    double pauseTimeAccumulator;
+    dseconds pauseTimeAccumulator;
 
     /**
      * \brief Designates a custom lifespan, if necessary.
      */
-    double totalLifespan;
+    dseconds totalLifespan;
     
     /**
      * \brief Should this mod be allowed as a child modifier
@@ -415,9 +416,15 @@ namespace Chaos {
      * \brief Get how long the mod has been active.
      * \return The mod's running time minus the accumulated time we've been paused.
      */
-    double lifetime() { return timer.runningTime() - pauseTimeAccumulator; }
-    double lifespan() { return totalLifespan; }
+    dseconds lifetime() { return timer.runningTime() - pauseTimeAccumulator; }
+    
+    double getLifetime() {
+      dseconds lt = lifetime();
+      return std::chrono::duration<double>(lt).count();
+     }
 
+    dseconds lifespan() { return totalLifespan; }
+    double getLifespan() { return std::chrono::duration<double>(totalLifespan).count(); }
     /**
      * \brief Common entry point into the begin function
      *
@@ -486,6 +493,31 @@ namespace Chaos {
      * one active mod is remapping things.
      */ 
     virtual void apply();
+
+    /**
+     * \brief Common entry point into the remap function
+     * \param[in,out] event The event coming from the controller
+     * \return true if the event is valid and should be passed on to other mods and the controller
+     * \return false if the event should be dropped and not sent to other mods or the controller
+     *
+     * This function is called directly by the ChaosEngine class for each incomming event. It
+     * gives a place to handle any common tasks required for all modifiers, after which we call the
+     * virtual remap() function implemented by the
+     * concrete child class.
+     */
+    bool _remap(DeviceEvent& event);
+
+    /**
+     * \brief Remap incomming commands
+     * \param[in,out] event The event coming from the controller
+     * \return true if the event is valid and should be passed on to other mods and the controller
+     * \return false if the event should be dropped and not sent to other mods or the controller
+     *
+     * This function is called directly by the ChaosEngine class for each incomming event. Modifiers
+     * 
+     * Both remap() and tweak() are conceptually similar. The difference is that the remap() function
+     */
+    virtual bool remap(DeviceEvent& event);
 
     /**
      * \brief Common entry point into the tweak function

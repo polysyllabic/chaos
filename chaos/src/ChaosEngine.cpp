@@ -26,7 +26,7 @@
 #include <toml++/toml.h>
 
 #include "ChaosEngine.hpp"
-#include "ControllerInput.hpp"
+#include <ControllerInput.hpp>
 #include "Sequence.hpp"
 
 using namespace Chaos;
@@ -59,17 +59,23 @@ void ChaosEngine::newCommand(const std::string& command) {
       lock();
       modifiers.push_back(mod);
       modifiersThatNeedToStart.push(mod);
-      // We track the mod count manually because the mod list length isn't a reliable indication of the number
-      // of active primary mods, since it may contain child mods.
-      if (++primary_mods > game.getNumActiveMods()) {
-        removeOldestMod();
-      }
       unlock();
     } else {
       PLOG_ERROR << "ERROR: Modifier not found: " << command;
     }
   }
   
+  // Manually remove a mod
+  if (root.isMember("remove")) {
+    std::shared_ptr<Modifier> mod = game.getModifier(root["remove"].asString());
+    if (mod != nullptr) {
+      PLOG_INFO << "Manually removing modifier '" << mod->getName();
+      removeMod(mod);
+    } else {
+      PLOG_ERROR << "ERROR: Modifier not found: " << command;
+    }
+  }
+
   if (root.isMember("game")) {
     reportGameStatus();
   }
@@ -97,7 +103,8 @@ void ChaosEngine::reportGameStatus() {
   msg["game"] = game.getName();
   msg["errors"] = game.getErrors();
   msg["nmods"] = game.getNumActiveMods();
-  msg["modtime"] = game.getTimePerModifier();
+  double t = std::chrono::duration<double>(game.getTimePerModifier()).count();
+  msg["modtime"] = t;
   msg["mods"] = game.getModList();
   chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
 }
@@ -114,7 +121,7 @@ void ChaosEngine::doAction() {
   // Initialize the mods that are waiting
   lock();
   while(!modifiersThatNeedToStart.empty()) {
-    PLOG_DEBUG << "Processing new modifiers";
+    PLOG_DEBUG << "Processing new modifier.";
     modifiersThatNeedToStart.front()->_begin();
     modifiersThatNeedToStart.pop();
   }
@@ -130,18 +137,23 @@ void ChaosEngine::doAction() {
   // Check front element for expiration. 
   if (modifiers.size() > 0) {
     std::shared_ptr<Modifier> front = modifiers.front();
-    if ((front->lifespan() >= 0 && front->lifetime() > front->lifespan()) ||
-	      (front->lifespan()  < 0 && front->lifetime() > game.getTimePerModifier())) {
+    if ((front->lifespan() != dseconds::min() && front->lifetime() > front->lifespan()) ||
+	      (front->lifespan() == dseconds::min() && front->lifetime() > game.getTimePerModifier())) {
       removeMod(front);
     }
   }
+  // If we have too many mods as the result of a manual apply, remove the oldest one
+  if (modifiers.size() > game.getNumActiveMods()) {
+    removeOldestMod();
+  }
+
 }
 
 // Remove oldest mod whether or not it's expired. This keeps manually inserted mods from
 // going beyond the specified modifier count.
 void ChaosEngine::removeOldestMod() {
-  PLOG_DEBUG << "Finding oldest mod";
   if (modifiers.size() > 0) {
+    PLOG_DEBUG << "Finding oldest mod";
     std::shared_ptr<Modifier> oldest = nullptr;
     for (auto& mod : modifiers) {
       if (!oldest || oldest->lifetime() < mod->lifetime()) {
@@ -153,7 +165,8 @@ void ChaosEngine::removeOldestMod() {
 }
 
 void ChaosEngine::removeMod(std::shared_ptr<Modifier> to_remove) {
-  PLOG_INFO << "Removing modifier: " << to_remove->getName() << " lifetime = " << to_remove->lifetime();
+  PLOG_INFO << "Removing '" << to_remove->getName() << "' from active mod list";
+  PLOG_DEBUG << "Lifetime on removal = " << to_remove->getLifetime();
   lock();
   // Do cleanup for this mod, if necessary
   to_remove->_finish();
@@ -162,7 +175,6 @@ void ChaosEngine::removeMod(std::shared_ptr<Modifier> to_remove) {
   for (auto& mod : modifiers) {
     mod->_apply();
   }
-  --primary_mods;
   unlock();
 }
 
@@ -172,7 +184,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
   bool valid = true;
   
   lock();
-  // The options button pauses the chaos engine (always check real buttons for this, not a remap)
+  // The options button pauses the chaos engine
   if (game.matchesID(input, ControllerSignal::OPTIONS) || game.matchesID(input, ControllerSignal::PS)) {
     if(input.value == 1 && pause == false) { // on rising edge
       pause = true;
@@ -182,7 +194,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
     }
   }
 
-  // The share button resumes the chaos engine (also not remapped)
+  // The share button resumes the chaos engine
   if (game.matchesID(input, ControllerSignal::SHARE)) {
     if(input.value == 1 && pause == true) { // on rising edge
       pausePrimer = true;
@@ -197,8 +209,14 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
 	
   if (!pause) {
     lock();
-    // Translate incomming signal to what the console expects before passing that on to the mods
-    valid = remapEvent(output);
+    // First call all remaps to translate the incomming signal 
+    for (auto& mod : modifiers) {
+      valid = (*mod)._remap(output);
+      if (!valid) {
+        break;
+      }
+    }
+    // Now pass to the regular tweak routines, which always see the fully remapped event
     if (valid) {
       for (auto& mod : modifiers) {
 	      valid = (*mod)._tweak(output);
@@ -241,105 +259,17 @@ void ChaosEngine::sendInterfaceMessage(const std::string& msg) {
   chaosInterface.sendMessage(msg);
 }
 
-bool ChaosEngine::remapEvent(DeviceEvent& event) {
-  DeviceEvent new_event;
-
-  // Get the object with information about the incomming signal
-  std::shared_ptr<ControllerInput> from_controller = game.getSignalTable().getInput(event);
-  assert (from_controller);
-  std::shared_ptr<ControllerInput> to_console = from_controller->getRemap();
-
-  // If this signal isn't remapped, we're done
-  if (to_console == nullptr) {
-    return true;
-  }
-
-  // Touchpad active requires special setup and tear-down
-  if (from_controller->getSignal() == ControllerSignal::TOUCHPAD_ACTIVE) {
-    prepTouchpad(event);
-  }
-
-  // When mapping from any type of axis to buttons/hybrids and the choice of button is determined
-  // by the sign of the value. If the negative remap is a button, the positive will be a button also,
-  // so it's safe to check that.
-  if (event.value < 0 && event.id == TYPE_AXIS && to_console->getButtonType() == TYPE_BUTTON) {
-    to_console = from_controller->getNegRemap();
-    assert (to_console);
-  }
-
-  // If we are remapping to NOTHING, we drop this signal.
-  if (to_console->getSignal() == ControllerSignal::NOTHING) {
-    PLOG_DEBUG << "dropping remapped event";
-    return false;
-  }
-
-  // Now handle cases that require additional actions
-  switch (from_controller->getType()) {
-  case ControllerSignalType::HYBRID:
-    // Going from hybrid to button, we drop the axis component
-    if (to_console->getType() == ControllerSignalType::BUTTON && event.type == TYPE_AXIS) {
- 	    return false;
-    }
-  case ControllerSignalType::BUTTON:
-    // From button to hybrid, we need to insert a new event for the axis
-    if (to_console->getType() == ControllerSignalType::HYBRID) {
-   	  new_event.id = to_console->getHybridAxis();
-      new_event.type = TYPE_AXIS;
-   	  new_event.value = event.value ? JOYSTICK_MAX : JOYSTICK_MIN;
-      controller.applyEvent(new_event);
-    }
-    break;
-  case ControllerSignalType::AXIS:
-    // From axis to button, we need a new event to zero out the second button when the value is
-    // below the threshold. The first button will get a 0 value from the changed regular value
-    // At this point, to_console has been set with the negative remap value.
-    if (to_console->getButtonType() == TYPE_BUTTON && abs(event.value) < from_controller->getThreshold()) {
-      new_event.id = to_console->getID();
-      new_event.value = 0;
-      new_event.type = TYPE_BUTTON;
-      controller.applyEvent(new_event);
-    }
-  }
-
-  // Touchpad-to-axis conversion has to be handled in a different conversion routine
-  if (from_controller->getType() == ControllerSignalType::TOUCHPAD && 
-      to_console->getType() == ControllerSignalType::AXIS) {
-    event.value = game.getSignalTable().touchpadToAxis(from_controller->getSignal(), event.value);
-  }
-  // Update the event
-  event.type = to_console->getButtonType();
-  event.id = to_console->getID(event.type);
-  event.value = from_controller->remapValue(to_console, event.value);
-  return true;
+bool ChaosEngine::eventMatches(const DeviceEvent& event, std::shared_ptr<GameCommand> command) { 
+  std::shared_ptr<ControllerInput> signal = command->getInput();
+  return controller.matches(event, signal); 
 }
 
-void ChaosEngine::prepTouchpad(const DeviceEvent& event) {
-  Touchpad& touchpad = game.getSignalTable().getTouchpad();
-  if (! touchpad.isActive() && event.value == 0) {
-    touchpad.clearActive();
-    PLOG_DEBUG << "Begin touchpad use";
-  } else if (touchpad.isActive() && event.value) {
-    PLOG_DEBUG << "End touchpad use";
-    // We're stopping touchpad use. Zero out all remapped axes in use.
-    disableTPAxis(ControllerSignal::TOUCHPAD_X);
-    disableTPAxis(ControllerSignal::TOUCHPAD_Y);
-    disableTPAxis(ControllerSignal::TOUCHPAD_X_2);
-    disableTPAxis(ControllerSignal::TOUCHPAD_Y_2);
-  }
-  touchpad.setActive(!event.value);
+void ChaosEngine::setOff(std::shared_ptr<GameCommand> command) {
+  std::shared_ptr<ControllerInput> signal = command->getInput();
+  controller.setOff(signal);
 }
-
-// If the touchpad axis is currently being remapped, send a 0 signal to the remapped axis
-void ChaosEngine::disableTPAxis(ControllerSignal tp_axis) {
-  DeviceEvent new_event{0, 0, TYPE_AXIS, AXIS_RX};
-  std::shared_ptr<ControllerInput> tp = game.getSignalTable().getInput(tp_axis);
-  assert (tp && tp->getType() == ControllerSignalType::TOUCHPAD);
-
-  if (tp->getRemap()) {
-    std::shared_ptr<ControllerInput> r = tp->getRemap();
-    assert(r);
-    new_event.id = r->getID();
-    controller.applyEvent(new_event);
-  }
+    
+void ChaosEngine::setOn(std::shared_ptr<GameCommand> command) {
+  std::shared_ptr<ControllerInput> signal = command->getInput();
+  controller.setOn(signal);
 }
-

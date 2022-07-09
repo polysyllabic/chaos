@@ -19,9 +19,8 @@
 #include <cstddef>
 #include <plog/Log.h>
 
-#include "config.hpp"
-#include "ControllerState.hpp"
-#include "Dualshock.hpp"
+#include <ControllerState.hpp>
+#include <Dualshock.hpp>
 
 #ifdef USE_DUALSENSE
 #include "Dualsense.hpp"

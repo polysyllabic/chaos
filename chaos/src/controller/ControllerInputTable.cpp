@@ -18,11 +18,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <algorithm>
+#include <TOMLUtils.hpp>
+
 #include "ControllerInputTable.hpp"
 #include "ControllerInput.hpp"
-#include "GameConditionTable.hpp"
-#include "GameCondition.hpp"
-#include "TOMLUtils.hpp"
 
 using namespace Chaos;
 
@@ -115,23 +114,6 @@ bool ControllerInputTable::matchesID(const DeviceEvent& event, ControllerSignal 
   return (event.id == to_match->getID() && event.type == to_match->getButtonType());
 }
 
-short ControllerInputTable::touchpadToAxis(ControllerSignal tp_axis, short value) {
-  short ret;
-  // Use the touchpad value to update the running derivative count
-  short derivativeValue = touchpad.getVelocity(tp_axis, value) *
-      (touchpad_condition->inCondition()) ? touchpad_scale_if : touchpad_scale;
-
-  if (derivativeValue > 0) {
-    ret = derivativeValue + touchpad_skew;
-  }
-  else if (derivativeValue < 0) {
-    ret = derivativeValue - touchpad_skew;
-  }
-    
-  PLOG_DEBUG << "Derivative: " << derivativeValue << ", skew = " << touchpad_skew << ", returning " << ret;
-  return ret;
-}
-
 std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const toml::table& config, const std::string& key) {
   std::optional<std::string> signal = config[key].value<std::string>();
   if (!signal) {
@@ -144,7 +126,8 @@ std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const toml::tabl
   return inp;
 }
 
-void ControllerInputTable::setCascadingRemap(std::unordered_map<std::shared_ptr<ControllerInput>, SignalRemap>& remaps) {
+void ControllerInputTable::setCascadingRemap(RemapTable& remaps) {
+  RemapTable copy = RemapTable(remaps);
   for (auto& r : remaps) {
     // Check if the from signal in the remaps list already appears as a to_console entry in the table
     auto it = std::find_if(inputs.begin(), inputs.end(), [r](auto inp)
@@ -156,9 +139,11 @@ void ControllerInputTable::setCascadingRemap(std::unordered_map<std::shared_ptr<
       // The signal isn't currently being remapped.
       std::shared_ptr<ControllerInput> source = r.first;
       r.first->setRemap(r.second);
+      PLOG_DEBUG << "New remap of " << r.first->getName() << " to_console = " << r.second.to_console;
     } else {
       // To-signal already remapped. Apply the remap to the signal whose to_console value is currently
       // the from value we're trying to remap
+      PLOG_DEBUG << "Cascading remap of " << r.first->getName() << " to_console = " << r.second.to_console;
       it->second->setRemap(r.second);
     }
   }
@@ -171,7 +156,7 @@ void ControllerInputTable::clearRemaps() {
 }
 
 // This is the game-specific initialization
-int ControllerInputTable::initializeInputs(const toml::table& config, GameConditionTable& conditions) {
+int ControllerInputTable::initializeInputs(const toml::table& config) {
   int parse_errors;
   double scale = config["remapping"]["touchpad_scale"].value_or(1.0);
   if (scale == 0) {
@@ -179,31 +164,12 @@ int ControllerInputTable::initializeInputs(const toml::table& config, GameCondit
     ++parse_errors;
     scale = 1;
   }
-  touchpad_scale = scale;
+  Touchpad::setDefaultScale(scale);
 
-  // Condition is optional; Flag an error if bad condition name but not if missing entirely
-  std::optional<std::string> c = config["remapping"]["touchpad_condition"].value<std::string>();
-  if (c) {
-    touchpad_condition = conditions.getCondition(*c);
-    if (!touchpad_condition) {
-      ++parse_errors;
-      PLOG_ERROR << "The condition " << *c << " is not defined";
-    }
-  } 
-  double scale_if = config["remapping"]["touchpad_scale_if"].value_or(1.0);
-  if (scale_if == 0) {
-    ++parse_errors;
-    PLOG_ERROR << "Touchpad scale_if cannot be 0. Setting to 1";
-    scale_if = 1;
-  }
-  touchpad_scale_if = scale_if;
+  short skew = config["remapping"]["touchpad_skew"].value_or(0);
+  Touchpad::setDefaultSkew(skew);
 
-  int skew = config["remapping"]["touchpad_skew"].value_or(0);
-  touchpad_skew = skew;
-
-  PLOG_VERBOSE << "Touchpad scale = " << scale << "; condition = " << 
-                (touchpad_condition ? touchpad_condition->getName() : "<none>") <<
-                "; scale_if = " << scale_if << "; skew = " << skew;
+  PLOG_VERBOSE << "Touchpad scale = " << scale << "; skew = " << skew;
   return parse_errors;
 }
 

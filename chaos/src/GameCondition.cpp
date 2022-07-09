@@ -55,7 +55,7 @@ GameCondition::GameCondition(toml::table& config, GameCommandTable& commands) {
     }
   }
 
-  threshold = config["threshold"].value_or(0.0);
+  threshold = config["threshold"].value_or(1.0);
   if (threshold < 0 || threshold > 1) {
     throw std::runtime_error("Condition threshold must be between 0 and 1");
   }
@@ -88,6 +88,7 @@ void GameCondition::reset() {
   if (trigger_on.empty()) {
     persistent_state = true;
   } else {
+    persistent_state = false;
     for (auto& it : trigger_on) {
       it.second = false;
     }
@@ -103,7 +104,6 @@ bool GameCondition::thresholdComparison(short value, short threshold) {
   // This function tests only one signal at a time. It's a programming error to call us
   // if the type is DISTANCE
   assert(threshold_type != ThresholdType::DISTANCE);
-  PLOG_DEBUG << name << " value = " << value << " threshold = " << threshold;
   switch (threshold_type) {
     case ThresholdType::GREATER:
       return value > threshold;
@@ -124,6 +124,7 @@ bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> command) {
   // need to check the threshold for that remapped signal.
   short threshold = getSignalThreshold(command);
   short curval = command->getState();
+  PLOG_VERBOSE << "threshold for " << command->getName() << ": " << threshold << "; state = " << curval;
   return thresholdComparison(curval, threshold);
 }
 
@@ -227,5 +228,6 @@ bool GameCondition::inCondition() {
   if (! while_not_conditions.empty()) {
     unless_state = testConditions(while_not_conditions, true);
   }
+  PLOG_VERBOSE << "persistent = " << persistent_state << "; while = " << while_state << "; unless = " << unless_state;
   return persistent_state && while_state && unless_state;
 }

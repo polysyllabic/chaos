@@ -33,8 +33,8 @@ int SequenceTable::buildSequenceList(toml::table& config, GameCommandTable& comm
   PLOG_DEBUG << "Initializing list of defined sequences";
   int parse_errors = 0;
   // global parameters for sequences
-  Sequence::setPressTime(config["controller"]["button_press_time"].value_or(0.0625));
-  Sequence::setReleaseTime(config["controller"]["button_release_time"].value_or(0.0625));
+  Sequence::setPressTime(dseconds(config["controller"]["button_press_time"].value_or(0.0625)));
+  Sequence::setReleaseTime(dseconds(config["controller"]["button_release_time"].value_or(0.0625)));
   
   if (sequence_map.size() > 0) {
     PLOG_DEBUG << "Clearing existing Sequence data";
@@ -66,7 +66,7 @@ int SequenceTable::buildSequenceList(toml::table& config, GameCommandTable& comm
       }
       try {
         std::shared_ptr<Sequence> s = makeSequence(*seq, "sequence", commands, controller, true);
-        PLOG_VERBOSE << "Adding pre-defined sequence: " << *seq_name;
+        PLOG_DEBUG << "Adding pre-defined sequence: " << *seq_name;
        	auto [it, result] = sequence_map.try_emplace(*seq_name, s);
         if (! result) {
           ++parse_errors;
@@ -113,7 +113,7 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
     if (delay < 0) {
 	    throw std::runtime_error("Delay must be a non-negative number of seconds.");
     }
-    unsigned int delay_time = (unsigned int) (delay * SEC_TO_MICROSEC);
+    usec delay_time = usec(delay);
 
     int repeat = definition["repeat"].value_or(1);
     if (repeat < 1) {
@@ -122,11 +122,11 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
     }
 
     if (*event == "delay") {
-      if (delay_time == 0) {
+      if (delay_time == usec::zero()) {
         PLOG_WARNING << "You've tried to add a delay of 0 microseconds. This will be ignored.";
 	    } else {
-	      seq->addDelay(delay_time);
-        PLOG_VERBOSE << "Delay = " << delay_time << " microseconds";
+	      seq->addDelay(delay_time.count());
+        PLOG_VERBOSE << "Delay = " << delay_time.count() << " microseconds";
 	    }
       continue;
     }
@@ -161,14 +161,14 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
 	      if (repeat > 1) {
 	        PLOG_WARNING << "Repeat is not supported with 'hold' and will be ignored.";
     	  }
-	      seq->addHold(signal, value, delay_time);
-        PLOG_VERBOSE << "Hold " << signal->getName() << " for " << delay_time << " microseconds";
+	      seq->addHold(signal, value, delay_time.count());
+        PLOG_VERBOSE << "Hold " << signal->getName() << " for " << delay_time.count() << " microseconds";
       } else if (*event == "press") {
 	      for (int i = 0; i < repeat; i++) {
 	        seq->addPress(signal, value);
-	        if (delay_time > 0) {
-	          seq->addDelay(delay_time);
-            PLOG_VERBOSE << "Press " << signal->getName() << " with a delay of " << delay_time << " microseconds";
+	        if (delay_time > usec::zero()) {
+	          seq->addDelay(delay_time.count());
+            PLOG_VERBOSE << "Press " << signal->getName() << " with a delay of " << delay_time.count() << " microseconds";
 	        } else {
             PLOG_VERBOSE << "Press " << signal->getName();
           }
@@ -177,8 +177,8 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
 	      if (repeat > 1) {
 	        PLOG_WARNING << "Repeat is not supported with 'release' and will be ignored.";
 	      }
-	      seq->addRelease(signal, delay_time);
-        PLOG_VERBOSE << "Release " << signal->getName() << " (delay =" << delay_time << " microseconds)";
+	      seq->addRelease(signal, delay_time.count());
+        PLOG_VERBOSE << "Release " << signal->getName() << " (delay =" << delay_time.count() << " microseconds)";
       } else {
     	  throw std::runtime_error("Unrecognized event type: " + *event);
       }

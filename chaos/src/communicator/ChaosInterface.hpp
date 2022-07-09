@@ -20,7 +20,7 @@
 #pragma once
 #include <queue>
 #include <string>
-#include <mogi/thread.h>
+#include <thread.hpp>
 
 #include "CommandListener.hpp"
 #include "CommandSender.hpp"
@@ -33,7 +33,7 @@ namespace Chaos {
    * The interface combines both a server (to receive messages) and a client (to send them).
    * We need both because messages can be initiated from either end.
    */
-  class ChaosInterface : public Mogi::Thread {
+  class ChaosInterface : public Thread {
   private:
     CommandListener listener;
     CommandSender talker;

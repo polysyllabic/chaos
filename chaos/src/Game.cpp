@@ -72,12 +72,14 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
   }
   PLOG_INFO << "Active modifiers: " << active_modifiers;
 
-  time_per_modifier = configuration["mod_defaults"]["time_per_modifier"].value_or(180.0);
-  if (time_per_modifier < 10) {
+  double t = configuration["mod_defaults"]["time_per_modifier"].value_or(180.0);
+  time_per_modifier = dseconds(t);
+
+  if (time_per_modifier < std::chrono::seconds(10)) {
     PLOG_WARNING << "Minimum active time for modifiers is 10 seconds.";
-    time_per_modifier = 10;
+    time_per_modifier = std::chrono::seconds(10);
   }
-  PLOG_INFO << "Time per modifier: " << time_per_modifier << " seconds";
+  PLOG_INFO << "Time per modifier: " << time_per_modifier.count() << " seconds";
 
   // Process the game-command definitions
   parse_errors += game_commands.buildCommandList(configuration, signal_table);
@@ -86,7 +88,7 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
   parse_errors += game_conditions.buildConditionList(configuration, game_commands);
 
   // Initialize the remapping table
-  parse_errors += signal_table.initializeInputs(configuration, game_conditions);
+  parse_errors += signal_table.initializeInputs(configuration);
 
   assert(sequences);
   // Initialize defined sequences and static parameters for sequences
