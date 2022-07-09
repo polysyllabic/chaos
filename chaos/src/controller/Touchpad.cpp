@@ -26,11 +26,16 @@
 
 using namespace Chaos;
 
+double Touchpad::default_scale;
+short Touchpad::default_skew;
+
 Touchpad::Touchpad() {
   timer.initialize();
+  scale = default_scale;
+  skew = default_skew;
 }
 
-void Touchpad::clearActive() {
+void Touchpad::clearPrior() {
   dX.priorActive = false;
   dY.priorActive = false;
   dX_2.priorActive = false;

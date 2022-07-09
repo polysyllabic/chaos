@@ -80,17 +80,6 @@ namespace Chaos {
 
     void reportGameStatus();
 
-    bool remapEvent(DeviceEvent& event);
-    /**
-     * Set up and tear down touchpad state on receiving a new touchpad active signal.
-     */
-    void prepTouchpad(const DeviceEvent& event);
-
-    /**
-     * If the touchpad axis is currently being remapped, send a 0 signal to the remapped axis.
-     */
-    void disableTPAxis(ControllerSignal tp_axis);
-
     void removeMod(std::shared_ptr<Modifier> mod);
 
   public:
@@ -136,6 +125,8 @@ namespace Chaos {
     
     void setOn(std::shared_ptr<GameCommand> command);
 
+    void applyEvent(const DeviceEvent& event) { controller.applyEvent(event); }
+
     std::shared_ptr<Modifier> getModifier(const std::string& name) {
       return game.getModifier(name);
     }
@@ -173,11 +164,9 @@ namespace Chaos {
       return game.getSignalTable().getInput(name);
     }
 
-    void setCascadingRemap(std::unordered_map<std::shared_ptr<ControllerInput>, SignalRemap>& remaps) {
-      game.getSignalTable().setCascadingRemap(remaps);
+    std::shared_ptr<ControllerInput> getInput(const DeviceEvent& event) {
+      return game.getSignalTable().getInput(event);
     }
-
-    void clearRemaps() { game.getSignalTable().clearRemaps(); }
 
     void addControllerInputs(const toml::table& config, const std::string& key,
                                  std::vector<std::shared_ptr<ControllerInput>>& vec) {

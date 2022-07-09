@@ -23,12 +23,12 @@
 #include <toml++/toml.h>
 
 #include "Modifier.hpp"
-#include "ControllerInput.hpp"
-#include "ControllerInputTable.hpp"
+#include <ControllerInput.hpp>
+#include <Touchpad.hpp>
 #include "EngineInterface.hpp"
 
 namespace Chaos {
-  class Game;
+  
   /** 
    * \brief A modifier that remaps the game commands to different inputs from the controller.
    *
@@ -76,12 +76,11 @@ namespace Chaos {
   class RemapModifier : public Modifier::Registrar<RemapModifier> {
 
   private:
-    //ControllerInputTable& remap_table;
 
     /**
      * \brief The list of remappings set by this mod.
      * 
-     * If #random is true, the to portion of the list is regenerated each time.
+     * If #random is true, the to portion of the list is regenerated each time we start.
      */
     std::unordered_map<std::shared_ptr<ControllerInput>, SignalRemap> remaps;
 
@@ -103,8 +102,23 @@ namespace Chaos {
      */
     std::vector<std::shared_ptr<ControllerInput>> signals;
     
+    /**
+     * Helper class to manage velocity calculations
+     */
+    Touchpad touchpad;
+
+    /**
+     * \brief Convert the touchpad signal to an axis signal
+     * 
+     * \param tp_axis The axis of the touchpad to convert
+     * \param value The value of the incoming raw touchpad event
+     * \return short Converted axis value
+     */
+    short touchpadToAxis(ControllerSignal signal, short value);
+
     std::shared_ptr<ControllerInput> lookupInput(const toml::table& config, const std::string& key, bool required);
 
+    
   public:
     RemapModifier(toml::table& config, EngineInterface* e);
 
@@ -112,9 +126,7 @@ namespace Chaos {
     const std::string& getModType() { return mod_type; }
 
     void begin();
-    void apply();
-    void finish();
-
+    bool remap(DeviceEvent& event);
   };
 };
 

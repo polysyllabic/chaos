@@ -1330,6 +1330,10 @@ remap = [
       {from = "RY", to = "NOTHING"}
       ]
 
+# Note for touchpad remapping, TOUCHPAD_ACTIVE must be included in the remap list so that
+# starting and stopping touchpad use can be initialized properly. Also, the axes that are
+# being remapped should all be in the signals list as well as the remap table. Otherwise,
+# they won't be properly set to 0 on conclusion.
 [[modifier]]
 name = "Touchpad Aiming"
 description = "No more aiming with the joystick. Finally making use of the touchpad!"

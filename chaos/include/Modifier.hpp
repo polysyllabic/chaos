@@ -495,6 +495,31 @@ namespace Chaos {
     virtual void apply();
 
     /**
+     * \brief Common entry point into the remap function
+     * \param[in,out] event The event coming from the controller
+     * \return true if the event is valid and should be passed on to other mods and the controller
+     * \return false if the event should be dropped and not sent to other mods or the controller
+     *
+     * This function is called directly by the ChaosEngine class for each incomming event. It
+     * gives a place to handle any common tasks required for all modifiers, after which we call the
+     * virtual remap() function implemented by the
+     * concrete child class.
+     */
+    bool _remap(DeviceEvent& event);
+
+    /**
+     * \brief Remap incomming commands
+     * \param[in,out] event The event coming from the controller
+     * \return true if the event is valid and should be passed on to other mods and the controller
+     * \return false if the event should be dropped and not sent to other mods or the controller
+     *
+     * This function is called directly by the ChaosEngine class for each incomming event. Modifiers
+     * 
+     * Both remap() and tweak() are conceptually similar. The difference is that the remap() function
+     */
+    virtual bool remap(DeviceEvent& event);
+
+    /**
      * \brief Common entry point into the tweak function
      * \param[in,out] event The event coming from the controller to test/alter.
      * \return true if the event is valid and should be passed on to other mods and the controller

@@ -153,6 +153,14 @@ void Modifier::_apply() {
 
 void Modifier::apply() {}
 
+bool Modifier::_remap(DeviceEvent& event) {
+  return remap(event);
+}
+
+bool Modifier::remap(DeviceEvent& event) {
+  return true;
+}
+
 bool Modifier::_tweak(DeviceEvent& event) {
   // Traverse the list of persistent game conditions and see if the event matches an on or off
   // event. If it does, we update the game state accordingly

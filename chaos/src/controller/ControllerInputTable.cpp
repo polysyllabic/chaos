@@ -114,22 +114,6 @@ bool ControllerInputTable::matchesID(const DeviceEvent& event, ControllerSignal 
   return (event.id == to_match->getID() && event.type == to_match->getButtonType());
 }
 
-short ControllerInputTable::touchpadToAxis(ControllerSignal tp_axis, short value) {
-  short ret;
-  // Use the touchpad value to update the running derivative count
-  short derivativeValue = touchpad.getVelocity(tp_axis, value) * touchpad_scale;
-
-  if (derivativeValue > 0) {
-    ret = derivativeValue + touchpad_skew;
-  }
-  else if (derivativeValue < 0) {
-    ret = derivativeValue - touchpad_skew;
-  }
-    
-  PLOG_DEBUG << "Derivative: " << derivativeValue << ", skew = " << touchpad_skew << ", returning " << ret;
-  return ret;
-}
-
 std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const toml::table& config, const std::string& key) {
   std::optional<std::string> signal = config[key].value<std::string>();
   if (!signal) {
@@ -142,7 +126,8 @@ std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const toml::tabl
   return inp;
 }
 
-void ControllerInputTable::setCascadingRemap(std::unordered_map<std::shared_ptr<ControllerInput>, SignalRemap>& remaps) {
+void ControllerInputTable::setCascadingRemap(RemapTable& remaps) {
+  RemapTable copy = RemapTable(remaps);
   for (auto& r : remaps) {
     // Check if the from signal in the remaps list already appears as a to_console entry in the table
     auto it = std::find_if(inputs.begin(), inputs.end(), [r](auto inp)
@@ -179,10 +164,10 @@ int ControllerInputTable::initializeInputs(const toml::table& config) {
     ++parse_errors;
     scale = 1;
   }
-  touchpad_scale = scale;
+  Touchpad::setDefaultScale(scale);
 
-  int skew = config["remapping"]["touchpad_skew"].value_or(0);
-  touchpad_skew = skew;
+  short skew = config["remapping"]["touchpad_skew"].value_or(0);
+  Touchpad::setDefaultSkew(skew);
 
   PLOG_VERBOSE << "Touchpad scale = " << scale << "; skew = " << skew;
   return parse_errors;

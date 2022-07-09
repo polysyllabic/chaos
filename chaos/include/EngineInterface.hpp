@@ -38,14 +38,17 @@ namespace Chaos {
   
   class EngineInterface {
   public:
-    // Engine status
+    // Engine
     virtual bool isPaused() = 0;
     virtual void fakePipelinedEvent(DeviceEvent& event, std::shared_ptr<Modifier> sourceMod) = 0;
+  
     // These functions access the controller
     virtual short getState(uint8_t id, uint8_t type) = 0;
     virtual bool eventMatches(const DeviceEvent& event, std::shared_ptr<GameCommand> command) = 0;
     virtual void setOff(std::shared_ptr<GameCommand> command) = 0;
     virtual void setOn(std::shared_ptr<GameCommand> command) = 0 ;
+    virtual void applyEvent(const DeviceEvent& event) = 0;
+
     // Functions to get modifier data
     virtual std::shared_ptr<Modifier> getModifier(const std::string& name) = 0;
     virtual std::unordered_map<std::string, std::shared_ptr<Modifier>>& getModifierMap() = 0;
@@ -56,8 +59,7 @@ namespace Chaos {
     virtual void restoreMenuState(std::shared_ptr<MenuItem> item) = 0;
     // These functions access the signal (remap) table
     virtual std::shared_ptr<ControllerInput> getInput(const std::string& name) = 0;
-    virtual void setCascadingRemap(std::unordered_map<std::shared_ptr<ControllerInput>, SignalRemap>& remaps) = 0;
-    virtual void clearRemaps() = 0;
+    virtual std::shared_ptr<ControllerInput> getInput(const DeviceEvent& event) = 0;
     // Game Controller Inputs
     virtual void addControllerInputs(const toml::table& config, const std::string& key,
                                  std::vector<std::shared_ptr<ControllerInput>>& vec) = 0;
