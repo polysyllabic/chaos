@@ -30,7 +30,7 @@ using namespace Chaos;
 int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
                                 bool use_menu) {
   int parse_errors = 0;
-  PLOG_VERBOSE << "Building modifier list";
+  PLOG_DEBUG << "Building modifier list";
   
   if (mod_map.size() > 0) {
     PLOG_VERBOSE << "Clearing existing Modifier data.";
@@ -78,7 +78,7 @@ int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
       }
       // Now we can create the mod. The constructors handle the rest of the configuration.
       try {
-	      PLOG_VERBOSE << "Adding modifier '" << *mod_name << "' of type " << *mod_type;
+	      PLOG_DEBUG << "Adding modifier '" << *mod_name << "' of type " << *mod_type;
 	      std::shared_ptr<Modifier> m = Modifier::create(*mod_type, *modifier, engine);
         assert(m);
         auto [it, result] = mod_map.try_emplace(*mod_name, m);

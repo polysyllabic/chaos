@@ -66,7 +66,7 @@ int SequenceTable::buildSequenceList(toml::table& config, GameCommandTable& comm
       }
       try {
         std::shared_ptr<Sequence> s = makeSequence(*seq, "sequence", commands, controller, true);
-        PLOG_VERBOSE << "Adding pre-defined sequence: " << *seq_name;
+        PLOG_DEBUG << "Adding pre-defined sequence: " << *seq_name;
        	auto [it, result] = sequence_map.try_emplace(*seq_name, s);
         if (! result) {
           ++parse_errors;

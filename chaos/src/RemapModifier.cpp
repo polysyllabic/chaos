@@ -36,6 +36,7 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
 
   initialize(config, e);
   
+  PLOG_DEBUG << "Adding signals";
   engine->addControllerInputs(config, "signals", signals);
 
   disable_signals = config["disableSignals"].value_or(false);
@@ -50,7 +51,7 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
     if (! remap_list) {
       throw std::runtime_error("Expect 'remap' to contain an array of remappings.");
     }
-    PLOG_VERBOSE << "Processing remap list";
+    PLOG_DEBUG << "Processing remap list";
     for (auto& elem : *remap_list) {
       const toml::table* remapping = elem.as_table();
       if (! remapping) {
@@ -117,6 +118,7 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
     if (! remap_list || !remap_list->is_homogeneous(toml::node_type::string)) {
       throw std::runtime_error("randomRemap must be an array of strings");
     }
+    PLOG_VERBOSE << "Adding list of random remaps for " << name;
     for (auto& elem : *remap_list) {
       std::optional<std::string> signame = elem.value<std::string>();
       // the is_homogenous test above should ensure that signame always has a value
