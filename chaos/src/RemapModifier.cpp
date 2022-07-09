@@ -67,7 +67,6 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
       ControllerSignalType to_type = to->getType();
 
       std::shared_ptr<ControllerInput> to_neg = lookupInput(*remapping, "to_neg", false);
-      ControllerSignalType to_neg_type = to_neg->getType();
 
       // Check for unsupported remappings
       if (from_type == ControllerSignalType::DUMMY) {
@@ -76,13 +75,13 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
         if ((to_type == ControllerSignalType::ACCELEROMETER ||
             to_type == ControllerSignalType::GYROSCOPE || 
             to_type == ControllerSignalType::TOUCHPAD) || (to_neg && (
-            to_neg_type == ControllerSignalType::ACCELEROMETER || 
-            to_neg_type == ControllerSignalType::GYROSCOPE || 
-            to_neg_type == ControllerSignalType::TOUCHPAD
+            to_neg->getType() == ControllerSignalType::ACCELEROMETER || 
+            to_neg->getType() == ControllerSignalType::GYROSCOPE || 
+            to_neg->getType() == ControllerSignalType::TOUCHPAD
             ))) {
           throw std::runtime_error("Cross-type remapping not supported going to the accelerometer, gyroscope, or touchpad.");
         }
-        if (to_neg && to_neg_type != ControllerSignalType::DUMMY && to_neg_type != to_type) {
+        if (to_neg && to_neg->getType() != ControllerSignalType::DUMMY && to_neg->getType() != to_type) {
           PLOG_WARNING << "The 'to' and 'to_neg' signals belong to different classes. Are you sure this is what you want?";
         }
       }
