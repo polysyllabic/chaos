@@ -160,7 +160,12 @@ void RemapModifier::begin() {
       auto it = buttons.begin();
       std::advance(it, index);
       value.to_console =  *it;
+      PLOG_DEBUG << key->getName() << " remapped to " << (value.to_console)->getName();
       buttons.erase(it);
+    }
+    PLOG_DEBUG << "Verify assignments:";
+    for (auto [key, value] : remaps) {
+      PLOG_DEBUG << key->getName() << " remapped to " << (value.to_console)->getName();
     }
   }
 }
