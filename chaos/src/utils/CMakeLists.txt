@@ -1,3 +1,5 @@
+find_package (Threads REQUIRED)
+
 add_library (chaos_utils
   random.cpp
   random.hpp
@@ -21,3 +23,5 @@ target_include_directories(chaos_utils
   PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
+target_link_libraries(chaos_utils
+  ${CMAKE_THREAD_LIBS_INIT})
