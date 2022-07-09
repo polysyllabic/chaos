@@ -11,6 +11,9 @@ add_library (chaos_utils
   TOMLUtils.cpp
   TOMLUtils.hpp
 )
+
+target_compile_features(chaos_utils PRIVATE cxx_std_17)
+
 target_include_directories(chaos_utils
   PRIVATE
     ${tomlplusplus_SOURCE_DIR}/include

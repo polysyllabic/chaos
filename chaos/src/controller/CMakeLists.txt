@@ -19,6 +19,8 @@ add_library (chaos_controller
   Touchpad.cpp
   )
 
+target_compile_features(chaos_controller PRIVATE cxx_std_17)
+
 target_include_directories(chaos_controller
   PRIVATE
   	${plog_SOURCE_DIR}/include

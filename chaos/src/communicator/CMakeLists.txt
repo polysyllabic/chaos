@@ -8,6 +8,9 @@ add_library (chaos_communicator
     CommandSender.hpp
     ChaosInterface.hpp
 )
+
+target_compile_features(chaos_communicator PRIVATE cxx_std_17)
+
 target_include_directories(chaos_communicator
   PRIVATE
   	${plog_SOURCE_DIR}/include
