@@ -241,6 +241,7 @@ bool RemapModifier::remap(DeviceEvent& event) {
     modified.value = event.value;
 
     // Now handle cases that require additional actions
+    if (event.value) {
     switch (from->getType()) {
     case ControllerSignalType::BUTTON:
       switch (to_console->getType()) {
@@ -327,6 +328,7 @@ bool RemapModifier::remap(DeviceEvent& event) {
     } // end switch
     if (remap.invert) {
       modified.value = ControllerInput::joystickLimit(-event.value);
+    }
     }
     if (event.value) {
      PLOG_DEBUG << name << ": " << from->getName() << ":" << event.value << " to " << to_console->getName() << ":" << modified.value;
