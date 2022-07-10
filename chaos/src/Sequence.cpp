@@ -99,7 +99,7 @@ void Sequence::send() {
     PLOG_DEBUG << "Sending event for input (" << (int) event.type << ":" << (int) event.id
 	       << ") value=" << (int) event.value << "; sleeping for " << (int) event.time << " microseconds";
     controller.applyEvent(event);
-    if (event.time) {
+    if (event.time > 0) {
       usleep(event.time);
     }
   }

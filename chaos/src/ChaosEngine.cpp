@@ -144,8 +144,8 @@ void ChaosEngine::doAction() {
   // Check front element for expiration. 
   if (modifiers.size() > 0) {
     std::shared_ptr<Modifier> front = modifiers.front();
-    if ((front->lifespan() < 0 && front->lifetime() > front->lifespan()) ||
-	      (front->lifespan() >= 0 && front->lifetime() > game.getTimePerModifier())) {
+    if ((front->lifespan() >= 0 && front->lifetime() > front->lifespan()) ||
+	      (front->lifespan() <  0 && front->lifetime() > game.getTimePerModifier())) {
       removeMod(front);
     }
   } if (modifiers.size() > game.getNumActiveMods()) {
