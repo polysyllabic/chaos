@@ -247,7 +247,7 @@ while = [ "aiming" ]
 
 [[condition]]
 name = "shot taken"
-trigger_on = [ "shoot" ]
+trigger_on = "shoot"
 while = [ "aiming" ]
 
 [[condition]]
@@ -270,13 +270,13 @@ threshold_type = "distance"
 
 [[condition]]
 name = "gun selected"
-trigger_on = [ "select weapon" ]
-clear_on = [ "select consumable" ]
+trigger_on = "select weapon"
+clear_on = "select consumable"
 
 [[condition]]
 name = "consumable selected"
-trigger_on = [ "select consumable" ]
-clear_on = [ "select weapon" ]
+trigger_on = "select consumable"
+clear_on = "select weapon"
 
 
 

@@ -68,14 +68,7 @@ void SequenceModifier::update() {
   
   switch (sequence_state) {
   case SequenceState::UNTRIGGERED:
-    // If there is no condition, this will also return true
-    if (inCondition()) {
-      // go straight into the sequence if no delay
-      sequence_state = (start_delay == 0) ? SequenceState::IN_SEQUENCE :
-                                            SequenceState::STARTING;
-      PLOG_DEBUG << "Condition met after waiting " << sequence_time << " seconds";
-      sequence_time = 0;
-    }
+    return;
   case SequenceState::STARTING:
     // In the starting state, we wait for any initial delay before the sequence starts
     if (sequence_time >= start_delay) {
@@ -101,7 +94,7 @@ case SequenceState::IN_SEQUENCE:
       sequence_state = SequenceState::UNTRIGGERED;
       sequence_time = 0;
       sequence_step = 0;
-            
+      resetConditionTriggers();
     }
   }
 }

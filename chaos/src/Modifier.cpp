@@ -202,6 +202,14 @@ void Modifier::sendFinishSequence() {
   }
 }
 
+void Modifier::resetConditionTriggers() {
+  for (auto& c : conditions) {
+    c->reset();
+  }
+  for (auto& c : unless_conditions) {
+    c->reset();
+  }
+}
 
 ConditionCheck Modifier::getConditionTest(const toml::table& config, const std::string& key) {
   std::optional<std::string_view> ttype = config[key].value<std::string_view>();

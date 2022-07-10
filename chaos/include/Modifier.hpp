@@ -579,6 +579,8 @@ namespace Chaos {
      */
     bool inCondition();
     
+    void resetConditionTriggers();
+    
         /**
      * \brief Checks the list of negative game conditions 
      * 
