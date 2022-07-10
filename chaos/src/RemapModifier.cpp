@@ -192,7 +192,7 @@ void RemapModifier::begin() {
 bool RemapModifier::remap(DeviceEvent& event) {
   DeviceEvent new_event;
   auto signal = engine->getInput(event);
-
+  short orig_val = event.value;
   // Is this event in our list of remaps?
   if (auto it{remaps.find(signal)}; it != std::end(remaps)) {
     const auto[from, remap]{*it};
@@ -270,6 +270,8 @@ bool RemapModifier::remap(DeviceEvent& event) {
     event.value = (from->getType() == ControllerSignalType::TOUCHPAD) ?
       touchpadToAxis(from->getSignal(), event.value) : 
       from->remapValue(to_console, event.value);
+
+    PLOG_DEBUG << name << " with original value " << orig_val << " remaps to " << to_console->getName() << " with " << event.value;
 
   }
   return true;

@@ -1197,7 +1197,7 @@ beginSequence = [ { event="hold", command = "dodge/sprint"},
       { event ="hold", command = "move forward/back", value = -128 } ]
 force_on = [ 1, -128 ]
 blockWhileBusy = [ "move forward/back" ]
-time_on = 4.0
+time_on = 5.0
 time_off = 0.1
 finishSequence = [ { event="release", command = "move forward/back"},
        { event="release", command = "dodge/sprint"}  ]
@@ -1212,7 +1212,7 @@ beginSequence = [ { event="hold", command = "dodge/sprint"},
       { event ="hold", command = "move forward/back", value = 128 } ]
 force_on = [1, 128]
 blockWhileBusy = [ "move forward/back" ]
-time_on = 4.0
+time_on = 5.0
 time_off = 0.1
 finishSequence = [ { event="release", command = "move forward/back"},
        { event="release", command = "dodge/sprint"}  ]
