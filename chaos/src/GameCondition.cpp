@@ -128,10 +128,10 @@ bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> command) {
   return thresholdComparison(curval, threshold);
 }
 
-short int GameCondition::getSignalThreshold(std::shared_ptr<GameCommand> signal) {
+short int GameCondition::getSignalThreshold(std::shared_ptr<GameCommand> command) {
   // Check the threshold for the remapped control in case signals are swapped between signal classes
-  std::shared_ptr<ControllerInput> remapped = signal->getRemappedSignal();
-  return getSignalThreshold(remapped);
+  std::shared_ptr<ControllerInput> signal = command->getInput();
+  return getSignalThreshold(signal);
 }
 
 short int GameCondition::getSignalThreshold(std::shared_ptr<ControllerInput> input) {

@@ -80,39 +80,6 @@ namespace Chaos {
      */
     bool matchesID(const DeviceEvent& event, ControllerSignal to);
 
-    /**
-     * \brief Alters the incomming event to the value expected by the console
-     * \param[in,out] event The signal coming from the controller
-     * \return Validity of the signal. False signals are dropped from processing by the mods and not sent to
-     * the console.
-     *
-     * This remapping is invoked from the chaos engine's sniffify routine before the list of regular
-     * mods is traversed. That means that mods can operate on the signals associated with particular
-     * commands without worrying about the state of the remapping.
-     */
-    bool remapEvent(DeviceEvent& event);
-
-    /**
-     * \brief Set a cascading remap.
-     * \param remaps The complete rmapping information for the signal to the console.
-     *
-     * Before setting the remap, checks to see if the remapping signal is already the to-signal from
-     * some other input. If the to part of the remap from portion of the remapped signal is already
-     * in use, we cascade the remap by changing making the to-signal of the other input the to-signal
-     * for the new one. For example, if a previous mod maps ACCX -> LX, and the new mod maps LX -> RX,
-     * the unified map will be, in effect, ACCX -> LX -> RX, simplified to ACCX -> RX.
-     */
-    void setCascadingRemap(RemapTable& remaps);
-
-    /**
-     * \brief Reset all remapping to default
-     * 
-     * When a remap mod is removed form the active list, there may be other remap modifiers still active.
-     * To recreate the remap table in this case we wipe the table clean and have each existing mod reapply
-     * its mappings in order. This function is invoked by remap mods in their finish() routine.
-     */
-    void clearRemaps();
-
     int initializeInputs(const toml::table& config);
 
     void addToVector(const toml::table& config, const std::string& key,

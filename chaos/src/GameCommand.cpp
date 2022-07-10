@@ -31,18 +31,6 @@ GameCommand::GameCommand(const std::string& cmd, std::shared_ptr<ControllerInput
                          name{cmd}, binding{bind} {
 }
 
-std::shared_ptr<ControllerInput> GameCommand::getRemappedSignal() {
-  // If not remapping, return the actual signal
-  if (binding->getRemap() == nullptr) {
-    return binding;
-  }
-  // If remapping to dev/null, return null
-  if (binding->getRemap()->getSignal() == ControllerSignal::NOTHING) {
-    return nullptr;
-  }
-  return binding->getRemap();
-}
-
 short GameCommand::getState() {
   short state = binding->getState();
   return state;

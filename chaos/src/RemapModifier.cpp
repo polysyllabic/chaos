@@ -190,9 +190,9 @@ void RemapModifier::begin() {
 }
 
 bool RemapModifier::remap(DeviceEvent& event) {
-  DeviceEvent new_event;
+  DeviceEvent new_event{};
   auto signal = engine->getInput(event);
-  short orig_val = event.value;
+
   // Is this event in our list of remaps?
   if (auto it{remaps.find(signal)}; it != std::end(remaps)) {
     const auto[from, remap]{*it};
@@ -218,6 +218,7 @@ bool RemapModifier::remap(DeviceEvent& event) {
     }
 
     auto to_console = remap.to_console;
+    DeviceEvent modified;
     // When mapping from any type of axis to buttons/hybrids, the choice of button is determined
     // by the sign of the value.
     if (event.value < 0 && event.id == TYPE_AXIS && to_console->getButtonType() == TYPE_BUTTON) {
@@ -234,25 +235,74 @@ bool RemapModifier::remap(DeviceEvent& event) {
       return false;
     }
 
+    // Default remapping
+    modified.id = to_console->getID();
+    modified.type = to_console->getButtonType();
+    modified.value = event.value;
+
     // Now handle cases that require additional actions
     switch (from->getType()) {
-    case ControllerSignalType::HYBRID:
-      // Going from hybrid to button, we drop the axis component
-      if (to_console->getType() == ControllerSignalType::BUTTON && event.type == TYPE_AXIS) {
- 	      return false;
-      }
     case ControllerSignalType::BUTTON:
-      // From button to hybrid, we need to insert a new event for the axis
-      if (to_console->getType() == ControllerSignalType::HYBRID) {
+      switch (to_console->getType()) {
+      case ControllerSignalType::THREE_STATE:
+        // If the source button maps to the negative dpad value, use -1, otherwise, use 1
+        modified.value = remap.to_min ? -1 : 1;
+        break;
+      case ControllerSignalType::AXIS:
+        // If the source button maps to the negative axis value, use min, otherwise, use max
+        modified.value = remap.to_min ? JOYSTICK_MIN : JOYSTICK_MAX;
+        break;
+      case ControllerSignalType::HYBRID:
+        // From button to hybrid, we need to insert a new event for the axis
    	    new_event.id = to_console->getHybridAxis();
         new_event.type = TYPE_AXIS;
    	    new_event.value = event.value ? JOYSTICK_MAX : JOYSTICK_MIN;
         engine->applyEvent(new_event);
       }
       break;
+    case ControllerSignalType::HYBRID:
+      switch (to_console->getType()) {
+      // Going from hybrid to button, we drop the axis component
+      case ControllerSignalType::BUTTON:
+        if (event.type == TYPE_AXIS) {
+ 	        return false;
+        }
+        break;
+      case ControllerSignalType::THREE_STATE:
+        modified.value = remap.to_min ? -1 : 1;
+      }
+      break;
+    case ControllerSignalType::THREE_STATE:
+      switch (to_console->getType()) {
+      case ControllerSignalType::AXIS:
+	      // Scale to axis extremes
+      	modified.value = ControllerInput::joystickLimit(JOYSTICK_MAX*event.value);
+      	break;
+      case ControllerSignalType::BUTTON:
+      case ControllerSignalType::HYBRID:
+        // if we're mapping a -1 dpad onto a button, it should change to 1
+        modified.value = 1;
+      }
+      break;
     case ControllerSignalType::AXIS:
-      // From axis to button, we need a new event to zero out the second button when the value is
-      // below the threshold. The first button will get a 0 value from the changed regular value
+      switch (to_console->getType()) {
+      case ControllerSignalType::BUTTON:
+        if (event.value > 0) {
+          modified.value = (!remap.to_negative && event.value > remap.threshold) ? 1 : 0;
+        } else if (event.value < 0) {
+          modified.value = (remap.to_negative && event.value < -remap.threshold) ? 1 : 0;
+        }
+        break;
+      case ControllerSignalType::THREE_STATE:
+        if (event.value > 0) {
+          modified.value = (!remap.to_negative && event.value > remap.threshold) ? 1 : 0;
+        } else if (event.value < 0) {
+          modified.value = (remap.to_negative && event.value < -remap.threshold) ? -1 : 0;
+        }
+        break;
+   	  }
+      // From axis to any type of button, we need a new event to zero out the second button when
+      // the value is below the threshold. The first button will get a 0 value from the changed regular value
       // At this point, to_console has been set with the negative remap value.
       if (to_console->getButtonType() == TYPE_BUTTON && abs(event.value) < remap.threshold) {
         new_event.id = to_console->getID();
@@ -260,19 +310,29 @@ bool RemapModifier::remap(DeviceEvent& event) {
         new_event.type = TYPE_BUTTON;
         engine->applyEvent(new_event);
       }
+      break;
+    case ControllerSignalType::ACCELEROMETER:
+      if (to_console->getType() == ControllerSignalType::AXIS) {
+	      modified.value= ControllerInput::joystickLimit((short) (-event.value/remap.scale));
+      }
+      break;
+    case ControllerSignalType::TOUCHPAD:
+      if (to_console->getType() == ControllerSignalType::AXIS) {
+	      modified.value = touchpadToAxis(from->getSignal(), event.value);
+      }
+      break;
+    case ControllerSignalType::DUMMY:
+      PLOG_WARNING << "Remapping from NONE or NOTHING";
+      break;
     } // end switch
-
-    // Update the event
-    event.type = to_console->getButtonType();
-    event.id = to_console->getID(event.type);
-
-    // If we're remapping across button classes, we also need to update the value
-    event.value = (from->getType() == ControllerSignalType::TOUCHPAD) ?
-      touchpadToAxis(from->getSignal(), event.value) : 
-      from->remapValue(to_console, event.value);
-    if (event.value) {
-     PLOG_DEBUG << name << ": " << from->getName() << ":" << orig_val << " to " << to_console->getName() << ":" << event.value;
+    if (remap.invert) {
+      modified.value = ControllerInput::joystickLimit(-event.value);
     }
+    if (event.value) {
+     PLOG_DEBUG << name << ": " << from->getName() << ":" << event.value << " to " << to_console->getName() << ":" << modified.value;
+    }
+    // Update the event
+    event = modified;
   }
   return true;
 }

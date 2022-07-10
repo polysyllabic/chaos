@@ -89,13 +89,6 @@ namespace Chaos {
     std::shared_ptr<ControllerInput> getInput() { return binding; }
     
     /**
-     * \brief Get the pointer to the ControllerInput object that is the remapped signal.
-     * 
-     * \return std::shared_ptr<ControllerInput> 
-     */
-    std::shared_ptr<ControllerInput> getRemappedSignal();
-
-    /**
      * \brief Get the current state of the controller for this command
      * 
      * \return short Current state
