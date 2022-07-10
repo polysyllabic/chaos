@@ -270,9 +270,9 @@ bool RemapModifier::remap(DeviceEvent& event) {
     event.value = (from->getType() == ControllerSignalType::TOUCHPAD) ?
       touchpadToAxis(from->getSignal(), event.value) : 
       from->remapValue(to_console, event.value);
-
-    PLOG_DEBUG << name << " with original value " << orig_val << " remaps to " << to_console->getName() << " with " << event.value;
-
+    if (event.value) {
+     PLOG_DEBUG << name << ": " << from->getName() << ":" << orig_val << " to " << to_console->getName() << ":" << event.value;
+    }
   }
   return true;
 }

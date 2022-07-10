@@ -162,8 +162,10 @@ short ControllerInput::remapValue(std::shared_ptr<ControllerInput> to, short val
         rval = toMin() ? -1 : 1;
         break;
       case ControllerSignalType::AXIS:
+
         // If the source button maps to the negative axis value, use min, otherwise, use max
         rval = toMin() ? JOYSTICK_MIN : JOYSTICK_MAX;
+        PLOG_DEBUG << "button to axis: from " << name << ":" << value << " to " << to->getName() << " rval=" << rval;
       // No change required for hybrid
       }
       break;
@@ -197,6 +199,7 @@ short ControllerInput::remapValue(std::shared_ptr<ControllerInput> to, short val
           rval = (button_to_min && value < -remap_threshold) ? new_val : 0;
         }
    	  }
+      PLOG_DEBUG << "axis to button: from " << name << ":" << value << " to " << to->getName() << " rval=" << rval;
       break;
     case ControllerSignalType::ACCELEROMETER:
       assert(remap_scale);

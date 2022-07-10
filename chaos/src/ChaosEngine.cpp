@@ -141,9 +141,8 @@ void ChaosEngine::doAction() {
 	      (front->lifespan() == dseconds::min() && front->lifetime() > game.getTimePerModifier())) {
       removeMod(front);
     }
-  }
-  // If we have too many mods as the result of a manual apply, remove the oldest one
-  if (modifiers.size() > game.getNumActiveMods()) {
+  } if (modifiers.size() > game.getNumActiveMods()) {
+    // If we have too many mods as the result of a manual apply, remove the oldest one
     removeOldestMod();
   }
 
