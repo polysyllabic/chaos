@@ -91,15 +91,15 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
         invert = false;
       }
 
-      double thresh_proportion = (*remapping)["threshold"].value_or(1);
+      double thresh_proportion = (*remapping)["threshold"].value_or(1.0);
       short threshold = 1;
       if (thresh_proportion < 0 || thresh_proportion > 1) {
         PLOG_WARNING << "Threshold proportion = " << thresh_proportion << ": must be between 0 and 1";
       } else {
-        threshold = (int) (thresh_proportion * JOYSTICK_MAX);
+        threshold = (int) (thresh_proportion * (double) JOYSTICK_MAX);
       }
 
-      double sensitivity = (*remapping)["sensitivity"].value_or(1);
+      double sensitivity = (*remapping)["sensitivity"].value_or(1.0);
       if (sensitivity == 0) {
         PLOG_ERROR << "The sensitivity cannot be 0. Using 1 instead.";
         sensitivity = 1;
@@ -130,8 +130,8 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
   PLOG_DEBUG << name << ": random = " << random;
   for (auto [from, r] : remaps) {
     PLOG_DEBUG << "from " << from->getName() << " to " << (r.to_console ? r.to_console->getName() : "TBD") <<
-    "to_min=" << r.to_min << "" << (r.to_negative ? r.to_negative->getName() : "NONE") <<
-    "threshold = " << r.threshold;
+    " to_min = " << r.to_min << " to_negative = " << (r.to_negative ? r.to_negative->getName() : "NONE") <<
+    " threshold = " << r.threshold << " invert = " << r.invert;
   }
 }
 
@@ -333,7 +333,7 @@ bool RemapModifier::remap(DeviceEvent& event) {
       modified.value = ControllerInput::joystickLimit(-event.value);
     }
     }
-    if (event.value) {
+    if (modified.value) {
      PLOG_DEBUG << name << ": " << from->getName() << ":" << event.value << " to " << to_console->getName() << ":" << modified.value;
     }
     // Update the event
