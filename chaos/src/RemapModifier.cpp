@@ -295,6 +295,7 @@ bool RemapModifier::remap(DeviceEvent& event) {
         else if (event.value < 0) {
           to_console = remap.to_negative;
           other_button = remap.to_console;
+          modified.id = to_console->getID();
           modified.value = (event.value <= -remap.threshold) ? 1 : 0;
         }
         // Zero out the opposite button
@@ -302,7 +303,7 @@ bool RemapModifier::remap(DeviceEvent& event) {
         new_event.value = 0;
         new_event.type = TYPE_BUTTON;
         engine->applyEvent(new_event);
-        PLOG_DEBUG << "Other button zeroed: " << other_button->getName();
+        // PLOG_DEBUG << "Other button zeroed: " << other_button->getName();
         break;
       }
       case ControllerSignalType::THREE_STATE:
@@ -336,7 +337,7 @@ bool RemapModifier::remap(DeviceEvent& event) {
     }
     //if (modified.value != 0) {
      PLOG_DEBUG << name << ": " << from->getName() << ":" << event.value << " to " << to_console->getName() << "(" 
-     << modified.type << "." << modified.id << "):" << modified.value;
+     << (int) modified.type << "." << (int) modified.id << "):" << modified.value;
     //}
     // Update the event
     event.id = modified.id;
