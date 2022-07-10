@@ -61,25 +61,25 @@ namespace Chaos {
 
   protected:
     
-    dseconds press_time;
+    double press_time;
     bool is_on;
     /**
      * Time in seconds to keep the command on.
      */
-    dseconds time_on;
+    double time_on;
 
     /**
      * Time in seconds to leave the command off.
      */
 
-    dseconds time_off;
+    double time_off;
 
     int repeat_count;
     int num_cycles = 1;
     /**
      * Time in seconds to wait after one cycle ends before repeating the sequence.
      */
-    dseconds cycle_delay;
+    double cycle_delay;
 
     /**
      * The values that we set the commands to while we're in the on state

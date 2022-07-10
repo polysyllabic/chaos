@@ -120,15 +120,15 @@ namespace Chaos {
     /**
      * Time in seconds to wait after a cycle begins before issuing the repeat_sequence.
      */
-    dseconds start_delay;
+    double start_delay;
     /**
      * Repeat the cycle after this amount of time (in seconds).
      */
-    dseconds repeat_delay;
+    double repeat_delay;
 
     std::vector<std::shared_ptr<GameCommand>> block_while;
     
-    dseconds sequence_time;
+    double sequence_time;
     short sequence_step;
 
     void processSequence(Sequence& seq);

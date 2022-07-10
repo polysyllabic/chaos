@@ -320,12 +320,12 @@ namespace Chaos {
     /**
      * \brief Amount of time the engine has been paused.
      */
-    dseconds pauseTimeAccumulator;
+    double pauseTimeAccumulator;
 
     /**
      * \brief Designates a custom lifespan, if necessary.
      */
-    dseconds totalLifespan;
+    double totalLifespan;
     
     /**
      * \brief Should this mod be allowed as a child modifier
@@ -417,15 +417,14 @@ namespace Chaos {
      * \brief Get how long the mod has been active.
      * \return The mod's running time minus the accumulated time we've been paused.
      */
-    dseconds lifetime() { return timer.runningTime() - pauseTimeAccumulator; }
+    double lifetime() { return timer.runningTime() - pauseTimeAccumulator; }
     
     double getLifetime() {
-      dseconds lt = lifetime();
-      return std::chrono::duration<double>(lt).count();
+      return lifetime();
      }
 
-    dseconds lifespan() { return totalLifespan; }
-    double getLifespan() { return std::chrono::duration<double>(totalLifespan).count(); }
+    double lifespan() { return totalLifespan; }
+    double getLifespan() { return lifespan(); }
     /**
      * \brief Common entry point into the begin function
      *

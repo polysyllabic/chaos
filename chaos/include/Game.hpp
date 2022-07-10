@@ -71,7 +71,7 @@ namespace Chaos {
 
     int getNumActiveMods() { return active_modifiers; }
 
-    dseconds getTimePerModifier() { return time_per_modifier; }
+    double getTimePerModifier() { return time_per_modifier; }
 
     /**
      * \brief Get the number of errors encountered loading the game-configuration file
@@ -169,7 +169,7 @@ namespace Chaos {
     /**
     * Time in seconds modifiers last before they are removed from the queue.
     */
-    dseconds time_per_modifier;
+    double time_per_modifier;
 
     /**
      * Controller signal status, including remapping

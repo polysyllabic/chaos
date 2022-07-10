@@ -62,17 +62,17 @@ namespace Chaos {
   protected:
     DeviceEvent cooldownCommand;
     bool pressedState;
-    dseconds cooldownTimer;
+    double cooldownTimer;
     bool inCooldown;
     
     /**
      * Time that the event is allowed before we block it
      */
-    dseconds time_on;
+    double time_on;
     /**
      * Time that the event is held in cooldown before re-enabled.
      */
-    dseconds time_off;
+    double time_off;
 
   public:
     CooldownModifier(toml::table& config, EngineInterface* e);

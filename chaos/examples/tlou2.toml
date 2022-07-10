@@ -1226,7 +1226,7 @@ groups = [ "combat" ]
 appliesTo = [ "aiming" ]
 time_on = 4.0
 time_off = 0.1
-force_on = true
+force_on = [ 1 ]
 
 # This is a child-only mod: part of the Navigation Assistance parent mod
 [[modifier]]

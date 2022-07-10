@@ -66,11 +66,11 @@ short Touchpad::getVelocity(ControllerSignal tp_axis, short value) {
   return derivative(dd, value, timer.runningTime());
 }
 
-double Touchpad::derivative(DerivData* d, short current, dseconds timestamp) {
+double Touchpad::derivative(DerivData* d, short current, double timestamp) {
   double ret = 0;
   if (d->priorActive) {
     if (timestamp != d->timestampPrior[0]) {
-      double denom = dseconds(timestamp - d->timestampPrior[0]).count();
+      double denom = timestamp - d->timestampPrior[0];
       PLOG_DEBUG << "deriv denom = " << denom;
       ret = ((double)(current - d->prior[0]))/(denom);
     }	

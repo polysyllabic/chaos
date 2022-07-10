@@ -20,8 +20,9 @@
 #pragma once
 #include <memory>
 #include <vector>
-#include <timer.hpp>
 #include "DeviceEvent.hpp"
+
+#define SEC_TO_MICROSEC 1000000.0
 
 namespace Chaos {
   class Controller;
@@ -52,16 +53,16 @@ namespace Chaos {
     unsigned int wait_until;
 
     // Time in microseconds to hold down a signal for a button press
-    static usec press_time;
+    static unsigned int press_time;
 
     // Time in microseconds to release a signal for a button press before going on to the next command.
-    static usec release_time;
+    static unsigned int release_time;
 
   public:
     Sequence(Controller& c);
 
-    static void setPressTime(dseconds time);
-    static void setReleaseTime(dseconds time);
+    static void setPressTime(double time);
+    static void setReleaseTime(double time);
 
     /**
      * \brief Directly add an individual event to the sequence stack
@@ -87,27 +88,27 @@ namespace Chaos {
      * \brief Emulates holding down the gamapad input signal in the fully on position.
      * \param signal The input signal the console expects to receive
      * \param value The value of the input signal.
-     * \param hold_time Time to hold the signal in microseconds.
+     * \param hold_time Time to hold the signal in seconds.
      *
      * A value of 0 means that the default maximum will be used when emulating the signal press.
      * This is 1 for buttons and the d-pad, and the joystick maximum for other axes. For the hybrid
      * controls L2/R2, a non-zero value is passed to the axis portion of the signal. The button
      * portion is set to 1 regardless.
      */
-    void addHold(std::shared_ptr<ControllerInput> signal, short value, usec hold_time);
+    void addHold(std::shared_ptr<ControllerInput> signal, short value, double hold_time);
     /**
      * \brief Turns off the gamapad input signal.
      * \param signal The input signal the console expects to receive
-     * \param hold_time Time to hold the signal in microseconds.
+     * \param hold_time Time to hold the signal in seconds.
      */
-    void addRelease(std::shared_ptr<ControllerInput> signal, usec release_time);
+    void addRelease(std::shared_ptr<ControllerInput> signal, double release_time);
     /**
      * \brief Add a delay
-     * \param delay Time to delay in microseconds
+     * \param delay Time to delay in seconds
      *
      */
     //void addDelay(unsigned int delay);
-    void addDelay(usec delay);
+    void addDelay(double delay);
 
     void addSequence(std::shared_ptr<Sequence> seq);
 
@@ -133,7 +134,7 @@ namespace Chaos {
      * \return true if sequence is done
      * \return false if sequence is still in progress
      */
-    bool sendParallel(dseconds sequenceTime);
+    bool sendParallel(double sequenceTime);
     
   };
 

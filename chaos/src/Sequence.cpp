@@ -26,8 +26,8 @@
 
 using namespace Chaos;
 
-usec Sequence::press_time;
-usec Sequence::release_time;
+unsigned int Sequence::press_time;
+unsigned int Sequence::release_time;
 
 Sequence::Sequence(Controller& c) : controller{c} {}
 
@@ -45,9 +45,9 @@ void Sequence::addPress(std::shared_ptr<ControllerInput> signal, short value) {
   addRelease(signal, release_time);
 }
 
-void Sequence::addHold(std::shared_ptr<ControllerInput> signal, short value, usec hold) {
+void Sequence::addHold(std::shared_ptr<ControllerInput> signal, short value, double hold) {
   assert(signal);
-  unsigned int hold_time = (unsigned int) hold.count();
+  unsigned int hold_time = (unsigned int) (hold * SEC_TO_MICROSEC);
   short int hybrid_value;  
   unsigned int hybrid_hold;
   // If a value is passed for a hybrid signal (L2/R2), it applies to the axis signal. The button
@@ -72,9 +72,9 @@ void Sequence::addHold(std::shared_ptr<ControllerInput> signal, short value, use
   }
 }
 
-void Sequence::addRelease(std::shared_ptr<ControllerInput> signal, usec release) {
+void Sequence::addRelease(std::shared_ptr<ControllerInput> signal, double release) {
   assert(signal);
-  unsigned int release_time = (unsigned int) release.count();
+  unsigned int release_time = (unsigned int) (release * SEC_TO_MICROSEC); 
   unsigned int hybrid_release;
   if (signal->getType() == ControllerSignalType::HYBRID) {
     hybrid_release = release_time;
@@ -94,9 +94,10 @@ void Sequence::addRelease(std::shared_ptr<ControllerInput> signal, usec release)
 //  events.push_back( {delay, 0, 255, 255} );
 //}
 
-void Sequence::addDelay(usec delay) {
-  PLOG_DEBUG << "adding delay of " << delay.count() << "usecs";
-  events.push_back({(unsigned int) delay.count(), 0, 255, 255});
+void Sequence::addDelay(double delay) {
+  unsigned int usec_delay = (unsigned int) (delay * SEC_TO_MICROSEC);
+  PLOG_DEBUG << "adding delay of " << usec_delay << "usecs";
+  events.push_back({usec_delay, 0, 255, 255});
 }
 
 void Sequence::send() {
@@ -111,8 +112,8 @@ void Sequence::send() {
   }
 }
 
-bool Sequence::sendParallel(dseconds sequenceTime) {
-  unsigned int elapsed = usec(sequenceTime).count();
+bool Sequence::sendParallel(double sequenceTime) {
+  unsigned int elapsed = (unsigned int) (sequenceTime * SEC_TO_MICROSEC);
   for (DeviceEvent& e = events[current_step]; current_step <= events.size(); e = events[++current_step]) {
     PLOG_DEBUG << "Sending parallel step " << current_step << " type = " << (int) e.type << " value = " << e.value;
     if (e.isDelay()) {
@@ -141,12 +142,12 @@ bool Sequence::empty() {
   return events.empty();
 }
 
-void Sequence::setPressTime(dseconds time) {
-  press_time = time;
+void Sequence::setPressTime(double time) {
+  press_time = (unsigned int) (time * SEC_TO_MICROSEC);
 }
 
-void Sequence::setReleaseTime(dseconds time) {
-  release_time = time;
+void Sequence::setReleaseTime(double time) {
+  release_time = (unsigned int) (time * SEC_TO_MICROSEC);
 }
 
 
