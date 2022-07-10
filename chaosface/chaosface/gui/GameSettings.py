@@ -44,6 +44,7 @@ class GameSettings(flx.PyWidget):
                 flx.Widget(flex=1)
               self.announce_candidates = flx.CheckBox(text="Announce candidates in chat", checked=config.relay.announce_candidates, style="text-align:left")
               self.announce_winner = flx.CheckBox(text="Announce winner in chat", checked=config.relay.announce_winner, style="text-align:left")
+              self.announce_active = flx.CheckBox(text="Announce active mods in chat", checked=config.relay.announce_active, style="text-align:left")
               flx.Widget(flex=1)
           with flx.GroupWidget(flex=0, title='Modifier Redemption'):
             with flx.HBox():
@@ -68,9 +69,7 @@ class GameSettings(flx.PyWidget):
                 flx.Label(style=label_style, text=' ')
                 flx.Label(style=label_style, text=' ')
         with flx.VBox(flex=1):
-          with flx.HBox():
-            flx.Label(style="text-align:left", text='Available Modifiers')
-            self.available_mods = ModifierView()
+          self.available_mods = ModifierView()
         # End of HSplit
       with flx.HBox():
         self.save_button = flx.Button(text="Save")
@@ -245,7 +244,7 @@ class ModifierView(flx.VBox):
       item.dispose()
     for mod, mod_data in data:
       with self.tree:
-        flx.TreeItem(text=mod, checked=mod_data['active'])
+        flx.TreeItem(text=mod_data['name'], checked=mod_data['active'])
 
   @flx.reaction('enable_all.pointer_click')
   def _enable_all_button_clicked(self, *events):

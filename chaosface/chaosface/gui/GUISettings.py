@@ -16,12 +16,18 @@ class GUISettings(flx.PyWidget):
     with flx.VSplit(flex=1):
       flx.Label(style="text-align:center", text="Settings" )
       with flx.HBox():
-        with flx.VBox(flex=1):
-          flx.Widget(flex=1)
         with flx.VBox():
+          flx.Label(style=styleLabel, text="Font:")
+          flx.Label(style=styleLabel, text="Font Color:")
+          flx.Label(style=styleLabel, text="Font Size:")
+          flx.Label(style=styleLabel, text="Progress Bar Color:")
           flx.Label(style=styleLabel, text="Browser Update Rate (Hz):" )
         with flx.VBox(flex=1):
-          self.uiRate = flx.LineEdit(style=styleField, text=str(config.relay.uiRate))
+          self.font = flx.LineEdit(style=styleField, text=config.relay.overlay_font)
+          self.font_color = flx.LineEdit(style=styleField, text=config.relay.overlay_font_color)
+          self.font_size = flx.LineEdit(style=styleField, text=str(config.relay.overlay_font_size))
+          self.progress_color = flx.LineEdit(style=styleField, text=config.relay.progress_bar_color)
+          self.uiRate = flx.LineEdit(style=styleField, text=str(config.relay.ui_rate))
       with flx.HBox():
         flx.Widget(flex=1)
         self.saveButton = flx.Button(flex=0,text="Save")

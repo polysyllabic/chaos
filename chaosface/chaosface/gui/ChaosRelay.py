@@ -14,6 +14,7 @@
   FROM OTHER THREADS: flx.loop.call_soon(config.relay.set_num_active_mods, 3)
 """
 import logging
+import asyncio
 import json
 import math
 import copy
@@ -21,7 +22,8 @@ import numpy as np
 from copy import deepcopy
 from pathlib import Path
 from flexx import flx
-from twitchbot import BaseBot, cfg
+from twitchbot import cfg
+from chaosface.chatbot.ChaosBot import ChaosBot
 
 _chaos_description = ("Twitch Controls Chaos lets chat interfere with a streamer playing a "
   "PlayStation game. It uses a Raspberry Pi to modify controller input based on gameplay "
@@ -48,6 +50,7 @@ chaos_defaults = {
   'voting_type': 'Proportional',
   'announce_candidates': False,
   'announce_winner': False,
+  'announce_active': False,
   'pi_host': '192.168.1.232',
   'listen_port': 5556,
   'talk_port': 5555,
@@ -86,8 +89,9 @@ chaos_defaults = {
   'msg_by_raffle': 'winning raffles',
   'msg_mod_not_found': "I can't find the modifier '{}'.",
   'msg_mod_not_active': "The mod '{}' is currently disabled",
-  'msg_active_mods': 'The currently active mods are ',
-  'msg_candidate_mods': 'You can currently vote for the following mods: ',
+  'msg_active_mods': 'The currently active modifiers are ',
+  'msg_candidate_mods': 'You can currently vote for the following modifiers: ',
+  'msg_winning_mod': "The modifier '{}' has won the vote.",
   'msg_in_cooldown': 'Cannot apply the mod yet.',
   'msg_no_credits': 'You need a modifier credit to do that.',
   'msg_user_balance': '@{} currently has {} modifier credit{}.',
@@ -95,7 +99,7 @@ chaos_defaults = {
   'msg_mod_status': "The modifier '{}' is now {}",
   'msg_credit_transfer': '@{} has given @{} 1 mod credit',
   'msg_mod_list': 'A list of the available mods for this game can be found here: {}',
-  'mod_list_link': '',
+  'mod_list_link': 'https://github.com/polysyllabic/chaos/blob/main/chaos/examples/tlou_mods.txt',
 }
 
 CONFIG_PATH = Path.cwd() / 'configs'
@@ -106,7 +110,7 @@ CHAOS_CREDIT_FILE = CONFIG_PATH / 'chaos_credits.json'
 class ChaosRelay(flx.Component):
   keep_going = True
   valid_data = False
-  chatbot: BaseBot
+  chatbot: ChaosBot
 
   modifier_data = {}
   enabled_mods = []
@@ -159,8 +163,14 @@ class ChaosRelay(flx.Component):
 
   # User Interface Settings      
   announce_candidates = flx.BoolProp(settable=True)
+  announce_active = flx.BoolProp(settable=True)
   announce_winner = flx.BoolProp(settable=True)
   obs_overlays = flx.BoolProp(settable=True)
+  overlay_font = flx.StringProp(settable=True)
+  overlay_font_size = flx.FloatProp(settable=True)
+  overlay_font_color = flx.StringProp(settable=True)
+  progress_bar_color = flx.StringProp(settable=True)
+
   ui_rate = flx.FloatProp(settable=True)
   ui_port = flx.IntProp(settable=True)
   
@@ -238,6 +248,7 @@ class ChaosRelay(flx.Component):
     self.set_vote_options(self.get_attribute('vote_options'))
     self.set_voting_type(self.get_attribute('voting_type'))
     self.set_announce_candidates(self.get_attribute('announce_candidates'))
+    self.set_announce_active(self.get_attribute('announce_active'))
     self.set_announce_winner(self.get_attribute('announce_winner'))
     self.set_pi_host(self.get_attribute('pi_host'))
     self.set_listen_port(self.get_attribute('listen_port'))
@@ -499,9 +510,23 @@ class ChaosRelay(flx.Component):
     msg = self.get_attribute('msg_credit_methods') + msg
     return msg
 
+  #def send_winning_mod_to_chat(self, winner):
+  #  if winner:
+  #    mod_name = self.modifier_data['winner']['name']
+  #    msg = self.get_attribute('msg_winning_mod').format(mod_name)
+  #    #asyncio.create_task(self.chatbot.send_message(msg))
+
+  #def send_active_mods_to_chat(self):
+  #  msg = self.list_active_mods()
+    #asyncio.create_task(self.chatbot.send_message(msg))
+
   def list_active_mods(self):
     return self.get_attribute('msg_active_mods') +  ', '.join(filter(None, self.active_mods))
 
+  #def send_candidate_mods_to_chat(self):
+  #  msg = self.list_candidate_mods()
+    #asyncio.create_task(self.chatbot.send_message(msg))
+  
   def list_candidate_mods(self):    
     msg = self.get_attribute('msg_candidate_mods')
     for num, mod in enumerate(self.candidate_mods, start=1):

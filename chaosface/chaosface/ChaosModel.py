@@ -196,7 +196,6 @@ class ChaosModel(EngineObserver):
         begin_time = now
 
       if self.vote_time >= config.relay.time_per_vote():
-        logging.debug('Vote time expired')
         # Reset voting time
         begin_time = now
         # Skip voting if no data yet or voting is disabled
@@ -207,8 +206,15 @@ class ChaosModel(EngineObserver):
         mod_key = self.select_winning_modifier()
         self.replace_mod(mod_key)
 
-        #self.announceMods()
-        #self.announceVoting()
+        #if config.relay.announce_winner:
+        #  config.relay.send_winning_mod_to_chat(mod_key)
+
+        #if config.relay.announce_active:
+        #  config.relay.send_active_mods_to_chat()
+
+        #if config.relay.announce_candidates:
+        #  config.relay.send_candidate_mods_to_chat()
+
       # Update elapsed voting time
       flx.loop.call_soon(config.relay.set_vote_time, self.vote_time/config.relay.time_per_vote())
 
