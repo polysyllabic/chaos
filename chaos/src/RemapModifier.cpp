@@ -129,6 +129,10 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
       remaps.insert({sig, {nullptr, nullptr, false, false, 0, 1}});
     }
   }
+  PLOG_DEBUG << name << ": random = " << random;
+  for (auto r : remaps) {
+    PLOG_DEBUG << "from " << (r.first)->getName();
+  }
 }
 
 std::shared_ptr<ControllerInput> RemapModifier::lookupInput(const toml::table& config, const std::string& key, bool required) {

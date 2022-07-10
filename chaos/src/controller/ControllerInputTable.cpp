@@ -126,29 +126,6 @@ std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const toml::tabl
   return inp;
 }
 
-void ControllerInputTable::setCascadingRemap(RemapTable& remaps) {
-  RemapTable copy = RemapTable(remaps);
-  for (auto& r : remaps) {
-    // Check if the from signal in the remaps list already appears as a to_console entry in the table
-    auto it = std::find_if(inputs.begin(), inputs.end(), [r](auto inp)
-      {
-        //std::shared_ptr<ControllerInput> s = ;
-        return (inp.second->getRemap() == r.first);
-      });
-    if (it == inputs.end()) {
-      // The signal isn't currently being remapped.
-      std::shared_ptr<ControllerInput> source = r.first;
-      r.first->setRemap(r.second);
-      PLOG_DEBUG << "New remap of " << r.first->getName() << " to_console = " << r.second.to_console;
-    } else {
-      // To-signal already remapped. Apply the remap to the signal whose to_console value is currently
-      // the from value we're trying to remap
-      PLOG_DEBUG << "Cascading remap of " << r.first->getName() << " to_console = " << r.second.to_console;
-      it->second->setRemap(r.second);
-    }
-  }
-}
-
 void ControllerInputTable::clearRemaps() {
   for (auto [from, remapping] : inputs) {
     remapping->setRemap({nullptr, nullptr, false, false, 0, 1});

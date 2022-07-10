@@ -107,7 +107,9 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
 #endif
 
   on_begin  = engine->createSequence(config, "beginSequence", false);
-  on_finish = engine->createSequence(config, "finishSequence", false);  
+  on_finish = engine->createSequence(config, "finishSequence", false);
+
+  unlisted = config["unlisted"].value_or(false);
 }
 
 // The chaos engine calls the underscored routines directly, giving us a chance to perform general

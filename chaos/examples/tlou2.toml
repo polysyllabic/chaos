@@ -1144,7 +1144,7 @@ type = "repeat"
 groups = [ "combat" ]
 appliesTo = [ "melee" ]
 timeOn = 0.1
-timeOff = 1.1
+timeOff = 1.2
 beginSequence = [{ event = "release", command = "melee" }]
 finishSequence = [{ event = "release", command = "melee" }]
 
@@ -1161,7 +1161,7 @@ finishSequence = [{ event = "release", command = "dodge/sprint" }]
 
 [[modifier]]
 name = "Periodic Listen Mode"
-description = "Stop, look, listen to your heart, hear what it's saying."
+description = "Stop. Look. Listen to your heart. Hear what it's saying."
 type = "repeat"
 groups = [ "view" ]
 appliesTo = [ "swap/listen" ]
@@ -1172,14 +1172,14 @@ finishSequence = [{ event = "release", command = "swap/listen" }]
 
 [[modifier]]
 name = "Force Running"
-description = "To move is to run (mostly)"
+description = "To move is to run (mostly)."
 type = "repeat"
 groups = [ "movement" ]
 appliesTo = [ "dodge/sprint" ]
 timeOn = 4.0
 timeOff = 0.1
 forceOn = true
-beginSequence = [{ event = "release", command = "dodge/sprint" }]
+beginSequence = [{ event = "hold", command = "dodge/sprint" }]
 finishSequence = [{ event = "release", command = "dodge/sprint" }]
 
 [[modifier]]
@@ -1187,8 +1187,8 @@ name = "Leeroy Jenkins"
 description = "Alright let's do this! LEEEEROOOOOY NNNJEEEENNKIINNS!!! (Holds forward and sprint)"
 type = "repeat"
 groups = [ "movement" ]
-appliesTo = [ "dodge/sprint" ]
-beginSequence = [ { event="release", command = "dodge/sprint"},
+appliesTo = [ "dodge/sprint", "move forward/back" ]
+beginSequence = [ { event="hold", command = "dodge/sprint"},
       { event ="hold", command = "move forward/back", value = -128 } ]
 forceOn = true
 blockWhileBusy = [ "move forward/back" ]
@@ -1311,6 +1311,7 @@ remap = [
 name = "Motion Control Movement"
 description = "No more movement with the joystick. Tilt the controller to move instead."
 type = "remap"
+signals = [ "LX", "LY" ]
 remap = [
       {from = "ACCX", to = "LX", sensitivity=20},
       {from = "ACCZ", to = "LY", sensitivity=20},
@@ -1322,6 +1323,7 @@ remap = [
 name = "Motion Control Aiming"
 description = "No more aiming with the joystick. Tilt the controller to aim/look instead."
 type = "remap"
+signals = [ "RX", "RY" ]
 remap = [
       {from = "ACCX", to = "RX", sensitivity=24},
       {from = "ACCZ", to = "RY", sensitivity=24},

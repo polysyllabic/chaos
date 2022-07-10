@@ -52,13 +52,13 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
     engine->addGameCommands(config, "blockWhileBusy", block_while);
   }
 
-  PLOG_VERBOSE << " - timeOn: " << time_on.count() << "; timeOff: " << time_off.count() << "; cycleDelay: " << cycle_delay.count();
-  PLOG_VERBOSE << " - repeat: " << repeat_count << "; forceOn: " << (force_on ? "true" : "false");
+  PLOG_DEBUG << " - timeOn: " << time_on.count() << "; timeOff: " << time_off.count() << "; cycleDelay: " << cycle_delay.count();
+  PLOG_DEBUG << " - repeat: " << repeat_count << "; forceOn: " << (force_on ? "true" : "false");
   if (block_while.empty()) {
-    PLOG_VERBOSE << " - blockWhileBusy: NONE";
+    PLOG_DEBUG << " - blockWhileBusy: NONE";
   } else {
     for (auto& cmd : block_while) {
-      PLOG_VERBOSE << " - blockWhileBusy:" << cmd->getName();
+      PLOG_DEBUG << " - blockWhileBusy:" << cmd->getName();
     }
   }
 }
@@ -69,15 +69,20 @@ void RepeatModifier::begin() {
 }
 
 void RepeatModifier::update() {
-  std::shared_ptr<GameCommand> cmd = commands.front();
   press_time += timer.dTime();
   if (repeat_count < num_cycles) {
-    if (press_time > time_on && cmd->getState()) {
-      engine->setOff(cmd);
+    if (press_time > time_on) {
+      for (auto cmd : commands) {
+        PLOG_DEBUG << "Turning " << cmd->getName() << " off";
+        engine->setOff(cmd);
+      }
       press_time = dseconds::zero();
       repeat_count++;
-    } else if (press_time > time_off && ! commands[0]->getState()) {
-      engine->setOn(cmd);
+    } else if (press_time > time_off) {
+      for (auto cmd : commands) {
+        PLOG_DEBUG << "Turning " << cmd->getName() << " on";
+        engine->setOn(cmd);
+      }
       press_time = dseconds::zero();
     }
   } else if (press_time > cycle_delay) {
@@ -89,14 +94,18 @@ void RepeatModifier::update() {
 
 bool RepeatModifier::tweak(DeviceEvent& event) {
   if (force_on) {
-    if (engine->eventMatches(event, commands[0])) {
-      event.value = commands[0]->getInput()->getMax((ButtonType) event.type);
+    for (auto& cmd : commands) {
+      if (engine->eventMatches(event, cmd)) {
+        event.value = cmd->getInput()->getMax((ButtonType) event.type);
+        PLOG_DEBUG << "force " << cmd->getName() << " to " << event.value;
+      }
     }
   }
   // Drop any events in the blockWhile list
   if (! block_while.empty()) {
     for (auto& cmd : block_while) {
       if (engine->eventMatches(event, cmd)) {
+        PLOG_DEBUG << "blocking " << cmd->getName();
 	      return false;
       }
     }
