@@ -1300,7 +1300,7 @@ remap = [
       {from = "RX", to = "RY"},
       {from = "RY", to = "RX"},
       {from = "LX", to = "LY"},
-      {from = "LY", to = "RX"} ]
+      {from = "LY", to = "LX"} ]
 
 [[modifier]]
 name = "Swap D-pad/Left Joystick"
@@ -1321,8 +1321,8 @@ type = "remap"
 signals = [ "RX", "RY" ]
 disable_signals = true
 remap = [
-      {from = "RX", to = "SQUARE", to_neg = "CIRCLE", threshold=0.5},
-      {from = "RY", to = "X", to_neg = "TRIANGLE", threshold=0.5},
+      {from = "RX", to = "CIRCLE", to_neg = "SQUARE", threshold=0.5},
+      {from = "RY", to = "TRIANGLE", to_neg = "X", threshold=0.5},
       {from = "SQUARE", to = "RX", to_min = true},
       {from = "CIRCLE", to = "RX"},
       {from = "TRIANGLE", to = "RY", to_min = true},
@@ -1378,8 +1378,8 @@ remap = [
       {from = "LY", to = "RY"},
       {from = "RX", to = "LX"},
       {from = "RY", to = "LY"},
-      {from = "DX", to = "SQUARE", to_neg = "CIRCLE"},
-      {from = "DY", to = "X", to_neg = "TRIANGLE"},
+      {from = "DX", to = "CIRCLE", to_neg = "SQUARE"},
+      {from = "DY", to = "TRIANGLE", to_neg = "X"},
       {from = "R1", to = "L1"},
       {from = "L1", to = "R1"},
       {from = "L2", to = "R2"},

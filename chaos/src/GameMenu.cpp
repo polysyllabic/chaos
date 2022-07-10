@@ -98,7 +98,7 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, bo
   Sequence seq{controller};
 
   defined_sequences->addSequence(seq, "disable all");
-  seq.addDelay(disable_delay.count());
+  seq.addDelay(disable_delay);
   defined_sequences->addSequence(seq, "open menu");
 
   // Create a stack of all the parent menus of this option

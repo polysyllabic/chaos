@@ -335,10 +335,10 @@ bool RemapModifier::remap(DeviceEvent& event) {
       modified.value = ControllerInput::joystickLimit(-event.value);
     }
     }
-    //if (modified.value != 0) {
-     PLOG_DEBUG << name << ": " << from->getName() << ":" << event.value << " to " << to_console->getName() << "(" 
+    if (modified.value != 0) {
+     PLOG_VERBOSE << name << ": " << from->getName() << ":" << event.value << " to " << to_console->getName() << "(" 
      << (int) modified.type << "." << (int) modified.id << "):" << modified.value;
-    //}
+    }
     // Update the event
     event.id = modified.id;
     event.type = modified.type;

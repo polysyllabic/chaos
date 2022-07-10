@@ -26,8 +26,8 @@
 
 using namespace Chaos;
 
-unsigned int Sequence::press_time;
-unsigned int Sequence::release_time;
+usec Sequence::press_time;
+usec Sequence::release_time;
 
 Sequence::Sequence(Controller& c) : controller{c} {}
 
@@ -45,9 +45,10 @@ void Sequence::addPress(std::shared_ptr<ControllerInput> signal, short value) {
   addRelease(signal, release_time);
 }
 
-void Sequence::addHold(std::shared_ptr<ControllerInput> signal, short value, unsigned int hold_time) {
+void Sequence::addHold(std::shared_ptr<ControllerInput> signal, short value, usec hold) {
   assert(signal);
-  short int hybrid_value;
+  unsigned int hold_time = (unsigned int) hold.count();
+  short int hybrid_value;  
   unsigned int hybrid_hold;
   // If a value is passed for a hybrid signal (L2/R2), it applies to the axis signal. The button
   // signal will just use 1.
@@ -61,41 +62,47 @@ void Sequence::addHold(std::shared_ptr<ControllerInput> signal, short value, uns
     value = (signal->getType() == ControllerSignalType::BUTTON ||
 	     signal->getType() == ControllerSignalType::THREE_STATE) ? 1 : JOYSTICK_MAX;
   }
-  PLOG_VERBOSE << "Adding hold: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
+  PLOG_DEBUG << "Adding hold: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
     << ":" << value << " for " << hold_time << " microseconds";
   events.push_back({hold_time, value, (uint8_t) signal->getButtonType(), signal->getID()});
   if (signal->getType() == ControllerSignalType::HYBRID) {
     events.push_back( {hybrid_hold, hybrid_value, TYPE_AXIS, signal->getHybridAxis()} );
-    PLOG_VERBOSE << "Adding hold: " << (int) TYPE_AXIS << ": " << (int) signal->getHybridAxis()
+    PLOG_DEBUG << "Adding hold: " << (int) TYPE_AXIS << ": " << (int) signal->getHybridAxis()
       << ":" << hybrid_value << " for " << hybrid_hold << " microseconds";
   }
 }
 
-void Sequence::addRelease(std::shared_ptr<ControllerInput> signal, unsigned int release_time) {
+void Sequence::addRelease(std::shared_ptr<ControllerInput> signal, usec release) {
   assert(signal);
+  unsigned int release_time = (unsigned int) release.count();
   unsigned int hybrid_release;
   if (signal->getType() == ControllerSignalType::HYBRID) {
     hybrid_release = release_time;
     release_time = 0;
   }
-  PLOG_VERBOSE << "Adding release: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
+  PLOG_DEBUG << "Adding release: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
     << " for " << release_time << " microseconds";
   events.push_back({release_time, 0, (uint8_t) signal->getButtonType(), signal->getID()});
   if (signal->getType() == ControllerSignalType::HYBRID) {
-    PLOG_VERBOSE << "Adding release: " << TYPE_AXIS << ": " << (int) signal->getHybridAxis()
+    PLOG_DEBUG << "Adding release: " << TYPE_AXIS << ": " << (int) signal->getHybridAxis()
       << " for " << hybrid_release << " microseconds";
     events.push_back( {hybrid_release, JOYSTICK_MIN, TYPE_AXIS, signal->getHybridAxis()} );
   }
 }
 
-void Sequence::addDelay(unsigned int delay) {
-  events.push_back( {delay, 0, 255, 255} );
+//void Sequence::addDelay(unsigned int delay) {
+//  events.push_back( {delay, 0, 255, 255} );
+//}
+
+void Sequence::addDelay(usec delay) {
+  PLOG_DEBUG << "adding delay of " << delay.count() << "usecs";
+  events.push_back({(unsigned int) delay.count(), 0, 255, 255});
 }
 
 void Sequence::send() {
-  PLOG_VERBOSE << "Sending sequence";
+  PLOG_DEBUG << "Sending sequence";
   for (auto& event : events) {
-    PLOG_VERBOSE << "Sending event for input (" << (int) event.type << ":" << (int) event.id
+    PLOG_DEBUG << "Sending event for input (" << (int) event.type << ":" << (int) event.id
 	       << ") value=" << (int) event.value << "; sleeping for " << (int) event.time << " microseconds";
     controller.applyEvent(event);
     if (event.time) {
@@ -135,11 +142,11 @@ bool Sequence::empty() {
 }
 
 void Sequence::setPressTime(dseconds time) {
-  press_time = usec(time).count();
+  press_time = time;
 }
 
 void Sequence::setReleaseTime(dseconds time) {
-  release_time = usec(time).count();
+  release_time = time;
 }
 
 

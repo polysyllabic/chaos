@@ -52,10 +52,10 @@ namespace Chaos {
     unsigned int wait_until;
 
     // Time in microseconds to hold down a signal for a button press
-    static unsigned int press_time;
+    static usec press_time;
 
     // Time in microseconds to release a signal for a button press before going on to the next command.
-    static unsigned int release_time;
+    static usec release_time;
 
   public:
     Sequence(Controller& c);
@@ -94,19 +94,20 @@ namespace Chaos {
      * controls L2/R2, a non-zero value is passed to the axis portion of the signal. The button
      * portion is set to 1 regardless.
      */
-    void addHold(std::shared_ptr<ControllerInput> signal, short value, unsigned int hold_time);
+    void addHold(std::shared_ptr<ControllerInput> signal, short value, usec hold_time);
     /**
      * \brief Turns off the gamapad input signal.
      * \param signal The input signal the console expects to receive
      * \param hold_time Time to hold the signal in microseconds.
      */
-    void addRelease(std::shared_ptr<ControllerInput> signal, unsigned int release_time);
+    void addRelease(std::shared_ptr<ControllerInput> signal, usec release_time);
     /**
      * \brief Add a delay
-     * \param delay Time to delay
+     * \param delay Time to delay in microseconds
      *
      */
-    void addDelay(unsigned int delay);
+    //void addDelay(unsigned int delay);
+    void addDelay(usec delay);
 
     void addSequence(std::shared_ptr<Sequence> seq);
 

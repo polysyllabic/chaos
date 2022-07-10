@@ -125,7 +125,7 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
       if (delay_time == usec::zero()) {
         PLOG_WARNING << "You've tried to add a delay of 0 microseconds. This will be ignored.";
 	    } else {
-	      seq->addDelay(delay_time.count());
+	      seq->addDelay(delay_time);
         PLOG_VERBOSE << "Delay = " << delay_time.count() << " microseconds";
 	    }
       continue;
@@ -161,23 +161,23 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
 	      if (repeat > 1) {
 	        PLOG_WARNING << "Repeat is not supported with 'hold' and will be ignored.";
     	  }
-	      seq->addHold(signal, value, delay_time.count());
+	      seq->addHold(signal, value, delay_time);
         PLOG_VERBOSE << "Hold " << signal->getName() << " for " << delay_time.count() << " microseconds";
       } else if (*event == "press") {
 	      for (int i = 0; i < repeat; i++) {
 	        seq->addPress(signal, value);
 	        if (delay_time > usec::zero()) {
-	          seq->addDelay(delay_time.count());
-            PLOG_VERBOSE << "Press " << signal->getName() << " with a delay of " << delay_time.count() << " microseconds";
+	          seq->addDelay(delay_time);
+            PLOG_DEBUG << "Press " << signal->getName() << " with a delay of " << delay_time.count() << " microseconds";
 	        } else {
-            PLOG_VERBOSE << "Press " << signal->getName();
+            PLOG_DEBUG << "Press " << signal->getName();
           }
 	      }
       } else if (*event == "release") {
 	      if (repeat > 1) {
 	        PLOG_WARNING << "Repeat is not supported with 'release' and will be ignored.";
 	      }
-	      seq->addRelease(signal, delay_time.count());
+	      seq->addRelease(signal, delay_time);
         PLOG_VERBOSE << "Release " << signal->getName() << " (delay =" << delay_time.count() << " microseconds)";
       } else {
     	  throw std::runtime_error("Unrecognized event type: " + *event);
