@@ -113,6 +113,7 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
     if (delay < 0) {
 	    throw std::runtime_error("Delay must be a non-negative number of seconds.");
     }
+    unsigned int delay_usecs = (unsigned int) (delay * SEC_TO_MICROSEC);
 
     int repeat = definition["repeat"].value_or(1);
     if (repeat < 1) {
@@ -121,10 +122,10 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
     }
 
     if (*event == "delay") {
-      if (delay == 0) {
+      if (delay_usecs == 0) {
         PLOG_WARNING << "You've tried to add a delay of 0 microseconds. This will be ignored.";
 	    } else {
-	      seq->addDelay(delay);
+	      seq->addDelay(delay_usecs);
 	    }
       continue;
     }
@@ -159,14 +160,15 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
 	      if (repeat > 1) {
 	        PLOG_WARNING << "Repeat is not supported with 'hold' and will be ignored.";
     	  }
-        PLOG_DEBUG << "Hold " << signal->getName() << " for " << delay << " seconds";
-	      seq->addHold(signal, value, delay);
+        PLOG_DEBUG << "Hold " << signal->getName() << " for " << delay_usecs << " useconds";
+
+	      seq->addHold(signal, value, delay_usecs);
       } else if (*event == "press") {
 	      for (int i = 0; i < repeat; i++) {
 	        seq->addPress(signal, value);
-	        if (delay > 0) {
-            PLOG_DEBUG << "Press " << signal->getName() << " with a delay of " << delay << " seconds";
-	          seq->addDelay(delay);
+	        if (delay_usecs > 0) {
+            PLOG_DEBUG << "Press " << signal->getName() << " with a delay of " << delay_usecs << " useconds";
+	          seq->addDelay(delay_usecs);
 	        } else {
             PLOG_DEBUG << "Press " << signal->getName();
           }
@@ -175,8 +177,8 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
 	      if (repeat > 1) {
 	        PLOG_WARNING << "Repeat is not supported with 'release' and will be ignored.";
 	      }
-        PLOG_DEBUG << "Release " << signal->getName() << " (delay =" << delay << " seconds)";
-	      seq->addRelease(signal, delay);
+        PLOG_DEBUG << "Release " << signal->getName() << " (delay =" << delay_usecs << " usec)";
+	      seq->addRelease(signal, delay_usecs);
       } else {
     	  throw std::runtime_error("Unrecognized event type: " + *event);
       }

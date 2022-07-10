@@ -45,9 +45,8 @@ void Sequence::addPress(std::shared_ptr<ControllerInput> signal, short value) {
   addRelease(signal, release_time);
 }
 
-void Sequence::addHold(std::shared_ptr<ControllerInput> signal, short value, double hold) {
+void Sequence::addHold(std::shared_ptr<ControllerInput> signal, short value, unsigned int hold_time) {
   assert(signal);
-  unsigned int hold_time = (unsigned int) (hold * SEC_TO_MICROSEC);
   short int hybrid_value;  
   unsigned int hybrid_hold;
   // If a value is passed for a hybrid signal (L2/R2), it applies to the axis signal. The button
@@ -72,9 +71,8 @@ void Sequence::addHold(std::shared_ptr<ControllerInput> signal, short value, dou
   }
 }
 
-void Sequence::addRelease(std::shared_ptr<ControllerInput> signal, double release) {
+void Sequence::addRelease(std::shared_ptr<ControllerInput> signal, unsigned int release_time) {
   assert(signal);
-  unsigned int release_time = (unsigned int) (release * SEC_TO_MICROSEC); 
   unsigned int hybrid_release;
   if (signal->getType() == ControllerSignalType::HYBRID) {
     hybrid_release = release_time;
@@ -90,14 +88,9 @@ void Sequence::addRelease(std::shared_ptr<ControllerInput> signal, double releas
   }
 }
 
-//void Sequence::addDelay(unsigned int delay) {
-//  events.push_back( {delay, 0, 255, 255} );
-//}
-
-void Sequence::addDelay(double delay) {
-  unsigned int usec_delay = (unsigned int) (delay * SEC_TO_MICROSEC);
-  PLOG_DEBUG << "adding delay of " << usec_delay << "usecs";
-  events.push_back({usec_delay, 0, 255, 255});
+void Sequence::addDelay(unsigned int delay) {
+  PLOG_DEBUG << "adding delay of " << delay << "usecs";
+  events.push_back( {delay, 0, 255, 255} );
 }
 
 void Sequence::send() {
@@ -144,10 +137,12 @@ bool Sequence::empty() {
 
 void Sequence::setPressTime(double time) {
   press_time = (unsigned int) (time * SEC_TO_MICROSEC);
+  PLOG_DEBUG << "press_time = " << time << " = " << press_time << " usecs";
 }
 
 void Sequence::setReleaseTime(double time) {
   release_time = (unsigned int) (time * SEC_TO_MICROSEC);
+  PLOG_DEBUG << "release_time = " << time << " = " << release_time << " usecs";
 }
 
 
