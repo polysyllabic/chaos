@@ -91,7 +91,7 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
         invert = false;
       }
 
-      double thresh_proportion = (*remapping)["threshold"].value_or(0);
+      double thresh_proportion = (*remapping)["threshold"].value_or(1);
       short threshold = 1;
       if (thresh_proportion < 0 || thresh_proportion > 1) {
         PLOG_WARNING << "Threshold proportion = " << thresh_proportion << ": must be between 0 and 1";
@@ -116,12 +116,10 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
     if (! remap_list || !remap_list->is_homogeneous(toml::node_type::string)) {
       throw std::runtime_error("random_remap must be an array of strings");
     }
-    PLOG_DEBUG << "Adding list of random remaps for " << name;
     for (auto& elem : *remap_list) {
       std::optional<std::string> signame = elem.value<std::string>();
       // the is_homogenous test above should ensure that signame always has a value
       assert(signame);
-      PLOG_DEBUG << "Processing " << *signame;
       std::shared_ptr<ControllerInput> sig = engine->getInput(*signame);
       if (! sig) {
 	      throw std::runtime_error("Controller input for random remap '" + *signame + "' is not defined");
@@ -130,8 +128,10 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
     }
   }
   PLOG_DEBUG << name << ": random = " << random;
-  for (auto r : remaps) {
-    PLOG_DEBUG << "from " << (r.first)->getName();
+  for (auto [from, r] : remaps) {
+    PLOG_DEBUG << "from " << from->getName() << " to " << (r.to_console ? r.to_console->getName() : "TBD") <<
+    "to_min=" << r.to_min << "" << (r.to_negative ? r.to_negative->getName() : "NONE") <<
+    "threshold = " << r.threshold;
   }
 }
 
@@ -218,16 +218,6 @@ bool RemapModifier::remap(DeviceEvent& event) {
     }
 
     auto to_console = remap.to_console;
-    DeviceEvent modified;
-    // When mapping from any type of axis to buttons/hybrids, the choice of button is determined
-    // by the sign of the value.
-    if (event.value < 0 && event.id == TYPE_AXIS && to_console->getButtonType() == TYPE_BUTTON) {
-      to_console = remap.to_negative;
-      if (!to_console) {
-        PLOG_ERROR << name << " is missing remap for negative values of " << from->getName();
-        return true;
-      }
-    }
 
     // If we are remapping to NOTHING, we drop this signal.
     if (to_console->getSignal() == ControllerSignal::NOTHING) {
@@ -235,7 +225,8 @@ bool RemapModifier::remap(DeviceEvent& event) {
       return false;
     }
 
-    // Default remapping
+    DeviceEvent modified;
+    // Basic remapping
     modified.id = to_console->getID();
     modified.type = to_console->getButtonType();
     modified.value = event.value;
@@ -286,32 +277,44 @@ bool RemapModifier::remap(DeviceEvent& event) {
       }
       break;
     case ControllerSignalType::AXIS:
-    {
-      int neg_val = (to_console->getType() == ControllerSignalType::THREE_STATE) ? -1 : 1;
       switch (to_console->getType()) {
       case ControllerSignalType::BUTTON:
-      case ControllerSignalType::THREE_STATE:
+      case ControllerSignalType::HYBRID:
+      {
+        // When mapping from an axis to buttons/hybrids, the choice of button is determined by
+        // the sign of the value.
+        if (!remap.to_negative) {
+          PLOG_ERROR << name << " is missing remap for negative values of " << from->getName();
+          return true;
+        }
+        auto other_button = remap.to_negative;
         if (event.value > 0) {
           // if to_negative not set, to_console is the right signal to send to
-          modified.value = (event.value >= remap.threshold && remap.to_negative == nullptr) ? 1 : 0;
+          modified.value = (event.value >= remap.threshold) ? 1 : 0;
           }
         else if (event.value < 0) {
-            modified.id = remap.to_negative->getID();
-            modified.value = (event.value <= -remap.threshold  && remap.to_negative) ? neg_val : 0;
-          }
-        break;
-   	  }
-      // From axis to any type of button, we need a new event to zero out the second button when
-      // the value is below the threshold. The first button will get a 0 value from the changed regular value
-      // At this point, to_console has been set with the negative remap value.
-      if (to_console->getButtonType() == TYPE_BUTTON && abs(event.value) < remap.threshold) {
-        new_event.id = to_console->getID();
+          to_console = remap.to_negative;
+          other_button = remap.to_console;
+          modified.value = (event.value <= -remap.threshold) ? 1 : 0;
+        }
+        // Zero out the opposite button
+        new_event.id = other_button->getID();
         new_event.value = 0;
         new_event.type = TYPE_BUTTON;
         engine->applyEvent(new_event);
+        break;
       }
+      case ControllerSignalType::THREE_STATE:
+        if (event.value > 0) {
+          // if to_negative not set, to_console is the right signal to send to
+          modified.value = (event.value >= remap.threshold) ? 1 : 0;
+          }
+        else if (event.value < 0) {
+          modified.value = (event.value <= -remap.threshold) ? -1 : 0;
+        }
+        break;
+   	  }
       break;
-    }
     case ControllerSignalType::ACCELEROMETER:
       if (to_console->getType() == ControllerSignalType::AXIS) {
 	      modified.value= ControllerInput::joystickLimit((short) (-event.value/remap.scale));
