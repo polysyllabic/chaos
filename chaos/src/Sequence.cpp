@@ -109,6 +109,7 @@ bool Sequence::sendParallel(double sequenceTime) {
   unsigned int elapsed = (unsigned int) (sequenceTime * SEC_TO_MICROSEC);
   for (DeviceEvent& e = events[current_step]; current_step <= events.size(); e = events[++current_step], wait_until += e.time) {
     if (e.isDelay()) {
+      PLOG_DEBUG << "Delay of " << e.time << "usecs";
       continue;
     }
     // return until delay expires, then move to the next step
@@ -116,7 +117,9 @@ bool Sequence::sendParallel(double sequenceTime) {
       return false;
     }
     // send out events until we hit the next delay
-    PLOG_DEBUG << "Sending parallel step " << current_step << " type = " << (int) e.type << " value = " << e.value;
+    PLOG_DEBUG << "Parallel step " << current_step << ": signal = ("
+      << (int) e.type << "." << (int) e.id << ") value = " << e.value <<
+      "sequenceTime=" << sequenceTime << "; elapsed usec=" << elapsed;
     controller.applyEvent(e);
   }
   PLOG_DEBUG << "parallel send finished";

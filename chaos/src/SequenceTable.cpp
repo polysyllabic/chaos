@@ -153,21 +153,21 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
       std::shared_ptr<ControllerInput> signal = command->getInput();
 
 	    // If this signal is a hybrid control, this gets the axis max, which is needed for addHold
-	    int max_val = (signal) ? signal->getMax(TYPE_AXIS) : 0;
+	    int max_val = (signal) ? signal->getMax(TYPE_BUTTON) : 0;
       int value = definition["value"].value_or(max_val);
 
       if (*event == "hold") {
 	      if (repeat > 1) {
 	        PLOG_WARNING << "Repeat is not supported with 'hold' and will be ignored.";
     	  }
-        PLOG_DEBUG << "Hold " << signal->getName() << " for " << delay_usecs << " useconds";
+        PLOG_DEBUG << "Hold " << signal->getName() << " at value " << value << " for " << delay_usecs << " useconds";
 
 	      seq->addHold(signal, value, delay_usecs);
       } else if (*event == "press") {
 	      for (int i = 0; i < repeat; i++) {
 	        seq->addPress(signal, value);
 	        if (delay_usecs > 0) {
-            PLOG_DEBUG << "Press " << signal->getName() << " with a delay of " << delay_usecs << " useconds";
+            PLOG_DEBUG << "Press " << signal->getName() << " at value " << value  << " with a delay of " << delay_usecs << " useconds";
 	          seq->addDelay(delay_usecs);
 	        } else {
             PLOG_DEBUG << "Press " << signal->getName();

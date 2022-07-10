@@ -88,9 +88,8 @@ case SequenceState::IN_SEQUENCE:
     break;
   case SequenceState::ENDING:
     // After the sequence, we wait for the delay amount before resetting the trigger
-    PLOG_DEBUG << "sequence_time=" << sequence_time << "; repeat_delay=" << repeat_delay;
-    if (sequence_time >= repeat_delay) {
-      PLOG_DEBUG << "Resetting trigger";
+    if (sequence_time >= repeat_delay) {    
+      PLOG_DEBUG << "Resetting trigger at sequence_time = " << sequence_time << "; repeat_delay = " << repeat_delay;
       sequence_state = SequenceState::UNTRIGGERED;
       sequence_time = 0;
       sequence_step = 0;
@@ -118,6 +117,7 @@ bool SequenceModifier::tweak(DeviceEvent& event) {
     } else {
       for (auto& cmd : block_while) {
         if (engine->eventMatches(event, cmd)) {
+          PLOG_DEBUG << "blocked " << cmd->getName() << " value " << event.value;
           return false;
         }
       }

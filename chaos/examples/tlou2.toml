@@ -1483,12 +1483,13 @@ type = "sequence"
 groups = [ "movement"]
 blockWhileBusy = [ "dodge/sprint", "crouch/prone" ]
 condition = [ "fast movement" ]
-cycle_delay = 0.5
-repeatSequence = [
-  { event = "press", command = "dodge/sprint", delay = 0.1 },
-  { event = "press", command = "crouch/prone", delay = 0.8 },
-  { event = "release", command = "crouch/prone"},
-  { event = "release", command = "dodge/sprint"}
+cycle_delay = 1.0
+step_timings = [ 0.1, 0.8, 0.5 ]
+repeatSequence = [  
+  { step = 1, event = "press", command = "dodge/sprint", delay = 0.1 },
+  { step = 2, event = "press", command = "crouch/prone", delay = 0.8 },
+  { step = 3, event = "release", command = "crouch/prone"},
+  { step = 3, event = "release", command = "dodge/sprint"}
   ]
 beginSequence = [ { event = "release", command = "dodge/sprint" },
                   { event = "release", command = "crouch/prone" }]
@@ -1532,10 +1533,11 @@ groups = [ "combat" ]
 blockWhileBusy = [ "aiming", "shoot" ]
 condition = [ "shot taken" ]
 start_delay = 0.2
+step_timings = [ 1.0, 0.2, 0.0 ]
 repeatSequence = [
-  { event = "release", command = "shoot", delay = 1.0 },
-  { event = "hold", command = "shoot", delay = 0.2 },
-  { event = "release", command = "shoot" }
+  { step = 1, event = "release", command = "shoot", delay = 1.0 },
+  { step = 2, event = "hold", command = "shoot", delay = 0.2 },
+  { step = 3, event = "release", command = "shoot" }
   ]
 
 [[modifier]]
@@ -1609,12 +1611,12 @@ type = "sequence"
 groups = [ "movement" ]
 blockWhileBusy = [ "dodge/sprint", "crouch/prone" ]
 condition = [ "movement" ]
-cycle_delay = 1.4
-repeatSequence = [
-  { event = "press", command = "dodge/sprint", delay = 0.1 },
-  { event = "press", command = "crouch/prone", delay = 0.8 },
-  { event = "release", command = "crouch/prone"},
-  { event = "release", command = "dodge/sprint"}
+step_timings = [ 0.1, 0.8, 0.5 ]
+repeatSequence = [  
+  { step = 1, event = "press", command = "dodge/sprint", delay = 0.1 },
+  { step = 2, event = "press", command = "crouch/prone", delay = 0.8 },
+  { step = 3, event = "release", command = "crouch/prone"},
+  { step = 3, event = "release", command = "dodge/sprint"}
   ]
 beginSequence = [ { event = "release", command = "dodge/sprint" },
                   { event = "release", command = "crouch/prone" }]
@@ -1629,13 +1631,14 @@ groups = [ "movement" ]
 blockWhileBusy = [ "jump", "aiming", "move forward/back", "move sideways" ]
 start_delay = 6.0
 cycle_delay = 0.1
+step_timings = [ 0.1, 0.1, 0.0 ]
 repeatSequence = [
-   { event = "release", command = "jump" },
-   { event = "release", command = "aiming" },
-   { event = "hold", command = "move forward/back" },
-   { event = "release", command = "move sideways" },
-   { event = "hold", command = "jump", delay = 0.1 },
-   { event = "release", command = "jump" }
+   { step = 1, event = "release", command = "jump" },
+   { step = 1, event = "release", command = "aiming" },
+   { step = 1, event = "release", command = "move sideways" },
+   { step = 1, event = "hold", command = "move forward/back"}, # should imply JOYSTICK_MAX = 127
+   { step = 2, event = "hold", command = "jump"},
+   { step = 3, event = "release", command = "jump" }
    ]
 
 # === Menu Modifiers ===
