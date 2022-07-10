@@ -175,7 +175,9 @@ int ControllerInputTable::initializeInputs(const toml::table& config) {
 
 void ControllerInputTable::addToVector(const toml::table& config, const std::string& key,
                                    std::vector<std::shared_ptr<ControllerInput>>& vec) {
-      
+
+  PLOG_DEBUG << "Adding " << key;
+
   if (config.contains(key)) {
     const toml::array* cmd_list = config.get(key)->as_array();
     if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
@@ -194,5 +196,7 @@ void ControllerInputTable::addToVector(const toml::table& config, const std::str
         throw std::runtime_error("Unrecognized controller input: " + *cmd + " in " + key);
      	}
     }
-  }      
+  } else {
+    PLOG_DEBUG << "No " << key << " array to add";
+  }
 }

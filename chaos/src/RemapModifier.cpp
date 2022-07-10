@@ -32,14 +32,13 @@ const std::string RemapModifier::mod_type = "remap";
 RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "signals", "disableSignals", "remap", "random_remap", "unlisted"});
+      "name", "description", "type", "groups", "signals", "disable_signals", "remap", "random_remap", "unlisted"});
 
   initialize(config, e);
   
-  PLOG_DEBUG << "Adding signals";
   engine->addControllerInputs(config, "signals", signals);
 
-  disable_signals = config["disableSignals"].value_or(false);
+  disable_signals = config["disable_signals"].value_or(false);
 
   // remap
   if (config.contains("remap")) {
@@ -111,17 +110,18 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
 
   // Note: Random remapping mmay break if axes and buttons are included in the same list.
   // Currently we don't check for this.
-  if (config.contains("randomRemap")) {
+  if (config.contains("random_remap")) {
     random = true;
-    const toml::array* remap_list = config.get("randomRemap")-> as_array();
+    const toml::array* remap_list = config.get("random_remap")-> as_array();
     if (! remap_list || !remap_list->is_homogeneous(toml::node_type::string)) {
-      throw std::runtime_error("randomRemap must be an array of strings");
+      throw std::runtime_error("random_remap must be an array of strings");
     }
-    PLOG_VERBOSE << "Adding list of random remaps for " << name;
+    PLOG_DEBUG << "Adding list of random remaps for " << name;
     for (auto& elem : *remap_list) {
       std::optional<std::string> signame = elem.value<std::string>();
       // the is_homogenous test above should ensure that signame always has a value
       assert(signame);
+      PLOG_DEBUG << "Processing " << *signame;
       std::shared_ptr<ControllerInput> sig = engine->getInput(*signame);
       if (! sig) {
 	      throw std::runtime_error("Controller input for random remap '" + *signame + "' is not defined");
@@ -146,6 +146,7 @@ std::shared_ptr<ControllerInput> RemapModifier::lookupInput(const toml::table& c
 }
 
 void RemapModifier::begin() {
+  DeviceEvent event{};
   if (random) {
     // Generate a new remapping
     Random rng;
@@ -166,6 +167,20 @@ void RemapModifier::begin() {
     PLOG_DEBUG << "Verify assignments:";
     for (auto [key, value] : remaps) {
       PLOG_DEBUG << key->getName() << " remapped to " << (value.to_console)->getName();
+    }
+  }
+  if (disable_signals) {
+    for (auto& sig : signals) {
+      event.value = 0;
+      event.id = sig->getID();
+      event.type = sig->getButtonType();
+      engine->applyEvent(event);
+      if (sig->getType() == ControllerSignalType::HYBRID) {
+        event.id = sig->getHybridAxisIndex();
+        event.type = TYPE_AXIS;
+        event.value = JOYSTICK_MIN;
+        engine->applyEvent(event);
+      }
     }
   }
 }
