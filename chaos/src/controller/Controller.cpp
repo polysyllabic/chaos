@@ -70,23 +70,21 @@ bool Controller::matches(const DeviceEvent& event, std::shared_ptr<ControllerInp
   return (event.type == signal->getButtonType() && event.id == signal->getID());
 }
 
+void Controller::setValue(std::shared_ptr<ControllerInput> signal, short value) {
+  // to do: screen to max for signal type
+  value = ControllerInput::joystickLimit(value);
+  DeviceEvent event = {0, value, (uint8_t) signal->getButtonType(), signal->getID()};
+  if (signal->getType() == ControllerSignalType::HYBRID) {
+    applyEvent(event);
+    event = {0, (short)((value) ? JOYSTICK_MAX : JOYSTICK_MIN), TYPE_AXIS, signal->getHybridAxis()};
+  }
+  PLOG_DEBUG << "Setting " << signal->getName() << " to " << value;
+  applyEvent(event);
+}
+
 // Send a new event to turn off the command.
 void Controller::setOff(std::shared_ptr<ControllerInput> signal) {
-  DeviceEvent event;
-  PLOG_DEBUG << "Turning " << signal->getName() << " off";
-  switch (signal->getType()) {
-  case ControllerSignalType::BUTTON:
-    event = {0, 0, TYPE_BUTTON, signal->getID()};
-    break;
-  case ControllerSignalType::HYBRID:
-    event = {0, 0, TYPE_BUTTON, signal->getID()};
-    applyEvent(event);
-    event = {0, JOYSTICK_MIN, TYPE_AXIS, signal->getHybridAxis()};
-    break;
-  default:
-    event = {0, 0, TYPE_AXIS, signal->getID()};
-  }
-  applyEvent(event);
+  setValue(signal, 0);
 }
 
 // Send a new event to turn the command to its maximum value.

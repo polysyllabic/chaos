@@ -125,6 +125,8 @@ namespace Chaos {
     
     void setOn(std::shared_ptr<GameCommand> command);
 
+    void setValue(std::shared_ptr<GameCommand> command, short value);
+
     void applyEvent(const DeviceEvent& event) { controller.applyEvent(event); }
 
     std::shared_ptr<Modifier> getModifier(const std::string& name) {

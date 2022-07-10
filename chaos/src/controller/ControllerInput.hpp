@@ -292,7 +292,7 @@ namespace Chaos {
      */
     static short getMax(std::shared_ptr<ControllerInput> signal);
 
-    short joystickLimit(int input) {
+    static short joystickLimit(int input) {
       return fmin(fmax(input, JOYSTICK_MIN), JOYSTICK_MAX);
     }
 
