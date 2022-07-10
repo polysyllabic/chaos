@@ -95,9 +95,9 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
       short threshold = 1;
       if (thresh_proportion < 0 || thresh_proportion > 1) {
         PLOG_WARNING << "Threshold proportion = " << thresh_proportion << ": must be between 0 and 1";
-      } else {
-        threshold = (int) (thresh_proportion * (double) JOYSTICK_MAX);
+        thresh_proportion = 0.5;
       }
+      threshold = (int) ((double) JOYSTICK_MAX * thresh_proportion);
 
       double sensitivity = (*remapping)["sensitivity"].value_or(1.0);
       if (sensitivity == 0) {
@@ -124,7 +124,7 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
       if (! sig) {
 	      throw std::runtime_error("Controller input for random remap '" + *signame + "' is not defined");
       }
-      remaps.insert({sig, {nullptr, nullptr, false, false, 0, 1}});
+      remaps.insert({sig, {nullptr, nullptr, false, false, 1, 1.0}});
     }
   }
   PLOG_DEBUG << name << ": random = " << random;
@@ -298,10 +298,11 @@ bool RemapModifier::remap(DeviceEvent& event) {
           modified.value = (event.value <= -remap.threshold) ? 1 : 0;
         }
         // Zero out the opposite button
-        new_event.id = other_button->getID();
-        new_event.value = 0;
-        new_event.type = TYPE_BUTTON;
-        engine->applyEvent(new_event);
+        //new_event.id = other_button->getID();
+        //new_event.value = 0;
+        //new_event.type = TYPE_BUTTON;
+        //engine->applyEvent(new_event);
+        //PLOG_DEBUG << "Other button zeroed: " << other_button->getName();
         break;
       }
       case ControllerSignalType::THREE_STATE:
@@ -333,9 +334,9 @@ bool RemapModifier::remap(DeviceEvent& event) {
       modified.value = ControllerInput::joystickLimit(-event.value);
     }
     }
-    if (modified.value) {
+    //if (modified.value != 0) {
      PLOG_DEBUG << name << ": " << from->getName() << ":" << event.value << " to " << to_console->getName() << ":" << modified.value;
-    }
+    //}
     // Update the event
     event = modified;
   }
