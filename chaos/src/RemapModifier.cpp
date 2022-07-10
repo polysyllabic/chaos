@@ -286,20 +286,19 @@ bool RemapModifier::remap(DeviceEvent& event) {
       }
       break;
     case ControllerSignalType::AXIS:
+    {
+      int neg_val = (to_console->getType() == ControllerSignalType::THREE_STATE) ? -1 : 1;
       switch (to_console->getType()) {
       case ControllerSignalType::BUTTON:
-        if (event.value > 0) {
-          modified.value = (!remap.to_negative && event.value > remap.threshold) ? 1 : 0;
-        } else if (event.value < 0) {
-          modified.value = (remap.to_negative && event.value < -remap.threshold) ? 1 : 0;
-        }
-        break;
       case ControllerSignalType::THREE_STATE:
         if (event.value > 0) {
-          modified.value = (!remap.to_negative && event.value > remap.threshold) ? 1 : 0;
-        } else if (event.value < 0) {
-          modified.value = (remap.to_negative && event.value < -remap.threshold) ? -1 : 0;
-        }
+          // if to_negative not set, to_console is the right signal to send to
+          modified.value = (event.value >= remap.threshold && remap.to_negative == nullptr) ? 1 : 0;
+          }
+        else if (event.value < 0) {
+            modified.id = remap.to_negative->getID();
+            modified.value = (event.value <= -remap.threshold  && remap.to_negative) ? neg_val : 0;
+          }
         break;
    	  }
       // From axis to any type of button, we need a new event to zero out the second button when
@@ -312,6 +311,7 @@ bool RemapModifier::remap(DeviceEvent& event) {
         engine->applyEvent(new_event);
       }
       break;
+    }
     case ControllerSignalType::ACCELEROMETER:
       if (to_console->getType() == ControllerSignalType::AXIS) {
 	      modified.value= ControllerInput::joystickLimit((short) (-event.value/remap.scale));
