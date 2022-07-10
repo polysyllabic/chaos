@@ -62,7 +62,7 @@ namespace Chaos {
   protected:
     
     dseconds press_time;
-
+    bool is_on;
     /**
      * Time in seconds to keep the command on.
      */
@@ -82,10 +82,15 @@ namespace Chaos {
     dseconds cycle_delay;
 
     /**
-     * If any incoming events try to turn the signal off, force them back on.
+     * The values that we set the commands to while we're in the on state
      */
-    bool force_on;
-    
+    std::vector<short> force_on;
+
+    /**
+     * The values that we set the commands to while we're in the off state
+     */
+    std::vector<short> force_off;
+
     /**
      * \brief Any commands in this list are blocked while the mod is active.
      *

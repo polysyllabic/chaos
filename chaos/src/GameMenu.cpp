@@ -93,7 +93,7 @@ std::shared_ptr<MenuItem> GameMenu::getMenuItem(toml::table& config, const std::
 }
 
 
-void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, Controller& controller) {
+void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, bool restore, Controller& controller) {
   PLOG_DEBUG << "Creating set menu sequence";
   Sequence seq{controller};
 
@@ -120,7 +120,7 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, Co
   }
   // navigation through the final leaf
   item->selectItem(seq);  
-  item->setState(seq, new_val);
+  item->setState(seq, new_val, restore);
   PLOG_DEBUG << "Constructing reverse navigation";
   item->navigateBack(seq);
   // Back out, leaving all the parent menus in their default state
@@ -132,7 +132,7 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, Co
 
 void GameMenu::restoreState(std::shared_ptr<MenuItem> item, Controller& controller) {
   PLOG_DEBUG << "Creating restore menu sequence";
-  setState(item, item->getDefault(), controller);
+  setState(item, item->getDefault(), true, controller);
 }
 
 void GameMenu::correctOffset(std::shared_ptr<MenuItem> changed) {

@@ -286,6 +286,7 @@ namespace Chaos {
      * This is used to declare child mods that should not appear independently for voting.
      */
     bool unlisted;
+    
     /**
      * \brief List of game conditions to test
      *

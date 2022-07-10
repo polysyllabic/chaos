@@ -271,8 +271,7 @@ namespace Chaos {
 
     short getState() { return current_state; }
     
-    void setState(Sequence& seq, unsigned int new_state);
-    void restoreState(Sequence& seq);
+    void setState(Sequence& seq, unsigned int new_state, bool restore);
 
     bool isOption() { return is_option; }
     bool isSelectable() { return is_selectable; }

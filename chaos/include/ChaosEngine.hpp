@@ -125,6 +125,8 @@ namespace Chaos {
     
     void setOn(std::shared_ptr<GameCommand> command);
 
+    void setValue(std::shared_ptr<GameCommand> command, short value);
+
     void applyEvent(const DeviceEvent& event) { controller.applyEvent(event); }
 
     std::shared_ptr<Modifier> getModifier(const std::string& name) {
@@ -147,7 +149,7 @@ namespace Chaos {
      * The menu item must be settable (i.e., not a submenu)
      */
     void setMenuState(std::shared_ptr<MenuItem> item, unsigned int new_val) {
-      game.getMenu().setState(item, new_val, controller);
+      game.getMenu().setState(item, new_val, true, controller);
     }
 
     /**

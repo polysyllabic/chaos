@@ -28,8 +28,8 @@ const std::string RepeatModifier::mod_type = "repeat";
 
 RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "appliesTo", "disableOnStart", "disableOnFinish", "forceOn",
-      "timeOn", "timeOff", "repeat", "cycleDelay", "blockWhileBusy", "beginSequence", "finishSequence", "unlisted"});
+      "name", "description", "type", "groups", "appliesTo", "disableOnStart", "disableOnFinish", "force_on",
+      "time_on", "time_off", "repeat", "cycle_delay", "blockWhileBusy", "beginSequence", "finishSequence", "unlisted"});
   initialize(config, e);
 
   if (commands.empty()) {
@@ -39,11 +39,34 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
     PLOG_WARNING << "More than one command in 'appliesTo' -- extra commands will be ignored.";
   }
   
-  time_on = dseconds(config["timeOn"].value_or(0.0));
-  time_off = dseconds(config["timeOff"].value_or(0.0));
+  time_on = dseconds(config["time_on"].value_or(0.0));
+  time_off = dseconds(config["time_off"].value_or(0.0));
   repeat_count = config["repeat"].value_or(1);
-  cycle_delay = dseconds(config["cycleDelay"].value_or(0.0));
-  force_on = config["forceOn"].value_or(false);
+  cycle_delay = dseconds(config["cycle_delay"].value_or(0.0));
+
+  if (config.contains("force_on")) {
+    const toml::array* val_list = config.get("force_on")->as_array();
+    if (! val_list || ! val_list->is_homogeneous(toml::node_type::integer)) {
+      throw std::runtime_error("force_on must be an array of integers");
+    }
+    for (auto& elem : * val_list) {
+      std::optional<int> val = elem.value<int>();
+      assert(val);
+      force_on.push_back(*val);      
+    }
+  }
+  
+  if (config.contains("force_off")) {
+    const toml::array* val_list = config.get("force_off")->as_array();
+    if (! val_list || ! val_list->is_homogeneous(toml::node_type::integer)) {
+      throw std::runtime_error("force_off must be an array of integers");
+    }
+    for (auto& elem : * val_list) {
+      std::optional<int> val = elem.value<int>();
+      assert(val);
+      force_off.push_back(*val);
+    }
+  }
 
     // Allow "ALL" as a shortcut to avoid enumerating all signals
   std::optional<std::string> for_all = config["blockWhileBusy"].value<std::string>();
@@ -52,13 +75,13 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
     engine->addGameCommands(config, "blockWhileBusy", block_while);
   }
 
-  PLOG_VERBOSE << " - timeOn: " << time_on.count() << "; timeOff: " << time_off.count() << "; cycleDelay: " << cycle_delay.count();
-  PLOG_VERBOSE << " - repeat: " << repeat_count << "; forceOn: " << (force_on ? "true" : "false");
+  PLOG_DEBUG << " - time_on: " << time_on.count() << "; time_off: " << time_off.count() << "; cycle_delay: " << cycle_delay.count();
+  PLOG_DEBUG << " - repeat: " << repeat_count;
   if (block_while.empty()) {
-    PLOG_VERBOSE << " - blockWhileBusy: NONE";
+    PLOG_DEBUG << " - blockWhileBusy: NONE";
   } else {
     for (auto& cmd : block_while) {
-      PLOG_VERBOSE << " - blockWhileBusy:" << cmd->getName();
+      PLOG_DEBUG << " - blockWhileBusy:" << cmd->getName();
     }
   }
 }
@@ -66,18 +89,40 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
 void RepeatModifier::begin() {
   press_time = dseconds::zero();
   repeat_count = 0;
+  is_on = false;
 }
 
 void RepeatModifier::update() {
-  std::shared_ptr<GameCommand> cmd = commands.front();
   press_time += timer.dTime();
   if (repeat_count < num_cycles) {
-    if (press_time > time_on && cmd->getState()) {
-      engine->setOff(cmd);
+    if (press_time > time_on && is_on) {
+      int i = 0;
+      for (auto cmd : commands) {
+        if (i < force_off.size()) {
+          PLOG_DEBUG << "Setting " << cmd->getName() << " to " << force_off[i];
+          engine->setValue(cmd, force_off[i]);
+        } else {
+          PLOG_DEBUG << "Turning " << cmd->getName() << " off";
+          engine->setOff(cmd);
+        }
+        is_on = false;
+        i++;
+      }
       press_time = dseconds::zero();
       repeat_count++;
-    } else if (press_time > time_off && ! commands[0]->getState()) {
-      engine->setOn(cmd);
+    } else if (press_time > time_off && !is_on) {
+      int i = 0;
+      for (auto cmd : commands) {
+        if (i < force_on.size()) {
+          PLOG_DEBUG << "Setting " << cmd->getName() << " to " << force_on[i];
+          engine->setValue(cmd, force_on[i]);
+        } else {
+          PLOG_DEBUG << "Turning " << cmd->getName() << " on";
+          engine->setOn(cmd);
+        }
+        is_on = true;
+        i++;
+      }
       press_time = dseconds::zero();
     }
   } else if (press_time > cycle_delay) {
@@ -88,16 +133,25 @@ void RepeatModifier::update() {
 }
 
 bool RepeatModifier::tweak(DeviceEvent& event) {
-  if (force_on) {
-    if (engine->eventMatches(event, commands[0])) {
-      event.value = commands[0]->getInput()->getMax((ButtonType) event.type);
+  if (is_on) {
+    if (! force_on.empty()) {
+      int i = 0;      
+      for (auto& cmd : commands) {
+        if (engine->eventMatches(event, cmd) && i < force_on.size()) {
+          event.value = force_on[i];
+          PLOG_DEBUG << "force " << cmd->getName() << " to " << event.value;
+          return true;
+        }
+        i++;
+      }
     }
-  }
-  // Drop any events in the blockWhile list
-  if (! block_while.empty()) {
-    for (auto& cmd : block_while) {
-      if (engine->eventMatches(event, cmd)) {
-	      return false;
+    // Drop any events in the blockWhile list
+    if (! block_while.empty()) {
+      for (auto& cmd : block_while) {
+        if (engine->eventMatches(event, cmd)) {
+          PLOG_DEBUG << "blocking " << cmd->getName();
+	        return false;
+        }
       }
     }
   }

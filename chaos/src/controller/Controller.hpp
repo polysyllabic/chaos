@@ -105,7 +105,14 @@ namespace Chaos {
      * is also in effect.
      */
     bool matches(const DeviceEvent& event, std::shared_ptr<ControllerInput> signal);
-    
+
+    /**
+     * Sets the signal to the specified value
+     * \param signal The signal to set
+     * \param value  The value to set
+     */
+    void setValue(std::shared_ptr<ControllerInput> signal, short value);
+
     /**
      * Turns off the button/axis for the associated input signal.
      * \param[in] The signal that we're disabling.

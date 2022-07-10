@@ -47,6 +47,7 @@ namespace Chaos {
     virtual bool eventMatches(const DeviceEvent& event, std::shared_ptr<GameCommand> command) = 0;
     virtual void setOff(std::shared_ptr<GameCommand> command) = 0;
     virtual void setOn(std::shared_ptr<GameCommand> command) = 0 ;
+    virtual void setValue(std::shared_ptr<GameCommand> command, short value) = 0 ;
     virtual void applyEvent(const DeviceEvent& event) = 0;
 
     // Functions to get modifier data

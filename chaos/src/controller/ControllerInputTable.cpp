@@ -126,29 +126,6 @@ std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const toml::tabl
   return inp;
 }
 
-void ControllerInputTable::setCascadingRemap(RemapTable& remaps) {
-  RemapTable copy = RemapTable(remaps);
-  for (auto& r : remaps) {
-    // Check if the from signal in the remaps list already appears as a to_console entry in the table
-    auto it = std::find_if(inputs.begin(), inputs.end(), [r](auto inp)
-      {
-        //std::shared_ptr<ControllerInput> s = ;
-        return (inp.second->getRemap() == r.first);
-      });
-    if (it == inputs.end()) {
-      // The signal isn't currently being remapped.
-      std::shared_ptr<ControllerInput> source = r.first;
-      r.first->setRemap(r.second);
-      PLOG_DEBUG << "New remap of " << r.first->getName() << " to_console = " << r.second.to_console;
-    } else {
-      // To-signal already remapped. Apply the remap to the signal whose to_console value is currently
-      // the from value we're trying to remap
-      PLOG_DEBUG << "Cascading remap of " << r.first->getName() << " to_console = " << r.second.to_console;
-      it->second->setRemap(r.second);
-    }
-  }
-}
-
 void ControllerInputTable::clearRemaps() {
   for (auto [from, remapping] : inputs) {
     remapping->setRemap({nullptr, nullptr, false, false, 0, 1});
@@ -175,7 +152,9 @@ int ControllerInputTable::initializeInputs(const toml::table& config) {
 
 void ControllerInputTable::addToVector(const toml::table& config, const std::string& key,
                                    std::vector<std::shared_ptr<ControllerInput>>& vec) {
-      
+
+  PLOG_DEBUG << "Adding " << key;
+
   if (config.contains(key)) {
     const toml::array* cmd_list = config.get(key)->as_array();
     if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
@@ -194,5 +173,7 @@ void ControllerInputTable::addToVector(const toml::table& config, const std::str
         throw std::runtime_error("Unrecognized controller input: " + *cmd + " in " + key);
      	}
     }
-  }      
+  } else {
+    PLOG_DEBUG << "No " << key << " array to add";
+  }
 }

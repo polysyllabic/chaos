@@ -1056,8 +1056,8 @@ offset = -24
 #
 # In addition to the general parameters required for all modules, the following parameters are
 # defined:
-# - timeOn: Length of time to allow the command before going into cooldown. (Required)
-# - timeOff: Length of time spent in cooldown, where the command is blocked. (Required)
+# - time_on: Length of time to allow the command before going into cooldown. (Required)
+# - time_off: Length of time spent in cooldown, where the command is blocked. (Required)
 #
 # Note: Although the appliesTo key takes an array, this mod type expects only a single
 # command. All but the first will be ignored.
@@ -1068,8 +1068,8 @@ description = "Running is disabled after 2 seconds and takes 4 seconds to rechar
 type = "cooldown"
 groups = [ "movement" ]
 appliesTo = [ "dodge/sprint" ]
-timeOn = 2.0
-timeOff = 4.0
+time_on = 2.0
+time_off = 4.0
 
 [[modifier]]
 name = "Snapshot"
@@ -1077,20 +1077,25 @@ description = "You can only aim for 1 second at a time, so take that shot quickl
 type = "cooldown"
 groups = [ "combat" ]
 appliesTo = [ "aiming" ]
-timeOn = 1.0
-timeOff = 3.0
+time_on = 1.0
+time_off = 3.0
 
 # == Repeat Modifiers ==
 #
-# Repeat modifiers apply a command in a cycle
+# Repeat modifiers apply commands in a cycle
 #
 # In addition to the general parameters required for all modules, the following parameters are
 # defined:
-# - timeOn: Length of time to allow the command before going into cooldown. (Required)
-# - timeOff: Length of time spent in cooldown, where the command is blocked. (Required)
-#
-# Note: Although the appliesTo key takes an array, this mod type expects only a single
-# command. All but the first will be ignored.
+# - 
+# - time_on: Length of time in seconds that the commands are on. (Required)
+# - time_off: Length of time in seconds that the commands are off. (Required)
+# - repeat_count: Number of on-off repetitions in one cycle. (Optional, Default = 1)
+# - cycle_delay: Time in seconds to wait after all repetitions before starting a new cycle.
+# - force_on: Array of values to which we will set the commands in appliesTo when the command is
+#   on. If omitted, will set all commands in appliesTo to the maximum value. (Optional)
+# - force_off: Array of values to which we will set the commands in appliesTo when the command is
+#   off. If omitted, will set all commands in appliesTo to 0. (Optional)
+# - blockWhileBusy: List of signals to drop while in the on state
 #
 [[modifier]]
 name = "Keep Proning"
@@ -1098,8 +1103,8 @@ description = "Proning at inconvenient times"
 type = "repeat"
 groups = [ "movement" ]
 appliesTo = [ "crouch/prone" ]
-timeOn = 2.0
-timeOff = 2.0
+time_on = 2.0
+time_off = 2.0
 beginSequence = [{ event = "release", command = "crouch/prone" }]
 finishSequence = [{ event = "release", command = "crouch/prone" }]
 
@@ -1109,8 +1114,8 @@ description = "Keeping things toxic with teabagging"
 type = "repeat"
 groups = [ "movement" ]
 appliesTo = [ "crouch/prone" ]
-timeOn = 0.1
-timeOff = 0.6
+time_on = 0.1
+time_off = 0.6
 beginSequence = [{ event = "release", command = "crouch/prone" }]
 finishSequence = [{ event = "release", command = "crouch/prone" }]
 
@@ -1119,10 +1124,10 @@ name = "Anthony Caliber"
 description = "Flashlight flickering"
 type = "repeat"
 appliesTo = [ "flashlight" ]
-timeOn = 0.066667
-timeOff = 0.089583
+time_on = 0.066667
+time_off = 0.089583
 repeat = 8
-cycleDelay = 4.0
+cycle_delay = 4.0
 beginSequence = [{ event = "release", command = "flashlight" }]
 finishSequence = [{ event = "release", command = "flashlight" }]
 
@@ -1132,8 +1137,8 @@ description = "Repeated presses of jump"
 type = "repeat"
 groups = [ "movement" ]
 appliesTo = [ "jump" ]
-timeOn = 0.1
-timeOff = 2.0
+time_on = 0.1
+time_off = 2.0
 beginSequence = [{ event = "release", command = "jump" }]
 finishSequence = [{ event = "release", command = "jump" }]
 
@@ -1143,8 +1148,8 @@ description = "The only way to melee is to follow the master techniques of Rachy
 type = "repeat"
 groups = [ "combat" ]
 appliesTo = [ "melee" ]
-timeOn = 0.1
-timeOff = 1.1
+time_on = 0.1
+time_off = 1.2
 beginSequence = [{ event = "release", command = "melee" }]
 finishSequence = [{ event = "release", command = "melee" }]
 
@@ -1154,32 +1159,32 @@ description = "Repeaated dodges. Don't stand too near a ledge"
 type = "repeat"
 groups = [ "movement" ]
 appliesTo = [ "dodge/sprint" ]
-timeOn = 0.1
-timeOff = 2.0
+time_on = 0.1
+time_off = 2.0
 beginSequence = [{ event = "release", command = "dodge/sprint" }]
 finishSequence = [{ event = "release", command = "dodge/sprint" }]
 
 [[modifier]]
 name = "Periodic Listen Mode"
-description = "Stop, look, listen to your heart, hear what it's saying."
+description = "Stop. Look. Listen to your heart. Hear what it's saying."
 type = "repeat"
 groups = [ "view" ]
 appliesTo = [ "swap/listen" ]
-timeOn = 3.0
-timeOff = 8.0
+time_on = 3.0
+time_off = 8.0
 beginSequence = [{ event = "release", command = "swap/listen" }]
 finishSequence = [{ event = "release", command = "swap/listen" }]
 
 [[modifier]]
 name = "Force Running"
-description = "To move is to run (mostly)"
+description = "To move is to run (mostly)."
 type = "repeat"
 groups = [ "movement" ]
 appliesTo = [ "dodge/sprint" ]
-timeOn = 4.0
-timeOff = 0.1
-forceOn = true
-beginSequence = [{ event = "release", command = "dodge/sprint" }]
+time_on = 4.0
+time_off = 0.1
+force_on = [ 1 ]
+beginSequence = [{ event = "hold", command = "dodge/sprint" }]
 finishSequence = [{ event = "release", command = "dodge/sprint" }]
 
 [[modifier]]
@@ -1187,15 +1192,31 @@ name = "Leeroy Jenkins"
 description = "Alright let's do this! LEEEEROOOOOY NNNJEEEENNKIINNS!!! (Holds forward and sprint)"
 type = "repeat"
 groups = [ "movement" ]
-appliesTo = [ "dodge/sprint" ]
-beginSequence = [ { event="release", command = "dodge/sprint"},
+appliesTo = [ "dodge/sprint", "move forward/back" ]
+beginSequence = [ { event="hold", command = "dodge/sprint"},
       { event ="hold", command = "move forward/back", value = -128 } ]
-forceOn = true
+force_on = [ 1, -128 ]
 blockWhileBusy = [ "move forward/back" ]
-timeOn = 4.0
-timeOff = 0.1
+time_on = 4.0
+time_off = 0.1
 finishSequence = [ { event="release", command = "move forward/back"},
        { event="release", command = "dodge/sprint"}  ]
+
+[[modifier]]
+name = "Sir Robin"
+description = "When danger reared its ugly head, He bravely turned his tail and fled! (Force run backwards)"
+type = "repeat"
+groups = [ "movement" ]
+appliesTo = [ "dodge/sprint", "move forward/back" ]
+beginSequence = [ { event="hold", command = "dodge/sprint"},
+      { event ="hold", command = "move forward/back", value = 128 } ]
+force_on = [1, 128]
+blockWhileBusy = [ "move forward/back" ]
+time_on = 4.0
+time_off = 0.1
+finishSequence = [ { event="release", command = "move forward/back"},
+       { event="release", command = "dodge/sprint"}  ]
+
 
 [[modifier]]
 name = "Force Aiming"
@@ -1203,9 +1224,9 @@ description = "The aiming button is held"
 type = "repeat"
 groups = [ "combat" ]
 appliesTo = [ "aiming" ]
-timeOn = 4.0
-timeOff = 0.1
-forceOn = true
+time_on = 4.0
+time_off = 0.1
+force_on = true
 
 # This is a child-only mod: part of the Navigation Assistance parent mod
 [[modifier]]
@@ -1213,8 +1234,8 @@ name = "Periodic Navigation Assistance"
 description = "Keeps pointing camera in direction of story progression"
 type = "repeat"
 appliesTo = [ "look" ]
-timeOn = 0.1
-timeOff = 5.0
+time_on = 0.1
+time_off = 5.0
 unlisted = true
 
 # == Remap Modifiers ==
@@ -1225,7 +1246,6 @@ unlisted = true
 # In addition to the general parameters required for all modules, the following parameters are
 # defined:
 #
-# disableSignals: 
 # remap: an array of inline tables defining the remapping. The following keys are defined:
 #   - from: The signal as received from the controller
 #   - to: The signal that will be sent to the console in place of the 'from' signal. If an
@@ -1239,7 +1259,7 @@ unlisted = true
 #
 # signals: An array of signals (expected to be axes) that the remap needs to process.
 #
-# disableSignals: If true, all the signals lised in the signals list will all receive a 0 signal
+# disable_signals: If true, all the signals lised in the signals list will all receive a 0 signal
 # when the mod is initialized.
 #
 # random_remap: A list of controls that will be randomly remapped among one another.
@@ -1287,7 +1307,7 @@ name = "Swap D-pad/Left Joystick"
 description = "Retro-style motion and an odd analog inventory selector"
 type = "remap"
 signals = [ "LX", "LY" ]
-disableSignals = true
+disable_signals = true
 remap = [
       {from = "DX", to = "LX"},
       {from = "DY", to = "LY"},
@@ -1299,7 +1319,7 @@ name = "Swap Shapes/Right Joystick"
 description = "Analog actions and digital camera movement"
 type = "remap"
 signals = [ "RX", "RY" ]
-disableSignals = true
+disable_signals = true
 remap = [
       {from = "RX", to = "SQUARE", to_neg = "CIRCLE", threshold=0.5},
       {from = "RY", to = "X", to_neg = "TRIANGLE", threshold=0.5},
@@ -1312,6 +1332,7 @@ remap = [
 name = "Motion Control Movement"
 description = "No more movement with the joystick. Tilt the controller to move instead."
 type = "remap"
+signals = [ "LX", "LY" ]
 remap = [
       {from = "ACCX", to = "LX", sensitivity=20},
       {from = "ACCZ", to = "LY", sensitivity=20},
@@ -1323,6 +1344,7 @@ remap = [
 name = "Motion Control Aiming"
 description = "No more aiming with the joystick. Tilt the controller to aim/look instead."
 type = "remap"
+signals = [ "RX", "RY" ]
 remap = [
       {from = "ACCX", to = "RX", sensitivity=24},
       {from = "ACCZ", to = "RY", sensitivity=24},
@@ -1461,7 +1483,7 @@ type = "sequence"
 groups = [ "movement"]
 blockWhileBusy = [ "dodge/sprint", "crouch/prone" ]
 condition = [ "fast movement" ]
-cycleDelay = 0.5
+cycle_delay = 0.5
 repeatSequence = [
   { event = "press", command = "dodge/sprint", delay = 0.1 },
   { event = "press", command = "crouch/prone", delay = 0.8 },
@@ -1509,7 +1531,7 @@ type = "sequence"
 groups = [ "combat" ]
 blockWhileBusy = [ "aiming", "shoot" ]
 condition = [ "shot taken" ]
-startDelay = 0.2
+start_delay = 0.2
 repeatSequence = [
   { event = "release", command = "shoot", delay = 1.0 },
   { event = "hold", command = "shoot", delay = 0.2 },
@@ -1587,7 +1609,7 @@ type = "sequence"
 groups = [ "movement" ]
 blockWhileBusy = [ "dodge/sprint", "crouch/prone" ]
 condition = [ "movement" ]
-cycleDelay = 1.4
+cycle_delay = 1.4
 repeatSequence = [
   { event = "press", command = "dodge/sprint", delay = 0.1 },
   { event = "press", command = "crouch/prone", delay = 0.8 },
@@ -1605,8 +1627,8 @@ description = "Woah! What's behind you? Invokes a periodic, 180-degree quick tur
 type = "sequence"
 groups = [ "movement" ]
 blockWhileBusy = [ "jump", "aiming", "move forward/back", "move sideways" ]
-startDelay = 6.0
-cycleDelay = 0.1
+start_delay = 6.0
+cycle_delay = 0.1
 repeatSequence = [
    { event = "release", command = "jump" },
    { event = "release", command = "aiming" },

@@ -273,3 +273,8 @@ void ChaosEngine::setOn(std::shared_ptr<GameCommand> command) {
   std::shared_ptr<ControllerInput> signal = command->getInput();
   controller.setOn(signal);
 }
+
+void ChaosEngine::setValue(std::shared_ptr<GameCommand> command, short value) {
+  std::shared_ptr<ControllerInput> signal = command->getInput();
+  controller.setValue(signal, value);
+}

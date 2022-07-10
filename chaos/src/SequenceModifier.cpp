@@ -34,7 +34,7 @@ SequenceModifier::SequenceModifier(toml::table& config, EngineInterface* e) {
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "beginSequence", "finishSequence",
       "blockWhileBusy", "repeatSequence", "condition",
-      "startDelay", "cycleDelay", "unlisted"});
+      "start_delay", "cycle_delay", "unlisted"});
 
   initialize(config, e);
   
@@ -47,10 +47,10 @@ SequenceModifier::SequenceModifier(toml::table& config, EngineInterface* e) {
     engine->addGameCommands(config, "blockWhileBusy", block_while);
   }
 
-  start_delay = dseconds(config["startDelay"].value_or(0.0));
-  repeat_delay = dseconds(config["cycleDelay"].value_or(0.0));
+  start_delay = dseconds(config["start_delay"].value_or(0.0));
+  repeat_delay = dseconds(config["cycle_delay"].value_or(0.0));
 
-  PLOG_VERBOSE << "- startDelay: " << start_delay.count() << "; cycleDelay: " << repeat_delay.count();
+  PLOG_VERBOSE << "- start_delay: " << start_delay.count() << "; cycle_delay: " << repeat_delay.count();
 }
 
 void SequenceModifier::begin() {
