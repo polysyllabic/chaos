@@ -104,17 +104,9 @@ set_required_build_settings_for_GCC8()
 add_executable(chaos include/config.hpp
 	include/ChaosEngine.hpp
 	include/Configuration.hpp
-  #include/Controller.hpp
-  #include/ControllerInjector.hpp
-  #include/ControllerInput.hpp
-  #include/ControllerInputTable.hpp
-  #include/ControllerRaw.hpp
-	#include/ControllerState.hpp
   include/CooldownModifier.hpp
   include/DelayModifier.hpp
-  #include/DeviceEvent.hpp
   include/DisableModifier.hpp
-	#include/Dualshock.hpp
   include/EngineInterface.hpp
   include/enumerations.hpp
 	include/factory.hpp
@@ -137,20 +129,11 @@ add_executable(chaos include/config.hpp
   include/Sequence.hpp
   include/SequenceModifier.hpp
   include/SequenceTable.hpp
-  #include/signals.hpp
-  #include/TOMLUtils.hpp
-	#include/Touchpad.hpp
 	src/ChaosEngine.cpp
 	src/Configuration.cpp
-	#src/Controller.cpp
-  #src/ControllerInput.cpp
-  #src/ControllerInputTable.cpp
-  #src/ControllerRaw.cpp
-	#src/ControllerState.cpp
   src/CooldownModifier.cpp
   src/DelayModifier.cpp
   src/DisableModifier.cpp
-	#src/Dualshock.cpp
   src/FormulaModifier.cpp
   src/Game.cpp
 	src/GameCommand.cpp
@@ -169,8 +152,6 @@ add_executable(chaos include/config.hpp
   src/Sequence.cpp
   src/SequenceModifier.cpp
   src/SequenceTable.cpp
-	#src/Touchpad.cpp
-  #src/TOMLUtils.cpp
 	src/main.cpp)
 
 target_compile_features(chaos PRIVATE cxx_std_17)
@@ -197,19 +178,24 @@ target_link_libraries(chaos	PUBLIC chaos_communicator
 		sniffify
 		${LIBUSB_LIBRARIES})
 
-#find_package(Doxygen)
-#if (DOXYGEN_FOUND)
-#	set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in)
-#	set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
-#	configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
-#	message("Configuring Doxygen")
-#
-#	add_custom_target(doc ALL
-#		COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
-#		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-#		COMMENT "Generating HTML documentation"
-#		VERBATIM)
-#endif()
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+  set(LATEX_OUTPUT NO)
+  find_package(LATEX)
+  if (LATEX_FOUND)
+    set(LATEX_OUTPUT YES)
+  endif()
+	set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in)
+	set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+	configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+	message("Configuring Doxygen")
+
+	add_custom_target(doc ALL
+		COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+		COMMENT "Generating documentation"
+		VERBATIM)
+endif()
 
 # Tests
 add_subdirectory(tests EXCLUDE_FROM_ALL)
