@@ -47,7 +47,7 @@ void Sequence::addPress(std::shared_ptr<ControllerInput> signal, short value) {
 
 void Sequence::addHold(std::shared_ptr<ControllerInput> signal, short value, unsigned int hold_time) {
   assert(signal);
-  short int hybrid_value;
+  short int hybrid_value;  
   unsigned int hybrid_hold;
   // If a value is passed for a hybrid signal (L2/R2), it applies to the axis signal. The button
   // signal will just use 1.
@@ -61,12 +61,12 @@ void Sequence::addHold(std::shared_ptr<ControllerInput> signal, short value, uns
     value = (signal->getType() == ControllerSignalType::BUTTON ||
 	     signal->getType() == ControllerSignalType::THREE_STATE) ? 1 : JOYSTICK_MAX;
   }
-  PLOG_VERBOSE << "Adding hold: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
+  PLOG_DEBUG << "Adding hold: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
     << ":" << value << " for " << hold_time << " microseconds";
   events.push_back({hold_time, value, (uint8_t) signal->getButtonType(), signal->getID()});
   if (signal->getType() == ControllerSignalType::HYBRID) {
     events.push_back( {hybrid_hold, hybrid_value, TYPE_AXIS, signal->getHybridAxis()} );
-    PLOG_VERBOSE << "Adding hold: " << (int) TYPE_AXIS << ": " << (int) signal->getHybridAxis()
+    PLOG_DEBUG << "Adding hold: " << (int) TYPE_AXIS << ": " << (int) signal->getHybridAxis()
       << ":" << hybrid_value << " for " << hybrid_hold << " microseconds";
   }
 }
@@ -78,46 +78,49 @@ void Sequence::addRelease(std::shared_ptr<ControllerInput> signal, unsigned int 
     hybrid_release = release_time;
     release_time = 0;
   }
-  PLOG_VERBOSE << "Adding release: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
+  PLOG_DEBUG << "Adding release: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
     << " for " << release_time << " microseconds";
   events.push_back({release_time, 0, (uint8_t) signal->getButtonType(), signal->getID()});
   if (signal->getType() == ControllerSignalType::HYBRID) {
-    PLOG_VERBOSE << "Adding release: " << TYPE_AXIS << ": " << (int) signal->getHybridAxis()
+    PLOG_DEBUG << "Adding release: " << TYPE_AXIS << ": " << (int) signal->getHybridAxis()
       << " for " << hybrid_release << " microseconds";
     events.push_back( {hybrid_release, JOYSTICK_MIN, TYPE_AXIS, signal->getHybridAxis()} );
   }
 }
 
 void Sequence::addDelay(unsigned int delay) {
+  PLOG_DEBUG << "adding delay of " << delay << "usecs";
   events.push_back( {delay, 0, 255, 255} );
 }
 
 void Sequence::send() {
-  PLOG_VERBOSE << "Sending sequence";
+  PLOG_DEBUG << "Sending sequence";
   for (auto& event : events) {
-    PLOG_VERBOSE << "Sending event for input (" << (int) event.type << ":" << (int) event.id
+    PLOG_DEBUG << "Sending event for input (" << (int) event.type << ":" << (int) event.id
 	       << ") value=" << (int) event.value << "; sleeping for " << (int) event.time << " microseconds";
     controller.applyEvent(event);
-    if (event.time) {
+    if (event.time > 0) {
       usleep(event.time);
     }
   }
 }
 
-bool Sequence::sendParallel(dseconds sequenceTime) {
-  unsigned int elapsed = usec(sequenceTime).count();
-  for (DeviceEvent& e = events[current_step]; current_step <= events.size(); e = events[++current_step]) {
-    PLOG_DEBUG << "Sending parallel step " << current_step << " type = " << (int) e.type << " value = " << e.value;
+bool Sequence::sendParallel(double sequenceTime) {
+  unsigned int elapsed = (unsigned int) (sequenceTime * SEC_TO_MICROSEC);
+  for (DeviceEvent& e = events[current_step]; current_step <= events.size(); e = events[++current_step], wait_until += e.time) {
     if (e.isDelay()) {
-      wait_until += e.time;
-      // return until delay expires, then move to the next step
-      if (elapsed < wait_until) {
-        return false;
-      }
-    } else {
-      // send out events until we hit the next delay
-      controller.applyEvent(e);
+      PLOG_DEBUG << "Delay of " << e.time << "usecs";
+      continue;
     }
+    // return until delay expires, then move to the next step
+    if (elapsed < wait_until) {
+      return false;
+    }
+    // send out events until we hit the next delay
+    PLOG_DEBUG << "Parallel step " << current_step << ": signal = ("
+      << (int) e.type << "." << (int) e.id << ") value = " << e.value <<
+      "sequenceTime=" << sequenceTime << "; elapsed usec=" << elapsed;
+    controller.applyEvent(e);
   }
   PLOG_DEBUG << "parallel send finished";
   // We're at the end of the sequence. Reset the steps and time for the next iteration
@@ -134,12 +137,14 @@ bool Sequence::empty() {
   return events.empty();
 }
 
-void Sequence::setPressTime(dseconds time) {
-  press_time = usec(time).count();
+void Sequence::setPressTime(double time) {
+  press_time = (unsigned int) (time * SEC_TO_MICROSEC);
+  PLOG_DEBUG << "press_time = " << time << " = " << press_time << " usecs";
 }
 
-void Sequence::setReleaseTime(dseconds time) {
-  release_time = usec(time).count();
+void Sequence::setReleaseTime(double time) {
+  release_time = (unsigned int) (time * SEC_TO_MICROSEC);
+  PLOG_DEBUG << "release_time = " << time << " = " << release_time << " usecs";
 }
 
 

@@ -20,8 +20,9 @@
 #pragma once
 #include <memory>
 #include <vector>
-#include <timer.hpp>
 #include "DeviceEvent.hpp"
+
+#define SEC_TO_MICROSEC 1000000.0
 
 namespace Chaos {
   class Controller;
@@ -60,8 +61,8 @@ namespace Chaos {
   public:
     Sequence(Controller& c);
 
-    static void setPressTime(dseconds time);
-    static void setReleaseTime(dseconds time);
+    static void setPressTime(double time);
+    static void setReleaseTime(double time);
 
     /**
      * \brief Directly add an individual event to the sequence stack
@@ -103,10 +104,11 @@ namespace Chaos {
     void addRelease(std::shared_ptr<ControllerInput> signal, unsigned int release_time);
     /**
      * \brief Add a delay
-     * \param delay Time to delay
+     * \param delay Time to delay in seconds
      *
      */
     void addDelay(unsigned int delay);
+    //void addDelay(double delay);
 
     void addSequence(std::shared_ptr<Sequence> seq);
 
@@ -128,11 +130,11 @@ namespace Chaos {
     /**
      * \brief Return the nth step in the sequence of events
      * 
-     * \param step 
+     * \param sequenceTime 
      * \return true if sequence is done
      * \return false if sequence is still in progress
      */
-    bool sendParallel(dseconds sequenceTime);
+    bool sendParallel(double sequenceTime);
     
   };
 

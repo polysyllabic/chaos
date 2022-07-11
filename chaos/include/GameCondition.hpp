@@ -19,7 +19,7 @@
  */
 #pragma once
 #include <memory>
-#include <unordered_map>
+//#include <unordered_map>
 #include <vector>
 #include <string>
 #include <toml++/toml.h>
@@ -131,8 +131,10 @@ namespace Chaos {
      *
      * A vector of game commands that should be checked to determine if the game has reached 
      * a state that we care about.
+     * \todo Allow vectors of triggers
      */
-    std::unordered_map<std::shared_ptr<GameCommand>, bool> trigger_on;
+    // std::unordered_map<std::shared_ptr<GameCommand>, bool> trigger_on;
+    std::shared_ptr<GameCommand> trigger_on;
 
     /**
      * \brief Commands to check that turn the condition off.
@@ -140,7 +142,8 @@ namespace Chaos {
      * A vector of game commands that should be checked to determine if the game has left some
      * persistent state.
      */
-    std::unordered_map<std::shared_ptr<GameCommand>, bool> clear_on;
+    // std::unordered_map<std::shared_ptr<GameCommand>, bool> clear_on;
+    std::shared_ptr<GameCommand> clear_on;
 
     /**
      * \brief The current state of the condition.

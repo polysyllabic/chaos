@@ -35,14 +35,11 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
   if (commands.empty()) {
     throw std::runtime_error("No command(s) specified with 'appliesTo'");
   }
-  if (commands.size() > 1) {
-    PLOG_WARNING << "More than one command in 'appliesTo' -- extra commands will be ignored.";
-  }
   
-  time_on = dseconds(config["time_on"].value_or(0.0));
-  time_off = dseconds(config["time_off"].value_or(0.0));
+  time_on = config["time_on"].value_or(0.0);
+  time_off = config["time_off"].value_or(0.0);
   repeat_count = config["repeat"].value_or(1);
-  cycle_delay = dseconds(config["cycle_delay"].value_or(0.0));
+  cycle_delay = config["cycle_delay"].value_or(0.0);
 
   if (config.contains("force_on")) {
     const toml::array* val_list = config.get("force_on")->as_array();
@@ -75,7 +72,7 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
     engine->addGameCommands(config, "blockWhileBusy", block_while);
   }
 
-  PLOG_DEBUG << " - time_on: " << time_on.count() << "; time_off: " << time_off.count() << "; cycle_delay: " << cycle_delay.count();
+  PLOG_DEBUG << " - time_on: " << time_on << "; time_off: " << time_off << "; cycle_delay: " << cycle_delay;
   PLOG_DEBUG << " - repeat: " << repeat_count;
   if (block_while.empty()) {
     PLOG_DEBUG << " - blockWhileBusy: NONE";
@@ -87,7 +84,7 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
 }
 
 void RepeatModifier::begin() {
-  press_time = dseconds::zero();
+  press_time = 0;
   repeat_count = 0;
   is_on = false;
 }
@@ -108,7 +105,7 @@ void RepeatModifier::update() {
         is_on = false;
         i++;
       }
-      press_time = dseconds::zero();
+      press_time = 0;
       repeat_count++;
     } else if (press_time > time_off && !is_on) {
       int i = 0;
@@ -123,12 +120,12 @@ void RepeatModifier::update() {
         is_on = true;
         i++;
       }
-      press_time = dseconds::zero();
+      press_time = 0;
     }
   } else if (press_time > cycle_delay) {
     PLOG_DEBUG << "resetting repeat cycle";
     repeat_count = 0;
-    press_time = dseconds::zero();
+    press_time = 0;
   }
 }
 

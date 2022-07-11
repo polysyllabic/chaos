@@ -61,7 +61,7 @@ namespace Chaos {
      */
     void addSequence(Sequence& seq, const std::string& name);
 
-    void addDelay(Sequence& sequence, usec delay) { sequence.addDelay(delay.count()); }
+    void addDelay(Sequence& sequence, usec delay) { sequence.addDelay(delay); }
     
   };
 };

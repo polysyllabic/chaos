@@ -33,8 +33,8 @@ int SequenceTable::buildSequenceList(toml::table& config, GameCommandTable& comm
   PLOG_DEBUG << "Initializing list of defined sequences";
   int parse_errors = 0;
   // global parameters for sequences
-  Sequence::setPressTime(dseconds(config["controller"]["button_press_time"].value_or(0.0625)));
-  Sequence::setReleaseTime(dseconds(config["controller"]["button_release_time"].value_or(0.0625)));
+  Sequence::setPressTime(config["controller"]["button_press_time"].value_or(0.0625));
+  Sequence::setReleaseTime(config["controller"]["button_release_time"].value_or(0.0625));
   
   if (sequence_map.size() > 0) {
     PLOG_DEBUG << "Clearing existing Sequence data";
@@ -113,7 +113,7 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
     if (delay < 0) {
 	    throw std::runtime_error("Delay must be a non-negative number of seconds.");
     }
-    usec delay_time = usec(delay);
+    unsigned int delay_usecs = (unsigned int) (delay * SEC_TO_MICROSEC);
 
     int repeat = definition["repeat"].value_or(1);
     if (repeat < 1) {
@@ -122,11 +122,10 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
     }
 
     if (*event == "delay") {
-      if (delay_time == usec::zero()) {
+      if (delay_usecs == 0) {
         PLOG_WARNING << "You've tried to add a delay of 0 microseconds. This will be ignored.";
 	    } else {
-	      seq->addDelay(delay_time.count());
-        PLOG_VERBOSE << "Delay = " << delay_time.count() << " microseconds";
+	      seq->addDelay(delay_usecs);
 	    }
       continue;
     }
@@ -154,31 +153,32 @@ std::shared_ptr<Sequence> SequenceTable::makeSequence(toml::table& config,
       std::shared_ptr<ControllerInput> signal = command->getInput();
 
 	    // If this signal is a hybrid control, this gets the axis max, which is needed for addHold
-	    int max_val = (signal) ? signal->getMax(TYPE_AXIS) : 0;
+	    int max_val = (signal) ? signal->getMax(TYPE_BUTTON) : 0;
       int value = definition["value"].value_or(max_val);
 
       if (*event == "hold") {
 	      if (repeat > 1) {
 	        PLOG_WARNING << "Repeat is not supported with 'hold' and will be ignored.";
     	  }
-	      seq->addHold(signal, value, delay_time.count());
-        PLOG_VERBOSE << "Hold " << signal->getName() << " for " << delay_time.count() << " microseconds";
+        PLOG_DEBUG << "Hold " << signal->getName() << " at value " << value << " for " << delay_usecs << " useconds";
+
+	      seq->addHold(signal, value, delay_usecs);
       } else if (*event == "press") {
 	      for (int i = 0; i < repeat; i++) {
 	        seq->addPress(signal, value);
-	        if (delay_time > usec::zero()) {
-	          seq->addDelay(delay_time.count());
-            PLOG_VERBOSE << "Press " << signal->getName() << " with a delay of " << delay_time.count() << " microseconds";
+	        if (delay_usecs > 0) {
+            PLOG_DEBUG << "Press " << signal->getName() << " at value " << value  << " with a delay of " << delay_usecs << " useconds";
+	          seq->addDelay(delay_usecs);
 	        } else {
-            PLOG_VERBOSE << "Press " << signal->getName();
+            PLOG_DEBUG << "Press " << signal->getName();
           }
 	      }
       } else if (*event == "release") {
 	      if (repeat > 1) {
 	        PLOG_WARNING << "Repeat is not supported with 'release' and will be ignored.";
 	      }
-	      seq->addRelease(signal, delay_time.count());
-        PLOG_VERBOSE << "Release " << signal->getName() << " (delay =" << delay_time.count() << " microseconds)";
+        PLOG_DEBUG << "Release " << signal->getName() << " (delay =" << delay_usecs << " usec)";
+	      seq->addRelease(signal, delay_usecs);
       } else {
     	  throw std::runtime_error("Unrecognized event type: " + *event);
       }

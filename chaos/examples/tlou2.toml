@@ -247,7 +247,7 @@ while = [ "aiming" ]
 
 [[condition]]
 name = "shot taken"
-trigger_on = [ "shoot" ]
+trigger_on = "shoot"
 while = [ "aiming" ]
 
 [[condition]]
@@ -270,13 +270,13 @@ threshold_type = "distance"
 
 [[condition]]
 name = "gun selected"
-trigger_on = [ "select weapon" ]
-clear_on = [ "select consumable" ]
+trigger_on = "select weapon"
+clear_on = "select consumable"
 
 [[condition]]
 name = "consumable selected"
-trigger_on = [ "select consumable" ]
-clear_on = [ "select weapon" ]
+trigger_on = "select consumable"
+clear_on = "select weapon"
 
 
 
@@ -1197,7 +1197,7 @@ beginSequence = [ { event="hold", command = "dodge/sprint"},
       { event ="hold", command = "move forward/back", value = -128 } ]
 force_on = [ 1, -128 ]
 blockWhileBusy = [ "move forward/back" ]
-time_on = 4.0
+time_on = 5.0
 time_off = 0.1
 finishSequence = [ { event="release", command = "move forward/back"},
        { event="release", command = "dodge/sprint"}  ]
@@ -1212,7 +1212,7 @@ beginSequence = [ { event="hold", command = "dodge/sprint"},
       { event ="hold", command = "move forward/back", value = 128 } ]
 force_on = [1, 128]
 blockWhileBusy = [ "move forward/back" ]
-time_on = 4.0
+time_on = 5.0
 time_off = 0.1
 finishSequence = [ { event="release", command = "move forward/back"},
        { event="release", command = "dodge/sprint"}  ]
@@ -1226,7 +1226,7 @@ groups = [ "combat" ]
 appliesTo = [ "aiming" ]
 time_on = 4.0
 time_off = 0.1
-force_on = true
+force_on = [ 1 ]
 
 # This is a child-only mod: part of the Navigation Assistance parent mod
 [[modifier]]
@@ -1300,7 +1300,7 @@ remap = [
       {from = "RX", to = "RY"},
       {from = "RY", to = "RX"},
       {from = "LX", to = "LY"},
-      {from = "LY", to = "RX"} ]
+      {from = "LY", to = "LX"} ]
 
 [[modifier]]
 name = "Swap D-pad/Left Joystick"
@@ -1321,8 +1321,8 @@ type = "remap"
 signals = [ "RX", "RY" ]
 disable_signals = true
 remap = [
-      {from = "RX", to = "SQUARE", to_neg = "CIRCLE", threshold=0.5},
-      {from = "RY", to = "X", to_neg = "TRIANGLE", threshold=0.5},
+      {from = "RX", to = "CIRCLE", to_neg = "SQUARE", threshold=0.5},
+      {from = "RY", to = "TRIANGLE", to_neg = "X", threshold=0.5},
       {from = "SQUARE", to = "RX", to_min = true},
       {from = "CIRCLE", to = "RX"},
       {from = "TRIANGLE", to = "RY", to_min = true},
@@ -1378,8 +1378,8 @@ remap = [
       {from = "LY", to = "RY"},
       {from = "RX", to = "LX"},
       {from = "RY", to = "LY"},
-      {from = "DX", to = "SQUARE", to_neg = "CIRCLE"},
-      {from = "DY", to = "X", to_neg = "TRIANGLE"},
+      {from = "DX", to = "CIRCLE", to_neg = "SQUARE"},
+      {from = "DY", to = "TRIANGLE", to_neg = "X"},
       {from = "R1", to = "L1"},
       {from = "L1", to = "R1"},
       {from = "L2", to = "R2"},
@@ -1483,12 +1483,13 @@ type = "sequence"
 groups = [ "movement"]
 blockWhileBusy = [ "dodge/sprint", "crouch/prone" ]
 condition = [ "fast movement" ]
-cycle_delay = 0.5
-repeatSequence = [
-  { event = "press", command = "dodge/sprint", delay = 0.1 },
-  { event = "press", command = "crouch/prone", delay = 0.8 },
-  { event = "release", command = "crouch/prone"},
-  { event = "release", command = "dodge/sprint"}
+cycle_delay = 1.0
+step_timings = [ 0.1, 0.8, 0.5 ]
+repeatSequence = [  
+  { step = 1, event = "press", command = "dodge/sprint", delay = 0.1 },
+  { step = 2, event = "press", command = "crouch/prone", delay = 0.8 },
+  { step = 3, event = "release", command = "crouch/prone"},
+  { step = 3, event = "release", command = "dodge/sprint"}
   ]
 beginSequence = [ { event = "release", command = "dodge/sprint" },
                   { event = "release", command = "crouch/prone" }]
@@ -1532,10 +1533,11 @@ groups = [ "combat" ]
 blockWhileBusy = [ "aiming", "shoot" ]
 condition = [ "shot taken" ]
 start_delay = 0.2
+step_timings = [ 1.0, 0.2, 0.0 ]
 repeatSequence = [
-  { event = "release", command = "shoot", delay = 1.0 },
-  { event = "hold", command = "shoot", delay = 0.2 },
-  { event = "release", command = "shoot" }
+  { step = 1, event = "release", command = "shoot", delay = 1.0 },
+  { step = 2, event = "hold", command = "shoot", delay = 0.2 },
+  { step = 3, event = "release", command = "shoot" }
   ]
 
 [[modifier]]
@@ -1609,12 +1611,12 @@ type = "sequence"
 groups = [ "movement" ]
 blockWhileBusy = [ "dodge/sprint", "crouch/prone" ]
 condition = [ "movement" ]
-cycle_delay = 1.4
-repeatSequence = [
-  { event = "press", command = "dodge/sprint", delay = 0.1 },
-  { event = "press", command = "crouch/prone", delay = 0.8 },
-  { event = "release", command = "crouch/prone"},
-  { event = "release", command = "dodge/sprint"}
+step_timings = [ 0.1, 0.8, 0.5 ]
+repeatSequence = [  
+  { step = 1, event = "press", command = "dodge/sprint", delay = 0.1 },
+  { step = 2, event = "press", command = "crouch/prone", delay = 0.8 },
+  { step = 3, event = "release", command = "crouch/prone"},
+  { step = 3, event = "release", command = "dodge/sprint"}
   ]
 beginSequence = [ { event = "release", command = "dodge/sprint" },
                   { event = "release", command = "crouch/prone" }]
@@ -1629,13 +1631,14 @@ groups = [ "movement" ]
 blockWhileBusy = [ "jump", "aiming", "move forward/back", "move sideways" ]
 start_delay = 6.0
 cycle_delay = 0.1
+step_timings = [ 0.1, 0.1, 0.0 ]
 repeatSequence = [
-   { event = "release", command = "jump" },
-   { event = "release", command = "aiming" },
-   { event = "hold", command = "move forward/back" },
-   { event = "release", command = "move sideways" },
-   { event = "hold", command = "jump", delay = 0.1 },
-   { event = "release", command = "jump" }
+   { step = 1, event = "release", command = "jump" },
+   { step = 1, event = "release", command = "aiming" },
+   { step = 1, event = "release", command = "move sideways" },
+   { step = 1, event = "hold", command = "move forward/back", delay=0.1}, # should imply JOYSTICK_MAX = 127
+   { step = 2, event = "hold", command = "jump", delay=0.1},
+   { step = 3, event = "release", command = "jump"}
    ]
 
 # === Menu Modifiers ===

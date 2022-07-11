@@ -36,63 +36,16 @@ namespace Chaos {
   /**
    * \brief Defines the nature of a particular signal coming from the controller
    *
-   * This class defines the specifics of the actual signals coming from the controller and keeps
-   * track of data such as the current remapping status. In other words, the Controller class
-   * is the object for the physical controller. This one manages the game-specific translation
-   * from the raw signals coming from the controller to the game commands that modifiers act on.
+   * This class defines the specifics of the actual signals coming from the controller.
    */
   class ControllerInput {
   private:
     /**
      * \brief The canonical input signal received from the controller
      *
-     * This is the actual signal received from the controller. The GameCommand class defines a
-     * mapping between a game command and this signal as being the controller signal that the
-     * game actually expects to see.
+     * This is the actual signal received from the controller.
      */
     ControllerSignal actual;
-
-    /**
-     * \brief The input type that the controller to which the input will be altered before it is
-     * sent to the console.
-     *
-     * If no remapping is defined, this will be set to nullptr. For remapping of an axis to
-     * multiple buttons, this contains the remap for positive axis values.
-     */
-    std::shared_ptr<ControllerInput> to_console;
-
-    /**
-     * The remapped control used for negative values when mapping one input onto multiple buttons
-     * for output.
-     */
-    std::shared_ptr<ControllerInput> to_negative;
-
-    /**
-     * \brief Size of axis signal required to remap
-     * 
-     * If the signal falls below the threshold proportion, the remapped signal will be 0. This is
-     * intended, for example, to prevent tiny movements (or controller drift) from triggering a
-     * button press.
-     */
-    short remap_threshold;
-
-    /**
-     * If true, button-to-axis remaps go to the joystick minimum. Otherwise they go to the maximum.
-     */
-    bool button_to_min;
-
-    /**
-     * If true, switch the sign of the value while remapping.
-     * 
-     * This inversion applies after any other value scaling has been performed.
-     */
-    bool remap_invert;
-
-    /**
-     * Scaling factor when remapping from accelerometer or touchpad to axis. The incoming signal
-     * value (or touchpad velocity) is divided by this factor.
-     */
-    double remap_scale;
 
     /**
      * \brief Name for this signal in the TOML file
@@ -235,40 +188,6 @@ namespace Chaos {
     int getHybridAxisIndex() { return hybrid_index; }
     
     /**
-     * \brief Get the signal this control is currently remapped to
-     * 
-     * \return ControllerSignal The signal we actually send to the console in place of this signal
-     * 
-     * When an axis is mapped to two buttons, this signal is the one used for positive axis signals.
-     */
-    std::shared_ptr<ControllerInput> getRemap() { return to_console; }
-
-    /**
-     * \brief Get the signal this control is currently remapped to for negative axis values
-     * 
-     * \return ControllerSignal The signal we actually send to the console in place of this signal
-     * 
-     * When an axis is mapped to two buttons, this signal is the one used for negative axis signals.
-     */
-    std::shared_ptr<ControllerInput> getNegRemap() { return to_negative; }
-
-    short getThreshold() { return remap_threshold; }
-
-    double getTouchpadScale() { return remap_scale; }    
-
-    bool remapInverted() { return remap_invert; }
-
-    /**
-     * \brief Should an incoming signal be remapped to positive or negative maximum
-     * 
-     * \return true Should map to the outgoing signal's negative minimum
-     * \return false Should map to the outgoing signal's positive maximum
-     * 
-     * Used when buttons are remapped to axes.
-     */
-    bool toMin() { return button_to_min;}
-
-    /**
      * \brief Get the minimum value for this signal.
      * \param type Whether the signal is an axis or a button
      *
@@ -297,12 +216,6 @@ namespace Chaos {
     }
 
     /**
-     * Directly set all remapping information for this signal.
-     * \param remapping The complete rmapping information for the signal to the console.
-     */
-    void setRemap(const SignalRemap& remapping);
-
-    /**
      * \brief Get the current state of the controller for this signal
      * 
      * \return short Live controller state
@@ -311,28 +224,6 @@ namespace Chaos {
      * state.
      */
     short getState();
-
-    /**
-     * \brief Get the current state of the remapped signal
-     * 
-     * \return short 
-     *
-     * We check the current state of the remapped signal or signals for this controller. The value
-     * of the remapped state is translated to the equivalent value it would have as the actual
-     * signal so that the value here can safely be used to check condition thresholds against the
-     * originally established threshold.
-     */
-    short getRemappedState();
-
-    /**
-     * \brief Translate a value for the device event to its remapped value
-     * 
-     * \param value The value as given by the source signal
-     * \return Remapped value
-     *
-     * Takes a signal value and scales it, if necessary, to the value specified in the remap table.
-     */
-    short remapValue(std::shared_ptr<ControllerInput> to, short value);
 
   };
 

@@ -49,13 +49,11 @@ int GameMenu::initialize(toml::table& config, std::shared_ptr<SequenceTable> seq
   // Timing parameters
   // A 10 second delay is absurdly long, but it's unclear to me where to cap it. This mostly
   // in case a user gets mixed up and tries to enter time in milliseconds or some other unit.
-  double delay = TOMLUtils::getValue<double>(*menu_list, "disable_delay", 0, 10, 0.333333);
-  disable_delay = usec(delay);
-  PLOG_VERBOSE << "menu disable_delay = " << delay << " seconds (" << disable_delay.count() << " microseconds)";
+  disable_delay = TOMLUtils::getValue<double>(*menu_list, "disable_delay", 0, 10, 0.333333);
+  PLOG_VERBOSE << "menu disable_delay = " << disable_delay << " seconds";
 
-  delay = TOMLUtils::getValue<double>(*menu_list, "select_delay", 0, 10, 0.05);
-  select_delay = usec(delay);
-  PLOG_VERBOSE << "menu select_delay = " << delay << " seconds (" << select_delay.count() << " microseconds)";
+  select_delay = TOMLUtils::getValue<double>(*menu_list, "select_delay", 0, 10, 0.05);
+  PLOG_VERBOSE << "menu select_delay = " << select_delay << " seconds";
 
   remember_last = (*menu_list)["remember_last"].value_or(false);
   PLOG_VERBOSE << "menu remember_last = " << remember_last;
@@ -98,7 +96,7 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, bo
   Sequence seq{controller};
 
   defined_sequences->addSequence(seq, "disable all");
-  seq.addDelay(disable_delay.count());
+  seq.addDelay(disable_delay);
   defined_sequences->addSequence(seq, "open menu");
 
   // Create a stack of all the parent menus of this option

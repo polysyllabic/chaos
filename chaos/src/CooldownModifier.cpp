@@ -47,37 +47,35 @@ CooldownModifier::CooldownModifier(toml::table& config, EngineInterface* e) {
   cooldownCommand.value = 0;
   cooldownCommand.type = commands[0]->getInput()->getButtonType();
   cooldownCommand.id = commands[0]->getInput()->getID(cooldownCommand.type);
-  double t = config["timeOn"].value_or(0.0);
-  time_on = dseconds(t);
-  if (time_on == dseconds::zero()) {
+  time_on = config["timeOn"].value_or(0.0);
+  if (time_on == 0) {
     PLOG_WARNING << "The timeOn for this cooldown mod is 0 seconds!";
   }
-  PLOG_VERBOSE << " - timeOn: " << time_on.count();
+  PLOG_VERBOSE << " - timeOn: " << time_on;
   
-  t = config["timeOff"].value_or(0.0);
-  time_off = dseconds(t);
-  if (time_off == dseconds::zero()) {
+  time_off = config["timeOff"].value_or(0.0);
+  if (time_off == 0) {
     PLOG_WARNING << "The timeOff for this cooldown mod is 0 seconds!";
   }
-  PLOG_VERBOSE << " - timeOff: " << time_off.count();
+  PLOG_VERBOSE << " - timeOff: " << time_off;
 }
 
 void CooldownModifier::begin() {
   pressedState = engine->getState(cooldownCommand.id, cooldownCommand.type);
-  cooldownTimer = dseconds::zero();
+  cooldownTimer = 0;
   inCooldown = false;
 }
 
 void CooldownModifier::update() {
 
   // Get the difference since the last time update.
-  dseconds deltaT = timer.dTime();
+  double deltaT = timer.dTime();
 
   if (inCooldown) {
     // count down until cooldown ends
     cooldownTimer -= deltaT;
-    if (cooldownTimer < dseconds::zero()) {
-      cooldownTimer = dseconds::zero();
+    if (cooldownTimer < 0) {
+      cooldownTimer = 0;
       inCooldown = false;
       PLOG_DEBUG << "Cooldown expired";
     }

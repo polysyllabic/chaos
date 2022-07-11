@@ -23,21 +23,26 @@
  * 
  */
 #include "timer.hpp"
+#include <sys/time.h>
 
 using namespace Chaos;
 
 Timer::Timer() {}
 
 void Timer::initialize() {
-	timecycle = chr::time_point_cast<dseconds>(chr::steady_clock::now());
-	runningtime = dseconds::zero();
+	// timecycle = chr::time_point_cast<usec>(chr::steady_clock::now());
+  gettimeofday(&tv, nullptr); // Grab the current time (simply an initialization)
+	timecycle = tv.tv_sec + tv.tv_usec * 1e-6; // Compute the current time, in seconds
+	runningtime = 0;
+  // runningtime = usec::zero();
 }
 
 void Timer::update() {
-  // Store the old time
-	oldtimecycle = timecycle;
+  gettimeofday(&tv, nullptr);   // Grab the current time
+	oldtimecycle = timecycle;  // Store the old time
+	timecycle = tv.tv_sec + tv.tv_usec * 1e-6; // Compute the current time, in seconds  // Store the old time
   // Grab the current time
-	timecycle = chr::time_point_cast<dseconds>(chr::steady_clock::now());
+	// timecycle = chr::time_point_cast<usec>(chr::steady_clock::now());
 	dtime = timecycle - oldtimecycle;
 }
 
@@ -45,10 +50,10 @@ void Timer::reset() {
 	initialize();
 }
 
-dseconds Timer::runningTime() {
+usec Timer::runningTime() {
 	return runningtime;
 }
 
-dseconds Timer::dTime() {
+usec Timer::dTime() {
 	return dtime;
 }

@@ -76,6 +76,13 @@ void ChaosEngine::newCommand(const std::string& command) {
     }
   }
 
+  // Remove all mods
+  if (root.isMember("reset")) {
+    while (! modifiers.empty()) {
+      removeOldestMod();
+    }
+  }
+
   if (root.isMember("game")) {
     reportGameStatus();
   }
@@ -137,13 +144,12 @@ void ChaosEngine::doAction() {
   // Check front element for expiration. 
   if (modifiers.size() > 0) {
     std::shared_ptr<Modifier> front = modifiers.front();
-    if ((front->lifespan() != dseconds::min() && front->lifetime() > front->lifespan()) ||
-	      (front->lifespan() == dseconds::min() && front->lifetime() > game.getTimePerModifier())) {
+    if ((front->lifespan() >= 0 && front->lifetime() > front->lifespan()) ||
+	      (front->lifespan() <  0 && front->lifetime() > game.getTimePerModifier())) {
       removeMod(front);
     }
-  }
-  // If we have too many mods as the result of a manual apply, remove the oldest one
-  if (modifiers.size() > game.getNumActiveMods()) {
+  } if (modifiers.size() > game.getNumActiveMods()) {
+    // If we have too many mods as the result of a manual apply, remove the oldest one
     removeOldestMod();
   }
 

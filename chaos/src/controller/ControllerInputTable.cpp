@@ -126,12 +126,6 @@ std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const toml::tabl
   return inp;
 }
 
-void ControllerInputTable::clearRemaps() {
-  for (auto [from, remapping] : inputs) {
-    remapping->setRemap({nullptr, nullptr, false, false, 0, 1});
-  }
-}
-
 // This is the game-specific initialization
 int ControllerInputTable::initializeInputs(const toml::table& config) {
   int parse_errors;

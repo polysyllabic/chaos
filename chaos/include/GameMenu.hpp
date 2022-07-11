@@ -70,12 +70,12 @@ namespace Chaos {
     /**
      * Time to wait, in microseconds, after disabling all control inputs
      */
-    usec disable_delay;
+    unsigned int disable_delay;
 
     /**
      * Time to wait, in microseconds after selecting a menu item before issuing the next comand
      */
-    usec select_delay;
+    unsigned int select_delay;
 
     /**
      * \brief Add commands necessary to navigate to this item from the top of main menu
@@ -107,7 +107,7 @@ namespace Chaos {
      */
     std::shared_ptr<MenuItem> getMenuItem(const std::string& name);
 
-    unsigned int getSelectDelay() { return select_delay.count(); }
+    unsigned int getSelectDelay() { return select_delay; }
 
     /**
      * \brief Sets a menu item to the specified value

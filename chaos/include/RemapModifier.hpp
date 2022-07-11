@@ -118,7 +118,6 @@ namespace Chaos {
 
     std::shared_ptr<ControllerInput> lookupInput(const toml::table& config, const std::string& key, bool required);
 
-    
   public:
     RemapModifier(toml::table& config, EngineInterface* e);
 

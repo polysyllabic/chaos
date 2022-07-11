@@ -23,14 +23,15 @@
  * 
  */
 #pragma once
-#include <chrono>
+//#include <chrono>
+#include <sys/time.h>
 
-namespace chr = std::chrono;
+//namespace chr = std::chrono;
 
 namespace Chaos {
 
-  using dseconds = chr::duration<double>;
-  using usec = chr::duration<double, std::micro>;
+  //using usec = std::chrono::microseconds;
+  using usec = double;
 
   /**
    * \brief Keeps track of time
@@ -40,11 +41,13 @@ namespace Chaos {
    */
   class Timer {
   private:
-    chr::time_point<chr::steady_clock, dseconds> timecycle;
-    chr::time_point<chr::steady_clock, dseconds> oldtimecycle;
-    dseconds dtime;
-    dseconds runningtime;
-
+    struct timeval tv;
+    double timecycle;
+    // chr::time_point<chr::steady_clock, std::chrono::microseconds> timecycle;
+    double oldtimecycle;
+    // chr::time_point<chr::steady_clock, std::chrono::microseconds> oldtimecycle;
+    usec dtime;
+    usec runningtime;
   public:
     Timer();
 
@@ -73,7 +76,7 @@ namespace Chaos {
      * \brief Get the running time since initialization.
      * \return The time since initialize() was called.
      */
-    dseconds runningTime();
+    usec runningTime();
 
     /**
      * \brief Returns the last computed difference in time between the most recent update() and the
@@ -81,8 +84,7 @@ namespace Chaos {
      *
      * \return The delta time between the previous two update() calls.
      */
-    dseconds dTime();
-
+    usec dTime();
   };
 
 };

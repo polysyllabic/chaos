@@ -71,7 +71,7 @@ namespace Chaos {
 
     int getNumActiveMods() { return active_modifiers; }
 
-    dseconds getTimePerModifier() { return time_per_modifier; }
+    double getTimePerModifier() { return time_per_modifier; }
 
     /**
      * \brief Get the number of errors encountered loading the game-configuration file
@@ -98,19 +98,7 @@ namespace Chaos {
     GameConditionTable& getGameConditionTable() { return game_conditions; }
     ControllerInputTable& getSignalTable() { return signal_table; }
     std::shared_ptr<SequenceTable> getSequenceTable() { return sequences; }
-    /**
-     * \brief Alters the incomming event to the value expected by the console
-     * \param[in,out] event The signal coming from the controller
-     * \return Validity of the signal. False signals are dropped from processing by the mods and not sent to
-     * the console.
-     *
-     * This remapping is invoked from the chaos engine's sniffify routine before the list of regular
-     * mods is traversed. That means that mods can operate on the signals associated with particular
-     * commands without worrying about the state of the remapping.
-     */
-    //bool remapEvent(DeviceEvent& event) { return signal_table.remapEvent(event); }
-    //bool remapEvent(DeviceEvent& event);
-
+    
     /**
      * \brief Tests if an event matches this signal
      * \param event The incomming event from the controller
@@ -181,7 +169,7 @@ namespace Chaos {
     /**
     * Time in seconds modifiers last before they are removed from the queue.
     */
-    dseconds time_per_modifier;
+    double time_per_modifier;
 
     /**
      * Controller signal status, including remapping

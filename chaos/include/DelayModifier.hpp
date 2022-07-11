@@ -28,7 +28,7 @@
 namespace Chaos {
 
   typedef struct _TimeAndEvent{
-    dseconds time;
+    double time;
     DeviceEvent event;
   } TimeAndEvent;
 
@@ -58,7 +58,7 @@ namespace Chaos {
   class DelayModifier : public Modifier::Registrar<DelayModifier> {
   protected:
     std::queue<TimeAndEvent> eventQueue;
-    dseconds delayTime;
+    double delayTime;
     
   public:
     

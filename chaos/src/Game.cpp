@@ -72,14 +72,13 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
   }
   PLOG_INFO << "Active modifiers: " << active_modifiers;
 
-  double t = configuration["mod_defaults"]["time_per_modifier"].value_or(180.0);
-  time_per_modifier = dseconds(t);
+  time_per_modifier = configuration["mod_defaults"]["time_per_modifier"].value_or(180.0);
 
-  if (time_per_modifier < std::chrono::seconds(10)) {
+  if (time_per_modifier < 10.0) {
     PLOG_WARNING << "Minimum active time for modifiers is 10 seconds.";
-    time_per_modifier = std::chrono::seconds(10);
+    time_per_modifier = 10.0;
   }
-  PLOG_INFO << "Time per modifier: " << time_per_modifier.count() << " seconds";
+  PLOG_INFO << "Time per modifier: " << time_per_modifier << " seconds";
 
   // Process the game-command definitions
   parse_errors += game_commands.buildCommandList(configuration, signal_table);

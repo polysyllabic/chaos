@@ -41,16 +41,22 @@ GameCondition::GameCondition(toml::table& config, GameCommandTable& commands) {
       "name", "while", "while_not", "trigger_on", "clear_on", "threshold", "threshold_type",
       "test_type"});
   
-  commands.addToMap(config, "trigger_on", trigger_on);
-  commands.addToMap(config, "clear_on", clear_on);
+  // commands.addToMap(config, "trigger_on", trigger_on);
+  std::optional<std::string> cmd_name = config["trigger_on"].value<std::string>();
+  trigger_on = (cmd_name) ? commands.getCommand(*cmd_name) : nullptr;
+
+  // commands.addToMap(config, "clear_on", clear_on);
+  cmd_name = config["clear_on"].value<std::string>();
+  clear_on = (cmd_name) ? commands.getCommand(*cmd_name) : nullptr;
+
   commands.addToVector(config, "while", while_conditions);
   commands.addToVector(config, "while_not", while_not_conditions);
 
-  if (trigger_on.empty()) {
+  if (! trigger_on) {
     if (while_conditions.empty() && while_not_conditions.empty()) {
       throw std::runtime_error("At least one of 'while', 'while_not' or 'trigger_on' must be defined.");
     }
-    if (!clear_on.empty()) {
+    if (clear_on) {
       throw std::runtime_error("To use 'clear_on', you must also define 'trigger_on'.");
     }
   }
@@ -80,24 +86,26 @@ GameCondition::GameCondition(toml::table& config, GameCommandTable& commands) {
     }
   }
 
-  PLOG_VERBOSE << "Condition: " << config["name"] <<  "; " << ((thtype) ? *thtype : "magnitude") <<
+  PLOG_DEBUG << "Condition: " << config["name"] <<  "; " << ((thtype) ? *thtype : "magnitude") <<
     " threshold = " << threshold;
+  PLOG_DEBUG << "-- trigger on: " << ((trigger_on) ? trigger_on->getName() : "NONE") << " clear on: " <<
+    ((clear_on) ? clear_on->getName() : "NONE");
 }
 
 void GameCondition::reset() {
-  if (trigger_on.empty()) {
+  if (! trigger_on) {
     persistent_state = true;
   } else {
     persistent_state = false;
-    for (auto& it : trigger_on) {
-      it.second = false;
-    }
+    // for (auto& it : trigger_on) {
+    //   it.second = false;
+    //}
   }
-  if (!clear_on.empty()) {
-    for (auto& it : clear_on) {
-      it.second = false;
-    }
-  }
+  //if (!clear_on.empty()) {
+  //  for (auto& it : clear_on) {
+  //    it.second = false;
+  //  }
+  //}
 }
 
 bool GameCondition::thresholdComparison(short value, short threshold) {
@@ -128,10 +136,10 @@ bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> command) {
   return thresholdComparison(curval, threshold);
 }
 
-short int GameCondition::getSignalThreshold(std::shared_ptr<GameCommand> signal) {
+short int GameCondition::getSignalThreshold(std::shared_ptr<GameCommand> command) {
   // Check the threshold for the remapped control in case signals are swapped between signal classes
-  std::shared_ptr<ControllerInput> remapped = signal->getRemappedSignal();
-  return getSignalThreshold(remapped);
+  std::shared_ptr<ControllerInput> signal = command->getInput();
+  return getSignalThreshold(signal);
 }
 
 short int GameCondition::getSignalThreshold(std::shared_ptr<ControllerInput> input) {
@@ -158,41 +166,34 @@ short int GameCondition::getSignalThreshold(std::shared_ptr<ControllerInput> inp
   }
 }
 
-// Incomming device events have already been remapped, so we can check directly.
 // This routine is called from _tweak, and so it does not need to be invoked by the child modifiers
 // directly.
 void GameCondition::updateState(DeviceEvent& event) {
-  int count = 0;
-  if (!trigger_on.empty()) {
-    for (auto& [trigger, state] : trigger_on) {
-      if (event.type == trigger->getInput()->getButtonType() && event.id == trigger->getInput()->getID()) {
-        int threshold = getSignalThreshold(trigger->getInput());
-        state = thresholdComparison(event.value, threshold);
+  if (trigger_on) {
+    if (event.type == trigger_on->getInput()->getButtonType() && 
+        event.id == trigger_on->getInput()->getID()) {
+      int threshold = getSignalThreshold(trigger_on->getInput());
+      bool state = thresholdComparison(event.value, threshold); 
+      if (clear_on) {
         if (state) {
-          ++count;
+          // If clear_on is set, we leave the trigger set until we get the clear condition
+          persistent_state = true;
         }
+      } else { 
+        // If no clear_on is set, we reset the trigger as soon as it fails to meet the condition
+        persistent_state = state;
       }
-    }
-    if (count == trigger_on.size()) {
-      persistent_state = true;
     }
   }
-  if (! clear_on.empty()) {
-    count = 0;
-    for (auto& [trigger, state] : clear_on) {
-      if (event.type == trigger->getInput()->getButtonType() && event.id == trigger->getInput()->getID()) {
-        int threshold = getSignalThreshold(trigger->getInput());
-        state = thresholdComparison(event.value, threshold);
-        if (state) {
-          ++count;
-        }
-      }
-    }
-    if (count == trigger_on.size()) {
-      persistent_state = false;
+  if (clear_on) {
+    if (event.type == clear_on->getInput()->getButtonType() && event.id == clear_on->getInput()->getID()) {
+      int threshold = getSignalThreshold(clear_on->getInput());
+      bool state = thresholdComparison(event.value, threshold);
+      persistent_state = persistent_state && state;
     }
   }
 }
+
 
 // Test real-time condition of the controller
 bool GameCondition::testConditions(std::vector<std::shared_ptr<GameCommand>> command_list, bool unless) {
@@ -225,9 +226,9 @@ bool GameCondition::inCondition() {
   if (! while_conditions.empty()) {
     while_state = testConditions(while_conditions, false);
   } 
-  if (! while_not_conditions.empty()) {
-    unless_state = testConditions(while_not_conditions, true);
-  }
+  //if (! while_not_conditions.empty()) {
+  //  unless_state = testConditions(while_not_conditions, true);
+  //}
   PLOG_VERBOSE << "persistent = " << persistent_state << "; while = " << while_state << "; unless = " << unless_state;
   return persistent_state && while_state && unless_state;
 }
