@@ -118,8 +118,8 @@ bool Sequence::sendParallel(double sequenceTime) {
     }
     // send out events until we hit the next delay
     PLOG_DEBUG << "Parallel step " << current_step << ": signal = ("
-      << (int) e.type << "." << (int) e.id << ") value = " << e.value <<
-      "sequenceTime=" << sequenceTime << "; elapsed usec=" << elapsed;
+      << (int) e.type << "." << (int) e.id << ") value = " << e.value << " next delay = " << e.time <<
+      "; elapsed usec=" << elapsed;
     controller.applyEvent(e);
   }
   PLOG_DEBUG << "parallel send finished";
