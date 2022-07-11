@@ -162,7 +162,7 @@ void ChaosEngine::removeOldestMod() {
     PLOG_DEBUG << "Finding oldest mod";
     std::shared_ptr<Modifier> oldest = nullptr;
     for (auto& mod : modifiers) {
-      if (!oldest || oldest->lifetime() < mod->lifetime()) {
+      if (!oldest || oldest->lifetime() > mod->lifetime()) {
         oldest = mod;
       }
     }
