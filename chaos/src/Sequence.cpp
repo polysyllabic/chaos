@@ -106,8 +106,11 @@ void Sequence::send() {
 }
 
 bool Sequence::sendParallel(double sequenceTime) {
+  //if (current_step == 0) {
+  //  wait_until = 0;
+  //}
   unsigned int elapsed = (unsigned int) (sequenceTime * SEC_TO_MICROSEC);
-  for (DeviceEvent& e = events[current_step]; current_step <= events.size(); e = events[++current_step], wait_until += e.time) {
+  for (DeviceEvent e = events[current_step]; current_step <= events.size(); e = events[++current_step], wait_until += e.time) {
     if (e.isDelay()) {
       PLOG_DEBUG << "Delay of " << e.time << "usecs";
       continue;

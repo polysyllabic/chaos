@@ -46,11 +46,11 @@ namespace Chaos {
     Controller& controller;
 
     // to track current stage for sending the sequence in parallel
-    short current_step;
+    short current_step = 0;
 
     // running tracker of elapsed time in microseconds to wait before sending the next sequence
     // in parallel
-    unsigned int wait_until;
+    unsigned int wait_until = 0;
 
     // Time in microseconds to hold down a signal for a button press
     static unsigned int press_time;
