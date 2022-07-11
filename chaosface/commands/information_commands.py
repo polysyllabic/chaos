@@ -44,14 +44,13 @@ async def cmd_mod(msg: Message, *args):
     await msg.reply("Usage: !mod <mod name>")
   else:
     mod = ' '.join(args)
-    logging.debug('Asking for description of {mod}')
     await msg.reply(config.relay.get_mod_description(mod))
 
 @Command('mods')
 async def cmd_mods(msg: Message, *args):
   link = config.relay.get_attribute('mod_list_link')
   if link:
-    await msg.reply(config.relay('msg_mod_list').format(link))
+    await msg.reply(config.relay.get_attribute('msg_mod_list').format(link))
 
 # List currently active mods
 @SubCommand(cmd_mods, 'active')

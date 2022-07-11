@@ -16,9 +16,9 @@ class ChaosBot(BaseBot):
     super().__init__()
     self.channel: Channel = None
 
-  async def send_message(self, msg: str):
+  def send_message(self, msg: str):
     if self.channel and msg:
-      await self.channel.send_message(str)
+      asyncio.create_task(self.channel.send_message(str))
 
 
   # All we do here is look for potential votes. Commands are dispatched by the parent class and

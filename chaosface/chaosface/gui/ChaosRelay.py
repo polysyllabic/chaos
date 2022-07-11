@@ -118,6 +118,7 @@ class ChaosRelay(flx.Component):
   active_keys = []
   candidate_keys = []
   force_mod:str = ''
+  reset_mods = False
   insert_cooldown = 0.0
 
   # Model-View bridge:
@@ -510,11 +511,11 @@ class ChaosRelay(flx.Component):
     msg = self.get_attribute('msg_credit_methods') + msg
     return msg
 
-  #def send_winning_mod_to_chat(self, winner):
-  #  if winner:
-  #    mod_name = self.modifier_data['winner']['name']
-  #    msg = self.get_attribute('msg_winning_mod').format(mod_name)
-  #    #asyncio.create_task(self.chatbot.send_message(msg))
+  def send_winning_mod_to_chat(self, winner):
+    if winner:
+      mod_name = self.modifier_data[winner]['name']
+      msg = self.get_attribute('msg_winning_mod').format(mod_name)
+      #self.chatbot.send_message(msg)
 
   #def send_active_mods_to_chat(self):
   #  msg = self.list_active_mods()

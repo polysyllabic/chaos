@@ -51,6 +51,10 @@ async def cmd_disable_mod(msg: Message, *args):
   request = ' '.join(args)
   await msg.reply(config.relay.set_mod_enabled(request, True))
 
+@Command('resetmods', permission='admin')
+async def cmd_reset_mods(msg: Message, *args):
+  config.relay.reset_mods = True
+
 # 
 #@Command('queue', permission='apply_credits')
 #async def cmd_queue_mod(msg: Message, *args):

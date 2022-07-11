@@ -82,6 +82,11 @@ class ChaosModel(EngineObserver):
               "time": config.relay.get_attribute('modifier_time')}
     message = self.chaos_communicator.send_message(json.dumps(toSend))
 
+  def reset_mods(self, mod_name):
+    logging.debug("Resetting mods")
+    toSend = {"reset": True }
+    message = self.chaos_communicator.send_message(json.dumps(toSend))
+
   def flash_pause(self):
     if self.paused_flashing_timer > 0.5 and config.relay.paused_bright == True:
       flx.loop.call_soon(config.relay.set_paused_bright, False)
@@ -194,6 +199,12 @@ class ChaosModel(EngineObserver):
         self.replace_mod(config.relay.force_mod)
         config.relay.force_mod = ''
         begin_time = now
+
+      if config.relay.reset_mods:
+        self.reset_mods()
+        flx.loop.call_soon(config.relay.reset_current_mods)
+        config.relay.reset_mods = False
+
 
       if self.vote_time >= config.relay.time_per_vote():
         # Reset voting time
