@@ -35,6 +35,7 @@
 #include "Touchpad.hpp"
 #include "GameCommand.hpp"
 #include "GameCondition.hpp"
+#include "ConditionTrigger.hpp"
 #include "Sequence.hpp"
 
 namespace Chaos {
@@ -189,38 +190,12 @@ namespace Chaos {
                     public std::enable_shared_from_this<Modifier> {
 
   private:
-    /**
-     * \brief The parent modifier, if any
-     * 
-     * \todo Move this to ParentMod and overload getptr()
-     */
-    std::shared_ptr<Modifier> parent; 
-
-  protected:
-    /**
-     * \brief Name of the mod as defined in the TOML file
-     */
+    std::shared_ptr<Modifier> parent;
     std::string name;
-
-    /**
-     * Description of this mod for the use of the chat bot.
-     */
     std::string description;
 
-    /**
-     * \brief A list of groups to which the mod belongs.
-     *
-     * Groups are used by the chaosface user interface to allow for more sophisticated mod
-     * selections, for example to limit the number of mods in a particular group to 1 at a time.
-     * The default, if no groups are specified in the TOML file, is the mod's type. Group names
-     * can be arbitrary, and there is no encapsulation by mod type. In other words, you can
-     * groupings within or across mod types.
-     */
+  protected:
     std::unordered_set<std::string> groups;
-    
-    /**
-     * \brief Running count of how long this mod has been active.
-     */
     Timer timer;
 
     /**
@@ -280,11 +255,6 @@ namespace Chaos {
      */
     bool lock_all;
 
-    /**
-     * \brief If true, do not list the mod to the chatbot
-     * 
-     * This is used to declare child mods that should not appear independently for voting.
-     */
     bool unlisted;
     
     /**
@@ -317,59 +287,49 @@ namespace Chaos {
      */
     ConditionCheck unless_test;
 
+    std::shared_ptr<ConditionTrigger> trigger;
+
     /**
      * \brief Amount of time the engine has been paused.
      */
-    double pauseTimeAccumulator;
+    double pause_time_accumulator;
 
     /**
      * \brief Designates a custom lifespan, if necessary.
      */
     double totalLifespan;
     
-    /**
-     * \brief Should this mod be allowed as a child modifier
-     */
     bool allow_recursion;
 
     EngineInterface* engine;
 
     /**
-     * \brief Common initialization.
+     * \brief Perform common initialization for all modifiers
      *
      * Because the registrar factory method is designed to prevent classes from invoking this
      * class as a direct base class, we can't put common initialization in the constructor here.
      * Instead, child classes should call this initialization routine in their own constructors.
      *
-     * This will parse those parts of the TOML table definition that are used by all or many
-     * mods. The fields handled here (which need not be re-parsed by the child class) are the
+     * This will parse those parts of the TOML table definition that are available for use by all
+     * modifiers. The fields handled here, which need not be re-parsed by the child class, are the
      * following:
      *
+     * - name
      * - description
-     * - appliesTo
+     * - groups
+     * - applies_to
      * - condition
-     * - gamestate
-     *
+     * - condition_test
+     * - trigger
+     * - unless
+     * - unless_test
+     * - begin_sequence
+     * - finish_sequence
+     * - unlisted
      */
     void initialize(toml::table& config, EngineInterface* e);
 
     /**
-     * \brief Send any sequence intended to issue when the mod initializes.
-     * 
-     * Mods that support begining sequences should put a call to this function in their begin()
-     * routine. If the sequence is empty, this will do nothing.
-     */
-    void sendBeginSequence();
-
-    /**
-     * \brief Send any sequence intended to issue when the mod is finishing.
-     * 
-     * Mods that support begining sequences should put a call to this function in their finish()
-     * routine. If the sequence is empty, this will do nothing.
-     */
-    void sendFinishSequence();
-
-/**
      * \brief Get a ConditionTest object corresponding to the type name in the TOML file
      * 
      * \param config Table that contains the condition test as a key/value pair
@@ -391,15 +351,33 @@ namespace Chaos {
 
   public:
     /**
-     * Get name of this mod type will be identified in the TOML file
-     */
-    virtual const std::string& getModType() = 0;
-
-    /**
-     * This constructor can only be invoked by the Registrar class
+     * \brief Constructor
+     * 
+     * The Passkey parameter ensures that this constructor can only be invoked by the Registrar
+     * class and not by direct subclassing.
      */
     Modifier(Passkey) {}
     
+    /**
+     * \brief Get the name of this mod as defined in the TOML file
+     * 
+     * \return std::string& 
+     */
+    std::string& getName() { return name; }
+
+    /**
+     * \brief Get a short description of this mod for the Twitch-bot.
+     * \return The descrition of the mod
+     *
+     * \todo Internationalize the description strings.
+     */
+    std::string& getDescription() { return description; }
+
+    /**
+     * \brief Get name by which this type of modifier is identified in the TOML file.
+     */
+    virtual const std::string& getModType() = 0;
+
     /**
      * \brief Get the pointer to this mod if it's an ordinary mod, or its parent if it has one
      * 
@@ -409,15 +387,26 @@ namespace Chaos {
       return parent ? parent : shared_from_this();
     }
 
+    /**
+     * \brief Set the parent modifier
+     */
     void setParentModifier(std::shared_ptr<Modifier> new_parent) { parent = new_parent; }
     
+    /**
+     * \brief Is this modifier unlisted
+     * 
+     * Unlisted modifiers are not reported to the interface. Child modifiers that should not be run
+     * independently of their parent can be declared unlisted so that they cannot appear as
+     * candidates for voting.
+     */
+
     bool isUnlisted() { return unlisted; }
     
     /**
      * \brief Get how long the mod has been active.
      * \return The mod's running time minus the accumulated time we've been paused.
      */
-    double lifetime() { return timer.runningTime() - pauseTimeAccumulator; }
+    double lifetime() { return timer.runningTime() - pause_time_accumulator; }
     
     double getLifetime() {
       return lifetime();
@@ -544,24 +533,15 @@ namespace Chaos {
     virtual bool tweak(DeviceEvent& event);
 
     /**
-     * \brief Get the name of this mod as defined in the TOML file
-     * 
-     * \return std::string& 
-     */
-    std::string& getName() { return name; }
-
-    /**
-     * \brief Get a short description of this mod for the Twitch-bot.
-     * \return The descrition of the mod
-     *
-     * \todo Internationalize the description strings.
-     */
-    std::string& getDescription() { return description; }
-
-    /**
      * \brief Get the list of groups to which this modifier belongs is Json
      * 
      * \return Json::Value list of groups as a Json array
+     * 
+     * Groups are used by the chaosface user interface to allow for more sophisticated mod
+     * selections, for example to limit the number of mods in a particular group to 1 at a time.
+     * The default, if no groups are specified in the TOML file, is the mod's type. Group names
+     * can be arbitrary, and there is no encapsulation by mod type. In other words, you can
+     * groupings within or across mod types.
      */
     Json::Value getGroups();
     
@@ -579,9 +559,7 @@ namespace Chaos {
      */
     bool inCondition();
     
-    void resetConditionTriggers();
-    
-        /**
+    /**
      * \brief Checks the list of negative game conditions 
      * 
      * \return true if we're in the defined state
@@ -601,15 +579,48 @@ namespace Chaos {
      */
     bool inUnless();
     
+    /**
+     * \brief Is this mod allowed as a child modifier
+     * 
+     * Ordinary modifiers have this set to true by default. Parent modifiers that select children
+     * randomly have this set as false so we don't get recursion in the selection process.
+     */
     bool allowRecursion() { return allow_recursion; }
+
+    /**
+     * \brief Set whether this mod can be used as a child modifier
+     * 
+     * The default for most modifiers is true. Parent modifiers that select children randomly have
+     * this set as false so we don't get recursion in the selection process.
+     */
     void setRecursion(bool recursion) { allow_recursion = recursion; }
     
     /**
-     * \brief Get the metadata about this mod as a Json object
+     * \brief Get the metadata about this modifier as a Json object
      * 
      * \return Json::Value 
      */
     Json::Value toJsonObject();
+
+  private:
+    /**
+     * \brief Send any sequence intended to issue when the modifier initializes.
+     * 
+     * This function is called automatically after a modifier completes its begin() routine.
+     * Child classes do not need to invoke it specifically. If the begin_sequence is empty,
+     * this will do nothing.
+     */
+    void sendBeginSequence();
+
+    /**
+     * \brief Send any sequence intended to issue when the modifier is finishing.
+     * 
+     * This function is called automatically after a modifier completes its finish() routine.
+     * Child classes do not need to invoke it specifically. If the finish_sequence is empty,
+     * this will do nothing.
+     */
+    void sendFinishSequence();
+
 
   };
 

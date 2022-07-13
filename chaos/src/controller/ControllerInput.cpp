@@ -121,3 +121,8 @@ short ControllerInput::getState() {
   return (getType() == ControllerSignalType::DUMMY) ? 0 :
     controller.getState(button_id, getButtonType());  
 }
+
+bool ControllerInput::matches(const DeviceEvent& event) {
+  return (event.index() == button_index || 
+    (input_type == ControllerSignalType::HYBRID && event.index() == hybrid_index));
+}

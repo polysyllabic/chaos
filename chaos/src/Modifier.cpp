@@ -36,7 +36,7 @@
 
 using namespace Chaos;
 
-
+// TODO: 
 void Modifier::initialize(toml::table& config, EngineInterface* e) {
   engine = e;
   parent = nullptr;
@@ -68,46 +68,29 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
   PLOG_VERBOSE << " - type: " << config["type"].value_or("TYPE NOT FOUND");
   PLOG_VERBOSE << " - groups: " << groups;
 
-  std::optional<std::string> for_all = config["appliesTo"].value<std::string>();
+  std::optional<std::string> for_all = config["applies_to"].value<std::string>();
   applies_to_all = (for_all && *for_all == "ALL");
   if (! applies_to_all) {
-    engine->addGameCommands(config, "appliesTo", commands);
+    engine->addGameCommands(config, "applies_to", commands);
   }
  
   engine->addGameConditions(config, "condition", conditions);
-  condition_test = getConditionTest(config, "conditionTest");
-
-#ifndef NDEBUG
-  switch (condition_test) {
-    case ConditionCheck::ALL:
-      PLOG_VERBOSE << "Condition test = ALL";
-      break;
-    case ConditionCheck::ANY:
-      PLOG_VERBOSE << "Condition test = ANY";
-      break;
-    case ConditionCheck::NONE:
-      PLOG_VERBOSE << "Condition test = NONE";
-  }
-#endif
+  condition_test = getConditionTest(config, "condition_test");
 
   engine->addGameConditions(config, "unless", unless_conditions);
-  unless_test = getConditionTest(config, "unlessTest");
+  unless_test = getConditionTest(config, "unless_test");
 
-#ifndef NDEBUG
-  switch (unless_test) {
-    case ConditionCheck::ALL:
-      PLOG_VERBOSE << "Condition test = ALL";
-      break;
-    case ConditionCheck::ANY:
-      PLOG_VERBOSE << "Condition test = ANY";
-      break;
-    case ConditionCheck::NONE:
-      PLOG_VERBOSE << "Condition test = NONE";
+  trigger = nullptr;
+  std::optional<std::string> trigger_name = config["trigger"].value<std::string>();
+  if (trigger_name) {
+    trigger = engine->getTrigger(*trigger_name);
+    if (!trigger) {
+      PLOG_ERROR << "Trigger " << *trigger_name << " not found";
+    }
   }
-#endif
 
-  on_begin  = engine->createSequence(config, "beginSequence", false);
-  on_finish = engine->createSequence(config, "finishSequence", false);
+  on_begin  = engine->createSequence(config, "begin_sequence", false);
+  on_finish = engine->createSequence(config, "finish_sequence", false);
 
   unlisted = config["unlisted"].value_or(false);
 }
@@ -117,13 +100,7 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
 // virtual functions.
 void Modifier::_begin() {
   timer.initialize();
-  pauseTimeAccumulator = 0;
-  for (auto& cond : conditions) {
-    cond->reset();
-  }
-  for (auto& cond : unless_conditions) {
-    cond->reset();
-  }
+  pause_time_accumulator = 0;
   begin();
   sendBeginSequence();
 }
@@ -134,7 +111,7 @@ void Modifier::begin() {}
 void Modifier::_update(bool wasPaused) {
   timer.update();
   if (wasPaused) {
-    pauseTimeAccumulator += timer.dTime();
+    pause_time_accumulator += timer.dTime();
   }
   update();
 }
@@ -164,17 +141,8 @@ bool Modifier::remap(DeviceEvent& event) {
 }
 
 bool Modifier::_tweak(DeviceEvent& event) {
-  // Traverse the list of persistent game conditions and see if the event matches an on or off
-  // event. If it does, we update the game state accordingly
-  if (!conditions.empty()) {
-    for (auto& c : conditions) {
-      c->updateState(event);
-    }
-  }
-  if (!unless_conditions.empty()) {
-    for (auto& c : unless_conditions) {
-      c->updateState(event);
-    }
+  if (trigger)  {
+    trigger->updateState(event);
   }
   return tweak(event);
 }
@@ -199,15 +167,6 @@ void Modifier::sendFinishSequence() {
     in_sequence = lock_while_busy;
     on_finish->send();
     in_sequence = false;
-  }
-}
-
-void Modifier::resetConditionTriggers() {
-  for (auto& c : conditions) {
-    c->reset();
-  }
-  for (auto& c : unless_conditions) {
-    c->reset();
   }
 }
 

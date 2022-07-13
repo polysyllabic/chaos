@@ -34,40 +34,6 @@
 
 using namespace Chaos;
 
-int GameMenu::initialize(toml::table& config, std::shared_ptr<SequenceTable> sequences) {
-  PLOG_VERBOSE << "Initializing menu";
-  defined_sequences = sequences;
-  assert(defined_sequences);
-
-  int errors = 0;
-  toml::table* menu_list = config["menu"].as_table();
-  if (! config.contains("menu")) {
-    PLOG_ERROR << "No 'menu' table found in configuration file";
-    return 1;
-  }
-
-  // Timing parameters
-  // A 10 second delay is absurdly long, but it's unclear to me where to cap it. This mostly
-  // in case a user gets mixed up and tries to enter time in milliseconds or some other unit.
-  disable_delay = TOMLUtils::getValue<double>(*menu_list, "disable_delay", 0, 10, 0.333333);
-  PLOG_VERBOSE << "menu disable_delay = " << disable_delay << " seconds";
-
-  select_delay = TOMLUtils::getValue<double>(*menu_list, "select_delay", 0, 10, 0.05);
-  PLOG_VERBOSE << "menu select_delay = " << select_delay << " seconds";
-
-  remember_last = (*menu_list)["remember_last"].value_or(false);
-  PLOG_VERBOSE << "menu remember_last = " << remember_last;
-
-  hide_guarded = (*menu_list)["hide_guarded"].value_or(false);
-  PLOG_VERBOSE << "menu hide_guarded = " << hide_guarded;
-
-  if (! menu_list->contains("layout")) {
-    PLOG_ERROR << "No menu layout found!";
-    return 1;
-  }
-  return 0;
-}
-
 std::shared_ptr<MenuItem> GameMenu::getMenuItem(const std::string& name) {
  auto iter = menu.find(name);
   if (iter != menu.end()) {
@@ -90,14 +56,12 @@ std::shared_ptr<MenuItem> GameMenu::getMenuItem(toml::table& config, const std::
   return item;
 }
 
-
 void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, bool restore, Controller& controller) {
   PLOG_DEBUG << "Creating set menu sequence";
   Sequence seq{controller};
 
-  defined_sequences->addSequence(seq, "disable all");
-  seq.addDelay(disable_delay);
-  defined_sequences->addSequence(seq, "open menu");
+  defined_sequences->addToSequence(seq, "disable all");
+  defined_sequences->addToSequence(seq, "open menu");
 
   // Create a stack of all the parent menus of this option
   std::stack<std::shared_ptr<MenuItem>> menu_stack;
@@ -150,14 +114,8 @@ void GameMenu::correctOffset(std::shared_ptr<MenuItem> changed) {
   }
 }
 
-void GameMenu::addSequence(Sequence& sequence, const std::string& name) {
-  PLOG_DEBUG << "adding sequence " << name;
-  defined_sequences->addSequence(sequence, name);
-}
-
-void GameMenu::addSelectDelay(Sequence& sequence) {
-  PLOG_DEBUG << "adding select delay";
-  defined_sequences->addDelay(sequence, select_delay);
+void GameMenu::addToSequence(Sequence& sequence, const std::string& name) {
+  defined_sequences->addToSequence(sequence, name);
 }
 
 bool GameMenu::insertMenuItem(std::string& name, std::shared_ptr<MenuItem> new_item) {

@@ -30,52 +30,26 @@
 namespace Chaos {
   
   class Controller;
-  class SequenceTable;
   class Sequence;
+  class SequenceTable;
   class MenuItem;
 
   /**
    * \brief Defines the game's menu system.
    * 
    * This class provides a mechanism to select anything defined by the game menu. It is the central
-   * container for sub-menus and menu items, and it uses the mediator pattern to manage communication
-   * among the different menu items.
+   * container for sub-menus and menu items, and it uses the mediator pattern to manage 
+   * communication among the different menu items.
    */
   class GameMenu : public MenuInterface {
   private:
     std::unordered_map<std::string, std::shared_ptr<MenuItem>> menu;
+
     std::shared_ptr<SequenceTable> defined_sequences;
-    /**
-     * \brief Does the game menu remember the last position that the user left the menu in?
-     *
-     * If true, we must reset each menu we enter to the top item (offset 0) before exiting, so that
-     * we are in a known position when we open the menu the next time. Note: we do it this way rather
-     * than remembering the position ourselves because the user may pause the game and use menu options
-     * themselves. In that circumstance, it's more practical for the user to remember to leave everything
-     * at the top rather than to try to remember and restore whatever position the menus were in when the
-     * pause occurred.
-     */
+    // std::unordered_map<std::string, std::shared_ptr<Sequence>> defined_sequences;
+
     bool remember_last;
-
-    /**
-     * \brief Should we treat items protected by a guard as hidden when the guard is off?
-     * 
-     * The values of menu options protected by a guard cannot be changed unless the guard is set to true.
-     * If this flag is true, those protected items are also hidden. That is, the user cannot navigate to them,
-     * and scrolling down from the guard will skip over all the guarded items. Note that "hide" doesn't necessarily
-     * mean that the items are invisible to the user, just that they can't be navigated to.
-     */
     bool hide_guarded;
-
-    /**
-     * Time to wait, in microseconds, after disabling all control inputs
-     */
-    unsigned int disable_delay;
-
-    /**
-     * Time to wait, in microseconds after selecting a menu item before issuing the next comand
-     */
-    unsigned int select_delay;
 
     /**
      * \brief Add commands necessary to navigate to this item from the top of main menu
@@ -92,11 +66,35 @@ namespace Chaos {
     /**
      * \brief Initialize the GameMenu from the game's configuration file
      * 
-     * \param config Parsed TOML configuration file
-     * \param game Pointer to the calling game structure
-     * \return int Number of parsing errors
+     * \param sequences Pointer to the table of defined sequences
      */
-    int initialize(toml::table& config, std::shared_ptr<SequenceTable> sequences);
+    void setDefinedSequences(std::shared_ptr<SequenceTable> sequences) { defined_sequences = sequences; }
+
+    /**
+     * \brief Set whether the menu system remembers the last position that the user left the
+     * menu.
+     * 
+     * \param remember Does game re-enter menu sytem where last exited?
+     * 
+     * If true, we must reset each menu we enter to the top item (offset 0) before exiting, so that
+     * we are in a known position when we open the menu the next time. Note: we do it this way
+     * rather than remembering the position ourselves because the user may pause the game and use
+     * menu options themselves. In that circumstance, it's more practical for the user to remember
+     * to leave everything at the top rather than to try to remember and restore whatever position
+     * the menus were in when the pause occurred.
+     */
+    void setRememberLast(bool remember) { remember_last = remember; }
+
+    /**
+     * \brief Set if items protected by a guard are hidden from user input when the guard is off
+     * 
+     * The values of menu options protected by a guard cannot be changed unless the guard is set to
+     * true. If this flag is true, those protected items are also hidden. That is, the user cannot
+     * navigate to them, and scrolling down from the guard will skip over all the guarded items.
+     * Note that "hide" doesn't necessarily mean that the items are invisible to the user, just
+     * that they can't be navigated to.
+     */
+    void setHideGuarded(bool hide) { hide_guarded = hide; }
 
     /**
      * \brief Look up the defined MenuItem by name
@@ -106,8 +104,6 @@ namespace Chaos {
      * \return NULL if no item has been defined for this name.
      */
     std::shared_ptr<MenuItem> getMenuItem(const std::string& name);
-
-    unsigned int getSelectDelay() { return select_delay; }
 
     /**
      * \brief Sets a menu item to the specified value
@@ -138,9 +134,16 @@ namespace Chaos {
      */
     void correctOffset(std::shared_ptr<MenuItem> changed);
 
-    void addSequence(Sequence& sequence, const std::string& name);
-
-    void addSelectDelay(Sequence& sequence);
+    /**
+     * \brief Appends a defined sequence of the given name to an existing sequence
+     * 
+     * \param sequence The sequence being constructed
+     * \param name The name of the predefined sequence to append
+     * 
+     * If the name does not exist in the defined sequence list, an error will be logged and the
+     * sequence will remain unchanged.
+     */
+    void addToSequence(Sequence& sequence, const std::string& name);
 
     /**
      * \brief Look up the defined MenuItem by name
@@ -152,5 +155,7 @@ namespace Chaos {
     std::shared_ptr<MenuItem> getMenuItem(toml::table& config, const std::string& key);
 
     bool insertMenuItem(std::string& name, std::shared_ptr<MenuItem> new_item);
-};
+
+
+  };
 };

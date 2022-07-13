@@ -133,6 +133,10 @@ namespace Chaos {
       return game.getModifier(name);
     }
 
+    std::shared_ptr<ConditionTrigger> getTrigger(const std::string& name) {
+      return game.getTrigger(name);
+    }
+
     std::unordered_map<std::string, std::shared_ptr<Modifier>>& getModifierMap() {
       return game.getModifierMap();
     }
@@ -177,18 +181,17 @@ namespace Chaos {
 
     void addGameCommands(const toml::table& config, const std::string& key,
                          std::vector<std::shared_ptr<GameCommand>>& vec) {
-      game.getGameCommandTable().addToVector(config, key, vec);
+      game.addGameCommands(config, key, vec);
     }
 
     void addGameConditions(const toml::table& config, const std::string& key,
                            std::vector<std::shared_ptr<GameCondition>>& vec) {
-      game.getGameConditionTable().addToVector(config, key, vec);
+      game.addGameConditions(config, key, vec);
     }
 
     std::shared_ptr<Sequence> createSequence(toml::table& config, const std::string& key,
                                              bool required) {
-      return game.getSequenceTable()->makeSequence(config, key, game.getGameCommandTable(),
-                                                   controller, required);
+      return game.makeSequence(config, key, required);
 }/**
      * \brief Is the event an instance of the specified input command?
      * 

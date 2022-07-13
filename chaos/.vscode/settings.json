@@ -77,7 +77,8 @@
     "*.ipp": "cpp",
     "regex": "cpp",
     "forward_list": "cpp",
-    "valarray": "cpp"
+    "valarray": "cpp",
+    "source_location": "cpp"
   },
   "search.exclude": {
     "**/_deps": true

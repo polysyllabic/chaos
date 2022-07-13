@@ -28,12 +28,12 @@ const std::string RepeatModifier::mod_type = "repeat";
 
 RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "appliesTo", "disableOnStart", "disableOnFinish", "force_on",
-      "time_on", "time_off", "repeat", "cycle_delay", "blockWhileBusy", "beginSequence", "finishSequence", "unlisted"});
+      "name", "description", "type", "groups", "applies_to", "force_on", "time_on", "time_off",
+      "repeat", "cycle_delay", "block_while_busy", "begin_sequence", "finish_sequence", "unlisted"});
   initialize(config, e);
 
   if (commands.empty()) {
-    throw std::runtime_error("No command(s) specified with 'appliesTo'");
+    throw std::runtime_error("No command(s) specified with 'applies_to'");
   }
   
   time_on = config["time_on"].value_or(0.0);
@@ -66,19 +66,19 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
   }
 
     // Allow "ALL" as a shortcut to avoid enumerating all signals
-  std::optional<std::string> for_all = config["blockWhileBusy"].value<std::string>();
+  std::optional<std::string> for_all = config["block_while_busy"].value<std::string>();
   lock_all = (for_all && *for_all == "ALL");
   if (for_all && !lock_all) {
-    engine->addGameCommands(config, "blockWhileBusy", block_while);
+    engine->addGameCommands(config, "block_while_busy", block_while);
   }
 
   PLOG_DEBUG << " - time_on: " << time_on << "; time_off: " << time_off << "; cycle_delay: " << cycle_delay;
   PLOG_DEBUG << " - repeat: " << repeat_count;
   if (block_while.empty()) {
-    PLOG_DEBUG << " - blockWhileBusy: NONE";
+    PLOG_DEBUG << " - block_while_busy: NONE";
   } else {
     for (auto& cmd : block_while) {
-      PLOG_DEBUG << " - blockWhileBusy:" << cmd->getName();
+      PLOG_DEBUG << " - block_while_busy:" << cmd->getName();
     }
   }
 }

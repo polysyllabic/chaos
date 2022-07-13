@@ -28,13 +28,16 @@ namespace Chaos {
   class GameCommand;
   class ControllerInputTable;
 
+  /**
+   * \brief A container class to hold all game-command objects.
+   * 
+   */
   class GameCommandTable {
-
-   /**
+  private:
+    /**
      * The map of game commands identified by their names in the TOML file
      */
     std::unordered_map<std::string, std::shared_ptr<GameCommand>> command_map;
-
                      
   public:
 

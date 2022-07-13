@@ -7,12 +7,12 @@ project(chaos VERSION 2.0
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(FATAL_ERROR "Do not build in-source. Please remove CMakeCache.txt and the CMakeFiles/ directory. Then build out-of-source.")
-endif()
+endif() 
 
 set(CMAKE_BUILD_TYPE Debug)
 set(RASPBERRY_PI TRUE)
 set(USE_DUALSENSE FALSE)
-
+ 
 # Parse version variables
 file(READ "VERSION" ver)
 
@@ -103,6 +103,7 @@ set_required_build_settings_for_GCC8()
 
 add_executable(chaos include/config.hpp
 	include/ChaosEngine.hpp
+  include/ConditionTrigger.hpp
 	include/Configuration.hpp
   include/CooldownModifier.hpp
   include/DelayModifier.hpp
@@ -113,9 +114,9 @@ add_executable(chaos include/config.hpp
   include/FormulaModifier.hpp
   include/Game.hpp
   include/GameCommand.hpp
-  include/GameCommandTable.hpp
+  #include/GameCommandTable.hpp
   include/GameCondition.hpp
-  include/GameConditionTable.hpp
+  #include/GameConditionTable.hpp
   include/GameMenu.hpp
   include/MenuInterface.hpp
   include/MenuItem.hpp
@@ -130,6 +131,7 @@ add_executable(chaos include/config.hpp
   include/SequenceModifier.hpp
   include/SequenceTable.hpp
 	src/ChaosEngine.cpp
+  src/ConditionTrigger.cpp
 	src/Configuration.cpp
   src/CooldownModifier.cpp
   src/DelayModifier.cpp
@@ -137,9 +139,9 @@ add_executable(chaos include/config.hpp
   src/FormulaModifier.cpp
   src/Game.cpp
 	src/GameCommand.cpp
-  src/GameCommandTable.cpp
+  #src/GameCommandTable.cpp
   src/GameCondition.cpp
-  src/GameConditionTable.cpp
+  #src/GameConditionTable.cpp
   src/GameMenu.cpp
   src/MenuItem.cpp
   src/MenuModifier.cpp

@@ -35,6 +35,7 @@ namespace Chaos {
   class SignalRemap;
   class GameCondition;
   class Sequence;
+  class ConditionTrigger;
   
   class EngineInterface {
   public:
@@ -70,6 +71,7 @@ namespace Chaos {
     // Game Conditions
     virtual void addGameConditions(const toml::table& config, const std::string& key,
                                  std::vector<std::shared_ptr<GameCondition>>& vec) = 0;
+    virtual std::shared_ptr<ConditionTrigger> getTrigger(const std::string& name) = 0;
     // Sequences
     virtual std::shared_ptr<Sequence> createSequence(toml::table& config,
                                                      const std::string& key, bool required) = 0;

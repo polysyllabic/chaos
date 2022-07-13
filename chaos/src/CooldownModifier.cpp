@@ -34,36 +34,31 @@ const std::string CooldownModifier::mod_type = "cooldown";
 CooldownModifier::CooldownModifier(toml::table& config, EngineInterface* e) {
   
   TOMLUtils::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
-							  "beginSequence", "finishSequence", "appliesTo", "timeOn", "timeOff", "unlisted"});
+							  "begin_sequence", "finish_sequence", "applies_to", "trigger", "time_on",
+                "time_off", "unlisted"});
   initialize(config, e);
   if (commands.empty()) {
     throw std::runtime_error("No command associated with cooldown modifier.");
   }
   if (commands.size() > 1) {
-    PLOG_WARNING << "More than one cooldown command assigned in appliesTo. All but the first will be ignored.";
+    PLOG_WARNING << "More than one cooldown command assigned in applies_to. All but the first will be ignored.";
   }
-  // Save the DeviceEvent that we're operating on.
-  cooldownCommand.time = 0;
-  cooldownCommand.value = 0;
-  cooldownCommand.type = commands[0]->getInput()->getButtonType();
-  cooldownCommand.id = commands[0]->getInput()->getID(cooldownCommand.type);
-  time_on = config["timeOn"].value_or(0.0);
+  time_on = config["time_on"].value_or(0.0);
   if (time_on == 0) {
-    PLOG_WARNING << "The timeOn for this cooldown mod is 0 seconds!";
+    PLOG_WARNING << "The time_on for this cooldown mod is 0 seconds!";
   }
-  PLOG_VERBOSE << " - timeOn: " << time_on;
+  PLOG_VERBOSE << " - time_on: " << time_on;
   
-  time_off = config["timeOff"].value_or(0.0);
+  time_off = config["time_off"].value_or(0.0);
   if (time_off == 0) {
-    PLOG_WARNING << "The timeOff for this cooldown mod is 0 seconds!";
+    PLOG_WARNING << "The time_off for this cooldown mod is 0 seconds!";
   }
-  PLOG_VERBOSE << " - timeOff: " << time_off;
+  PLOG_VERBOSE << " - time_off: " << time_off;
 }
 
 void CooldownModifier::begin() {
-  pressedState = engine->getState(cooldownCommand.id, cooldownCommand.type);
-  cooldownTimer = 0;
-  inCooldown = false;
+  cooldown_timer = 0;
+  in_cooldown = false;
 }
 
 void CooldownModifier::update() {
@@ -71,32 +66,35 @@ void CooldownModifier::update() {
   // Get the difference since the last time update.
   double deltaT = timer.dTime();
 
-  if (inCooldown) {
+  if (in_cooldown) {
     // count down until cooldown ends
-    cooldownTimer -= deltaT;
-    if (cooldownTimer < 0) {
-      cooldownTimer = 0;
-      inCooldown = false;
-      PLOG_DEBUG << "Cooldown expired";
+    cooldown_timer -= deltaT;
+    if (cooldown_timer <= 0) {
+      cooldown_timer = 0;
+      in_cooldown = false;
+      PLOG_DEBUG << "Cooldown for " << getName() << " expired";
     }
   } else {
-    if (engine->getState(cooldownCommand.id, cooldownCommand.type)) {      
+    if (trigger->isTriggered()) {
       // increment cooldown timer until time_on exceeded
-      cooldownTimer += deltaT;
-      if (cooldownTimer > time_on) {
-        PLOG_DEBUG << "Cooldown started";
-	      cooldownTimer = time_off;
-	      inCooldown = true;
-	      // Disable event
-	      engine->fakePipelinedEvent(cooldownCommand, getptr());
+      cooldown_timer += deltaT;
+      if (cooldown_timer > time_on) {
+        PLOG_DEBUG << "Cooldown for " << getName() << " started";
+	      cooldown_timer = time_off;
+	      in_cooldown = true;
+	      // Disable event necessary?
+	      // engine->fakePipelinedEvent(cooldown_event, getptr());
       }
     }
   }
 }
 
 bool CooldownModifier::tweak(DeviceEvent& event) {
-  if (event.id == cooldownCommand.id && event.type == cooldownCommand.type) {
-    return inCooldown == false;
+  // Block events in the command list while in cooldown
+  for (auto& cmd : commands) {
+    if (cmd->getInput()->matches(event)) {
+      return !in_cooldown;
+    }
   }
   return true;
 }

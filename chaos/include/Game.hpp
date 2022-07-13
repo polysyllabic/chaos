@@ -26,8 +26,9 @@
 
 #include "GameMenu.hpp"
 #include "ControllerInputTable.hpp"
-#include "GameCommandTable.hpp"
-#include "GameConditionTable.hpp"
+//#include "GameCommandTable.hpp"
+//#include "GameConditionTable.hpp"
+#include "ConditionTrigger.hpp"
 #include "SequenceTable.hpp"
 #include "ModifierTable.hpp"
 #include "EngineInterface.hpp"
@@ -38,12 +39,13 @@ namespace Chaos {
   // the header files explicitly.
   class Modifier;
   class Controller;
+
   /**
    * \brief Main container for the information needed to run a game
    * 
    * The Game class is the facade for all the various classes containing information we need to
-   * inject chaos into a game. It also contains the logic to translate the TOML configuration file
-   * into the actual objects we use during operation.
+   * inject chaos into a game. It also contains most of the logic to translate the TOML
+   * configuration file into the actual objects we use during operation.
    */
   class Game {
   public:
@@ -56,7 +58,9 @@ namespace Chaos {
      * \return true If loaded with non-fatal errors
      * \return false If had a fatal error while loading
      * 
-     * If we're reloading a new game, an early fatal error will leave the old game's data intact
+     * If we're reloading a new game, an early fatal error will leave the old game's data intact.
+     * A count of the number of parsing errors encountered is kept in #parse_errors so that it can
+     * be reported to the interface.
      */
     bool loadConfigFile(const std::string& configfile, EngineInterface* engine);
 
@@ -69,8 +73,20 @@ namespace Chaos {
      */
     const std::string& getName() { return name; }
 
+    /**
+     * \brief Get the maximum number of active primary mods to run
+     * 
+     * \return int Number of modifiers
+     * 
+     * This number does not include the children of parent modifiers.
+     */
     int getNumActiveMods() { return active_modifiers; }
 
+    /**
+     * \brief Get the default time that a modifier remains active before it is removed.
+     * 
+     * \return double 
+     */
     double getTimePerModifier() { return time_per_modifier; }
 
     /**
@@ -81,10 +97,12 @@ namespace Chaos {
     int getErrors() { return parse_errors; }
 
     /**
-     * \brief Given the sequence name, get the object
+     * \brief Get the modifier's pointer base don its name
      * 
-     * \param name The name by which this sequence is identified in the TOML file
-     * \return std::shared_ptr<Sequence> Pointer to the Sequence object.
+     * \param name The name by which this modifier is identified in the TOML file
+     * \return std::shared_ptr<Sequence> Pointer to the Modifier object.
+     * 
+     * This name is case sensitive and is used in communication with the interface.
      */
     std::shared_ptr<Modifier> getModifier(const std::string& name) { return modifiers.getModifier(name); }
 
@@ -94,10 +112,10 @@ namespace Chaos {
 
     Json::Value getModList() { return modifiers.getModList(); }
 
-    GameCommandTable& getGameCommandTable() { return game_commands; }
-    GameConditionTable& getGameConditionTable() { return game_conditions; }
+    //GameCommandTable& getGameCommandTable() { return game_commands; }
+    //GameConditionTable& getGameConditionTable() { return game_conditions; }
     ControllerInputTable& getSignalTable() { return signal_table; }
-    std::shared_ptr<SequenceTable> getSequenceTable() { return sequences; }
+    //std::shared_ptr<SequenceTable> getSequenceTable() { return sequences; }
     
     /**
      * \brief Tests if an event matches this signal
@@ -114,6 +132,40 @@ namespace Chaos {
 
     GameMenu& getMenu() { return menu; }
 
+    std::shared_ptr<GameCommand> getCommand(const std::string& name);
+
+    void addGameCommands(const toml::table& config, const std::string& key,
+                         std::vector<std::shared_ptr<GameCommand>>& vec);
+
+    std::shared_ptr<GameCondition> getCondition(const std::string& name);
+
+    void addGameConditions(const toml::table& config, const std::string& key,
+                           std::vector<std::shared_ptr<GameCondition>>& vec);
+
+    std::shared_ptr<ConditionTrigger> getTrigger(const std::string& name);
+
+    short getSignalThreshold(std::shared_ptr<GameCommand> command, double proportion);
+
+    /**
+     * \brief Append sequence to the end of the current one by name
+     * 
+     * \param seq The sequence that is being created
+     * \param name The name of the defined sequence as given in the TOML file
+     */
+    void addSequence(Sequence& seq, const std::string& name);
+
+    /**
+     * \brief Construct a sequence from a TOML file definition
+     * 
+     * \param config The parsed TOML table object
+     * \param key The name of the 
+     * \param required 
+     * \return std::shared_ptr<Sequence> 
+     */
+    std::shared_ptr<Sequence> makeSequence(toml::table& config, 
+                                           const std::string& key,
+                                           bool required);
+
   private:
     /**
      * The name of this game
@@ -121,16 +173,22 @@ namespace Chaos {
     std::string name;
 
     /**
-     * Running count of total errors encountered in initializing the configuraiton file
+     * \brief Running count of total errors encountered in initializing the configuraiton file
      */
     int parse_errors;
 
     /**
-     * \brief Do we use the game's menu system
+     * \brief Running count of total warnings encountered in initializing the configuraiton file
+     */
+    int parse_warnings;
+
+    /**
+     * \brief Do we use the game's menu system?
      * 
-     * If false, menu modifiers are disabled
+     * If false, menu modifiers are disabled.
      */
     bool use_menu;
+
 
     Controller& controller;
 
@@ -143,16 +201,21 @@ namespace Chaos {
      * Container for defined sequences
      */
     std::shared_ptr<SequenceTable> sequences;
+    //std::unordered_map<std::string, std::shared_ptr<Sequence>> sequences;
 
     /**
      * Container for defined game commands
      */
-    GameCommandTable game_commands;
+    //GameCommandTable game_commands;
+    std::unordered_map<std::string, std::shared_ptr<GameCommand>> game_commands;
 
     /**
      * Container for defined game conditions
      */
-    GameConditionTable game_conditions;
+    // GameConditionTable game_conditions;
+    std::unordered_map<std::string, std::shared_ptr<GameCondition>> game_conditions;
+
+    std::unordered_map<std::string, std::shared_ptr<ConditionTrigger>> condition_triggers;
 
     /**
      * Container for defined modifiers
@@ -167,14 +230,24 @@ namespace Chaos {
     int active_modifiers;
 
     /**
-    * Time in seconds modifiers last before they are removed from the queue.
+    * \brief Default time in seconds that modifiers last before they are removed from the active
+    * modifier list.
     */
     double time_per_modifier;
 
     /**
-     * Controller signal status, including remapping
+     * Controller signal definitions
      */
     ControllerInputTable signal_table;
+    //std::unordered_map<std::string, std::shared_ptr<ControllerInput>> controller_signals;
+
+    void buildCommandList(toml::table& config);
+    void buildConditionList(toml::table& config);
+    void buildTriggerList(toml::table& config);
+    void buildSequenceList(toml::table& config);
+
+    std::shared_ptr<GameCondition> makeCondition(toml::table& config);
+    std::shared_ptr<ConditionTrigger> makeTrigger(toml::table& config);
 
     void makeMenu(toml::table& config);
     void addMenuItem(toml::table& config);

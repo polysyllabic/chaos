@@ -32,7 +32,8 @@ const std::string RemapModifier::mod_type = "remap";
 RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "signals", "disable_signals", "remap", "random_remap", "unlisted"});
+      "name", "description", "type", "groups", "signals", "disable_signals", "remap",
+      "random_remap", "unlisted"});
 
   initialize(config, e);
   
@@ -127,7 +128,7 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
       remaps.insert({sig, {nullptr, nullptr, false, false, 1, 1.0}});
     }
   }
-  PLOG_DEBUG << name << ": random = " << random;
+  PLOG_DEBUG << getName() << ": random = " << random;
   for (auto [from, r] : remaps) {
     PLOG_DEBUG << "from " << from->getName() << " to " << (r.to_console ? r.to_console->getName() : "TBD") <<
     " to_min = " << r.to_min << " to_negative = " << (r.to_negative ? r.to_negative->getName() : "NONE") <<
@@ -221,7 +222,7 @@ bool RemapModifier::remap(DeviceEvent& event) {
 
     // If we are remapping to NOTHING, we drop this signal.
     if (to_console->getSignal() == ControllerSignal::NOTHING) {
-      PLOG_DEBUG << name << " remapping " << from->getName() << " to NOTHING";
+      PLOG_DEBUG << getName() << " remapping " << from->getName() << " to NOTHING";
       return false;
     }
 
@@ -284,7 +285,7 @@ bool RemapModifier::remap(DeviceEvent& event) {
         // When mapping from an axis to buttons/hybrids, the choice of button is determined by
         // the sign of the value.
         if (!remap.to_negative) {
-          PLOG_ERROR << name << " is missing remap for negative values of " << from->getName();
+          PLOG_ERROR << getName() << " is missing remap for negative values of " << from->getName();
           return true;
         }
         auto other_button = remap.to_negative;
@@ -336,7 +337,7 @@ bool RemapModifier::remap(DeviceEvent& event) {
     }
     }
     if (modified.value != 0) {
-     PLOG_VERBOSE << name << ": " << from->getName() << ":" << event.value << " to " << to_console->getName() << "(" 
+     PLOG_VERBOSE << getName() << ": " << from->getName() << ":" << event.value << " to " << to_console->getName() << "(" 
      << (int) modified.type << "." << (int) modified.id << "):" << modified.value;
     }
     // Update the event

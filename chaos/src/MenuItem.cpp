@@ -64,10 +64,10 @@ void MenuItem::selectItem(Sequence& seq) {
     int delta = offset;
     PLOG_DEBUG << name << " menu offset = " << offset;
     for (int i = 0; i < tab_group; i++) {
-      menu_items.addSequence(seq, "tab right");
+      menu_items.addToSequence(seq, "tab right");
     }
     for (int i = 0; i > tab_group; i++) {
-      menu_items.addSequence(seq, "tab left");
+      menu_items.addToSequence(seq, "tab left");
     }
 
     // If this item is guarded, make sure the guard is enabled
@@ -83,18 +83,17 @@ void MenuItem::selectItem(Sequence& seq) {
 
     // navigate down for positive offsets
     for (int i = 0; i < delta; i++) {
-      menu_items.addSequence(seq, "menu down");
+      menu_items.addToSequence(seq, "menu down");
     }
 
     // navigate up for negative offsets
     for (int i = 0; i > delta; i--) {
-      menu_items.addSequence(seq, "menu up");
+      menu_items.addToSequence(seq, "menu up");
     }
 
     // Submenus require a button press
     if (! isOption()) {
-      menu_items.addSequence(seq, "menu select");
-      menu_items.addSelectDelay(seq);
+      menu_items.addToSequence(seq, "menu select");
     }
 }
 
@@ -103,18 +102,18 @@ void MenuItem::navigateBack(Sequence& seq) {
   // back out
   PLOG_DEBUG << "Navigate back offset " << offset;
   for (int i = 0; i < offset; i++) {
-    menu_items.addSequence(seq, "menu up");
+    menu_items.addToSequence(seq, "menu up");
   }
   for (int i = 0; i > offset; i--) {
-    menu_items.addSequence(seq, "menu down");
+    menu_items.addToSequence(seq, "menu down");
   }
   for (int i = 0; i < tab_group; i++) {
-    menu_items.addSequence(seq, "tab left");
+    menu_items.addToSequence(seq, "tab left");
   }
   for (int i = 0; i > tab_group; i++) {
-    menu_items.addSequence(seq, "tab right");
+    menu_items.addToSequence(seq, "tab right");
   }
-  menu_items.addSequence(seq, "menu exit");
+  menu_items.addToSequence(seq, "menu exit");
 }
 
 void MenuItem::setState(Sequence& seq, unsigned int new_val, bool restore) {
@@ -125,10 +124,10 @@ void MenuItem::setState(Sequence& seq, unsigned int new_val, bool restore) {
     current_state = new_val;
   }
   if (is_selectable) {
-    menu_items.addSequence(seq, "menu select");
+    menu_items.addToSequence(seq, "menu select");
   }
   if (confirm) {
-    menu_items.addSequence(seq, "confirm");
+    menu_items.addToSequence(seq, "confirm");
   }
 
   // Increment the counter, if set
@@ -148,9 +147,9 @@ void MenuItem::setMenuOption(Sequence& seq, unsigned int new_val) {
   // scroll to the appropriate option
   PLOG_DEBUG << "Setting option: difference = " << difference;
   for (int i = 0; i < difference; i++) {
-    menu_items.addSequence(seq, "option greater");
+    menu_items.addToSequence(seq, "option greater");
   }
   for (int i = 0; i > difference; i--) {
-    menu_items.addSequence(seq, "option less");
+    menu_items.addToSequence(seq, "option less");
   }
 }

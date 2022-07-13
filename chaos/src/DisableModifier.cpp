@@ -38,13 +38,13 @@ DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
   assert(config.contains("name"));
   assert(config.contains("type"));
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence",
-      "filter", "threshold", "condition", "conditionTest", "unless", "unlessTest", "unlisted"});
+      "name", "description", "type", "groups", "applies_to", "begin_sequence", "finish_sequence",
+      "filter", "threshold", "condition", "condition_test", "unless", "unless_test", "unlisted"});
 
   initialize(config, e);
 
   if (commands.empty() && ! applies_to_all) {
-    throw std::runtime_error("No command(s) specified with 'appliesTo'");
+    throw std::runtime_error("No command(s) specified with 'applies_to'");
   }
 
   // If the filter isn't specified, default to block all values of the signal

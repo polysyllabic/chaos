@@ -40,15 +40,22 @@ namespace Chaos {
    * when a particular signal comes in. For example, "shoot" in TLOU2 is equivalent to
    * "reload/toss" with the condition "aiming".
    *
+   * A command is defined in a TOML file by defining a name and binding. The following keys
+   * are required:
+   * - name: The label used to refer to the action in the elsewhere in this configuration file.
+   * Command names must be unique, but you can define multiple names to point to the same signal.
+   * This allows for aliases, in case you want to use different command names in different
+   * contexts.
+   * - binding: The controller signal (button, axis, etc.) attached to this command. The
+   * information about these signals are stored in ControllerInput opbects, and the particular
+   * labels ("L1", "X", etc.) are hard-coded.
+   * 
    * Example TOML defintition:
    *
    *     [[command]]
    *     name = "aiming"
    *     binding = "L2"
-   *
-   * Note that command names must be unique, but you can define multiple names to point to the same
-   * signal. This allows for aliases, in case you want to use different command names in different
-   * contexts.
+   * 
    */
   class GameCommand : public std::enable_shared_from_this<GameCommand> {
   private:

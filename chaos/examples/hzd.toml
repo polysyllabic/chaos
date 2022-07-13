@@ -156,22 +156,22 @@ trueOn = [ "aiming" ]
 # we take control of the controller.
 [[sequence]]
 name = "disable all"
-sequence = [{ event="release", command = "interact" },       # TRIANGLE
-            { event="release", command = "crouch/prone" },        # CIRCLE
-            { event="release", command = "jump" },          # X
-            { event="release", command = "melee" },               # SQUARE
-            { event="release", command = "dodge/sprint" },        # L1
+sequence = [{ event="release", command = "interact" },            # TRIANGLE
+            { event="release", command = "dodge" },               # CIRCLE
+            { event="release", command = "jump" },                # X
+            { event="release", command = "slide" },               # SQUARE
+            { event="release", command = "weapon wheel" },        # L1
             { event="release", command = "aiming" },              # L2
-            { event="release", command = "swap/listen" },         # R1
-            { event="release", command = "reload/toss" },         # R2
-            { event="release", command = "look" },                # L3
-            { event="release", command = "flashlight" },          # R3
+            { event="release", command = "light melee" },         # R1
+            { event="release", command = "heavy melee" },         # R2
+            { event="release", command = "sprint" },              # L3
+            { event="release", command = "focus" },               # R3
             { event="release", command = "move sideways" },       # LX
             { event="release", command = "move forward/back" },   # LY
             { event="release", command = "horizontal camera" },   # RX
             { event="release", command = "vertical camera" },     # RY
-            { event="release", command = "select weapon" },       # DX
-            { event="release", command = "select consumable" }    # DY
+            { event="release", command = "cycle tools/traps" },   # DX
+            { event="release", command = "use", delay=0.333333 }  # DY
 ]
 
 # Open the main menu (This sequence must exist with this name if the chaos engine uses the menu.)
@@ -242,7 +242,6 @@ sequence = [ { event="press", command = "menu right/left", value = -1},
 # This section defines the game's menu system.
 [menu]
 use_menu = false
-disable_delay = 0.333333
 remember_last = true
 hide_guarded_items = false
 

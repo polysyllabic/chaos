@@ -32,19 +32,19 @@ const std::string SequenceModifier::mod_type = "sequence";
 SequenceModifier::SequenceModifier(toml::table& config, EngineInterface* e) {
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "beginSequence", "finishSequence",
-      "blockWhileBusy", "repeatSequence", "condition",
+      "name", "description", "type", "groups", "begin_sequence", "finish_sequence",
+      "block_while_busy", "repeat_sequence", "trigger",
       "start_delay", "cycle_delay", "unlisted"});
 
   initialize(config, e);
   
-  repeat_sequence = e->createSequence(config, "repeatSequence", false);
+  repeat_sequence = e->createSequence(config, "repeat_sequence", false);
 
-  std::optional<std::string> for_all = config["blockWhileBusy"].value<std::string>();
+  std::optional<std::string> for_all = config["block_while_busy"].value<std::string>();
   // Allow "ALL" as a shortcut to avoid enumerating all signals
   lock_all = (for_all && *for_all == "ALL");
   if (! lock_all) {
-    engine->addGameCommands(config, "blockWhileBusy", block_while);
+    engine->addGameCommands(config, "block_while_busy", block_while);
   }
 
   start_delay = config["start_delay"].value_or(0.0);
@@ -93,7 +93,7 @@ case SequenceState::IN_SEQUENCE:
       sequence_state = SequenceState::UNTRIGGERED;
       sequence_time = 0;
       sequence_step = 0;
-      resetConditionTriggers();
+      trigger->reset();
     }
   }
 }
@@ -102,7 +102,7 @@ bool SequenceModifier::tweak(DeviceEvent& event) {
 
   if (sequence_state == SequenceState::UNTRIGGERED) {
     // If there is no condition, this will also return true
-    if (inCondition()) {
+    if (trigger->isTriggered()) {
       // go straight into the sequence if no delay
       sequence_state = (start_delay == 0) ? SequenceState::IN_SEQUENCE :
                                             SequenceState::STARTING;

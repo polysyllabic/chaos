@@ -31,11 +31,11 @@ const std::string DelayModifier::mod_type = "delay";
 DelayModifier::DelayModifier(toml::table& config, EngineInterface* e) {
   
   TOMLUtils::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
-							  "appliesTo", "delay", "beginSequence", "finishSequence", "unlisted"});
+							  "applies_to", "delay", "begin_sequence", "finish_sequence", "unlisted"});
   initialize(config, e);
 
   if (commands.empty() && ! applies_to_all) {
-    throw std::runtime_error("No command(s) specified with 'appliesTo'");
+    throw std::runtime_error("No command(s) specified with 'applies_to'");
   }
   
   delayTime = config["delay"].value_or(0.0);

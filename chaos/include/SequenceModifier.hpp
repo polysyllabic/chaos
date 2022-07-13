@@ -23,6 +23,7 @@
 #include "Modifier.hpp"
 #include "Sequence.hpp"
 #include "EngineInterface.hpp"
+#include "ConditionTrigger.hpp"
 
 namespace Chaos {
 

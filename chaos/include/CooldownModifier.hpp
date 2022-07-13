@@ -59,11 +59,9 @@ namespace Chaos {
    */
   class CooldownModifier : public Modifier::Registrar<CooldownModifier> {
 
-  protected:
-    DeviceEvent cooldownCommand;
-    bool pressedState;
-    double cooldownTimer;
-    bool inCooldown;
+  private:
+    double cooldown_timer;
+    bool in_cooldown;
     
     /**
      * Time that the event is allowed before we block it

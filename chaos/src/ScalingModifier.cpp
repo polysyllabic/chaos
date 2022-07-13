@@ -32,12 +32,12 @@ const std::string ScalingModifier::mod_type = "scaling";
 
 ScalingModifier::ScalingModifier(toml::table& config, EngineInterface* e) {
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence",
+      "name", "description", "type", "groups", "applies_to", "begin_sequence", "finish_sequence",
       "unlisted", "amplitude", "offset"});
   initialize(config, e);
 
   if (commands.empty()) {
-    throw std::runtime_error("No commands defined in appliesTo");
+    throw std::runtime_error("No commands defined in applies_to");
   }
 
   amplitude = config["amplitude"].value_or(1.0);
