@@ -40,9 +40,11 @@ CooldownModifier::CooldownModifier(toml::table& config, EngineInterface* e) {
   if (commands.empty()) {
     throw std::runtime_error("No command associated with cooldown modifier.");
   }
-  if (commands.size() > 1) {
-    PLOG_WARNING << "More than one cooldown command assigned in applies_to. All but the first will be ignored.";
+
+  if (trigger == nullptr) {
+    throw std::runtime_error("No trigger defined");
   }
+  
   time_on = config["time_on"].value_or(0.0);
   if (time_on == 0) {
     PLOG_WARNING << "The time_on for this cooldown mod is 0 seconds!";
