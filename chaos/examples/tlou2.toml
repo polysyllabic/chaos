@@ -226,15 +226,35 @@ binding = "DY"
 # You need to chain commands with differnt thresholds, you can define the conditions separately.
 # Modifiers support testing multiple conditiions simultaneously.
 #
-# Note that the names of conditions can be the same as the commands, but it's condition names that
-# are used in the triggers below.
+# Note that triggers are defined with conditions rather than commands, and so when you want a
+# condition that is just a simple command, you need both the command definition and the condition,
+# which look nearly identical. We associate triggers with conditions rather than commands to allow
+# for more complex trigger states, for example triggering at specific thresholds, or triggering in
+# conjunction with while conditions.
+# 
 [[condition]]
 name = "aiming"
 while = [ "aiming" ]
 
 [[condition]]
+name = "shoot"
+while = [ "shoot" ]
+
+[[condition]]
+name = "sprint"
+while = [ "dodge/sprint" ]
+
+[[condition]]
 name = "melee"
 while = [ "melee" ]
+
+[[condition]]
+name = "select weapon"
+while = [ "select weapon" ]
+
+[[condition]]
+name = "select consumable"
+while = [ "select consumable" ]
 
 [[condition]]
 name = "movement"
@@ -280,7 +300,7 @@ threshold_type = "distance"
 # 
 [[trigger]]
 name = "running"
-trigger_on = "dodge/sprint"
+trigger_on = "sprint"
 while = [ "movement" ]
 
 [[trigger]]
