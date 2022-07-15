@@ -39,7 +39,7 @@ DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
   assert(config.contains("type"));
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "applies_to", "begin_sequence", "finish_sequence",
-      "filter", "threshold", "condition", "condition_test", "unless", "unless_test", "unlisted"});
+      "filter", "threshold", "while", "unless", "unlisted"});
 
   initialize(config, e);
 

@@ -33,21 +33,30 @@ namespace Chaos {
   /**
    * \brief Defines a single test of a game condition
    * 
-   * A GameCondition is used to test particular controller states, for example, aiming a weapon.
-   * Modifiers use conditions to define various behavior. For example, a modifier may only work
-   * if a particular condition is true or false. Conditions are also used as the building blocks
-   * for a ConditionTrigger.
+   * Conditions are used to test check the state of events coming from the controller. There are
+   * two types of conditions: transient and persistent. A transient condition polls the current
+   * state of the controller. A persistent condition is set to true when a particular condition
+   * arrives and remains true until a different condition arrives that clears the condition.
+
+   * Transient conditions are defined in the 'while' parameter and compare the current state of
+   * the controller to the defined threshold value. More than one command can appear in the while
+   * parameter. How multiple commands are processed depends on the threshold type.  
    * 
-   * Game conditions can be used in two modes: polling and queued. Polling mode looks at the
-   * current state of the controller. Queued takes a device event passed through the tweak()
-   * meachanism. Polled conditions can have multiple commands in the while vector. Queued
-   * conditions are limited to checking one command at a time.
+   * Persistent events define one command that sets the state and a different command that clears
+   * it. Only one command at a time can be checked for setting and clearing a persistent state.
+   * 
+   * Transient and persistent are mutually exclusive states, so a condition must define either the
+   * while parameter or the set_on and clear_on parameters, but not both.
    * 
    * Conditions are defined in the TOML file, and the following keys are allowed:
    *
    * - name: The name by which the condition is identified in the TOML file (_Required_)
    * - while: A list of commands that must be true according to the real-time state of the
-   * controller (_Required_)
+   * controller
+   *  - set_on: A command that will set a persistent trigger to true when its incomming state
+   * exceeds the threshold
+   *  - clear_on: A command that will set a persistent trigger to false when its incomming state
+   * exceeds the threshold
    * - threshold: For axes, the threshold that a signal value must reach to trigger the condition,
    * expressed as a proportion of the maximum value. (_Optional. Default = 1_)
    * - thresholdType: The test applied to the threshold. The following keys correspond to the types
@@ -68,7 +77,8 @@ namespace Chaos {
    * categories of signal or different thresholds, you should create separate conditions and
    * chain them together in a ConditionTrigger.
    *
-   * The 'distance' threshold type checks the Pythagorean distance 
+   * The 'distance' threshold type checks the Pythagorean distance.
+   * 
    * The default threshold and #thresholdType settings have the effect of returning a true
    * condition on any non-zero signal from the specified game commands.
    *
@@ -94,20 +104,12 @@ namespace Chaos {
     std::string name;
     std::vector<std::shared_ptr<ControllerInput>> while_conditions;
 
-    ThresholdType threshold_type;
+    std::shared_ptr<ControllerInput> set_on;
+    std::shared_ptr<ControllerInput> clear_on;
+    bool persistent_state = false;
 
-    /**
-     * \brief The integer value that the threshold rule uses to test.
-     * 
-     */
     short threshold;
-
-    /**
-     * \brief Translates the proportional threshold into an integer based on the type of signal.
-     * 
-     * \return short 
-     */
-    short getSignalThreshold(std::shared_ptr<ControllerInput> input);
+    ThresholdType threshold_type;
 
     /**
      * \brief Test if the value passes the threshold for this threshold type
@@ -128,6 +130,11 @@ namespace Chaos {
      */
     GameCondition(const std::string& name);
 
+    /**
+     * \brief Get the threshold value required for the condition to be true
+     * 
+     * \return short 
+     */
     short getThreshold() { return threshold; }
 
     /**
@@ -151,10 +158,36 @@ namespace Chaos {
     void addCondition(std::shared_ptr<GameCommand> command);
 
     /**
+     * \brief Set the command to check for setting a persistent condition
+     * 
+     * \param command The game command to add
+     * 
+     * The GameCommand is translated to a ControllerInput object.
+     */
+    void setSetOn(std::shared_ptr<GameCommand> command);
+    
+    /**
+     * \brief Set the command to check for clearing a persistent condition
+     * 
+     * \param command The game command to add
+     * 
+     * The GameCommand is translated to a ControllerInput object.
+     */
+    void setClearOn(std::shared_ptr<GameCommand> command);
+
+    /**
      * \brief Tests if the condition's parameters have all been met.
      * 
+     * If this is a transient condition, it checks the current state of all items in the while
+     * list. If this is a persistent condition, it returns the current state.
      */
     bool inCondition();
+
+    /**
+     * \brief Sets a persistent condition if the incoming signal matches the set/clear states for
+     * a persistent event.
+     */
+    void updateState(DeviceEvent& event);
 
     /**
      * \brief Check if the incomming event matches the first command in the while list.
@@ -170,6 +203,7 @@ namespace Chaos {
      */
     bool pastThreshold(DeviceEvent& event);
 
+    bool isTransient() { return !while_conditions.empty(); }
     /**
      * \brief Get the name of the condition as used in the TOML file
      * 

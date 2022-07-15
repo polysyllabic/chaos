@@ -32,10 +32,9 @@
 #include "enumerations.hpp"
 #include "DeviceEvent.hpp"
 #include "EngineInterface.hpp"
-#include "Touchpad.hpp"
+//#include "Touchpad.hpp"
 #include "GameCommand.hpp"
 #include "GameCondition.hpp"
-#include "ConditionTrigger.hpp"
 #include "Sequence.hpp"
 
 namespace Chaos {
@@ -287,8 +286,6 @@ namespace Chaos {
      */
     ConditionCheck unless_test;
 
-    std::shared_ptr<ConditionTrigger> trigger;
-
     /**
      * \brief Amount of time the engine has been paused.
      */
@@ -320,7 +317,6 @@ namespace Chaos {
      * - applies_to
      * - condition
      * - condition_test
-     * - trigger
      * - unless
      * - unless_test
      * - begin_sequence

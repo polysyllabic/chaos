@@ -74,20 +74,11 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
     engine->addGameCommands(config, "applies_to", commands);
   }
  
-  engine->addGameConditions(config, "condition", conditions);
+  engine->addGameConditions(config, "while", conditions);
   condition_test = getConditionTest(config, "condition_test");
 
   engine->addGameConditions(config, "unless", unless_conditions);
   unless_test = getConditionTest(config, "unless_test");
-
-  trigger = nullptr;
-  std::optional<std::string> trigger_name = config["trigger"].value<std::string>();
-  if (trigger_name) {
-    trigger = engine->getTrigger(*trigger_name);
-    if (!trigger) {
-      PLOG_ERROR << "Trigger " << *trigger_name << " not found";
-    }
-  }
 
   on_begin  = engine->createSequence(config, "begin_sequence", false);
   on_finish = engine->createSequence(config, "finish_sequence", false);
@@ -141,8 +132,12 @@ bool Modifier::remap(DeviceEvent& event) {
 }
 
 bool Modifier::_tweak(DeviceEvent& event) {
-  if (trigger)  {
-    trigger->updateState(event);
+  // Update any conditions that track persistent states
+  for (auto& cond : conditions) {
+    cond->updateState(event);
+  }
+  for (auto& cond : unless_conditions) {
+    cond->updateState(event);
   }
   return tweak(event);
 }

@@ -28,19 +28,23 @@
 
 namespace Chaos {
 
+  enum class CooldownState { UNTRIGGERED, ALLOW, BLOCK };
   /**
    * \brief Modifier that allows an action for a set period of time and then blocks it until a
    * cooldown period has expired.
    *
    * Example TOML definition:
-   * [[modifier]]
-   * name = "Bad Stamina"
-   * description = "Running is disabled after 2 seconds and takes 4 seconds to recharge."
-   * type = "cooldown"
-   * groups = [ "movement" ]
-   * appliesTo = [ "dodge/sprint" ]
-   * timeOn = 2.0
-   * timeOff = 4.0
+   *     [[modifier]]
+   *     name = "Bad Stamina"
+   *     description = "Running is disabled after 2 seconds and takes 4 seconds to recharge."
+   *     type = "cooldown"
+   *     groups = [ "movement" ]
+   *     applies_to = [ "dodge/sprint" ]
+   *     while = [ "movement", "sprint" ]
+   *     trigger = [ "dodge/sprint", "vertical movement", "horizontal movement" ]
+   *     cumulative = true
+   *     time_on = 2.0
+   *     time_off = 4.0
    *
    * The following keys are defined for this class of modifier:
    *
@@ -61,8 +65,8 @@ namespace Chaos {
 
   private:
     double cooldown_timer;
-    bool in_cooldown;
-    
+    CooldownState state;
+    bool cumulative;
     /**
      * Time that the event is allowed before we block it
      */
@@ -71,6 +75,8 @@ namespace Chaos {
      * Time that the event is held in cooldown before re-enabled.
      */
     double time_off;
+
+    std::vector<std::shared_ptr<ControllerInput>> trigger;
 
   public:
     CooldownModifier(toml::table& config, EngineInterface* e);

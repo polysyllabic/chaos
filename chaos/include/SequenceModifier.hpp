@@ -23,7 +23,6 @@
 #include "Modifier.hpp"
 #include "Sequence.hpp"
 #include "EngineInterface.hpp"
-#include "ConditionTrigger.hpp"
 
 namespace Chaos {
 
@@ -109,6 +108,7 @@ namespace Chaos {
      * Sequence to execute at intervals throughout the lifetime of the mod.
      */
     std::shared_ptr<Sequence> repeat_sequence;
+    std::vector<std::shared_ptr<ControllerInput>> trigger;
 
     /**
      * \brief The state of the repeat sequence

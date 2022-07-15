@@ -28,7 +28,7 @@
 #include "ControllerInputTable.hpp"
 //#include "GameCommandTable.hpp"
 //#include "GameConditionTable.hpp"
-#include "ConditionTrigger.hpp"
+//#include "ConditionTrigger.hpp"
 #include "SequenceTable.hpp"
 #include "ModifierTable.hpp"
 #include "EngineInterface.hpp"
@@ -133,17 +133,29 @@ namespace Chaos {
     GameMenu& getMenu() { return menu; }
 
     std::shared_ptr<GameCommand> getCommand(const std::string& name);
+    std::shared_ptr<GameCommand> getCommand(const toml::table& config, const std::string& key,
+                                            bool required);
 
     void addGameCommands(const toml::table& config, const std::string& key,
                          std::vector<std::shared_ptr<GameCommand>>& vec);
+    
+    /**
+     * \brief Translates a list of game commands from the TOML file into the equivalent controller
+     * input signals
+     * 
+     * \param config 
+     * \param key 
+     * \param vec 
+     */
+    void addGameCommands(const toml::table& config, const std::string& key,
+                         std::vector<std::shared_ptr<ControllerInput>>& vec);
 
     std::shared_ptr<GameCondition> getCondition(const std::string& name);
 
     void addGameConditions(const toml::table& config, const std::string& key,
                            std::vector<std::shared_ptr<GameCondition>>& vec);
 
-    std::shared_ptr<ConditionTrigger> getTrigger(const std::string& name);
-
+    
     short getSignalThreshold(std::shared_ptr<GameCommand> command, double proportion);
 
     /**
@@ -166,6 +178,8 @@ namespace Chaos {
                                            const std::string& key,
                                            bool required);
 
+
+    
   private:
     /**
      * The name of this game
@@ -215,7 +229,7 @@ namespace Chaos {
     // GameConditionTable game_conditions;
     std::unordered_map<std::string, std::shared_ptr<GameCondition>> game_conditions;
 
-    std::unordered_map<std::string, std::shared_ptr<ConditionTrigger>> condition_triggers;
+    //std::unordered_map<std::string, std::shared_ptr<ConditionTrigger>> condition_triggers;
 
     /**
      * Container for defined modifiers
@@ -243,11 +257,11 @@ namespace Chaos {
 
     void buildCommandList(toml::table& config);
     void buildConditionList(toml::table& config);
-    void buildTriggerList(toml::table& config);
+    //void buildTriggerList(toml::table& config);
     void buildSequenceList(toml::table& config);
 
     std::shared_ptr<GameCondition> makeCondition(toml::table& config);
-    std::shared_ptr<ConditionTrigger> makeTrigger(toml::table& config);
+    //std::shared_ptr<ConditionTrigger> makeTrigger(toml::table& config);
 
     void makeMenu(toml::table& config);
     void addMenuItem(toml::table& config);

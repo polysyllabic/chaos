@@ -24,7 +24,7 @@
 #include <plog/Log.h>
 
 #include "GameCondition.hpp"
-#include "GameCommandTable.hpp"
+//#include "GameCommandTable.hpp"
 #include "GameCommand.hpp"
 #include "ControllerInput.hpp"
 #include "TOMLUtils.hpp"
@@ -94,10 +94,28 @@ void GameCondition::setThreshold(double proportion) {
   PLOG_DEBUG << "Threshold for " << name << " set to " << threshold;
 }
 
-// Test real-time condition of the controller
-bool GameCondition::inCondition() {
-  assert(!while_conditions.empty());
+// This routine should be called from _tweak, so child modifiers only need to check isTriggered.
+void GameCondition::updateState(DeviceEvent& event) {
+  if (persistent_state) {
+    // Once triggered, only an explicit clear_on match will reset
+    if (clear_on->getIndex() == event.index() && pastThreshold(event)) {
+      PLOG_DEBUG << "clear_on condition met: " << (int) event.type << "." << (int) event.id << ": " << event.value;
+      persistent_state = false;
+    } 
+    return;
+  }
+  if (set_on->getIndex() == event.index() && pastThreshold(event)) {
+    PLOG_DEBUG << "set_on condition met: " << (int) event.type << "." << (int) event.id << ": " << event.value;
+    persistent_state = true;
+  }
+}
 
+bool GameCondition::inCondition() {
+  // No while -- this is a persistent state
+  if (while_conditions.empty()) {
+    return persistent_state;
+  }
+  // We have 
   if (threshold_type == ThresholdType::DISTANCE) {
     if (while_conditions.size() != 2) {
       return false;
@@ -119,4 +137,12 @@ bool GameCondition::pastThreshold(DeviceEvent& event) {
 
 bool GameCondition::matchEvent(DeviceEvent& event) {
   return (event.index() == while_conditions.front()->getIndex());
+}
+
+void GameCondition::setSetOn(std::shared_ptr<GameCommand> command) {
+  set_on = command->getInput();
+}
+
+void GameCondition::setClearOn(std::shared_ptr<GameCommand> command) {
+  clear_on = command->getInput();
 }

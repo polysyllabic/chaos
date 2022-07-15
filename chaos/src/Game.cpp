@@ -91,7 +91,7 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
   // Process the conditions
   buildConditionList(configuration);
 
-  buildTriggerList(configuration);
+  // buildTriggerList(configuration);
 
   // Initialize the controller input table
   parse_errors += signal_table.initializeInputs(configuration);
@@ -355,42 +355,13 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
   PLOG_VERBOSE << "Initializing game condition " << *condition_name;
   
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "while", "threshold", "threshold_type"});
-
-  //commands.addToVector(config, "while", while_conditions);
-  if (! config.contains("while")) {
-    ++parse_errors;
-    PLOG_ERROR << "No 'while' commands defined.";
-    return nullptr;
-  }
-  const toml::array* cmd_list = config.get("while")->as_array();
-  if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
-    ++parse_errors;
-    PLOG_ERROR << "'while' must be an array of strings";
-    return nullptr;
-  }
+      "name", "while", "set_on", "clear_on", "threshold", "threshold_type"});
 
   std::shared_ptr<GameCondition> ret = std::make_shared<GameCondition>(*condition_name);
 
-  for (auto& elem : *cmd_list) {
-    std::optional<std::string> cmd = elem.value<std::string>();
-    assert(cmd);
-    // check that the string matches the name of a previously defined object
-    std::shared_ptr<GameCommand> item = getCommand(*cmd);
-    if (item) {
-      ret->addCondition(item);
-      PLOG_VERBOSE << "Added '" + *cmd + "' to the 'while' vector.";
-    } else {
-      ++parse_errors;
-      PLOG_ERROR << "Unrecognized command: " << *cmd << " in 'while' list";
-      return nullptr;
-    }
-  }
-
-  std::optional<std::string_view> thtype = config["threshold_type"].value<std::string_view>();
-
   // Default type is magnitude
   ThresholdType threshold_type = ThresholdType::MAGNITUDE;
+  std::optional<std::string_view> thtype = config["threshold_type"].value<std::string_view>();
   if (thtype) {
     if (*thtype == "greater" || *thtype == ">") {
       threshold_type = ThresholdType::GREATER;
@@ -415,131 +386,65 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
   }
   ret->setThreshold(proportion);
 
-  PLOG_DEBUG << "Condition: " << config["name"] <<  "; " << ((thtype) ? *thtype : "magnitude") <<
-    " threshold proportion = " << proportion << " -> " << ret->getThreshold();
-
-  return ret;
-}
-
-void Game::buildTriggerList(toml::table& config) {
-
-  // If we're loading a game after initialization, empty the previous data
-  if (condition_triggers.size() > 0) {
-    PLOG_VERBOSE << "Clearing existing ConditionTrigger data";
-    condition_triggers.clear();
-  }
-
-  toml::array* arr = config["trigger"].as_array();
-  if (arr) {
-    // Each node in the array should contain table defining one trigger
-    for (toml::node& elem : *arr) {
-      toml::table* trigger = elem.as_table();
-      if (! trigger) {
-        ++parse_errors;
-        PLOG_ERROR << "Trigger definition must be a table";
-        continue;
-      }
-      if (!trigger->contains("name")) {
-        ++parse_errors;
-        PLOG_ERROR << "Trigger missing required 'name' field:";
-        continue;
-      }
-      std::optional<std::string> trigger_name = trigger->get("name")->value<std::string>();
-      try {
-        PLOG_VERBOSE << "Adding trigger '" << *trigger_name << "' to map.";
-        auto t = makeTrigger(*trigger);
-        if (t) {
-  	      auto [it, result] = condition_triggers.try_emplace(*trigger_name, t);
-          if (! result) {
-            ++parse_errors;
-            PLOG_ERROR << "Duplicate trigger name: " << *trigger_name;
-          }
-        }
-	    }
-	    catch (const std::runtime_error& e) {
-        ++parse_errors;
-	      PLOG_ERROR << "In definition for trigger '" << *trigger_name << "': " << e.what(); 
-	    }
-    }
-  }
-}
-
-std::shared_ptr<ConditionTrigger> Game::makeTrigger(toml::table& config) {
-  assert(config.contains("name"));
-  PLOG_VERBOSE << "Initializing condition trigger " << config["name"];
-  
-  TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "while", "unless", "trigger_on", "clear_on"});
-  
-  // commands.addToMap(config, "trigger_on", trigger_on);
-  std::optional<std::string> condition_name = config["trigger_on"].value<std::string>();
-  if (! condition_name) {
-    ++parse_errors;
-    PLOG_ERROR << "The trigger " << config["name"] << " is missing a trigger_on field";
-    return nullptr;
-  }
-  std::shared_ptr<GameCondition> cond = getCondition(*condition_name);
-  if (!cond) {
-    ++parse_errors;
-    PLOG_ERROR << "The trigger_on condition " << *condition_name << " is not found";
-    return nullptr;
-  }
-
-  std::shared_ptr<ConditionTrigger> ret = std::make_shared<ConditionTrigger>(*condition_name);
-  ret->setTriggerOn(cond);
-  
-  condition_name = config["clear_on"].value<std::string>();
-  cond = (condition_name) ? getCondition(*condition_name) : nullptr;
-  ret->setClearOn(cond);
-
-  //commands.addToVector(config, "while", while_conditions);
   if (config.contains("while")) {
-    const toml::array* cnd_list = config.get("while")->as_array();
-    if (!cnd_list || !cnd_list->is_homogeneous(toml::node_type::string)) {
+    if (config.contains("set_on") || config.contains("clear_on")) {
+      ++parse_errors;
+      PLOG_ERROR << "A condition must contain either a while or a set_on/clear_on pair";
+      return nullptr;
+    }
+    const toml::array* cmd_list = config.get("while")->as_array();
+    if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
       ++parse_errors;
       PLOG_ERROR << "'while' must be an array of strings";
-    } else {
-      for (auto& elem : *cnd_list) {
-        std::optional<std::string> cmd = elem.value<std::string>();
-        assert(cmd);
-        // check that the string matches the name of a previously defined object
-        std::shared_ptr<GameCondition> item = getCondition(*cmd);
-        if (item) {
-          ret->addWhileCondition(item);
-          PLOG_VERBOSE << "Added '" + *cmd + "' to the 'while' vector.";
-        } else {
-          ++parse_errors;
-          PLOG_ERROR << "Unrecognized condition: " << *cmd << " in 'while' list";
-          return nullptr;
-        }
+      return nullptr;
+    }
+
+    for (auto& elem : *cmd_list) {
+      std::optional<std::string> cmd = elem.value<std::string>();
+      assert(cmd);
+      // check that the string matches the name of a previously defined object
+      std::shared_ptr<GameCommand> item = getCommand(*cmd);
+      if (item) {
+        ret->addCondition(item);
+        PLOG_VERBOSE << "Added '" + *cmd + "' to the while vector.";
+      } else {
+        ++parse_errors;
+        PLOG_ERROR << "Unrecognized command '" << *cmd << "' in while list";
+        return nullptr;
       }
     }
+    // case of empty while list
+    if (!ret->isTransient()) {
+      ++parse_errors;
+      PLOG_ERROR << "No commands in while list";
+      return nullptr;
+    }
+    PLOG_VERBOSE << "Transient condition: " << *condition_name <<  "; " << ((thtype) ? *thtype : "magnitude") <<
+      " threshold proportion = " << proportion << " -> " << ret->getThreshold();
     return ret;
   }
-
-  //commands.addToVector(config, "unless", unless_conditions);
-  if (config.contains("unless")) {
-    const toml::array* cnd_list = config.get("unless")->as_array();
-    if (!cnd_list || !cnd_list->is_homogeneous(toml::node_type::string)) {
-      ++parse_errors;
-      PLOG_ERROR << "'unless' must be an array of strings";
-    } else {
-      for (auto& elem : *cnd_list) {
-        std::optional<std::string> cmd = elem.value<std::string>();
-        assert(cmd);
-        // check that the string matches the name of a previously defined object
-        std::shared_ptr<GameCondition> item = getCondition(*cmd);
-        if (item) {
-          ret->addUnlessCondition(item);
-          PLOG_VERBOSE << "Added '" + *cmd + "' to the 'unless' vector.";
-        } else {
-          ++parse_errors;
-          PLOG_ERROR << "Unrecognized condition: " << *cmd << " in 'unless' list";
-          return nullptr;
-        }
-      }
-    }
+  // If we get here, we're constructing a persistent condition
+  if (!config.contains("set_on") || !config.contains("clear_on")) {
+    ++parse_errors;
+    PLOG_ERROR << "A persistent condition must contain both set_on and clear_on parameters";
+    return nullptr;
   }
+
+  std::shared_ptr<GameCommand> cmd = getCommand(config, "set_on", true);
+  if (! cmd) {
+    return nullptr;
+  }
+  ret->setSetOn(cmd);
+
+  cmd = getCommand(config, "clear_on", true);
+  if (! cmd) {
+    return nullptr;
+  }
+  ret->setClearOn(cmd);
+
+  PLOG_VERBOSE << "Persistent condition: " << *condition_name <<  "; " << ((thtype) ? *thtype : "magnitude") <<
+    " threshold proportion = " << proportion << " -> " << ret->getThreshold();
+
   return ret;
 }
 
@@ -708,6 +613,32 @@ std::shared_ptr<Sequence> Game::makeSequence(toml::table& config,
 }
 
 void Game::addGameCommands(const toml::table& config, const std::string& key,
+                           std::vector<std::shared_ptr<ControllerInput>>& vec) {
+  if (config.contains(key)) {
+    const toml::array* cmd_list = config.get(key)->as_array();
+    if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
+      ++parse_errors;
+      PLOG_ERROR << key << " must be an array of strings";
+      return;
+   	}
+
+    for (auto& elem : *cmd_list) {
+      std::optional<std::string> cmd = elem.value<std::string>();
+      assert(cmd);
+      // check that the string matches the name of a previously defined object
+   	  std::shared_ptr<GameCommand> item = getCommand(*cmd);
+      if (item) {
+        vec.push_back(item->getInput());
+        PLOG_VERBOSE << "Added '" << *cmd << "' to the " << key << " vector.";
+      } else {
+        ++parse_errors;
+        PLOG_ERROR << "Unrecognized command: " << *cmd << " in " << key;
+     	}
+    }
+  }      
+}
+
+void Game::addGameCommands(const toml::table& config, const std::string& key,
                            std::vector<std::shared_ptr<GameCommand>>& vec) {
       
   if (config.contains(key)) {
@@ -772,17 +703,28 @@ std::shared_ptr<GameCommand> Game::getCommand(const std::string& name) {
   return nullptr;
 }
 
+std::shared_ptr<GameCommand> Game::getCommand(const toml::table& config, const std::string& key,
+                                              bool required) {
+  std::optional<std::string> cmd_name = config[key].value<std::string>();
+  if (!cmd_name) {
+    if (required) {
+      ++parse_errors;
+      PLOG_ERROR << "Missing  required '" << *cmd_name << "' parameter";
+    }
+    return nullptr;
+  }
+  std::shared_ptr<GameCommand> cmd = getCommand(*cmd_name);
+  if (! cmd) {
+    ++parse_errors;
+    PLOG_ERROR << "The command '" << *cmd_name << "' does not exist (set_on)";
+    return nullptr;
+  }
+  return cmd;
+}
+
 std::shared_ptr<GameCondition> Game::getCondition(const std::string& name) {
   auto iter = game_conditions.find(name);
   if (iter != game_conditions.end()) {
-    return iter->second;
-  }
-  return nullptr;
-}
-
-std::shared_ptr<ConditionTrigger> Game::getTrigger(const std::string& name) {
-  auto iter = condition_triggers.find(name);
-  if (iter != condition_triggers.end()) {
     return iter->second;
   }
   return nullptr;

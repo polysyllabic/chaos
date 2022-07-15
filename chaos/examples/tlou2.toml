@@ -48,42 +48,7 @@ touchpad_scale = 0.12
 touchpad_skew = 30
 
 #--------------------------------------------------------------------------------------------------
-# Command Mapping
-#
-# This section defines the simple commands that this game supports, or at least the ones that we
-# can intercept and modify. This gives a game-specific semantic interpretation to the signals
-# that the game expects to receive. For example, you can associate "interact" with TRIANGLE.
-# Note that these commands are currently always simple. They associate one button press or axis
-# event with one command. To model more complex sequences, They do not currently support associating
-# simultaneous presses of controls with one command. Currently, those states are modeled by checking
-# for a condition when a particular signal comes in. For example, "shoot" in TLOU2 is equivalent to
-# "reload/toss" with the condition "aiming".
-# 
-# If you have remapped the game controls from their default settings, you can edit this section to
-# reflect the values that the game expects to receive.
-#
-# There are two parts to each command definition: 
-#
-# name: The label used to refer to the action in the elsewhere in this configuration file.
-#
-# binding: The controller event (button, axis, etc.) attached to this command. The following names
-# are defined for the control bindings. Note that these event names cannot be changed in this file:
-#
-#          Main Buttons: X, CIRCLE, TRIANGLE, SQUARE
-#          Bumper buttons: L1, R1
-#          Hybrid button/axis: L2, R2
-#          Other buttons: SHARE, OPTIONS, PS
-#          Joystick buttons: L3, R3
-#          Left joystick: LX, LY
-#          Right joystick: RX, RY
-#          D-pad: DX, DY
-#          Touchpad buttons: TOUCHPAD, TOUCHPAD_ACTIVE, TOUCHPAD_ACTIVE_2
-#          Touchpad axes: TOUCHPAD_X, TOUCHPAD_Y, TOUCHPAD_X_2, TOUCHPAD_Y_2
-#          Accelerometer: ACCX, ACCY, ACCZ
-#          Gyroscope: GYRX, GYRY, GYRZ
-#         
-# Command names must be unique, but you can define multiple names to point to the same signal. This
-# allows for aliases, in case you want to use different command names in different contexts.
+# Command Map
 [[command]]
 name = "interact"
 binding = "TRIANGLE"
@@ -192,69 +157,13 @@ binding = "DY"
 
 #--------------------------------------------------------------------------------------------------
 # Game Conditions
-#
-# Conditions are used to test the current state of the controller.
-#
-# The following keys are defined:
-# - name: The name by which the condition is identified in the TOML file. (Required)
-# - while: A list of commands that must be true according to the real-time state of the controller.
-# - unless: A list of commands that must be FALSE according to the real-time status of the
-#   controller. This can be used together with or independently of 'while'. (Optional)
-# - threshold: The proportion of the maximum value for the particular command being tested.
-#   The legal range of values is $0 \le x \le 1$. The sign of the incoming signal is accounted for
-#   in the test type. Note that a threshold is really only relevant for signals that are different
-#   types of axes. The states of the pure buttons are only 0 or 1.
-# - threshold_type: Defines the test applied to the threshold. The following tests are available:
-#     - greater: A positive signal greater than the threshold triggers the signal. The shortcut ">"
-#       can also be used for this type.
-#     - greater_equal: A positive signal greater than or equal to the threshold triggers the signal.
-#     - less: A negative signal less than the threshold triggers the signal. The shortcut "<" can
-#       also be used for this type.
-#     - less_equal: A negative signal less than or equal to the threshold triggers the signal. The
-#       shortcut "<=" can also be used for this type.
-#     - magnitude: A signal that is greater than the absolute value of the signal triggers the
-#       signal. (Default)
-#     - distance: Calculates the Pythagorean distance of the first two signals in the condition
-#       list (this assumes that they are axes). The condition is true if this distance exceeds the
-#       threshold.
-# 
-# Notes:
-# The default threshold and threshold_type settings have the effect of returning a true condition
-# on any non-zero signal from the specified game commands.
-# 
-# The same threshold and threshold type apply to all commands in the while and unless lists. If
-# You need to chain commands with differnt thresholds, you can define the conditions separately.
-# Modifiers support testing multiple conditiions simultaneously.
-#
-# Note that triggers are defined with conditions rather than commands, and so when you want a
-# condition that is just a simple command, you need both the command definition and the condition,
-# which look nearly identical. We associate triggers with conditions rather than commands to allow
-# for more complex trigger states, for example triggering at specific thresholds, or triggering in
-# conjunction with while conditions.
-# 
 [[condition]]
 name = "aiming"
 while = [ "aiming" ]
 
 [[condition]]
-name = "shoot"
-while = [ "shoot" ]
-
-[[condition]]
 name = "sprint"
 while = [ "dodge/sprint" ]
-
-[[condition]]
-name = "melee"
-while = [ "melee" ]
-
-[[condition]]
-name = "select weapon"
-while = [ "select weapon" ]
-
-[[condition]]
-name = "select consumable"
-while = [ "select consumable" ]
 
 [[condition]]
 name = "movement"
@@ -274,70 +183,18 @@ while = [ "horizontal camera", "vertical camera" ]
 threshold = 0.2
 threshold_type = "distance"
 
-#--------------------------------------------------------------------------------------------------
-# Condition Triggers
-#
-# Condition triggers are used to start an action when a particular event occurs.
-# test the state of the game for particular controller states. For example,
-# aiming a weapon is a common condition that occurs with other events and changes the meaning of an
-# incomming signal, e.g., you shoot the weapon when aiming but reload it when not aiming.
-#
-# The following keys are defined:
-# - name: The name by which the condition is identified in the TOML file. (Required)
-# - trigger_on: A condition that sets a state variable that can function as a trigger. If
-#   'clear_on' is defined, this state persists as true until the clear_on condition is met or the
-#   trigger is manually reset. Otherwise, the state resets as soon as an event comes in that
-#   falsifies the condition. (Required)
-# - clear_on: A condition that sets the state variable to false. (Optional)
-# - while: A list of game conditions that must be true according to the real-time state of the
-#   controller when the trigger_on event is processed. (Optional)
-# 
-# Notes:
-# Triggers and conditions overlap conceptually, and in some cases actions can be implemented with
-# either. The main distinction is that triggers designate a single event as the starting point
-# for some action. Other events may also be checked for being true at this point. Conditions
-# merely poll the current state of the controller at a specific instant in time.
-# 
-[[trigger]]
-name = "running"
-trigger_on = "sprint"
-while = [ "movement" ]
-
-[[trigger]]
-name = "shot taken"
-trigger_on = "shoot"
-while = [ "aiming" ]
-
-[[trigger]]
+[[condition]]
 name = "gun selected"
-trigger_on = "select weapon"
+set_on = "select weapon"
 clear_on = "select consumable"
 
-[[trigger]]
+[[condition]]
 name = "consumable selected"
-trigger_on = "select consumable"
+set_on = "select consumable"
 clear_on = "select weapon"
 
 #--------------------------------------------------------------------------------------------------
 # Sequences
-#
-# A sequence is a precomposed series of button presses that can be sent out in a batch.
-# Sequences can be used directly in many mods (see especially sequence modifiers), and indirectly
-# elsewhere. The sequences defined here can be reused as subsequences in other sequences. In other
-# words, if there are sequences of actions that you use repeatedly in different modifiers, you
-# can simplify your task by defining that sequence once here and referencing it in the mod
-# definitions. These sequences are also used to define certain game commands (e.g., involving menu
-# navigation) that the engine always needs to know about.
-#
-# A sequence is defined in the TOML file as an array of inline tables, with each inline table
-# defining one step in the sequence. The following keys are defined for each step:
-#
-# - event: The type of event. Event types must be one of the following:
-#     * hold:    Sets the signal to a specified value 
-#     * release:
-#     * press:
-#     * delay:
-#
 #
 # Zero out all relevant controls. This is used to stop users from whatever they are doing while
 # we take control of the controller, especially before issuing menu commands.
@@ -426,82 +283,21 @@ sequence = [ { event="press", command = "menu right/left", value = -1},
 
 #--------------------------------------------------------------------------------------------------
 # Menus
-# 
-# This section defines the game's menu system.
 [menu]
 # Should we use the menu system. If this is set to false, you can skip all the menu layout, but
 # menu mods will also not be available.
 use_menu = true
-
 # Does the menu system remember the last position in a menu/submenu where the user leaves the
 # cursor? This is a placeholder for future expansion. Setting to false has no effect currently.
 remember_last = true
-
 # Are items protected by a guard option hidden when the guard option is set to off? Note that
 # "hidden" doesn't necessarily mean literally hidden from the user, just that you can't navigate
 # to it and navigating down or up will skip over the option.
 hide_guarded_items = false
 
-# The following parameters define specific events that the engine needs to know in order to open
-# and navigate through the menus. The value for each must be the name of a sequence defined above,
-# and they define the default action that is taken for these events. All of these events can
-# be overridden on a per-item basis if necessary. If you do not need some of these actions for your
-# particular game, you can leave the values as an empty string.
-
 # === Menu Layout ===
-#
-# A menu is defined as a series of inline tables, each of which describes a single menu item.
-# By defining the complete menu system (or at least that portion which the engine needs to know
-# about for the modifiers), menu modifiers can simply reference the menu option they want to
-# invoke and the engine will calculate the complete series of button presses necessary to get to
-# it automatically.
-# 
-# A menu item has the following parameters defined:
-# name:   A unique name for this menu item (Required)
-# type:   The category of menu item (Required). The available types are:
-#         + option: Item is an option. Options are set to integer values representing their
-#           possible states, e.g., a boolean flag would be 0 = off, 1 = on. 0 always reflects the
-#           minimum value. The maximum value will be item dependent.
-#         + select: Item executes some command (e.g., restart encounter) that does not have an
-#           option value associated with it.
-#         + menu: Item is an ordinary menu that appears in a standard list. Selecting it will
-#           go to that sub menu.
-#         
-# parent:   The parent menu for this item. If omitted, this item belongs to the root (main)
-#           menu. (Optional)
-# offset:   The number of actions required to reach this item from the first item in the list. Must
-#           be an integer. Positive values navigate down, negative values navigate up. If the menu
-#           contains items that are hidden by default, the offsets should reflect the number of
-#           actions required to reach the option with the items in their default state. This means
-#           that a default-hidden entry will share an offset with a default-unhidden one. When the
-#           hidden entry is revealed, the offset will be recalculated. See the main menu below for
-#           an example. (Required)
-# - tab:    An integer indicating a group of items within a parent menu. Items in this group are
-#           displayed together and you must navigate from tab to tab with a different command from
-#           the normal menu up/down items. The value of the integer indicates the number of tab
-#           button presses required to reach this group from the default tab. Positive values mean
-#           tab right, negative values mean tab left. (Optional)
-# - hidden: A boolean value which if true indicates that the menu item is not displayed in the
-#           list currently. Menu items can be hidden or revealed as a result of other actions in
-#           the game. The default value is false. (Optional)
-# - confirm: For options/select items, selecting this option requires a yes/no confirmation.
-# - initialState: For options, the starting value for the menu item, expressed as an integer
-#           indicating the number of button presses away from the minimum value required to reach
-#           this state.
-# - counter: Name of a menu option whose counter is to be incremented when this menu option is set
-#            and decremented when this option is restored.
-# - counterAction: Action to take after this menu option's counter changes. The currently supported
-#            values are:
-#            + reveal: Menu option is shown when the counter is non-zero, hidden when zero
-# - guard:   Reference to another item in the same list that acts as a "guard" for this item. The
-#            referenced option must be enabled before we can set this value.
-#
-# Parent menu items must be declared before the child items that reference those parents, but the
-# definition order is otherwise unconstrained.
-#
 # For illustration, TLOU2 menu options that are unused are listed below and commented out. In
 # practice, you only need to define the menu items that the engine will actually invoke.
-
 layout = [
       # Main Menu Items
       {name = "options", type="menu", offset = 0},
@@ -730,80 +526,7 @@ layout = [
 #--------------------------------------------------------------------------------------------------
 # Gameplay Modifiers
 #
-# A modifier is a specific alteration of a game's operation, for example disabling a particular
-# control, or inverting the direction of a joystick movement. Specific types of modifiers are
-# available to implement specific kinds of actions.
-#
-# Each modifier is defined in its own table, labeled [[modifier]]. Regardless of type, each
-# modifier must specify values for the following keys:
-#
-# - name: A unique string identifying this mod (Required). This is the name by which the mod is
-#         selected, for example, when a user asks the chatbot to define its functionality, as well
-#         as the name shown in the voting and in-effect overlays.
-# - description: An explanatation of the mod for use by the chat bot (Required)
-# - type: The class of modifier (Required).
-#
-# The following modifier classes are currently implemented:
-# - cooldown: Allow a command for a set time then force a recharge period before it can be used again.
-# - delay: Wait for a set amount of time before sending a command.
-# - disable: Block commands from being sent to the console.
-# - formula: Alter the signal through a time-dependant formula
-# - menu: Apply a setting from the game's menus.
-# - parent: A mod that contains other mods as children.
-# - remap: Change which controls issue which commands.
-# - repeat: Repeat a particular command at intervals.
-# - scaling: Scale the signal through a linear formula.
-# - sequence: Issue an arbitrary sequence of actions.
-#
-# - group: A classification of that can be used by the chat bot for voting (e.g., to ensure that)
-#       only one mod in a category can be voted on at the same time. If omitted, the mod is
-#       assigned to the default "general" group. (Optional)
-# 
-# In this file, modifiers are sorted by type, and documentation for each type appears above the
-# first one. In most cases, however, modifiers can usually be defined in any order you prefer.
-# The one exception is for modifiers of the parent type that reference specific, named modifiers
-# as children. In this case, the child modifiers must be defined earlier in this file than the
-# parent.
-#
 # == Disable Modifiers ==
-# Modifiers of this type block commands from being passed to the controller, either unconditionally
-# or under various conditions. In addition to the keys required for all modifiers, the following
-# keys are defined:
-# - applies_to: The command or commands affected by the mod. The commands must be in square brackets
-#     even if there is only one. (Required)
-#
-# - filter: Which values to block (Optional). The value must be one of the following:
-#       + all: block all non-zero values (Default if omitted)
-#       + below: Values less than the threshold are blocked. Those above it are passed through
-#       + above: Values  block all values above the threshold
-#
-# - threshold: The threshold state above or below which signals will be filtered. (Optional)
-#   The default if omitted is 0. If more than one command is in the applies_to list, all commands
-#   are subject to the same filter threshold.
-#
-# - condition: An array of conditions whose total evaluation must be true for filtering to take
-# place. Conditions are separate from the filter threshold test that is performed on the applies_to
-# commands, and they must be one or more of those defined above. (Optional)
-#
-# - unless: An array of conditions whose total evaluation must be false for filtering to take
-# place. The test of listed commands functions exactly as 'condition', but the commands are
-# disabled only if test of the conditions returns false.
-#
-# Both condition and unless can be defined simultaneously for separate commands, if some sates
-# must be true and others false. In this case, for signal filtering to occur, 
-#
-# - condition_test: Type of test to perform when more than one game condition is in the array.
-# - unless_test: Type of test to perform when more than one condition is in the unless array.
-#
-# Both condition_test and unless_test accept the following values:
-#     + all: All conditions must be true (for condition) or false (for unless) simultaneously
-#     + any: Any one condition must be true (for condition) or false (for unless) at one time
-#     + none: None of the defined conditions must be true (for condition) or false (for unless)
-#
-# - sequenceBegin:  A sequence of commands to issue when the mod is activated.
-# - sequenceFinish: A sequence of commands to issue when the mod is deactivated.
-#
-# The format for sequences is described with the sequence modifiers below.
 #
 [[modifier]]
 name = "No Melee"
@@ -877,7 +600,7 @@ description = "No scopes! Aiming is still allowed"
 type = "disable"
 groups = [ "combat" ]
 applies_to = [ "scope" ]
-condition = [ "aiming" ]
+while = [ "aiming" ]
 
 [[modifier]]
 name = "No Shoulder Swap"
@@ -885,7 +608,7 @@ description = "While aiming, Square is disabled"
 type = "disable"
 groups = [ "combat" ]
 applies_to = [ "shoulder swap" ]
-condition = [ "aiming" ]
+while = [ "aiming" ]
 
 [[modifier]]
 name = "No Reloading"
@@ -893,7 +616,7 @@ description = "You can still shoot, but you can't reload."
 type = "disable"
 groups = [ "combat" ]
 applies_to = [ "reload/toss" ]
-condition = [ "gun selected" ]
+while = [ "select weapon" ]
 unless = [ "aiming" ]
 
 [[modifier]]
@@ -945,7 +668,7 @@ description = "Movement is disabled if aiming"
 type = "disable"
 groups = [ "movement" ]
 applies_to = [ "vertical movement", "horizontal movement" ]
-condition = [ "aiming" ]
+while = [ "aiming" ]
 
 [[modifier]]
 name = "No Aiming Camera"
@@ -953,7 +676,7 @@ description = "Camera is disabled if aiming"
 type = "disable"
 groups = [ "view" ]
 applies_to = [ "vertical camera", "horizontal camera" ]
-condition = [ "aiming" ]
+while = [ "aiming" ]
 
 [[modifier]]
 name = "Nascar"
@@ -1027,21 +750,6 @@ begin_sequence = [ { event = "release", command = "select consumable" },
 
 # == Scaling Modifiers ==
 #
-# Scaling modifiers alter signals according to a linear formula, y = amplitude * x + offset,
-# where x is the true signal and y is what is sent to the console.
-#
-# In addition to the parameters defined for all modifier types, the following parameters are
-# implemented for formula modifiers.
-#
-# - amplitude: The scale factor to multiply the signal by. Default = 1.
-# - offset: A fixed offset to add to the signal. Default = 0.
-#
-# Notes: 
-# At least one of amplitude or offset must be defined.
-#
-# After transformation, the output signal is clipped to the maximum value for that signal.
-#
-# The same formula is applied to each command in the applies_to list.
 [[modifier]]
 name = "Inverted"
 description = "Inverts the vertical axis for aiming"
@@ -1091,25 +799,16 @@ applies_to = [ "horizontal movement" ]
 offset = -24
 
 # == Cooldown Modifiers ==
-# A cooldown modifier allows an action for a set period of time and then blocks it until a set
-# period has expired.
 #
-# In addition to the general parameters required for all modules, the following parameters are
-# used:
-# - applies_to: List of commands that are blocked while in cooldown (Required)
-# - trigger: The condition trigger that starts the cooldown period (Required)
-# - time_on: Length of time to allow the command before going into cooldown. (Required)
-# - time_off: Length of time spent in cooldown, where the command is blocked. (Required)
-#
-# Notes: When a cooldown is triggered, the timer runs regardless of whether the user continues
-# with the action that triggered the cooldown. 
 [[modifier]]
 name = "Bad Stamina"
 description = "Running is disabled after 2 seconds and takes 4 seconds to recharge."
 type = "cooldown"
 groups = [ "movement" ]
 applies_to = [ "dodge/sprint" ]
-trigger = "running"
+while = [ "movement", "sprint" ]
+trigger = [ "dodge/sprint", "vertical movement", "horizontal movement" ]
+cumulative = true
 time_on = 2.0
 time_off = 4.0
 
@@ -1119,7 +818,8 @@ description = "You can only aim for 1 second at a time, so take that shot quickl
 type = "cooldown"
 groups = [ "combat" ]
 applies_to = [ "aiming" ]
-trigger = "aiming"
+while = [ "aiming" ]
+trigger = [ "aiming" ]
 time_on = 1.0
 time_off = 3.0
 
@@ -1129,7 +829,8 @@ description = "Take your time between shots. No shooting or reloading for 5-seco
 type = "cooldown"
 groups = [ "combat" ]
 applies_to = [ "shoot" ]
-trigger = "shot taken"
+while = [ "aiming" ]
+trigger = [ "shoot" ]
 time_on = 0.1
 time_off = 5.0
 
@@ -1139,7 +840,7 @@ description = "Other than being really old? Melee takes a lot out of you. 3-seco
 type = "cooldown"
 groups = [ "combat" ]
 applies_to = [ "melee" ]
-trigger = "melee"
+trigger = [ "melee" ]
 time_on = 0.1
 time_off = 3.0
 
@@ -1149,26 +850,13 @@ description = "After moving for 5 seconds, wait for another 5 seconds."
 type = "cooldown"
 groups = [ "movement" ]
 applies_to = [ "vertical movement", "horizontal movement" ]
-trigger = "movement"
+while = [ "movement" ]
+trigger = [ "vertical movement", "horizontal movement" ]
+cumulative = true
 time_on = 5.0
 time_off = 5.0
 
 # == Repeat Modifiers ==
-#
-# Repeat modifiers apply commands in a cycle
-#
-# In addition to the general parameters required for all modules, the following parameters are
-# defined:
-# - 
-# - time_on: Length of time in seconds that the commands are on. (Required)
-# - time_off: Length of time in seconds that the commands are off. (Required)
-# - repeat_count: Number of on-off repetitions in one cycle. (Optional, Default = 1)
-# - cycle_delay: Time in seconds to wait after all repetitions before starting a new cycle.
-# - force_on: Array of values to which we will set the commands in applies_to when the command is
-#   on. If omitted, will set all commands in applies_to to the maximum value. (Optional)
-# - force_off: Array of values to which we will set the commands in applies_to when the command is
-#   off. If omitted, will set all commands in applies_to to 0. (Optional)
-# - block_while_busy: List of signals to drop while in the on state
 #
 [[modifier]]
 name = "Keep Proning"
@@ -1313,40 +1001,6 @@ unlisted = true
 
 # == Remap Modifiers ==
 #
-# Remap modifiers swap controller signals. Unlike other types of modifiers, these operate on the
-# signal names (L1, RX, etc.) rather than the defined commands.
-#
-# In addition to the general parameters required for all modules, the following parameters are
-# defined:
-#
-# remap: an array of inline tables defining the remapping. The following keys are defined:
-#   - from: The signal as received from the controller
-#   - to: The signal that will be sent to the console in place of the 'from' signal. If an
-#     axis is being mapped to a button, positive axis signals are mapped to this button.
-#   - to_neg: When an axis is mapped to a button, negative axis values are sent to this signal.
-#   - to_min: Boolean. If true, the 'to' signal will be set to the minimum value when mapping
-#     a button to an axis. If false, the 'to' signal will be set to the maximum value.
-#   - threshold: Proportion of maximum axis signal before sending the signal to a button.
-#   - invert: Boolean. If true, the sign of the signal is flipped (e.g., -1 becomes 1, etc.)
-#   - sensitivity: A scaling factor. The from signal is divided by this factor during remapping
-#
-# signals: An array of signals (expected to be axes) that the remap needs to process.
-#
-# disable_signals: If true, all the signals lised in the signals list will all receive a 0 signal
-# when the mod is initialized.
-#
-# random_remap: A list of controls that will be randomly remapped among one another.
-#
-# Notes:
-# A remap modifier may specify *either* a fixed list of remaps with the "remap" key *or* a list
-# of controls that will be randomly scrambled with the "random_remap" key, but not both.
-#
-# When using random_remap, note that you can only scramble signals within the same basic class:
-# buttons or axes. Trying to scramble across input types will almost certainly break things,
-# since an axis must map to two buttons and vice versa.
-#
-# Setting 'to' or 'to_neg' to NOTHING has the effect of blocking the signal from reaching the
-# console.
 [[modifier]]
 name = "D-pad Rotate"
 description = "Rotates the D-pad inputs clockwise"
@@ -1498,33 +1152,13 @@ random_remap = [ "L1", "L2", "R1", "R2" ]
 
 # == Formula Modifiers ==
 #
-# Formula modifiers apply an offset to incoming signals according to a specified, time-dependent formula.
-# Currently, we don't have the ability to parse a general formula, so you must select from a pre-defined
-# formula types.
-#
-# In addition to the parameters defined for all modifier types, the following parameters are
-# implemented for formula modifiers.
-#
-# - formula_type: Which type of formula to apply. (Required) The options currently implemented are:
-#    - circle: Ofsets trace a circle
-#    - eight_curve: Offsets form a figure-8 curve (Geronimo lemniscate)
-#    - janky: offsets produce an apparently unsteady (but cyclic) variation
-#
-# - period_length: Time in seconds for a complete period
-# - amplitude: Proportion of the maximum signal value
-#
-# Notes:
-# These formulas derive an x and y component to the offset, which will be applied in turn to each command in
-# the list. That is, the odd numbered items in the list will receive the x component of the formula, and the
-# even numbered components will receive the y component.
-#
 [[modifier]]
 name = "Mega Scope Sway"
 description = "Good luck landing shots"
 type = "formula"
 groups = [ "combat", "view" ]
 applies_to = [ "horizontal camera", "vertical camera" ]
-condition =  [ "aiming" ]
+while =  [ "aiming" ]
 formula_type = "eight_curve"
 period_length = 0.5 
 amplitude = 0.5
@@ -1549,40 +1183,7 @@ formula_type = "janky"
 amplitude = 0.6
 period_length = 5.0
 
-[[modifier]]
-name = "Stumblebum"
-description = "Fast movement will make you go prone"
-type = "sequence"
-groups = [ "movement"]
-block_while_busy = [ "dodge/sprint", "crouch/prone" ]
-trigger = [ "fast movement" ]
-cycle_delay = 1.0
-repeat_sequence = [  
-  { event = "press", command = "dodge/sprint", delay = 0.1 },
-  { event = "press", command = "crouch/prone", delay = 0.8 },
-  { event = "release", command = "crouch/prone"},
-  { event = "release", command = "dodge/sprint"}
-  ]
-begin_sequence = [ { event = "release", command = "dodge/sprint" },
-                  { event = "release", command = "crouch/prone" }]
-finish_sequence = [{ event = "release", command = "dodge/sprint" },
-                  { event = "release", command = "crouch/prone" }]
-
-[[modifier]]
-name = "Drunk"
-description = "Random joystick motion. Also don't push things too far, or you may stumble (go prone)"
-type = "parent"
-groups = [ "movement", "view" ]
-children = ["Random Movement", "Stumblebum"]
-
-
 # === Sequence Modifier ===
-#
-# Sequence modifiers execute an arbitrary sequence of commands, either once (at the start or end of
-# the mod's lifetime), or in a cycle.
-#
-# In addition to the general parameters required for all modules, the following parameters are
-# defined:
 #
 [[modifier]]
 name = "Desk Pop"
@@ -1598,18 +1199,39 @@ begin_sequence = [
   ]
 
 [[modifier]]
+name = "Stumblebum"
+description = "Fast movement will make you go prone"
+type = "sequence"
+groups = [ "movement"]
+block_while_busy = [ "dodge/sprint", "crouch/prone" ]
+while = [ "fast movement" ]
+trigger = [ "vertical movement", "horizontal movement", "dodge/sprint" ]
+cycle_delay = 1.0
+repeat_sequence = [  
+  { event = "press", command = "dodge/sprint", delay = 0.1 },
+  { event = "press", command = "crouch/prone", delay = 0.8 },
+  { event = "release", command = "crouch/prone"},
+  { event = "release", command = "dodge/sprint"}
+  ]
+begin_sequence = [ { event = "release", command = "dodge/sprint" },
+                  { event = "release", command = "crouch/prone" }]
+finish_sequence = [{ event = "release", command = "dodge/sprint" },
+                  { event = "release", command = "crouch/prone" }]
+
+
+[[modifier]]
 name = "Double Tap"
 description = "It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins."
 type = "sequence"
 groups = [ "combat" ]
 block_while_busy = [ "aiming", "shoot" ]
-trigger = [ "shot taken" ]
+while = [ "aiming" ]
+trigger = [ "shoot" ]
 start_delay = 0.2
-step_timings = [ 1.0, 0.2, 0.0 ]
 repeat_sequence = [
-  { step = 1, event = "release", command = "shoot", delay = 1.0 },
-  { step = 2, event = "hold", command = "shoot", delay = 0.2 },
-  { step = 3, event = "release", command = "shoot" }
+  { event = "release", command = "shoot", delay = 1.0 },
+  { event = "hold", command = "shoot", delay = 0.2 },
+  { event = "release", command = "shoot" }
   ]
 
 [[modifier]]
@@ -1682,7 +1304,8 @@ description = "RIP elbows and knees. Any movement results in a prone dive."
 type = "sequence"
 groups = [ "movement" ]
 block_while_busy = [ "dodge/sprint", "crouch/prone" ]
-trigger = [ "movement" ]
+while = [ "movement" ]
+trigger = [ "vertical movement", "horizontal movement" ]
 repeat_sequence = [  
   { event = "press", command = "dodge/sprint", delay = 0.1 },
   { event = "press", command = "crouch/prone", delay = 0.8 },
@@ -1712,19 +1335,6 @@ repeat_sequence = [
    ]
 
 # === Menu Modifiers ===
-#
-# Menu modifiers select an item in the game menu and (if applicable) set it to a particular
-# value for the lifetime of the modifier. When the modifier is removed, the value is restored
-# to its previous state.
-#
-# In addition to the general parameters required for all modules, the following parameters are
-# defined:
-#
-# item:  The menu item to be selected. This must be the name of an item/submenu defined in the menu
-#        layout.
-# value: An integer indicating the value to set the menu item to. Items that are "select" types do
-#        not require a value.
-# reset_on_finish: 
 [[modifier]]
 name = "Restart Checkpoint"
 description = "Best served prior to the end of a long encounter."
@@ -2275,13 +1885,6 @@ unlisted = true
 
 # === Delay Modifiers ===
 #
-# Delay modifiers introduce a delay between when the controller input is pressed and when
-# it is passed on to the console
-#
-# In addition to the general parameters required for all modules, the following parameters are
-# defined:
-# - delay: The delay time in seconds
-#
 [[modifier]]
 name = "Input Delay"
 description = "Introduces a 0.2 second delay to the controller"
@@ -2348,25 +1951,6 @@ delay = 0.2
 
 # === Parent Modifiers ===
 #
-# Parent modifiers are container mods that execute a series of child modifiers, either from a
-# specific list, randomly selected, or both.
-#
-# In addition to the keys defined for all modifiers, the following keys are recognized for this
-# type:
-#
-# - children: A list of specific child modifiers.
-# - random: A boolean. If true, selects value number of child mods at random
-# - value: Number of random mods to select.
-#
-# Notes:
-# A new set of random mods is selected each time the modifier is applied.
-#
-# During the lifetime of the mod, child modifiers listed in _children_ will be processed in the order
-# that they are specified in the TOML file. If both specific child mods and random mods are specified,
-# the random mods will be processed after the explicit child mods.
-#
-# If you have specific child modifiers that should only be used as part of a parent mod, you can mark
-# those children as 'unlisted' so they do not appear for selection for voting.
 [[modifier]]
 name = "Mystery"
 description = "Applies a random modifier"
@@ -2386,4 +1970,11 @@ name = "Navigation Assistance"
 description = "Keeps pointing camera in direction of story progression"
 type = "parent"
 children = [ "Enable Navigation Assistance", "Periodic Navigation Assistance"]
+
+[[modifier]]
+name = "Drunk"
+description = "Random joystick motion. Also don't push things too far, or you may stumble (go prone)"
+type = "parent"
+groups = [ "movement", "view" ]
+children = ["Random Movement", "Stumblebum"]
 

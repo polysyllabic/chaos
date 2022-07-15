@@ -18,9 +18,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include<unordered_map>
 #include <toml++/toml.h>
 #include "Sequence.hpp"
-#include "GameCommandTable.hpp"
 
 namespace Chaos {
   class Controller;

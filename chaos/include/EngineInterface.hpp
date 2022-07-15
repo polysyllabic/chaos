@@ -35,7 +35,6 @@ namespace Chaos {
   class SignalRemap;
   class GameCondition;
   class Sequence;
-  class ConditionTrigger;
   
   class EngineInterface {
   public:
@@ -55,23 +54,26 @@ namespace Chaos {
     virtual std::shared_ptr<Modifier> getModifier(const std::string& name) = 0;
     virtual std::unordered_map<std::string, std::shared_ptr<Modifier>>& getModifierMap() = 0;
     virtual std::list<std::shared_ptr<Modifier>>& getActiveMods() = 0;
+
     // These functions access the menu system
     virtual std::shared_ptr<MenuItem> getMenuItem(const std::string& name) = 0;
     virtual void setMenuState(std::shared_ptr<MenuItem> item, unsigned int new_val) = 0;
     virtual void restoreMenuState(std::shared_ptr<MenuItem> item) = 0;
-    // These functions access the signal (remap) table
+
+    // These functions access the controller inputs (signals)
     virtual std::shared_ptr<ControllerInput> getInput(const std::string& name) = 0;
     virtual std::shared_ptr<ControllerInput> getInput(const DeviceEvent& event) = 0;
-    // Game Controller Inputs
     virtual void addControllerInputs(const toml::table& config, const std::string& key,
                                  std::vector<std::shared_ptr<ControllerInput>>& vec) = 0;
+
     // Game Commands
     virtual void addGameCommands(const toml::table& config, const std::string& key,
                                  std::vector<std::shared_ptr<GameCommand>>& vec) = 0;
+    virtual void addGameCommands(const toml::table& config, const std::string& key,
+                                 std::vector<std::shared_ptr<ControllerInput>>& vec) = 0;
     // Game Conditions
     virtual void addGameConditions(const toml::table& config, const std::string& key,
                                  std::vector<std::shared_ptr<GameCondition>>& vec) = 0;
-    virtual std::shared_ptr<ConditionTrigger> getTrigger(const std::string& name) = 0;
     // Sequences
     virtual std::shared_ptr<Sequence> createSequence(toml::table& config,
                                                      const std::string& key, bool required) = 0;
