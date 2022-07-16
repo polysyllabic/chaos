@@ -65,7 +65,7 @@ void SequenceModifier::begin() {
 
 void SequenceModifier::update() {
   // Skip if there's no repeated sequence
-  if (repeat_sequence->empty()) {
+  if (!repeat_sequence || repeat_sequence->empty()) {
     return;
   }
   sequence_time += timer.dTime();
