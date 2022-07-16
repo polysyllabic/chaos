@@ -58,6 +58,7 @@ CooldownModifier::CooldownModifier(toml::table& config, EngineInterface* e) {
 }
 
 void CooldownModifier::begin() {
+  PLOG_DEBUG << "Begin for " << getName();
   cooldown_timer = 0;
   state = CooldownState::UNTRIGGERED;
 }
@@ -94,8 +95,10 @@ void CooldownModifier::update() {
 bool CooldownModifier::tweak(DeviceEvent& event) {
   if (state == CooldownState::UNTRIGGERED) {
     // Check any incomming event to start the trigger
-    for (auto& cmd : trigger) {
-      if (cmd->matches(event) && inCondition()) {
+    PLOG_DEBUG << "Checking trigger conditions";
+    for (auto& sig : trigger) {
+      if (sig->matches(event) && inCondition()) {
+        PLOG_DEBUG << "Trigger matched on event " << (int) event.type << "." << (int) event.id;
         state = CooldownState::ALLOW;
         return true;
       }

@@ -118,6 +118,7 @@ bool GameCondition::inCondition() {
   if (while_conditions.empty()) {
     return persistent_state;
   }
+  PLOG_DEBUG << "Polling " << name << " condition";
   // We have 
   if (threshold_type == ThresholdType::DISTANCE) {
     if (while_conditions.size() != 2) {

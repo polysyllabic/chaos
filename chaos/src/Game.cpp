@@ -90,15 +90,12 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
 
   // Process the game-command definitions
   buildCommandList(configuration);
-  PLOG_DEBUG << "Errors after command list config: " << parse_errors;
 
   // Process the conditions
   buildConditionList(configuration);
-  PLOG_DEBUG << "Errors after condition list config: " << parse_errors;
 
   // Initialize defined sequences and static parameters for sequences
   buildSequenceList(configuration);
-  PLOG_DEBUG << "Errors after sequence list config: " << parse_errors;
 
   use_menu = configuration["use_menu"].value_or(true);
 
@@ -106,7 +103,6 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
     // Initialize the menu system's general settings
     makeMenu(configuration);
   }
-  PLOG_DEBUG << "Errors after menu config: " << parse_errors;
 
   // Create the modifiers
   parse_errors += modifiers.buildModList(configuration, engine, use_menu);
