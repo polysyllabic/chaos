@@ -75,10 +75,7 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
   }
  
   engine->addGameConditions(config, "while", conditions);
-  condition_test = getConditionTest(config, "condition_test");
-
   engine->addGameConditions(config, "unless", unless_conditions);
-  unless_test = getConditionTest(config, "unless_test");
 
   on_begin  = engine->createSequence(config, "begin_sequence", false);
   on_finish = engine->createSequence(config, "finish_sequence", false);
@@ -123,7 +120,6 @@ bool Modifier::remap(DeviceEvent& event) {
 
 bool Modifier::_tweak(DeviceEvent& event) {
   // Update any conditions that track persistent states
-  PLOG_DEBUG << "Checking incoming event for " << getName();
   for (auto& cond : conditions) {
     assert(cond);
     cond->updateState(event);
@@ -140,7 +136,6 @@ bool Modifier::tweak(DeviceEvent& event) {
 }
 
 void Modifier::sendBeginSequence() { 
-  PLOG_DEBUG << "Checking beginning sequence for " << getName();
   if (on_begin && !on_begin->empty()) {
     PLOG_DEBUG << "Sending beginning sequence for " << getName();
     in_sequence = lock_while_busy;
@@ -158,35 +153,9 @@ void Modifier::sendFinishSequence() {
   }
 }
 
-ConditionCheck Modifier::getConditionTest(const toml::table& config, const std::string& key) {
-  std::optional<std::string_view> ttype = config[key].value<std::string_view>();
-
-  // Default type is magnitude
-  ConditionCheck rval = ConditionCheck::ANY;
-  if (ttype) {
-    if (*ttype == "any") {
-      rval = ConditionCheck::ANY;
-    } else if (*ttype == "none") {
-      rval = ConditionCheck::NONE;
-    } else if (*ttype != "all") {
-      PLOG_WARNING << "Invalid ConditionTest '" << *ttype << "': using 'all' instead.";
-    }
-  }
-  return rval;
-}
-
-bool Modifier::testConditions(std::vector<std::shared_ptr<GameCondition>> condition_list, ConditionCheck type) {
+bool Modifier::testConditions(std::vector<std::shared_ptr<GameCondition>>& condition_list) {
   assert(!condition_list.empty());
 
-  // We can check whether all, any, or none of the gamestates are true
-  if (type == ConditionCheck::ANY) {
-    return std::any_of(condition_list.begin(), condition_list.end(), [](std::shared_ptr<GameCondition> c) {
-	    return c->inCondition(); });
-  } else if (type == ConditionCheck::NONE) {
-    return std::none_of(condition_list.begin(), condition_list.end(), [](std::shared_ptr<GameCondition> c) {
-	    return c->inCondition(); });
-    }
-  PLOG_DEBUG << "test type = all";
   return std::all_of(condition_list.begin(), condition_list.end(), [](std::shared_ptr<GameCondition> c) {
 	  return c->inCondition(); });
 }
@@ -197,7 +166,7 @@ bool Modifier::inCondition() {
     return true;
   }
   PLOG_DEBUG << "Testing while conditions";
-  return testConditions(conditions, condition_test);
+  return testConditions(conditions);
 }
 
 bool Modifier::inUnless() {
@@ -205,7 +174,7 @@ bool Modifier::inUnless() {
   if (unless_conditions.empty()) {
     return false;
   }
-  return testConditions(unless_conditions, unless_test);
+  return testConditions(unless_conditions);
 }
 
 Json::Value Modifier::toJsonObject() {
