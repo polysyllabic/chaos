@@ -100,6 +100,7 @@ void Modifier::_begin() {
 void Modifier::begin() {}
 
 void Modifier::_update(bool wasPaused) {
+  PLOG_DEBUG << "Update timer";
   timer.update();
   if (wasPaused) {
     pause_time_accumulator += timer.dTime();
@@ -134,9 +135,11 @@ bool Modifier::remap(DeviceEvent& event) {
 bool Modifier::_tweak(DeviceEvent& event) {
   // Update any conditions that track persistent states
   for (auto& cond : conditions) {
+    assert(cond);
     cond->updateState(event);
   }
   for (auto& cond : unless_conditions) {
+    assert(cond);
     cond->updateState(event);
   }
   return tweak(event);
@@ -147,8 +150,9 @@ bool Modifier::tweak(DeviceEvent& event) {
 }
 
 void Modifier::sendBeginSequence() { 
+  PLOG_DEBUG << "Checking beginning sequence for " << getName();
   if (on_begin && !on_begin->empty()) {
-    PLOG_DEBUG << "Sending beginning sequence for " << name;
+    PLOG_DEBUG << "Sending beginning sequence for " << getName();
     in_sequence = lock_while_busy;
     on_begin->send();
     in_sequence = false;
@@ -157,7 +161,7 @@ void Modifier::sendBeginSequence() {
 
 void Modifier::sendFinishSequence() { 
   if (on_finish && !on_finish->empty()) {
-    PLOG_DEBUG << "Sending finishing sequence for " << name;
+    PLOG_DEBUG << "Sending finishing sequence for " << getName();
     in_sequence = lock_while_busy;
     on_finish->send();
     in_sequence = false;

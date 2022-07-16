@@ -124,18 +124,22 @@ void ChaosEngine::doAction() {
     pausedPrior = true;
     return;    
   }
-
+  if (pausedPrior) {
+    PLOG_DEBUG << "Resuming after pause";
+  }
   // Initialize the mods that are waiting
   lock();  
   while(!modifiersThatNeedToStart.empty()) {
+    PLOG_DEBUG << "Processing new modifier";
     modifiersThatNeedToStart.front()->_begin();
     modifiersThatNeedToStart.pop();
   }
   unlock();
 	
   lock();
+  PLOG_DEBUG << "invoking _update for active mods";
   for (auto& mod : modifiers) {
-    (*mod)._update(pausedPrior);
+    mod->_update(pausedPrior);
   }
   pausedPrior = false;
   unlock();
@@ -143,12 +147,15 @@ void ChaosEngine::doAction() {
   // Check front element for expiration. 
   if (modifiers.size() > 0) {
     std::shared_ptr<Modifier> front = modifiers.front();
+    assert(front);
+    PLOG_DEBUG << "front modifier " << front->getName() << " lifespan =" << front->lifespan() << ", lifetime = " << front->lifetime();
     if ((front->lifespan() >= 0 && front->lifetime() > front->lifespan()) ||
 	      (front->lifespan() <  0 && front->lifetime() > game.getTimePerModifier())) {
       removeMod(front);
     }
   } if (modifiers.size() > game.getNumActiveMods()) {
     // If we have too many mods as the result of a manual apply, remove the oldest one
+    PLOG_DEBUG << " Have " << modifiers.size() << " mods; limit is " << game.getNumActiveMods();
     removeOldestMod();
   }
 
@@ -157,6 +164,7 @@ void ChaosEngine::doAction() {
 // Remove oldest mod whether or not it's expired. This keeps manually inserted mods from
 // going beyond the specified modifier count.
 void ChaosEngine::removeOldestMod() {
+  PLOG_DEBUG << "Looking for oldest mod";
   if (modifiers.size() > 0) {
     std::shared_ptr<Modifier> oldest = nullptr;
     for (auto& mod : modifiers) {
@@ -164,11 +172,13 @@ void ChaosEngine::removeOldestMod() {
         oldest = mod;
       }
     }
+    assert(oldest);
     removeMod(oldest);
   }
 }
 
 void ChaosEngine::removeMod(std::shared_ptr<Modifier> to_remove) {
+  assert(to_remove);
   PLOG_INFO << "Removing '" << to_remove->getName() << "' from active mod list";
   PLOG_DEBUG << "Lifetime on removal = " << to_remove->getLifetime();
   lock();
