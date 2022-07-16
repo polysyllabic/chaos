@@ -147,7 +147,6 @@ bool Modifier::tweak(DeviceEvent& event) {
 }
 
 void Modifier::sendBeginSequence() { 
-  PLOG_DEBUG << "Checking beginning sequence for " << name;
   if (on_begin && !on_begin->empty()) {
     PLOG_DEBUG << "Sending beginning sequence for " << name;
     in_sequence = lock_while_busy;

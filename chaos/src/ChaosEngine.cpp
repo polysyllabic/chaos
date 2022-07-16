@@ -128,7 +128,6 @@ void ChaosEngine::doAction() {
   // Initialize the mods that are waiting
   lock();  
   while(!modifiersThatNeedToStart.empty()) {
-    PLOG_DEBUG << "Processing new modifier.";
     modifiersThatNeedToStart.front()->_begin();
     modifiersThatNeedToStart.pop();
   }
@@ -159,7 +158,6 @@ void ChaosEngine::doAction() {
 // going beyond the specified modifier count.
 void ChaosEngine::removeOldestMod() {
   if (modifiers.size() > 0) {
-    PLOG_DEBUG << "Finding oldest mod";
     std::shared_ptr<Modifier> oldest = nullptr;
     for (auto& mod : modifiers) {
       if (!oldest || oldest->lifetime() > mod->lifetime()) {
