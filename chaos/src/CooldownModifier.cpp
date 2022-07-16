@@ -40,21 +40,29 @@ CooldownModifier::CooldownModifier(toml::table& config, EngineInterface* e) {
   if (commands.empty()) {
     throw std::runtime_error("No command associated with cooldown modifier.");
   }
+  PLOG_DEBUG << "Cooldown mod " << getName();
 
   engine->addGameCommands(config, "trigger", trigger);
-  
+
   time_on = config["time_on"].value_or(0.0);
-  if (time_on == 0) {
-    PLOG_WARNING << "The time_on for this cooldown mod is 0 seconds!";
+  if (time_on <= 0.0) {
+    throw std::runtime_error("Cooldown time_on must be a positive number");
   }
   
   time_off = config["time_off"].value_or(0.0);
-  if (time_off == 0) {
-    PLOG_WARNING << "The time_off for this cooldown mod is 0 seconds!";
+  if (time_off <= 0.0) {
+    throw std::runtime_error("Cooldown time_off must be a positive number");
   }
-  PLOG_VERBOSE << " time_on: " << time_on << "; time_off: " << time_off;
 
   cumulative = config["cumulative"].value_or(false);
+
+  PLOG_DEBUG << "Cooldown " << getName() << ": time_on = " << time_on << "; time_off = " << time_off << "; cumulative = " << cumulative;
+  for (auto& t : trigger) {
+    PLOG_DEBUG << "Trigger on event " << t->getName();
+  }
+  for (auto& c : conditions) {
+    PLOG_DEBUG << "With condition" << c->getName();
+  }
 }
 
 void CooldownModifier::begin() {

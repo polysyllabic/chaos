@@ -126,7 +126,7 @@ void ChaosEngine::doAction() {
   }
 
   // Initialize the mods that are waiting
-  lock();
+  lock();  
   while(!modifiersThatNeedToStart.empty()) {
     PLOG_DEBUG << "Processing new modifier.";
     modifiersThatNeedToStart.front()->_begin();
