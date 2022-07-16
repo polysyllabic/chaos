@@ -123,6 +123,9 @@ short ControllerInput::getState() {
 }
 
 bool ControllerInput::matches(const DeviceEvent& event) {
-  return (event.index() == button_index || 
+  bool rval = (event.index() == button_index || 
     (input_type == ControllerSignalType::HYBRID && event.index() == hybrid_index));
+  PLOG_DEBUG << name << ": button_index=" << button_index << "; hybrid_index=" << hybrid_index << "; event index=" << 
+    event.index() << "; match=" << (rval ? "YES" : "NO");
+  return rval;
 }

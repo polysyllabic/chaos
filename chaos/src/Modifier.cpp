@@ -186,6 +186,7 @@ bool Modifier::testConditions(std::vector<std::shared_ptr<GameCondition>> condit
     return std::none_of(condition_list.begin(), condition_list.end(), [](std::shared_ptr<GameCondition> c) {
 	    return c->inCondition(); });
     }
+  PLOG_DEBUG << "test type = all";
   return std::all_of(condition_list.begin(), condition_list.end(), [](std::shared_ptr<GameCondition> c) {
 	  return c->inCondition(); });
 }
@@ -195,6 +196,7 @@ bool Modifier::inCondition() {
   if (conditions.empty()) {
     return true;
   }
+  PLOG_DEBUG << "Testing while conditions";
   return testConditions(conditions, condition_test);
 }
 

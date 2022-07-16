@@ -74,7 +74,6 @@ void CooldownModifier::update() {
 
   // Get the difference since the last time update.
   double deltaT = timer.dTime();
-  PLOG_DEBUG << " deltaT = " << deltaT << "; state = " << (int) state;
 
   if (state == CooldownState::BLOCK) {
     // count down until cooldown ends
@@ -103,7 +102,6 @@ void CooldownModifier::update() {
 bool CooldownModifier::tweak(DeviceEvent& event) {
   if (state == CooldownState::UNTRIGGERED) {
     // Check any incomming event to start the trigger
-    PLOG_DEBUG << "Checking trigger conditions";
     for (auto& sig : trigger) {
       if (sig->matches(event) && inCondition()) {
         PLOG_DEBUG << "Trigger matched on event " << (int) event.type << "." << (int) event.id;
