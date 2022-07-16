@@ -88,12 +88,15 @@ void CooldownModifier::update() {
     // if the while condition is true
     if (!cumulative || inCondition()) {
       cooldown_timer += deltaT;
+      PLOG_DEBUG << "timer_on period = " << cooldown_timer;
     }
     if (cooldown_timer > time_on) {
       PLOG_DEBUG << "Cooldown for " << getName() << " started";
 	    cooldown_timer = time_off;
 	    state = CooldownState::BLOCK;
-      // Disable event necessary?
+      for (auto& cmd : commands) {
+        
+      }
       // engine->fakePipelinedEvent(cooldown_event, getptr());
     }
   }

@@ -45,6 +45,7 @@ void GameCondition::addCondition(std::shared_ptr<GameCommand> command) {
 bool GameCondition::thresholdComparison(short value) {
   
   assert(threshold_type != ThresholdType::DISTANCE);
+  PLOG_DEBUG << "threshold = " << threshold << "; value = " << value;
   switch (threshold_type) {
     case ThresholdType::GREATER:
       return value > threshold;

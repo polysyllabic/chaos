@@ -142,7 +142,6 @@ void ChaosEngine::doAction() {
   lock();
   for (auto& mod : modifiers) {
     assert (mod);
-    PLOG_DEBUG << "invoking _update for " << mod->getName();
     mod->_update(pausedPrior);
   }
   pausedPrior = false;
@@ -152,7 +151,6 @@ void ChaosEngine::doAction() {
   if (modifiers.size() > 0) {
     std::shared_ptr<Modifier> front = modifiers.front();
     assert(front);
-    PLOG_DEBUG << "front modifier " << front->getName() << " lifespan =" << front->lifespan() << ", lifetime = " << front->lifetime();
     if ((front->lifespan() >= 0 && front->lifetime() > front->lifespan()) ||
 	      (front->lifespan() <  0 && front->lifetime() > game.getTimePerModifier())) {
       removeMod(front);
