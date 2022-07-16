@@ -128,11 +128,11 @@ std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const toml::tabl
 
 // This is the game-specific initialization
 int ControllerInputTable::initializeInputs(const toml::table& config) {
-  int parse_errors;
+  int errors;
   double scale = config["remapping"]["touchpad_scale"].value_or(1.0);
   if (scale == 0) {
     PLOG_ERROR << "Touchpad scale cannot be 0. Setting to 1";
-    ++parse_errors;
+    ++errors;
     scale = 1;
   }
   Touchpad::setDefaultScale(scale);
@@ -141,7 +141,7 @@ int ControllerInputTable::initializeInputs(const toml::table& config) {
   Touchpad::setDefaultSkew(skew);
 
   PLOG_VERBOSE << "Touchpad scale = " << scale << "; skew = " << skew;
-  return parse_errors;
+  return errors;
 }
 
 void ControllerInputTable::addToVector(const toml::table& config, const std::string& key,

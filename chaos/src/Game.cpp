@@ -85,19 +85,20 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
   }
   PLOG_INFO << "Time per modifier: " << time_per_modifier << " seconds";
 
-  // Process the game-command definitions
-  buildCommandList(configuration);
-
-  // Process the conditions
-  buildConditionList(configuration);
-
-  // buildTriggerList(configuration);
-
   // Initialize the controller input table
   parse_errors += signal_table.initializeInputs(configuration);
 
+  // Process the game-command definitions
+  buildCommandList(configuration);
+  PLOG_DEBUG << "Errors after command list config: " << parse_errors;
+
+  // Process the conditions
+  buildConditionList(configuration);
+  PLOG_DEBUG << "Errors after condition list config: " << parse_errors;
+
   // Initialize defined sequences and static parameters for sequences
   buildSequenceList(configuration);
+  PLOG_DEBUG << "Errors after sequence list config: " << parse_errors;
 
   use_menu = configuration["use_menu"].value_or(true);
 
@@ -105,6 +106,7 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
     // Initialize the menu system's general settings
     makeMenu(configuration);
   }
+  PLOG_DEBUG << "Errors after menu config: " << parse_errors;
 
   // Create the modifiers
   parse_errors += modifiers.buildModList(configuration, engine, use_menu);
@@ -359,33 +361,6 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
 
   std::shared_ptr<GameCondition> ret = std::make_shared<GameCondition>(*condition_name);
 
-  // Default type is magnitude
-  ThresholdType threshold_type = ThresholdType::MAGNITUDE;
-  std::optional<std::string_view> thtype = config["threshold_type"].value<std::string_view>();
-  if (thtype) {
-    if (*thtype == "greater" || *thtype == ">") {
-      threshold_type = ThresholdType::GREATER;
-    } else if (*thtype == "greater_equal" || *thtype == ">=") {
-      threshold_type = ThresholdType::GREATER_EQUAL;
-    } else if (*thtype == "less" || *thtype == "<") {
-      threshold_type = ThresholdType::LESS;
-    } else if (*thtype == "less_equal" || *thtype == "<=") {
-      threshold_type = ThresholdType::LESS_EQUAL;
-    } else if (*thtype == "distance") {
-    threshold_type = ThresholdType::DISTANCE;
-    } else if (*thtype != "magnitude") {
-      PLOG_WARNING << "Invalid threshold_type '" << *thtype;
-    }
-  }
-
-  double proportion = config["threshold"].value_or(1.0);
-  if (proportion < 0 || proportion > 1) {
-    ++parse_warnings;
-    PLOG_WARNING << "Condition threshold must be between 0 and 1. Using 1";
-    proportion = 1.0;
-  }
-  ret->setThreshold(proportion);
-
   if (config.contains("while")) {
     if (config.contains("set_on") || config.contains("clear_on")) {
       ++parse_errors;
@@ -419,11 +394,8 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
       PLOG_ERROR << "No commands in while list";
       return nullptr;
     }
-    PLOG_VERBOSE << "Transient condition: " << *condition_name <<  "; " << ((thtype) ? *thtype : "magnitude") <<
-      " threshold proportion = " << proportion << " -> " << ret->getThreshold();
-    return ret;
-  }
-  // If we get here, we're constructing a persistent condition
+  } else {
+    // If we get here, we're constructing a persistent condition
   if (!config.contains("set_on") || !config.contains("clear_on")) {
     ++parse_errors;
     PLOG_ERROR << "A persistent condition must contain both set_on and clear_on parameters";
@@ -441,9 +413,37 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
     return nullptr;
   }
   ret->setClearOn(cmd);
+  }
 
-  PLOG_VERBOSE << "Persistent condition: " << *condition_name <<  "; " << ((thtype) ? *thtype : "magnitude") <<
-    " threshold proportion = " << proportion << " -> " << ret->getThreshold();
+  // Default type is magnitude
+  ThresholdType threshold_type = ThresholdType::MAGNITUDE;
+  std::optional<std::string_view> thtype = config["threshold_type"].value<std::string_view>();
+  if (thtype) {
+    if (*thtype == "greater" || *thtype == ">") {
+      threshold_type = ThresholdType::GREATER;
+    } else if (*thtype == "greater_equal" || *thtype == ">=") {
+      threshold_type = ThresholdType::GREATER_EQUAL;
+    } else if (*thtype == "less" || *thtype == "<") {
+      threshold_type = ThresholdType::LESS;
+    } else if (*thtype == "less_equal" || *thtype == "<=") {
+      threshold_type = ThresholdType::LESS_EQUAL;
+    } else if (*thtype == "distance") {
+    threshold_type = ThresholdType::DISTANCE;
+    } else if (*thtype != "magnitude") {
+      PLOG_WARNING << "Invalid threshold_type '" << *thtype;
+    }
+  }
+
+  double proportion = config["threshold"].value_or(1.0);
+  if (proportion < 0 || proportion > 1) {
+    ++parse_warnings;
+    PLOG_WARNING << "Condition threshold must be between 0 and 1. Using 1";
+    proportion = 1.0;
+  }
+  ret->setThreshold(proportion);
+
+  PLOG_VERBOSE << "Transient condition: " << *condition_name <<  "; " << ((thtype) ? *thtype : "magnitude") <<
+      " threshold proportion = " << proportion << " -> " << ret->getThreshold();
 
   return ret;
 }

@@ -616,7 +616,7 @@ description = "You can still shoot, but you can't reload."
 type = "disable"
 groups = [ "combat" ]
 applies_to = [ "reload/toss" ]
-while = [ "select weapon" ]
+while = [ "gun selected" ]
 unless = [ "aiming" ]
 
 [[modifier]]
