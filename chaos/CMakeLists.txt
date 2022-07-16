@@ -7,12 +7,12 @@ project(chaos VERSION 2.0
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(FATAL_ERROR "Do not build in-source. Please remove CMakeCache.txt and the CMakeFiles/ directory. Then build out-of-source.")
-endif()
+endif() 
 
 set(CMAKE_BUILD_TYPE Debug)
 set(RASPBERRY_PI TRUE)
 set(USE_DUALSENSE FALSE)
-
+ 
 # Parse version variables
 file(READ "VERSION" ver)
 
@@ -103,27 +103,17 @@ set_required_build_settings_for_GCC8()
 
 add_executable(chaos include/config.hpp
 	include/ChaosEngine.hpp
-	include/Configuration.hpp
-  #include/Controller.hpp
-  #include/ControllerInjector.hpp
-  #include/ControllerInput.hpp
-  #include/ControllerInputTable.hpp
-  #include/ControllerRaw.hpp
-	#include/ControllerState.hpp
+  include/Configuration.hpp
   include/CooldownModifier.hpp
   include/DelayModifier.hpp
-  #include/DeviceEvent.hpp
   include/DisableModifier.hpp
-	#include/Dualshock.hpp
   include/EngineInterface.hpp
   include/enumerations.hpp
 	include/factory.hpp
   include/FormulaModifier.hpp
   include/Game.hpp
   include/GameCommand.hpp
-  include/GameCommandTable.hpp
   include/GameCondition.hpp
-  include/GameConditionTable.hpp
   include/GameMenu.hpp
   include/MenuInterface.hpp
   include/MenuItem.hpp
@@ -137,26 +127,15 @@ add_executable(chaos include/config.hpp
   include/Sequence.hpp
   include/SequenceModifier.hpp
   include/SequenceTable.hpp
-  #include/signals.hpp
-  #include/TOMLUtils.hpp
-	#include/Touchpad.hpp
 	src/ChaosEngine.cpp
-	src/Configuration.cpp
-	#src/Controller.cpp
-  #src/ControllerInput.cpp
-  #src/ControllerInputTable.cpp
-  #src/ControllerRaw.cpp
-	#src/ControllerState.cpp
+  src/Configuration.cpp
   src/CooldownModifier.cpp
   src/DelayModifier.cpp
   src/DisableModifier.cpp
-	#src/Dualshock.cpp
   src/FormulaModifier.cpp
   src/Game.cpp
 	src/GameCommand.cpp
-  src/GameCommandTable.cpp
   src/GameCondition.cpp
-  src/GameConditionTable.cpp
   src/GameMenu.cpp
   src/MenuItem.cpp
   src/MenuModifier.cpp
@@ -169,8 +148,6 @@ add_executable(chaos include/config.hpp
   src/Sequence.cpp
   src/SequenceModifier.cpp
   src/SequenceTable.cpp
-	#src/Touchpad.cpp
-  #src/TOMLUtils.cpp
 	src/main.cpp)
 
 target_compile_features(chaos PRIVATE cxx_std_17)
@@ -197,19 +174,24 @@ target_link_libraries(chaos	PUBLIC chaos_communicator
 		sniffify
 		${LIBUSB_LIBRARIES})
 
-#find_package(Doxygen)
-#if (DOXYGEN_FOUND)
-#	set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in)
-#	set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
-#	configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
-#	message("Configuring Doxygen")
-#
-#	add_custom_target(doc ALL
-#		COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
-#		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-#		COMMENT "Generating HTML documentation"
-#		VERBATIM)
-#endif()
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+  set(LATEX_OUTPUT NO)
+  find_package(LATEX)
+  if (LATEX_FOUND)
+    set(LATEX_OUTPUT YES)
+  endif()
+	set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in)
+	set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+	configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+	message("Configuring Doxygen")
+
+	add_custom_target(doc ALL
+		COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+		COMMENT "Generating documentation"
+		VERBATIM)
+endif()
 
 # Tests
 add_subdirectory(tests EXCLUDE_FROM_ALL)

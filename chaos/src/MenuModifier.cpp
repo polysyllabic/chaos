@@ -28,8 +28,8 @@ const std::string MenuModifier::mod_type = "menu";
 MenuModifier::MenuModifier(toml::table& config, EngineInterface* e) {
   
   TOMLUtils::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
-             "menu_items", "reset_on_finish", "beginSequence",
-             "finishSequence","unlisted"});
+             "menu_items", "reset_on_finish", "begin_sequence",
+             "finish_sequence","unlisted"});
 
   initialize(config, e);
 

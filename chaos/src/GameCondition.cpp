@@ -24,93 +24,26 @@
 #include <plog/Log.h>
 
 #include "GameCondition.hpp"
-#include "GameCommandTable.hpp"
+//#include "GameCommandTable.hpp"
 #include "GameCommand.hpp"
 #include "ControllerInput.hpp"
 #include "TOMLUtils.hpp"
 
 using namespace Chaos;
 
-GameCondition::GameCondition(toml::table& config, GameCommandTable& commands) {
-  assert(config.contains("name"));
-  name = config["name"].value_or("");
+GameCondition::GameCondition(const std::string& condition_name) :
+  name{condition_name},
+  threshold{1},
+  threshold_type{ThresholdType::MAGNITUDE} {}
 
-  PLOG_VERBOSE << "Initializing game condition " << config["name"];
-  
-  TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "while", "while_not", "trigger_on", "clear_on", "threshold", "threshold_type",
-      "test_type"});
-  
-  // commands.addToMap(config, "trigger_on", trigger_on);
-  std::optional<std::string> cmd_name = config["trigger_on"].value<std::string>();
-  trigger_on = (cmd_name) ? commands.getCommand(*cmd_name) : nullptr;
-
-  // commands.addToMap(config, "clear_on", clear_on);
-  cmd_name = config["clear_on"].value<std::string>();
-  clear_on = (cmd_name) ? commands.getCommand(*cmd_name) : nullptr;
-
-  commands.addToVector(config, "while", while_conditions);
-  commands.addToVector(config, "while_not", while_not_conditions);
-
-  if (! trigger_on) {
-    if (while_conditions.empty() && while_not_conditions.empty()) {
-      throw std::runtime_error("At least one of 'while', 'while_not' or 'trigger_on' must be defined.");
-    }
-    if (clear_on) {
-      throw std::runtime_error("To use 'clear_on', you must also define 'trigger_on'.");
-    }
-  }
-
-  threshold = config["threshold"].value_or(1.0);
-  if (threshold < 0 || threshold > 1) {
-    throw std::runtime_error("Condition threshold must be between 0 and 1");
-  }
-
-  std::optional<std::string_view> thtype = config["threshold_type"].value<std::string_view>();
-
-  // Default type is magnitude
-  threshold_type = ThresholdType::MAGNITUDE;
-  if (thtype) {
-    if (*thtype == "greater" || *thtype == ">") {
-      threshold_type = ThresholdType::GREATER;
-    } else if (*thtype == "greater_equal" || *thtype == ">=") {
-      threshold_type = ThresholdType::GREATER_EQUAL;
-    } else if (*thtype == "less" || *thtype == "<") {
-      threshold_type = ThresholdType::LESS;
-    } else if (*thtype == "less_equal" || *thtype == "<=") {
-      threshold_type = ThresholdType::LESS_EQUAL;
-    } else if (*thtype == "distance") {
-    threshold_type = ThresholdType::DISTANCE;
-    } else if (*thtype != "magnitude") {
-      PLOG_WARNING << "Invalid threshold_type '" << *thtype;
-    }
-  }
-
-  PLOG_DEBUG << "Condition: " << config["name"] <<  "; " << ((thtype) ? *thtype : "magnitude") <<
-    " threshold = " << threshold;
-  PLOG_DEBUG << "-- trigger on: " << ((trigger_on) ? trigger_on->getName() : "NONE") << " clear on: " <<
-    ((clear_on) ? clear_on->getName() : "NONE");
+void GameCondition::addCondition(std::shared_ptr<GameCommand> command) {
+  // Translate command to the index of the device event for fast comparison
+  PLOG_DEBUG << "Adding condition for " << command->getName();
+  while_conditions.push_back(command->getInput());
 }
 
-void GameCondition::reset() {
-  if (! trigger_on) {
-    persistent_state = true;
-  } else {
-    persistent_state = false;
-    // for (auto& it : trigger_on) {
-    //   it.second = false;
-    //}
-  }
-  //if (!clear_on.empty()) {
-  //  for (auto& it : clear_on) {
-  //    it.second = false;
-  //  }
-  //}
-}
-
-bool GameCondition::thresholdComparison(short value, short threshold) {
-  // This function tests only one signal at a time. It's a programming error to call us
-  // if the type is DISTANCE
+bool GameCondition::thresholdComparison(short value) {
+  
   assert(threshold_type != ThresholdType::DISTANCE);
   switch (threshold_type) {
     case ThresholdType::GREATER:
@@ -126,109 +59,93 @@ bool GameCondition::thresholdComparison(short value, short threshold) {
   return std::abs(value) >= threshold;
 }
 
-bool GameCondition::pastThreshold(std::shared_ptr<GameCommand> command) {
+void GameCondition::setThreshold(double proportion) {
+  assert(proportion >= 0.0 && proportion <= 1.0);
 
-  // By calling getState from the command, we find the active state of the remapped signal. We also
-  // need to check the threshold for that remapped signal.
-  short threshold = getSignalThreshold(command);
-  short curval = command->getState();
-  PLOG_VERBOSE << "threshold for " << command->getName() << ": " << threshold << "; state = " << curval;
-  return thresholdComparison(curval, threshold);
-}
+  // Translate the threshold to an integer based on the signal of the first command in the commands list
+  if (while_conditions.empty()) {
+    if (proportion < 1.0) {
+      PLOG_ERROR << "Can't set threshold until while_conditions is set; using 1";  
+    }
+    threshold = 1;
+    return;
+  }
+  std::shared_ptr<ControllerInput> signal = while_conditions.front();
 
-short int GameCondition::getSignalThreshold(std::shared_ptr<GameCommand> command) {
-  // Check the threshold for the remapped control in case signals are swapped between signal classes
-  std::shared_ptr<ControllerInput> signal = command->getInput();
-  return getSignalThreshold(signal);
-}
+  bool neg_extreme = (threshold_type == ThresholdType::LESS || threshold_type == ThresholdType::LESS_EQUAL);
 
-short int GameCondition::getSignalThreshold(std::shared_ptr<ControllerInput> input) {
-  short extreme = (threshold_type == ThresholdType::LESS || threshold_type == ThresholdType::LESS_EQUAL) ?
-                  input->getMin(TYPE_AXIS) : input->getMax(TYPE_AXIS);
-
-  // Proportions only make sense for axes. If we've remapped from an axis to one of these and have
-  // a proportion < 1, we ignore that and just use the extreme value. For the hybrid triggers, we look at the button signal.
-  ControllerSignalType t = input->getType();
-  switch (t) {
+  // Proportions only make sense for axes.
+  switch (signal->getType()) {
     case ControllerSignalType::BUTTON:
+      threshold = 1;
+      break;
     case ControllerSignalType::THREE_STATE:
       // For buttons/tri-state, a proportion makes no sense
-      return extreme;
+      threshold = (neg_extreme) ? -1 : 1;
+      break;
     case ControllerSignalType::HYBRID:
       // If the threshold is 1, then look at the button; otherwise, we look at the fraction of the axis
-      if (threshold == 1) {
-        return 1;
+      if (proportion == 1.0) {
+        threshold = 1;
       }
       // falls through
     default:
       // Axis of some sort: calculate the threshold value as a proportion of the extreme.
-      return (short) ((double) extreme * threshold);
+      short extreme = (neg_extreme) ? signal->getMin(TYPE_AXIS) : signal->getMax(TYPE_AXIS);
+      threshold = (short) ((double) extreme * proportion);
   }
+  PLOG_DEBUG << "Threshold for " << name << " set to " << threshold;
 }
 
-// This routine is called from _tweak, and so it does not need to be invoked by the child modifiers
-// directly.
+// This routine should be called from _tweak, so child modifiers only need to check isTriggered.
 void GameCondition::updateState(DeviceEvent& event) {
-  if (trigger_on) {
-    if (event.type == trigger_on->getInput()->getButtonType() && 
-        event.id == trigger_on->getInput()->getID()) {
-      int threshold = getSignalThreshold(trigger_on->getInput());
-      bool state = thresholdComparison(event.value, threshold); 
-      if (clear_on) {
-        if (state) {
-          // If clear_on is set, we leave the trigger set until we get the clear condition
-          persistent_state = true;
-        }
-      } else { 
-        // If no clear_on is set, we reset the trigger as soon as it fails to meet the condition
-        persistent_state = state;
-      }
-    }
+  if (persistent_state) {
+    // Once triggered, only an explicit clear_on match will reset
+    if (clear_on->getIndex() == event.index() && pastThreshold(event)) {
+      PLOG_DEBUG << "clear_on condition met: " << (int) event.type << "." << (int) event.id << ": " << event.value;
+      persistent_state = false;
+    } 
+    return;
   }
-  if (clear_on) {
-    if (event.type == clear_on->getInput()->getButtonType() && event.id == clear_on->getInput()->getID()) {
-      int threshold = getSignalThreshold(clear_on->getInput());
-      bool state = thresholdComparison(event.value, threshold);
-      persistent_state = persistent_state && state;
-    }
+  if (set_on->getIndex() == event.index() && pastThreshold(event)) {
+    PLOG_DEBUG << "set_on condition met: " << (int) event.type << "." << (int) event.id << ": " << event.value;
+    persistent_state = true;
   }
-}
-
-
-// Test real-time condition of the controller
-bool GameCondition::testConditions(std::vector<std::shared_ptr<GameCommand>> command_list, bool unless) {
-  assert(!command_list.empty());
-
-  if (threshold_type == ThresholdType::DISTANCE) {
-    assert(command_list.size() == 2);
-    short x = command_list[0]->getState();
-    short y = command_list[1]->getState();
-    int square_dist = std::pow(getSignalThreshold(command_list[0]),2);
-    PLOG_DEBUG << "x = " << x << "; y = " << y << "x^2+y^2 = " << (x*x +y*y) << "; dist^2 = " << square_dist;
-    bool past = x*x + y*y >= square_dist;
-    return (past != unless);
-  }
-
-  if (unless) {
-    // Return true if none of the conditions are past the threshold. In other words, if any condition
-    // is past the threshold, the condition will be false.
-    return std::none_of(command_list.begin(), command_list.end(), [&](std::shared_ptr<GameCommand> c) {
-	    return pastThreshold(c); });
-  }
-  // return true if all the conditions are past the threshold
-  return std::all_of(command_list.begin(), command_list.end(), [&](std::shared_ptr<GameCommand> c) {
-	  return pastThreshold(c); });
 }
 
 bool GameCondition::inCondition() {
-  bool while_state = true;
-  bool unless_state = true;
-  if (! while_conditions.empty()) {
-    while_state = testConditions(while_conditions, false);
-  } 
-  //if (! while_not_conditions.empty()) {
-  //  unless_state = testConditions(while_not_conditions, true);
-  //}
-  PLOG_VERBOSE << "persistent = " << persistent_state << "; while = " << while_state << "; unless = " << unless_state;
-  return persistent_state && while_state && unless_state;
+  // No while -- this is a persistent state
+  if (while_conditions.empty()) {
+    return persistent_state;
+  }
+  // We have 
+  if (threshold_type == ThresholdType::DISTANCE) {
+    if (while_conditions.size() != 2) {
+      return false;
+    }    
+    short x = while_conditions[0]->getState();
+    short y = while_conditions[1]->getState();
+    PLOG_DEBUG << "x = " << x << "; y = " << y << "x^2+y^2 = " << (x*x +y*y) << "; dist^2 = " << threshold * threshold;    
+    return (x*x + y*y >= threshold * threshold);
+  }
+
+  return std::all_of(while_conditions.begin(), while_conditions.end(), [&](std::shared_ptr<ControllerInput> c) {
+	  return thresholdComparison(c->getState()); });
+
+}
+
+bool GameCondition::pastThreshold(DeviceEvent& event) {
+  return thresholdComparison(event.value);
+}
+
+bool GameCondition::matchEvent(DeviceEvent& event) {
+  return (event.index() == while_conditions.front()->getIndex());
+}
+
+void GameCondition::setSetOn(std::shared_ptr<GameCommand> command) {
+  set_on = command->getInput();
+}
+
+void GameCondition::setClearOn(std::shared_ptr<GameCommand> command) {
+  clear_on = command->getInput();
 }

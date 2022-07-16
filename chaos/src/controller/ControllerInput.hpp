@@ -211,6 +211,12 @@ namespace Chaos {
      */
     static short getMax(std::shared_ptr<ControllerInput> signal);
 
+    /**
+     * \brief Constrain to joystick limits
+     * 
+     * \param input The unfiltered signal value
+     * \return short The value clipped to the joystick's min/max
+     */
     static short joystickLimit(int input) {
       return fmin(fmax(input, JOYSTICK_MIN), JOYSTICK_MAX);
     }
@@ -225,6 +231,16 @@ namespace Chaos {
      */
     short getState();
 
+    /**
+     * \brief Does the command match the incomming device event
+     * 
+     * \param event Raw device event
+     * \return Does this signal match the incomming event.
+     * 
+     * For hybrid controls, returns true if the signal matches either the button or the axis
+     * component.
+     */
+    bool matches(const DeviceEvent& event);
   };
 
 };

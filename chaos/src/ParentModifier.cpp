@@ -32,7 +32,7 @@ ParentModifier::ParentModifier(toml::table& config, EngineInterface* e) {
   assert(config.contains("type"));
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "beginSequence", "finishSequence",
+      "name", "description", "type", "groups", "begin_sequence", "finish_sequence",
       "children", "random", "value", "unlisted"});
   initialize(config, e);
  

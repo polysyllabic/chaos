@@ -25,14 +25,17 @@ namespace Chaos {
   class MenuItem;
   class Sequence; 
 
+  /**
+   * \brief This class is an interface for the game menu and defined the functions
+   * that .
+   * 
+   */
   class MenuInterface {
   public:
+    virtual ~MenuInterface() = default;
     virtual std::shared_ptr<MenuItem> getMenuItem(const std::string& name) = 0;
-    //virtual void setMenuState(std::shared_ptr<MenuItem> item, unsigned int new_val) = 0;
-    //virtual void restoreMenuState(std::shared_ptr<MenuItem> item) = 0;
     virtual void correctOffset(std::shared_ptr<MenuItem> sender) = 0;
-    virtual void addSequence(Sequence& sequence, const std::string& name) = 0;
-    virtual void addSelectDelay(Sequence& sequence) = 0;
+    virtual void addToSequence(Sequence& sequence, const std::string& name) = 0;
   };
 
 };

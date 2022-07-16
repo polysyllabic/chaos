@@ -177,19 +177,24 @@ namespace Chaos {
 
     void addGameCommands(const toml::table& config, const std::string& key,
                          std::vector<std::shared_ptr<GameCommand>>& vec) {
-      game.getGameCommandTable().addToVector(config, key, vec);
+      game.addGameCommands(config, key, vec);
+    }
+    void addGameCommands(const toml::table& config, const std::string& key,
+                         std::vector<std::shared_ptr<ControllerInput>>& vec) {
+      game.addGameCommands(config, key, vec);
     }
 
     void addGameConditions(const toml::table& config, const std::string& key,
                            std::vector<std::shared_ptr<GameCondition>>& vec) {
-      game.getGameConditionTable().addToVector(config, key, vec);
+      game.addGameConditions(config, key, vec);
     }
 
     std::shared_ptr<Sequence> createSequence(toml::table& config, const std::string& key,
                                              bool required) {
-      return game.getSequenceTable()->makeSequence(config, key, game.getGameCommandTable(),
-                                                   controller, required);
-}/**
+      return game.makeSequence(config, key, required);
+    }
+
+    /**
      * \brief Is the event an instance of the specified input command?
      * 
      * This tests both that the event against the defined signal and that any defined condition
@@ -197,11 +202,31 @@ namespace Chaos {
      */
     bool matches(const DeviceEvent& event, std::shared_ptr<GameCommand> command);
  
-    // override from CommandListenerObserver
+    /**
+     * \brief Observer function for input from the interface
+     * 
+     * \param command A string containing the Json object received from the interface
+     * 
+     * This routine processes all incomming commands from the interface.
+     */
     void newCommand(const std::string& command);
 
+    /**
+     * \brief Is the engine paused
+     * 
+     * \return true if the engine is paused, false if it is running
+     * 
+     * While paused, all signals are passed through unaltered and modifiers' timers do not tick down.
+     */
     bool isPaused() { return pause; }
 
+    /**
+     * \brief Should the processing loop keep going
+     * 
+     * \return true as long as the engine should run
+     *
+     * When this returns false, the engine will shut down and exit.
+     */
     bool keepGoing() { return keep_going; }
   };
 

@@ -23,6 +23,7 @@
 
 #include "SequenceModifier.hpp"
 #include "EngineInterface.hpp"
+#include "ControllerInput.hpp"
 #include "TOMLUtils.hpp"
 
 using namespace Chaos;
@@ -32,20 +33,23 @@ const std::string SequenceModifier::mod_type = "sequence";
 SequenceModifier::SequenceModifier(toml::table& config, EngineInterface* e) {
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "beginSequence", "finishSequence",
-      "blockWhileBusy", "repeatSequence", "condition",
+      "name", "description", "type", "groups", "begin_sequence", "finish_sequence",
+      "block_while_busy", "repeat_sequence", "trigger", "while", "unless",
       "start_delay", "cycle_delay", "unlisted"});
 
   initialize(config, e);
   
-  repeat_sequence = e->createSequence(config, "repeatSequence", false);
+  repeat_sequence = e->createSequence(config, "repeat_sequence", false);
 
-  std::optional<std::string> for_all = config["blockWhileBusy"].value<std::string>();
+  std::optional<std::string> for_all = config["block_while_busy"].value<std::string>();
   // Allow "ALL" as a shortcut to avoid enumerating all signals
   lock_all = (for_all && *for_all == "ALL");
   if (! lock_all) {
-    engine->addGameCommands(config, "blockWhileBusy", block_while);
+    engine->addGameCommands(config, "block_while_busy", block_while);
   }
+
+  engine->addGameCommands(config, "trigger", trigger);
+
 
   start_delay = config["start_delay"].value_or(0.0);
   repeat_delay = config["cycle_delay"].value_or(0.0);
@@ -60,7 +64,7 @@ void SequenceModifier::begin() {
 }
 
 void SequenceModifier::update() {
-  // Abort if there's no repeated sequence
+  // Skip if there's no repeated sequence
   if (repeat_sequence->empty()) {
     return;
   }
@@ -68,11 +72,15 @@ void SequenceModifier::update() {
   
   switch (sequence_state) {
   case SequenceState::UNTRIGGERED:
+    if (trigger.empty()) {
+      // If there is no trigger, start sequence immediately
+      sequence_state = SequenceState::STARTING;
+    }   
     return;
   case SequenceState::STARTING:
     // In the starting state, we wait for any initial delay before the sequence starts
     if (sequence_time >= start_delay) {
-      PLOG_DEBUG << "Waiting " << start_delay << " seconds to start sequence";
+      PLOG_DEBUG << "Waited " << start_delay << " seconds to start sequence";
       sequence_state = SequenceState::IN_SEQUENCE;
       sequence_time = 0;
     }
@@ -93,21 +101,17 @@ case SequenceState::IN_SEQUENCE:
       sequence_state = SequenceState::UNTRIGGERED;
       sequence_time = 0;
       sequence_step = 0;
-      resetConditionTriggers();
     }
   }
 }
 
 bool SequenceModifier::tweak(DeviceEvent& event) {
 
-  if (sequence_state == SequenceState::UNTRIGGERED) {
-    // If there is no condition, this will also return true
-    if (inCondition()) {
-      // go straight into the sequence if no delay
-      sequence_state = (start_delay == 0) ? SequenceState::IN_SEQUENCE :
-                                            SequenceState::STARTING;
-      PLOG_DEBUG << "Condition met after waiting " << sequence_time << " seconds";
-      sequence_time = 0;
+  if (sequence_state == SequenceState::UNTRIGGERED && !trigger.empty()) {
+    for (auto& sig : trigger) {
+      if (sig->getIndex() == event.index() && inCondition()) {
+        sequence_state = SequenceState::STARTING;
+      }
     }
   }
   // While in sequence, drop selected signals

@@ -18,10 +18,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include<unordered_map>
 #include <toml++/toml.h>
-#include <timer.hpp>
 #include "Sequence.hpp"
-#include "GameCommandTable.hpp"
 
 namespace Chaos {
   class Controller;
@@ -36,8 +35,7 @@ namespace Chaos {
     std::unordered_map<std::string, std::shared_ptr<Sequence>> sequence_map;
 
   public:
-    int buildSequenceList(toml::table& config, GameCommandTable& commands,
-                          Controller& controller);
+    bool addDefinedSequence(const std::string& name, std::shared_ptr<Sequence> new_sequence);
 
     /**
      * \brief Given the sequence name, get the object
@@ -47,21 +45,25 @@ namespace Chaos {
      */
     std::shared_ptr<Sequence> getSequence(const std::string& name);
 
-    std::shared_ptr<Sequence> makeSequence(toml::table& config, 
-                                           const std::string& key,
-                                           GameCommandTable& commands,
-                                           Controller& controller,
-                                           bool required);
-
     /**
-     * \brief Append sequence to the end of the current one by name
+     * \brief Append a defined sequence to the end of another one by name
      * 
      * \param seq The sequence that is being created
      * \param name The name of the defined sequence as given in the TOML file
      */
-    void addSequence(Sequence& seq, const std::string& name);
+    void addToSequence(Sequence& seq, const std::string& name);
 
-    void addDelay(Sequence& sequence, usec delay) { sequence.addDelay(delay); }
+    /**
+     * \brief Append a delay to the end of a sequence
+     * 
+     * \param seq The sequence that is being created
+     * \param name The name of the defined sequence as given in the TOML file
+     */
+    void addDelayToSequence(Sequence& sequence, double delay);
     
+    /**
+     * \brief Remove all existing defined sequences
+     */
+    void clearSequenceList();
   };
 };

@@ -19,7 +19,6 @@
  */
 #pragma once
 #include <memory>
-//#include <unordered_map>
 #include <vector>
 #include <string>
 #include <toml++/toml.h>
@@ -32,36 +31,34 @@ namespace Chaos {
   class GameCommandTable;
   class ControllerInput;
   /**
-   * \brief Class to encapsulate a test for a controller condition that can be used by a modifier
-   * to make a decision.
+   * \brief Defines a single test of a game condition
    * 
-   * Conditions are used to test the state of the game for particular controller states. For
-   * example, aiming a weapon is a common condition that occurs with other events and changes the
-   * meaning of an incomming signal, e.g., you shoot the weapon when aiming but reload it when not
-   * aiming.
+   * Conditions are used to test check the state of events coming from the controller. There are
+   * two types of conditions: transient and persistent. A transient condition polls the current
+   * state of the controller. A persistent condition is set to true when a particular condition
+   * arrives and remains true until a different condition arrives that clears the condition.
+
+   * Transient conditions are defined in the 'while' parameter and compare the current state of
+   * the controller to the defined threshold value. More than one command can appear in the while
+   * parameter. How multiple commands are processed depends on the threshold type.  
+   * 
+   * Persistent events define one command that sets the state and a different command that clears
+   * it. Only one command at a time can be checked for setting and clearing a persistent state.
+   * 
+   * Transient and persistent are mutually exclusive states, so a condition must define either the
+   * while parameter or the set_on and clear_on parameters, but not both.
    * 
    * Conditions are defined in the TOML file, and the following keys are allowed:
    *
    * - name: The name by which the condition is identified in the TOML file (_Required_)
-   * - persistent: Boolean value to indicate whether the condition's state persists after being
-   * triggered. (_Optional, default = false_)
-   * - trigger_on: An array of commands that will be tested to determine if a condition state will
-   * be set to true. Once set, the state persists as true until either the clear_on conditions are
-   * met or the state is manually reset. If more than one command is in the trigger_on list, all
-   * incomming events must be received before the event triggers, and a partially triggered
-   * condition will be canceled if new incomming events undo the earlier partial trigger. If
-   * _trigger_on_ is not defined, _while_ must be, and vice versa. (_Optional_)
-   * - clear_on: An array of commands that will be tested to determine when a persistent state
-   * should be set to false. Not used for transient conditions. (_Optional_)
    * - while: A list of commands that must be true according to the real-time state of the
-   * controller, potentially in addition to the conditions defined in _trigger_on_. If _trigger_on_
-   * is not defined, _while_ or _while_not_ must be, and vice versa. If both _while/while_not_ and
-   * _trigger_on_ are defined, the while conditions are tested at the point where all conditions in
-   * _trigger_on_ are met. (_Optional_)
-   * - while_not: A list of commands that must be *false* according to the real-time status of the
-   * controller. This can be used together with or independently of _while_. (Optional)
-   * - threshold: The threshold that a signal value must reach to trigger the condition, expressed
-   * as a proportion of the maximum value for the particular signal type.
+   * controller
+   *  - set_on: A command that will set a persistent trigger to true when its incomming state
+   * exceeds the threshold
+   *  - clear_on: A command that will set a persistent trigger to false when its incomming state
+   * exceeds the threshold
+   * - threshold: For axes, the threshold that a signal value must reach to trigger the condition,
+   * expressed as a proportion of the maximum value. (_Optional. Default = 1_)
    * - thresholdType: The test applied to the threshold. The following keys correspond to the types
    # defined in ThresholdType.
    *     - "greater" or ">": ThresholdType::GREATER
@@ -70,26 +67,18 @@ namespace Chaos {
    *     - "less_equal" or "<=" ThresholdType::LESS_EQUAL
    *     - "magnitude": ThresholdType::MAGNITUDE (_Default_)
    *     - "distance": ThresholdType::DISTANCE
-   *     .
-   * - test_type: For a #thresholdType other than DISTANCE, what sort of logical relationship is
-   * required for the individual conditions. The possible values are:
-   *     - "all": All commands listed in #commands must be past the threshold. (_Default_)
-   *     - "any": One or more of the commands in #commands must be past the threshold.
-   *     - "none": None of the commands in #commands must be past the threshold.
    *
    * The threshold must be a number in the range $0 \le x \le 1$ that reflects the proportion of
    * the maximum value. It should therefore always be positive even when the sign of the incoming
-   * signal is negative. So if you want, for example, to trigger the condition when the left Dpad
-   * is pressed (-1 on the DX axis) but not when the right Dpad is pressed, you would set the
-   * threshold to 1 and the thresholdType to BELOW_EQUAL.
+   * signal is negative. The threshold is ignored for buttons and will always be 1.
    *
-   * If there is more than one command defined in #conditions, they must have the same maximum axis
-   * value. The same threshold check is applied to every command in the list, and if you attempt
-   * to mix different types, you will likely get incorrect behavior.
+   * If more than one command is defined in #while, the same threshold applies to all. This means
+   * the test will only work if each command has the same maximum value. If you have different
+   * categories of signal or different thresholds, you should create separate conditions and
+   * chain them together in a ConditionTrigger.
    *
-   * \todo Allow different thresholds for each command in the condition array.
-   * \todo Support turning off a persistent condition after a fixed time.
-   *
+   * The 'distance' threshold type checks the Pythagorean distance.
+   * 
    * The default threshold and #thresholdType settings have the effect of returning a true
    * condition on any non-zero signal from the specified game commands.
    *
@@ -100,146 +89,127 @@ namespace Chaos {
    *    while = [ "aiming" ]
    * 
    *    [[condition]]
-   *    name = "shot taken"
-   *    trigger_on = [ "shoot" ]
-   *    while = [ "aiming" ]
-   *    
-   *    [[condition]]
    *    name = "movement"
-   *    trigger_on = [ "move forward/back", "move sideways" ]  
+   *    while = [ "move forward/back", "move sideways" ]  
    *    threshold = 0.2
    *    threshold_type = "distance"
    *
-   * You can test a condition by calling the member function #inCondition().
+   * You can test a condition in two ways. Calling the member function inCondition() polls
+   * the real-time state of the controller for the condition. The function inCondition(event) 
+   * tests if the passed event matches the condition without checking the live state of the
+   * controller. Note that this latter function only makes sense when used on simple conditions.
    */
   class GameCondition {
-  protected:
+  private:
     std::string name;
+    std::vector<std::shared_ptr<ControllerInput>> while_conditions;
 
-    /**
-     * \brief Commands to test if their real-time state is true
-     */
-    std::vector<std::shared_ptr<GameCommand>> while_conditions;
+    std::shared_ptr<ControllerInput> set_on;
+    std::shared_ptr<ControllerInput> clear_on;
+    bool persistent_state = false;
 
-    /**
-     * \brief Commands to test if their real-time state is false
-     */
-    std::vector<std::shared_ptr<GameCommand>> while_not_conditions;
-
-    /**
-     * \brief Commands to check whether the condition is on.
-     *
-     * A vector of game commands that should be checked to determine if the game has reached 
-     * a state that we care about.
-     * \todo Allow vectors of triggers
-     */
-    // std::unordered_map<std::shared_ptr<GameCommand>, bool> trigger_on;
-    std::shared_ptr<GameCommand> trigger_on;
-
-    /**
-     * \brief Commands to check that turn the condition off.
-     *
-     * A vector of game commands that should be checked to determine if the game has left some
-     * persistent state.
-     */
-    // std::unordered_map<std::shared_ptr<GameCommand>, bool> clear_on;
-    std::shared_ptr<GameCommand> clear_on;
-
-    /**
-     * \brief The current state of the condition.
-     */
-    bool persistent_state;
-
-    /**
-     * \brief The rule for how to test the threshold value that triggers a condition.
-     */
+    short threshold;
     ThresholdType threshold_type;
 
     /**
-     * \brief The proportion that the threshold rule uses to test.
+     * \brief Test if the value passes the threshold for this threshold type
      * 
-     * Default is 1, i.e., maximum value.
+     * \param value incoming value
+     * \return W
      * 
-     * Although it would be faster to pre-convert this proportion to an integer, we need to account
-     * for the possibility that a signal is remapped from one signal type to another with a
-     * different maximum value.
+     * The ThresholdType must be one of the ordinary comparisons to one value. It's a programming
+     * error to call this function if the threshold type is DISTANCE.
      */
-    double threshold;
+    bool thresholdComparison(short value);
+
+  public:
+    /**
+     * \brief Construct a new GameCondition object
+     * 
+     * \param name Name of the came condition
+     */
+    GameCondition(const std::string& name);
 
     /**
-     * \brief Translates the proportional threshold into an integer based on the type of signal.
-     * This check is done _after_ any signal remapping. Call the overloaded version with a
-     * GameCommand pointer to get the thresholled with remapping.
+     * \brief Get the threshold value required for the condition to be true
      * 
      * \return short 
      */
-    short getSignalThreshold(std::shared_ptr<ControllerInput> input);
+    short getThreshold() { return threshold; }
 
     /**
      * \brief Translates the proportional threshold into an integer based on the type of signal that
      * the game command is currently mapped to and the threshold type.
-     * 
-     * \return short 
      */
-    short getSignalThreshold(std::shared_ptr<GameCommand> signal);
+    void setThreshold(double proportion);
 
     /**
-     * \brief Test if the signal exceeds the threshold for this type
-     * 
-     * \param signal 
-     * \return true 
-     * \return false 
+     * \brief Sets the rule for how to test the threshold value that triggers a condition.
      */
-    bool pastThreshold(std::shared_ptr<GameCommand> signal);
+    void setThresholdType(ThresholdType new_type) { threshold_type = new_type; }
 
-    bool thresholdComparison(short value, short threshold);
     /**
-     * \brief Test the real-time state of the controller
+     * \brief Add a command to the game condition list
      * 
-     * \param command_list 
-     * \param unless 
-     * \return true 
-     * \return false 
+     * \param command The game command to add
+     * 
+     * The GameCommand is translated to a ControllerInput object.
      */
-    bool testConditions(std::vector<std::shared_ptr<GameCommand>> command_list, bool unless);
+    void addCondition(std::shared_ptr<GameCommand> command);
 
-public:
-  /**
-   * \brief Construct a new GameCondition object
-   * 
-   * \param config Parsed TOML table containing the list of parameters defining the condition.
-   * \param commands Container object for previously initialized game commands
-   */
-  GameCondition(toml::table& config, GameCommandTable& commands);
+    /**
+     * \brief Set the command to check for setting a persistent condition
+     * 
+     * \param command The game command to add
+     * 
+     * The GameCommand is translated to a ControllerInput object.
+     */
+    void setSetOn(std::shared_ptr<GameCommand> command);
+    
+    /**
+     * \brief Set the command to check for clearing a persistent condition
+     * 
+     * \param command The game command to add
+     * 
+     * The GameCommand is translated to a ControllerInput object.
+     */
+    void setClearOn(std::shared_ptr<GameCommand> command);
 
-  /**
-   * \brief Resets the condition to appropriate initial conditions
-   */
-  void reset();
+    /**
+     * \brief Tests if the condition's parameters have all been met.
+     * 
+     * If this is a transient condition, it checks the current state of all items in the while
+     * list. If this is a persistent condition, it returns the current state.
+     */
+    bool inCondition();
 
-  /**
-   * \brief Tests if the condition's parameters have all been met.
-   * 
-   */
-  bool inCondition();
+    /**
+     * \brief Sets a persistent condition if the incoming signal matches the set/clear states for
+     * a persistent event.
+     */
+    void updateState(DeviceEvent& event);
 
-  /**
-   * \brief Updates the test state with the incomming event and checks if it fulfils the conditions
-   * of the test.
-   */
-  bool conditionTriggered(DeviceEvent& event);
+    /**
+     * \brief Check if the incomming event matches the first command in the while list.
+     * A match returns true if the event matches the command in the while list regardless of
+     * the event value.
+     */
+    bool matchEvent(DeviceEvent& event);
 
-  /**
-   * \brief Sets state if an incoming signal matches the trigger/clear states for a persistent event.
-   * 
-   * Conditions can be defined to be persistent, meaning that we track their state after the input
-   * that caused them is no longer coming from the controller. For example, selecting a weapon is
-   * an event that we want to remember, since the singificance of other actions can change depending
-   * on what is selected. Persistent conditions are defined 
-   */
-  void updateState(DeviceEvent& event);
+    /**
+     * \brief Check if the incomming event value passes the threshold.
+     * 
+     * Note that this routine _does not_ check that the event id matches. Use matchEvent for that.
+     */
+    bool pastThreshold(DeviceEvent& event);
 
-  std::string& getName() { return name; }
+    bool isTransient() { return !while_conditions.empty(); }
+    /**
+     * \brief Get the name of the condition as used in the TOML file
+     * 
+     * \return std::string& 
+     */
+    std::string& getName() { return name; }
   };
 
 };

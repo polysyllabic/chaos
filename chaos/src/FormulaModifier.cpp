@@ -30,12 +30,12 @@ const std::string FormulaModifier::mod_type = "formula";
   FormulaModifier::FormulaModifier(toml::table& config, EngineInterface* e) {
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "appliesTo", "beginSequence", "finishSequence",
+      "name", "description", "type", "groups", "applies_to", "begin_sequence", "finish_sequence",
       "condition", "formula_type", "amplitude", "period_length", "unlisted"});
   initialize(config, e);
 
   if (commands.empty()) {
-    throw std::runtime_error("No commands defined in appliesTo");
+    throw std::runtime_error("No commands defined in applies_to");
   }
 
   std::optional<std::string> formula = config["formula_type"].value<std::string>();
