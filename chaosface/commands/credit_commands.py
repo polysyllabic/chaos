@@ -13,7 +13,7 @@ async def cmd_add_mod_credit(msg: Message, *args):
     await msg.reply('Usage: !addcredit <user>')
     return
   config.relay.step_balance(args[0], 1)
-  await msg.replay(config.relay.get_balance_message(msg.author))
+  await msg.reply(config.relay.get_balance_message(msg.author))
 
 
 @Command('setbalance', permission='admin')
@@ -24,7 +24,7 @@ async def cmd_set_balance(msg: Message, *args):
   user = args[0]
   new_balance = int(args[1])
   config.relay.set_balance(user, new_balance)
-  await msg.replay(config.relay.get_balance_message(msg.author))
+  await msg.reply(config.relay.get_balance_message(msg.author))
   
 
 @Command('givecredit')
