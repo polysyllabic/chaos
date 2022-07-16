@@ -44,6 +44,7 @@ void Timer::update() {
   // Grab the current time
 	// timecycle = chr::time_point_cast<usec>(chr::steady_clock::now());
 	dtime = timecycle - oldtimecycle;
+  runningtime += dtime;
 }
 
 void Timer::reset() {
