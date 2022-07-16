@@ -187,12 +187,12 @@ namespace Chaos {
     std::string name;
 
     /**
-     * \brief Running count of total errors encountered in initializing the configuraiton file
+     * \brief Running count of total errors encountered in initializing the configuration file
      */
     int parse_errors;
 
     /**
-     * \brief Running count of total warnings encountered in initializing the configuraiton file
+     * \brief Running count of total warnings encountered in initializing the configuration file
      */
     int parse_warnings;
 

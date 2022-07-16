@@ -128,7 +128,7 @@ std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const toml::tabl
 
 // This is the game-specific initialization
 int ControllerInputTable::initializeInputs(const toml::table& config) {
-  int errors;
+  int errors = 0;
   double scale = config["remapping"]["touchpad_scale"].value_or(1.0);
   if (scale == 0) {
     PLOG_ERROR << "Touchpad scale cannot be 0. Setting to 1";

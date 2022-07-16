@@ -64,7 +64,10 @@ void GameCondition::setThreshold(double proportion) {
 
   // Translate the threshold to an integer based on the signal of the first command in the commands list
   if (while_conditions.empty()) {
-    PLOG_ERROR << "Can't set threshold until while_conditions is set";
+    if (proportion < 1.0) {
+      PLOG_ERROR << "Can't set threshold until while_conditions is set; using 1";  
+    }
+    threshold = 1;
     return;
   }
   std::shared_ptr<ControllerInput> signal = while_conditions.front();
