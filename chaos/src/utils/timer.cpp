@@ -38,8 +38,8 @@ void Timer::initialize() {
 }
 
 void Timer::update() {
-  gettimeofday(&tv, nullptr);   // Grab the current time
 	oldtimecycle = timecycle;  // Store the old time
+  gettimeofday(&tv, nullptr);   // Grab the current time
 	timecycle = tv.tv_sec + tv.tv_usec * 1e-6; // Compute the current time, in seconds  // Store the old time
   // Grab the current time
 	// timecycle = chr::time_point_cast<usec>(chr::steady_clock::now());

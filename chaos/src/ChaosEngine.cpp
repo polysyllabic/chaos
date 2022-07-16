@@ -132,11 +132,9 @@ void ChaosEngine::doAction() {
   while(!modifiersThatNeedToStart.empty()) {
     std::shared_ptr<Modifier> mod = modifiersThatNeedToStart.front();
     assert(mod);
-    PLOG_DEBUG << "Adding " << mod->getName() << "to active modifier list";
+    PLOG_DEBUG << "Initializing modifier " << mod->getName();
     modifiers.push_back(mod);
-    PLOG_DEBUG << "Removing " << mod->getName() << "from need-to-start list";
     modifiersThatNeedToStart.pop();
-    PLOG_DEBUG << "Calling _begin() for new modifier " << mod->getName();
     mod->_begin();
   }
   unlock();

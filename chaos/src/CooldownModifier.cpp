@@ -67,12 +67,14 @@ CooldownModifier::CooldownModifier(toml::table& config, EngineInterface* e) {
 void CooldownModifier::begin() {
   cooldown_timer = 0;
   state = CooldownState::UNTRIGGERED;
+  PLOG_DEBUG << "Initialized " << getName();
 }
 
 void CooldownModifier::update() {
 
   // Get the difference since the last time update.
   double deltaT = timer.dTime();
+  PLOG_DEBUG << " deltaT = " << deltaT << "; state = " << (int) state;
 
   if (state == CooldownState::BLOCK) {
     // count down until cooldown ends
@@ -112,7 +114,10 @@ bool CooldownModifier::tweak(DeviceEvent& event) {
   }
   // Block events in the command list while in cooldown
   for (auto& cmd : commands) {
-    if (cmd->getInput()->matches(event)) {
+    assert(cmd);
+    std::shared_ptr<ControllerInput> sig = cmd->getInput();
+    PLOG_DEBUG << "Checking " << cmd->getName() << ", maps to " << ((sig) ? sig->getName() : "NULL");
+    if (sig && sig->matches(event)) {
       return state != CooldownState::BLOCK;
     }
   }
