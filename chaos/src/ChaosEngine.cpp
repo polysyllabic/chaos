@@ -55,10 +55,10 @@ void ChaosEngine::newCommand(const std::string& command) {
   if (root.isMember("winner")) {
     std::shared_ptr<Modifier> mod = game.getModifier(root["winner"].asString());
     if (mod != nullptr) {
-      PLOG_INFO << "Adding Modifier: " << mod->getName();
       lock();
-      modifiers.push_back(mod);
+      PLOG_INFO << "Adding Modifier: " << mod->getName();
       modifiersThatNeedToStart.push(mod);
+      //mod->_begin();
       unlock();
     } else {
       PLOG_ERROR << "ERROR: Modifier not found: " << command;
@@ -130,15 +130,21 @@ void ChaosEngine::doAction() {
   // Initialize the mods that are waiting
   lock();  
   while(!modifiersThatNeedToStart.empty()) {
-    PLOG_DEBUG << "Processing new modifier";
-    modifiersThatNeedToStart.front()->_begin();
+    std::shared_ptr<Modifier> mod = modifiersThatNeedToStart.front();
+    assert(mod);
+    PLOG_DEBUG << "Adding " << mod->getName() << "to active modifier list";
+    modifiers.push_back(mod);
+    PLOG_DEBUG << "Removing " << mod->getName() << "from need-to-start list";
     modifiersThatNeedToStart.pop();
+    PLOG_DEBUG << "Calling _begin() for new modifier " << mod->getName();
+    mod->_begin();
   }
   unlock();
 	
   lock();
-  PLOG_DEBUG << "invoking _update for active mods";
   for (auto& mod : modifiers) {
+    assert (mod);
+    PLOG_DEBUG << "invoking _update for " << mod->getName();
     mod->_update(pausedPrior);
   }
   pausedPrior = false;
@@ -185,10 +191,6 @@ void ChaosEngine::removeMod(std::shared_ptr<Modifier> to_remove) {
   // Do cleanup for this mod, if necessary
   to_remove->_finish();
   modifiers.remove(to_remove);
-  // Execute apply() on remaining modifiers for post-removal actions
-  for (auto& mod : modifiers) {
-    mod->_apply();
-  }
   unlock();
 }
 
@@ -225,7 +227,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
     lock();
     // First call all remaps to translate the incomming signal 
     for (auto& mod : modifiers) {
-      valid = (*mod)._remap(output);
+      valid = mod->remap(output);
       if (!valid) {
         break;
       }
@@ -233,7 +235,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
     // Now pass to the regular tweak routines, which always see the fully remapped event
     if (valid) {
       for (auto& mod : modifiers) {
-	      valid = (*mod)._tweak(output);
+	      valid = mod->_tweak(output);
 	      if (!valid) {
 	        break;
 	      }

@@ -461,38 +461,6 @@ namespace Chaos {
     virtual void finish();
 
     /**
-     * \brief Common entry point into the apply function
-     *
-     * This function is called directly by the ChaosEngine class after a mod has being removed from
-     * the list. It gives a place to handle any common tasks required for all modifiers, after which
-     * we call the virtual apply() function implemented by the concrete child class.
-     */
-    void _apply();
-
-    /**
-     * \brief Commands to execute after another mod has executed its finish() routine.
-     *
-     * This routine will be executed for active mods _after_ another mod is removed from the
-     * stack. It can be used to regenerate states that might be affected by that other mod. For
-     * example, it is used by remap mods to rebuild the remap table in the event that more than
-     * one active mod is remapping things.
-     */ 
-    virtual void apply();
-
-    /**
-     * \brief Common entry point into the remap function
-     * \param[in,out] event The event coming from the controller
-     * \return true if the event is valid and should be passed on to other mods and the controller
-     * \return false if the event should be dropped and not sent to other mods or the controller
-     *
-     * This function is called directly by the ChaosEngine class for each incomming event. It
-     * gives a place to handle any common tasks required for all modifiers, after which we call the
-     * virtual remap() function implemented by the
-     * concrete child class.
-     */
-    bool _remap(DeviceEvent& event);
-
-    /**
      * \brief Remap incomming commands
      * \param[in,out] event The event coming from the controller
      * \return true if the event is valid and should be passed on to other mods and the controller

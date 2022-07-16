@@ -100,7 +100,6 @@ void Modifier::_begin() {
 void Modifier::begin() {}
 
 void Modifier::_update(bool wasPaused) {
-  PLOG_DEBUG << "Update timer";
   timer.update();
   if (wasPaused) {
     pause_time_accumulator += timer.dTime();
@@ -117,16 +116,6 @@ void Modifier::_finish() {
 }
 
 void Modifier::finish() {}
-
-void Modifier::_apply() {
-  apply();
-}
-
-void Modifier::apply() {}
-
-bool Modifier::_remap(DeviceEvent& event) {
-  return remap(event);
-}
 
 bool Modifier::remap(DeviceEvent& event) {
   return true;
