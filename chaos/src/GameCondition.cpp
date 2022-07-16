@@ -97,8 +97,12 @@ void GameCondition::setThreshold(double proportion) {
   PLOG_DEBUG << "Threshold for " << name << " set to " << threshold;
 }
 
-// This routine should be called from _tweak, so child modifiers only need to check isTriggered.
+// This routine manages the state of persistent triggers. It is called from _tweak, so child modifiers
+// don't need to call this. They should check isTriggered for the result.
 void GameCondition::updateState(DeviceEvent& event) {
+  if (!set_on || !clear_on) {
+    return;
+  }
   if (persistent_state) {
     // Once triggered, only an explicit clear_on match will reset
     if (clear_on->getIndex() == event.index() && pastThreshold(event)) {

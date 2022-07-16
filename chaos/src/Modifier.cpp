@@ -123,6 +123,7 @@ bool Modifier::remap(DeviceEvent& event) {
 
 bool Modifier::_tweak(DeviceEvent& event) {
   // Update any conditions that track persistent states
+  PLOG_DEBUG << "Checking incoming event for " << getName();
   for (auto& cond : conditions) {
     assert(cond);
     cond->updateState(event);
