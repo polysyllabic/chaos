@@ -94,10 +94,12 @@ void CooldownModifier::update() {
       PLOG_DEBUG << "Cooldown for " << getName() << " started";
 	    cooldown_timer = time_off;
 	    state = CooldownState::BLOCK;
+      // Turn off all the commands we're blocking.
+      // This was formerly done through fakePipelinedEvent(), but since remapping is now done
+      // before we see this event, I don't think it needs to be pipelined.
       for (auto& cmd : commands) {
-        
+        engine->setOff(cmd);
       }
-      // engine->fakePipelinedEvent(cooldown_event, getptr());
     }
   }
 }
@@ -115,9 +117,9 @@ bool CooldownModifier::tweak(DeviceEvent& event) {
   }
   // Block events in the command list while in cooldown
   for (auto& cmd : commands) {
-    assert(cmd);
+    assert(cmd && cmd->getInput());
     std::shared_ptr<ControllerInput> sig = cmd->getInput();
-    PLOG_DEBUG << "Checking " << cmd->getName() << ", maps to " << ((sig) ? sig->getName() : "NULL");
+    PLOG_VERBOSE << "Checking " << cmd->getName() << ", maps to " << ((sig) ? sig->getName() : "NULL");
     if (sig && sig->matches(event)) {
       return state != CooldownState::BLOCK;
     }

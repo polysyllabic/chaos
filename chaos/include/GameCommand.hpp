@@ -97,15 +97,14 @@ namespace Chaos {
     
     /**
      * \brief Get the current state of the controller for this command
-     * 
-     * \return short Current state
+     * \param hybrid_axis Return the axis component if this is a hybrid control
+     * \return short Live controller state
      *
-     * When checking the current state, we look at the remapped signal. That is, we case about what
-     * the user is actually doing, not what signal is going to the console. Remapping between axes
-     * and buttons, though creates a problem, since we need to check to two signals simultaneously.
-     * for the purpose of checking thresholds, etc.
+     * This examines the current state of the controller. If the signal is a HYBRID type and
+     * hybrid_axis is false, the button value will be polled. If it is true, the axis value
+     * will be polled. This value is ignored for other types.
      */
-    short getState();
+    short getState(bool hybrid_axis);
 
     /**
      * \brief Get the name of the command as defined in the TOML file

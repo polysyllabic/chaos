@@ -70,7 +70,7 @@ const std::string FormulaModifier::mod_type = "formula";
 void FormulaModifier::begin() {
   command_value.clear();
   for (auto& cmd : commands) {
-    command_value[cmd] = cmd->getState();
+    command_value[cmd] = cmd->getState(true);
   }
   command_offset.clear();
   for (auto& cmd : commands) {
