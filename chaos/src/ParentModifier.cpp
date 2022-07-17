@@ -92,6 +92,7 @@ void ParentModifier::buildRandomList() {
         PLOG_INFO << "Selected " << m_name << " as child mod";
         used_mods.push_back(mod);
         random_children.push_back(mod);
+        break;
       }
     }
   }
