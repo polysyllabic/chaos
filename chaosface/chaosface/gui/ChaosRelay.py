@@ -65,6 +65,8 @@ chaos_defaults = {
   'points_reward_title': 'Chaos Credit',
   'raffles': False,
   'raffle_time': 60.0,
+  'raffle_message_interval': 15.0,
+  'raffle_cooldown': 600.0,
   'redemption_cooldown': 600.0,
   'client_id': 'uic681f91dtxl3pdfyqxld2yvr82r1',
   'nick': "your_bot",
@@ -73,6 +75,7 @@ chaos_defaults = {
   'owner': "bot_owner",
   'channel': 'your_channel',
   'info_cmd_cooldown': 5.0,
+  'credit_name': 'credits',
   'msg_chaos_description': _chaos_description,
   'msg_how_to_vote': _chaos_how_to_vote,
   'msg_proportional_voting': 'The chances of a mod winning are proportional to the number of votes it receives.',
@@ -94,12 +97,14 @@ chaos_defaults = {
   'msg_winning_mod': "The modifier '{}' has won the vote.",
   'msg_in_cooldown': 'Cannot apply the mod yet.',
   'msg_no_credits': 'You need a modifier credit to do that.',
-  'msg_user_balance': '@{} currently has {} modifier credit{}.',
+  'msg_user_balance': '@{user} currently has {balance} modifier credit{plural}.',
   'msg_mod_applied': 'Modifier applied',
   'msg_mod_status': "The modifier '{}' is now {}",
+  'msg_user_not_found': "The user '{}' doesn't appear to be in chat. If you're sure you've spelled the name right, you can give a credit to this user anyway with the command '!givecredit #{}'",
   'msg_credit_transfer': '@{} has given @{} 1 mod credit',
   'msg_mod_list': 'A list of the available mods for this game can be found here: {}',
   'mod_list_link': 'https://github.com/polysyllabic/chaos/blob/main/chaos/examples/tlou_mods.txt',
+  'msg_raffle_open': 'A raffle for a modifier credit {status}. Type !join to enter.',
 }
 
 CONFIG_PATH = Path.cwd() / 'configs'
@@ -120,6 +125,8 @@ class ChaosRelay(flx.Component):
   force_mod:str = ''
   reset_mods = False
   insert_cooldown = 0.0
+  raffle_open = False
+  raffle_start_time = None
 
   # Model-View bridge:
   game_name = flx.StringProp(settable=True)
@@ -149,7 +156,10 @@ class ChaosRelay(flx.Component):
   points_reward_title = flx.StringProp(settable=True)
   raffles = flx.BoolProp(settable=True)
   raffle_time = flx.FloatProp(settable=True)
+  raffle_cooldown = flx.IntProp(settable=True)
+  raffle_message = flx.StringProp(settable=True)
   redemption_cooldown = flx.IntProp(settable=True)
+  credit_name = flx.StringProp(settable=True)
 
   # Chat Bot Configuration  
   channel_name = flx.StringProp(settable=True)
@@ -358,8 +368,8 @@ class ChaosRelay(flx.Component):
   def get_balance_message(self, user:str):
     balance = self.get_balance(user)
     plural = 's' if balance == 1 else ''
-    msg = self.get_attribute('msg_user_balance')
-    return msg.format(user, balance, plural)
+    msg: str = self.get_attribute('msg_user_balance')
+    return msg.format(user=user, balance=balance, plural=plural)
 
   def get_balance(self, user: str):
     if user not in self.user_credits:
@@ -472,6 +482,27 @@ class ChaosRelay(flx.Component):
     self.set_votes([0]*self.get_attribute('vote_options'))
     self.voted_users = []
 
+    # Announce the new voting pool in chat
+    if self.announce_candidates:
+      msg = self.get_attribute('msg_candidate_mods')
+      for num, mod in enumerate(candidates, start=1):
+        msg += ' {}: {}.'.format(num, mod)
+      print(f"Announcing new mods: {msg}")
+      if msg:
+        self.send_chat_message(msg)
+    else:
+      print("Not announcing mods")
+
+
+  def send_chat_message(self, msg: str):
+    """
+    The chatbot's send_message routine is async, so we schedule it in the chatbot's event loop
+    with run_until_complete()
+    """
+    if self.chatbot:
+      #self.chatbot._get_event_loop().run_until_complete(self.chatbot.send_message(msg))
+      self.chatbot._get_event_loop().create_task(self.chatbot.send_message(msg))
+
   def about_tcc(self):
     return self.get_attribute('msg_chaos_description')
 
@@ -511,24 +542,17 @@ class ChaosRelay(flx.Component):
     msg = self.get_attribute('msg_credit_methods') + msg
     return msg
 
-  def send_winning_mod_to_chat(self, winner):
+  def list_winning_mod(self, winner):
     if winner:
       mod_name = self.modifier_data[winner]['name']
-      msg = self.get_attribute('msg_winning_mod').format(mod_name)
-      #self.chatbot.send_message(msg)
-
-  #def send_active_mods_to_chat(self):
-  #  msg = self.list_active_mods()
-    #asyncio.create_task(self.chatbot.send_message(msg))
+      return self.get_attribute('msg_winning_mod').format(mod_name)
 
   def list_active_mods(self):
+    if not self.active_mods or not self.active_mods[0]:
+      return ''
     return self.get_attribute('msg_active_mods') +  ', '.join(filter(None, self.active_mods))
 
-  #def send_candidate_mods_to_chat(self):
-  #  msg = self.list_candidate_mods()
-    #asyncio.create_task(self.chatbot.send_message(msg))
-  
-  def list_candidate_mods(self):    
+  def list_candidate_mods(self):
     msg = self.get_attribute('msg_candidate_mods')
     for num, mod in enumerate(self.candidate_mods, start=1):
       msg += ' {}: {}.'.format(num, mod)
@@ -550,6 +574,13 @@ class ChaosRelay(flx.Component):
     times[finished_mod] = 1.0
     self.set_mod_times(times)
     self.set_active_mods(mods)
+
+    # Announce what's now active after the replacement
+    if self.announce_active:
+      msg = self.list_active_mods()
+      if msg:
+        self.send_chat_message(msg)
+
 
   @flx.action
   def reset_current_mods(self):

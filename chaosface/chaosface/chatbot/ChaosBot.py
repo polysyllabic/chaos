@@ -5,7 +5,6 @@
   The Twitch Bot to monitor chat for votes and other commands.
 """
 import logging
-import asyncio
 from twitchbot import BaseBot, Message, Channel
 from flexx import flx
 import chaosface.config.globals as config
@@ -16,9 +15,9 @@ class ChaosBot(BaseBot):
     super().__init__()
     self.channel: Channel = None
 
-  def send_message(self, msg: str):
+  async def send_message(self, msg: str):
     if self.channel and msg:
-      asyncio.create_task(self.channel.send_message(str))
+      await self.channel.send_message(msg)
 
 
   # All we do here is look for potential votes. Commands are dispatched by the parent class and
