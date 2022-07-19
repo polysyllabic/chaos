@@ -36,11 +36,11 @@
 
 using namespace Chaos;
 
-// TODO: 
 void Modifier::initialize(toml::table& config, EngineInterface* e) {
   engine = e;
   parent = nullptr;
-  totalLifespan = -1;    // An erroneous value that if set should be positive
+  total_lifespan = 0;
+  pause_time_accumulator = 0;
   lock_while_busy = true;
   allow_recursion = true;
   name = config["name"].value_or("NAME NOT FOUND");
@@ -182,7 +182,7 @@ Json::Value Modifier::toJsonObject() {
   result["name"] = getName();
   result["desc"] = getDescription();
   result["groups"] = getGroups();
-  result["lifespan"] = getLifespan();
+  result["lifespan"] = lifespan();
   return result;
 }
 

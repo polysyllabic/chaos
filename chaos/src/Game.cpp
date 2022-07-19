@@ -105,7 +105,7 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
   }
 
   // Create the modifiers
-  parse_errors += modifiers.buildModList(configuration, engine, use_menu);
+  parse_errors += modifiers.buildModList(configuration, engine, use_menu, getTimePerModifier());
   PLOG_INFO << "Loaded configuration file for " << name << " with " << parse_errors << " errors.";
   return true;
 }

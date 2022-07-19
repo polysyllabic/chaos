@@ -278,9 +278,9 @@ namespace Chaos {
     double pause_time_accumulator;
 
     /**
-     * \brief Designates a custom lifespan, if necessary.
+     * \brief Lifespan of the modifier
      */
-    double totalLifespan;
+    double total_lifespan;
     
     bool allow_recursion;
 
@@ -376,12 +376,15 @@ namespace Chaos {
      */
     double lifetime() { return timer.runningTime() - pause_time_accumulator; }
     
-    double getLifetime() {
-      return lifetime();
-     }
+    /**
+     * \brief Get the time this modifier should operate before removal
+     * 
+     * \return double
+     */
+    double lifespan() { return total_lifespan; }
 
-    double lifespan() { return totalLifespan; }
-    double getLifespan() { return lifespan(); }
+    void setLifespan(double time) { total_lifespan = time; }
+
     /**
      * \brief Common entry point into the begin function
      *

@@ -42,9 +42,10 @@ namespace Chaos {
      * \brief Create the overall list of mods from the TOML file.
      * \param config The object containing the fully parsed TOML file
      * \param engine Reference to the engine interface
+     * \param default_time Default lifetime in seconds
      * \param use_menu If false, do not use menu modifiers
      */
-    int buildModList(toml::table& config, EngineInterface* engine, bool use_menu);
+    int buildModList(toml::table& config, EngineInterface* engine, double default_time, bool use_menu);
 
     /**
      * \brief Given the sequence name, get the object

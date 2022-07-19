@@ -54,9 +54,13 @@ void ChaosEngine::newCommand(const std::string& command) {
 	
   if (root.isMember("winner")) {
     std::shared_ptr<Modifier> mod = game.getModifier(root["winner"].asString());
+    double time_active = game.getTimePerModifier();
     if (mod != nullptr) {
+      if (root.isMember("time")) {
+        time_active = root["time"].asDouble();
+      }
+      PLOG_INFO << "Adding Modifier: " << mod->getName() << " lifespan = " << time_active;
       lock();
-      PLOG_INFO << "Adding Modifier: " << mod->getName();
       modifiersThatNeedToStart.push(mod);
       //mod->_begin();
       unlock();
@@ -147,20 +151,18 @@ void ChaosEngine::doAction() {
   pausedPrior = false;
   unlock();
 	
-  // Check front element for expiration. 
-  if (modifiers.size() > 0) {
-    std::shared_ptr<Modifier> front = modifiers.front();
-    assert(front);
-    if ((front->lifespan() >= 0 && front->lifetime() > front->lifespan()) ||
-	      (front->lifespan() <  0 && front->lifetime() > game.getTimePerModifier())) {
-      removeMod(front);
-    }
-  } if (modifiers.size() > game.getNumActiveMods()) {
-    // If we have too many mods as the result of a manual apply, remove the oldest one
-    PLOG_DEBUG << " Have " << modifiers.size() << " mods; limit is " << game.getNumActiveMods();
+  // If we have too many mods, remove the oldest one
+  if (modifiers.size() > game.getNumActiveMods()) {
     removeOldestMod();
   }
-
+  // Check remaining mods for expiration. 
+  for  (auto& mod : modifiers) {    
+    if (mod->lifetime() > mod->lifespan()) {
+      removeMod(mod);
+      // Mods added one at a time, so we can stop searching on the first expired mod
+      break;
+    }
+  }
 }
 
 // Remove oldest mod whether or not it's expired. This keeps manually inserted mods from
@@ -168,13 +170,12 @@ void ChaosEngine::doAction() {
 void ChaosEngine::removeOldestMod() {
   PLOG_DEBUG << "Looking for oldest mod";
   if (modifiers.size() > 0) {
-    std::shared_ptr<Modifier> oldest = nullptr;
+    std::shared_ptr<Modifier> oldest = modifiers.front();
     for (auto& mod : modifiers) {
-      if (!oldest || oldest->lifetime() > mod->lifetime()) {
+      if (oldest->lifetime() < mod->lifetime()) {
         oldest = mod;
       }
     }
-    assert(oldest);
     removeMod(oldest);
   }
 }
@@ -182,7 +183,7 @@ void ChaosEngine::removeOldestMod() {
 void ChaosEngine::removeMod(std::shared_ptr<Modifier> to_remove) {
   assert(to_remove);
   PLOG_INFO << "Removing '" << to_remove->getName() << "' from active mod list";
-  PLOG_DEBUG << "Lifetime on removal = " << to_remove->getLifetime();
+  PLOG_DEBUG << "Lifetime on removal = " << to_remove->lifetime();
   lock();
   // Do cleanup for this mod, if necessary
   to_remove->_finish();

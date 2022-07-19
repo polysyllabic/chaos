@@ -28,7 +28,7 @@ using namespace Chaos;
 // Handles the static initialization. We construct the list of mods from their TOML-file
 // definitions.
 int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
-                                bool use_menu) {
+                                double default_time, bool use_menu) {
   int parse_errors = 0;
   PLOG_DEBUG << "Building modifier list";
   
@@ -81,6 +81,7 @@ int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
 	      PLOG_DEBUG << "Adding modifier '" << *mod_name << "' of type " << *mod_type;
 	      std::shared_ptr<Modifier> m = Modifier::create(*mod_type, *modifier, engine);
         assert(m);
+        m->setLifespan(default_time);
         auto [it, result] = mod_map.try_emplace(*mod_name, m);
         if (! result) {
           ++parse_errors;
