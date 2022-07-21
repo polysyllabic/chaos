@@ -165,7 +165,6 @@ bool Modifier::inCondition() {
   if (conditions.empty()) {
     return true;
   }
-  PLOG_DEBUG << "Testing while conditions";
   return testConditions(conditions);
 }
 
