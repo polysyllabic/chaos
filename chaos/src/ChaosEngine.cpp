@@ -61,8 +61,8 @@ void ChaosEngine::newCommand(const std::string& command) {
       }
       PLOG_INFO << "Adding Modifier: " << mod->getName() << " lifespan = " << time_active;
       lock();
+      mod->setLifespan(time_active);
       modifiersThatNeedToStart.push(mod);
-      //mod->_begin();
       unlock();
     } else {
       PLOG_ERROR << "ERROR: Modifier not found: " << command;
@@ -136,7 +136,7 @@ void ChaosEngine::doAction() {
   while(!modifiersThatNeedToStart.empty()) {
     std::shared_ptr<Modifier> mod = modifiersThatNeedToStart.front();
     assert(mod);
-    PLOG_DEBUG << "Initializing modifier " << mod->getName();
+    PLOG_DEBUG << "Initializing modifier " << mod->getName() << " lifespan = " << mod->lifespan();
     modifiers.push_back(mod);
     modifiersThatNeedToStart.pop();
     mod->_begin();
@@ -156,7 +156,7 @@ void ChaosEngine::doAction() {
     removeOldestMod();
   }
   // Check remaining mods for expiration. 
-  for  (auto& mod : modifiers) {    
+  for  (auto& mod : modifiers) {        
     if (mod->lifetime() > mod->lifespan()) {
       removeMod(mod);
       // Mods added one at a time, so we can stop searching on the first expired mod
@@ -183,7 +183,7 @@ void ChaosEngine::removeOldestMod() {
 void ChaosEngine::removeMod(std::shared_ptr<Modifier> to_remove) {
   assert(to_remove);
   PLOG_INFO << "Removing '" << to_remove->getName() << "' from active mod list";
-  PLOG_DEBUG << "Lifetime on removal = " << to_remove->lifetime();
+  PLOG_DEBUG << "Lifetime = " << to_remove->lifetime() << " of lifespan = " << to_remove->lifespan();
   lock();
   // Do cleanup for this mod, if necessary
   to_remove->_finish();
