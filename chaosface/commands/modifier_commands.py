@@ -7,9 +7,11 @@ from twitchbot import Command, Message
 import chaosface.config.globals as config
 import logging
 
+MANAGE_MODIFIERS_PERMISSION = 'manage_modifiers'
 
 # TODO: add permission='apply_modifiers' 
-@Command('apply', cooldown=config.relay.redemption_cooldown, cooldown_bypass='admin')
+@Command('apply', syntax='<mod name>', help='Apply a modifier immediately',
+         cooldown=config.relay.redemption_cooldown, cooldown_bypass=MANAGE_MODIFIERS_PERMISSION)
 async def cmd_apply_mod(msg: Message, *args):
   """
   Manually insert a mod into the list immediately. Requires a credit unless the command comds from
@@ -41,17 +43,23 @@ async def cmd_apply_mod(msg: Message, *args):
   ack: str = config.relay.get_attribute('msg_mod_not_active')
   await msg.reply(ack.format(config.relay.modifier_data[mod_key]['name']))
 
-@Command('disable', permission='admin')
+@Command('disable', permission=MANAGE_MODIFIERS_PERMISSION, syntax='<mod name>',
+         help='Disable a modifier so it no longer appears in voting lists')
 async def cmd_disable_mod(msg: Message, *args):
   request = ' '.join(args)
   await msg.reply(config.relay.set_mod_enabled(request, False))
 
-@Command('enable', permission='admin')
+@Command('enable', permission=MANAGE_MODIFIERS_PERMISSION, syntax='<mod name>',
+         help='Enable a modifier so it appears in voting lists')
 async def cmd_disable_mod(msg: Message, *args):
   request = ' '.join(args)
   await msg.reply(config.relay.set_mod_enabled(request, True))
 
-@Command('resetmods', permission='admin')
+@Command('remove', permission=MANAGE_MODIFIERS_PERMISSION)
+async def cmd_remove_mod(msg: Message, *args):
+  request = ' '.join(args)
+
+@Command('resetmods', permission=MANAGE_MODIFIERS_PERMISSION, help='Remove all active mods')
 async def cmd_reset_mods(msg: Message, *args):
   config.relay.reset_mods = True
 

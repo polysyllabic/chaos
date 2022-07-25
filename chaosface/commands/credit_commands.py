@@ -21,7 +21,7 @@ def validate_user_from_message(user: str, msg: Message):
     return user.lstrip('@').lower()
   return user.lower() if user in msg.channel.chatters else None
 
-@Command('credits', syntax='(target)', help='gets the caller\'s (or target\'s if specified) balance')
+@Command('credits', syntax='(user)', help='gets the caller\'s (or user\'s if specified) balance')
 async def cmd_get_balance(msg: Message, *args):
   if args:
     target = args[0].lstrip('@')
@@ -30,11 +30,11 @@ async def cmd_get_balance(msg: Message, *args):
   await msg.reply(config.relay.get_balance_message(target))
 
 # Manually add a mod credit to a user's account
-@Command('addcredits', permission=MANAGE_CREDIT_PERMISSION, syntax='<target> (amount)',
-  help='Add the specified amount (default 1) to the target\'s credit balance')
+@Command('addcredits', permission=MANAGE_CREDIT_PERMISSION, syntax='<user> (amount)',
+  help='Add the specified amount (1 if amount omitted) to the user\'s credit balance')
 async def cmd_add_credits(msg: Message, *args):
   if len(args) < 1:
-    raise InvalidArgumentsError('Must specify a target to receive the credits', cmd=cmd_add_credits)
+    raise InvalidArgumentsError('Must specify a user to receive the credits', cmd=cmd_add_credits)
   
   target: str = validate_user_from_message(args[0], msg)
   if not target:
@@ -53,11 +53,11 @@ async def cmd_add_credits(msg: Message, *args):
   await msg.reply(config.relay.get_balance_message(target))
 
 
-@Command('setcredits', permission=MANAGE_CREDIT_PERMISSION, syntax='<target> <amount>',
+@Command('setcredits', permission=MANAGE_CREDIT_PERMISSION, syntax='<user> <amount>',
   help='Set a user\'s credit balance to a specified amount')
 async def cmd_set_credits(msg: Message, *args):
   if len(args) != 2:
-    raise InvalidArgumentsError('Must specify a target and an amount', cmd=cmd_set_credits)
+    raise InvalidArgumentsError('Must specify a user and an amount', cmd=cmd_set_credits)
   
   target: str = validate_user_from_message(args[0], msg)
   if not target:
@@ -76,7 +76,7 @@ async def cmd_set_credits(msg: Message, *args):
   await msg.reply(config.relay.get_balance_message(msg.author))
   
 
-@Command('givecredits', syntax='<target> (amount)',
+@Command('givecredits', syntax='<user> (amount)',
   help='Give credits to another user. If amount is omitted, gives 1 credit')
 async def cmd_give_credits(msg: Message, *args):
   """

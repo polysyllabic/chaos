@@ -25,7 +25,7 @@ class ConnectionSetup(flx.PyWidget):
       '<a href="{bot}" target="_blank">log in as your bot and then click here.</a> ' 
       'Paste the generated token into the Bot OAuth field. '
       'To use points redemptions, you must also get a separate OAuth token. Log in with your '
-      'streamer\'s account <a href="{pubsub}"target="_blank">and click here.</a>.')
+      'streamer\'s account <a href="{pubsub}"target="_blank">and click here for a PubSub token.</a>.')
 
     with flx.VBox():
       with flx.GroupWidget(flex=1, title="Twitch Connection"):
@@ -34,8 +34,8 @@ class ConnectionSetup(flx.PyWidget):
             with flx.VBox():
               flx.Label(style=label_style, text="Streamer Channel:")
               flx.Label(style=label_style, text="Bot Name:")
-              flx.Label(style=label_style, text="Bot Oauth Token:")
-              flx.Label(style=label_style, text="PubSub Oauth Token:")
+              flx.Label(style=label_style, text="Bot OAuth Token:")
+              flx.Label(style=label_style, text="PubSub OAuth Token:")
             with flx.VBox(flex=1):
               self.channel_name = flx.LineEdit(style=field_style, text=config.relay.channel_name)
               self.bot_name = flx.LineEdit(style=field_style, text=config.relay.bot_name)

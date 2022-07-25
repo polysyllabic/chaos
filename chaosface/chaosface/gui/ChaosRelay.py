@@ -148,7 +148,7 @@ class ChaosRelay(flx.Component):
   time_per_modifier = flx.FloatProp(settable=True)
   softmax_factor = flx.IntProp(settable=True)
   vote_options = flx.IntProp(settable=True)
-  voting_type = flx.EnumProp(['Proportional', 'Majority', 'DISABLED'], 'Proportional', settable=True)
+  voting_type = flx.EnumProp(['Proportional', 'Majority', 'Authoritarian', 'DISABLED'], 'Proportional', settable=True)
   bits_redemptions = flx.BoolProp(settable=True)
   bits_per_credit = flx.IntProp(settable=True)
   multiple_credits = flx.BoolProp(settable=True)
