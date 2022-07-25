@@ -84,6 +84,12 @@ class ChaosModel(EngineObserver):
               "time": config.relay.get_attribute('modifier_time')}
     message = self.chaos_communicator.send_message(json.dumps(toSend))
 
+  def remove_mod(self, mod_name):
+    logging.debug("Removing mod: " + mod_name)
+    toSend = {"remove": mod_name}
+    message = self.chaos_communicator.send_message(json.dumps(toSend))
+
+
   def reset_mods(self, mod_name):
     logging.debug("Resetting mods")
     toSend = {"reset": True }
@@ -110,7 +116,10 @@ class ChaosModel(EngineObserver):
   def select_winning_modifier(self):
     tally = list(config.relay.votes)
     index = 0
-    if config.relay.voting_type == 'Proportional':
+    if config.relay.voting_type == 'Authoritarian':
+      return config.relay.get_random_mod()
+
+    elif config.relay.voting_type == 'Proportional':
       total_votes = sum(tally)
       if total_votes < 1:
         for i in range(len(tally)):
@@ -153,7 +162,9 @@ class ChaosModel(EngineObserver):
       flx.loop.call_soon(config.relay.replace_mod, mod_key)
     else:
       logging.debug(f'Mod key "{mod_key}" not in list (not sent)')
-    # Pick new candidates
+    # Pick new candidates, if we're voting
+    if config.relay.voting_type == 'DISABLED' or config.relay.voting_type == 'DISABLED':
+      return
     flx.loop.call_soon(config.relay.get_new_voting_pool)
 
   def _loop(self):
@@ -219,7 +230,7 @@ class ChaosModel(EngineObserver):
         if not config.relay.valid_data or config.relay.voting_type == 'DISABLE':
           continue
         
-        # Pick the winner
+        # Pick the winner        
         mod_key = self.select_winning_modifier()
         self.replace_mod(mod_key)
 

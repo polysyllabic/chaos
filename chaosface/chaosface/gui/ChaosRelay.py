@@ -444,30 +444,44 @@ class ChaosRelay(flx.Component):
     else:
       logging.error(f"Updating SoftMax: modifier '{new_mod}' not in mod list")
 
+  def pick_from_list(self, mod_list):
+    """
+    Randomly pick a mod from the list provided
+    """
+    votableTracker = {}
+    for mod in mod_list:
+      votableTracker[mod] = copy.deepcopy(self.modifier_data[mod])
+              
+    # Calculate the softmax probablities (must be done each time):
+    self.update_softmax_probabilities(votableTracker)
+    # make a decision:
+    choice_threshold = np.random.uniform(0,1)
+    selectionTracker = 0
+    for mod in votableTracker:
+      selectionTracker += votableTracker[mod]['p']
+      if selectionTracker > choice_threshold:
+        return mod
+
+  def get_random_mod(self):
+    """
+    Randomly pick a mod from the enabled but currently unused mods
+    """
+    inactive_mods = set(np.setdiff1d(self.enabled_mods, list(self.active_keys)))
+    return self.pick_from_list(inactive_mods)
+
   def get_new_voting_pool(self):
+    """
+    Refill the voting pool with random selections
+    """
     # Ignore currently active mods:
     inactive_mods = set(np.setdiff1d(self.enabled_mods, list(self.active_keys)))
 
     self.candidate_keys = []
     candidates = []
     for k in range(self.vote_options):
-      # build a list of contributor for this selection:
-      votableTracker = {}
-      for mod in inactive_mods:
-        votableTracker[mod] = copy.deepcopy(self.modifier_data[mod])
-              
-      # Calculate the softmax probablities (must be done each time):
-      self.update_softmax_probabilities(votableTracker)
-      # make a decision:
-      choice_threshold = np.random.uniform(0,1)
-      selectionTracker = 0
-      for mod in votableTracker:
-        selectionTracker += votableTracker[mod]['p']
-        if selectionTracker > choice_threshold:
-          self.candidate_keys.append(mod)
-          candidates.append(self.modifier_data[mod]['name'])
-          inactive_mods.remove(mod)  #remove this to prevent a repeat
-          break
+      mod = self.pick_from_list(inactive_mods)
+      candidates.append(self.modifier_data[mod]['name'])
+      inactive_mods.remove(mod)  #remove this to prevent a repeat
     
     if logging.getLogger().isEnabledFor(logging.DEBUG):
       logging.debug("New Voting Round:")
