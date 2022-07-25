@@ -70,7 +70,7 @@ const std::string FormulaModifier::mod_type = "formula";
 void FormulaModifier::begin() {
   command_value.clear();
   for (auto& cmd : commands) {
-    command_value[cmd] = cmd->getState();
+    command_value[cmd] = cmd->getState(true);
   }
   command_offset.clear();
   for (auto& cmd : commands) {
@@ -111,6 +111,7 @@ void FormulaModifier::update() {
       event.id = cmd->getInput()->getID();
       event.value = fmin(fmax(command_value[cmd] + command_offset[cmd], JOYSTICK_MIN), JOYSTICK_MAX);
       engine->fakePipelinedEvent(event, getptr());
+      PLOG_DEBUG << cmd->getName() << " orig value = " << command_value[cmd] << " + offset " << command_offset[cmd];
       i++;
     } else {
       command_offset[cmd] = 0;

@@ -54,10 +54,14 @@ void ChaosEngine::newCommand(const std::string& command) {
 	
   if (root.isMember("winner")) {
     std::shared_ptr<Modifier> mod = game.getModifier(root["winner"].asString());
+    double time_active = game.getTimePerModifier();
     if (mod != nullptr) {
-      PLOG_INFO << "Adding Modifier: " << mod->getName();
+      if (root.isMember("time")) {
+        time_active = root["time"].asDouble();
+      }
+      PLOG_INFO << "Adding Modifier: " << mod->getName() << " lifespan = " << time_active;
       lock();
-      modifiers.push_back(mod);
+      mod->setLifespan(time_active);
       modifiersThatNeedToStart.push(mod);
       unlock();
     } else {
@@ -124,45 +128,51 @@ void ChaosEngine::doAction() {
     pausedPrior = true;
     return;    
   }
-
+  if (pausedPrior) {
+    PLOG_DEBUG << "Resuming after pause";
+  }
   // Initialize the mods that are waiting
-  lock();
+  lock();  
   while(!modifiersThatNeedToStart.empty()) {
-    PLOG_DEBUG << "Processing new modifier.";
-    modifiersThatNeedToStart.front()->_begin();
+    std::shared_ptr<Modifier> mod = modifiersThatNeedToStart.front();
+    assert(mod);
+    PLOG_DEBUG << "Initializing modifier " << mod->getName() << " lifespan = " << mod->lifespan();
+    modifiers.push_back(mod);
     modifiersThatNeedToStart.pop();
+    mod->_begin();
   }
   unlock();
 	
   lock();
   for (auto& mod : modifiers) {
-    (*mod)._update(pausedPrior);
+    assert (mod);
+    mod->_update(pausedPrior);
   }
   pausedPrior = false;
   unlock();
 	
-  // Check front element for expiration. 
-  if (modifiers.size() > 0) {
-    std::shared_ptr<Modifier> front = modifiers.front();
-    if ((front->lifespan() >= 0 && front->lifetime() > front->lifespan()) ||
-	      (front->lifespan() <  0 && front->lifetime() > game.getTimePerModifier())) {
-      removeMod(front);
-    }
-  } if (modifiers.size() > game.getNumActiveMods()) {
-    // If we have too many mods as the result of a manual apply, remove the oldest one
+  // If we have too many mods, remove the oldest one
+  if (modifiers.size() > game.getNumActiveMods()) {
     removeOldestMod();
   }
-
+  // Check remaining mods for expiration. 
+  for  (auto& mod : modifiers) {        
+    if (mod->lifetime() > mod->lifespan()) {
+      removeMod(mod);
+      // Mods added one at a time, so we can stop searching on the first expired mod
+      break;
+    }
+  }
 }
 
 // Remove oldest mod whether or not it's expired. This keeps manually inserted mods from
 // going beyond the specified modifier count.
 void ChaosEngine::removeOldestMod() {
+  PLOG_DEBUG << "Looking for oldest mod";
   if (modifiers.size() > 0) {
-    PLOG_DEBUG << "Finding oldest mod";
-    std::shared_ptr<Modifier> oldest = nullptr;
+    std::shared_ptr<Modifier> oldest = modifiers.front();
     for (auto& mod : modifiers) {
-      if (!oldest || oldest->lifetime() > mod->lifetime()) {
+      if (oldest->lifetime() < mod->lifetime()) {
         oldest = mod;
       }
     }
@@ -171,16 +181,13 @@ void ChaosEngine::removeOldestMod() {
 }
 
 void ChaosEngine::removeMod(std::shared_ptr<Modifier> to_remove) {
+  assert(to_remove);
   PLOG_INFO << "Removing '" << to_remove->getName() << "' from active mod list";
-  PLOG_DEBUG << "Lifetime on removal = " << to_remove->getLifetime();
+  PLOG_DEBUG << "Lifetime = " << to_remove->lifetime() << " of lifespan = " << to_remove->lifespan();
   lock();
   // Do cleanup for this mod, if necessary
   to_remove->_finish();
   modifiers.remove(to_remove);
-  // Execute apply() on remaining modifiers for post-removal actions
-  for (auto& mod : modifiers) {
-    mod->_apply();
-  }
   unlock();
 }
 
@@ -217,7 +224,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
     lock();
     // First call all remaps to translate the incomming signal 
     for (auto& mod : modifiers) {
-      valid = (*mod)._remap(output);
+      valid = mod->remap(output);
       if (!valid) {
         break;
       }
@@ -225,7 +232,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
     // Now pass to the regular tweak routines, which always see the fully remapped event
     if (valid) {
       for (auto& mod : modifiers) {
-	      valid = (*mod)._tweak(output);
+	      valid = mod->_tweak(output);
 	      if (!valid) {
 	        break;
 	      }

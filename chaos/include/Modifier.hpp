@@ -265,13 +265,6 @@ namespace Chaos {
     std::vector<std::shared_ptr<GameCondition>> conditions;
 
     /**
-     * \brief Rule to apply for the test of the #conditions list.
-     *
-     * Currently supports all, any, or none true. 
-     */
-    ConditionCheck condition_test;
-
-    /**
      * \brief List of game conditions to test
      *
      * The list of conditions is tested according to the rule in unless_test, and mods are expected
@@ -280,21 +273,14 @@ namespace Chaos {
     std::vector<std::shared_ptr<GameCondition>> unless_conditions;
 
     /**
-     * \brief Rule to apply for the test of the #unless_conditions list.
-     *
-     * Currently supports all, any, or none true. 
-     */
-    ConditionCheck unless_test;
-
-    /**
      * \brief Amount of time the engine has been paused.
      */
     double pause_time_accumulator;
 
     /**
-     * \brief Designates a custom lifespan, if necessary.
+     * \brief Lifespan of the modifier
      */
-    double totalLifespan;
+    double total_lifespan;
     
     bool allow_recursion;
 
@@ -316,9 +302,7 @@ namespace Chaos {
      * - groups
      * - applies_to
      * - condition
-     * - condition_test
      * - unless
-     * - unless_test
      * - begin_sequence
      * - finish_sequence
      * - unlisted
@@ -326,24 +310,12 @@ namespace Chaos {
     void initialize(toml::table& config, EngineInterface* e);
 
     /**
-     * \brief Get a ConditionTest object corresponding to the type name in the TOML file
-     * 
-     * \param config Table that contains the condition test as a key/value pair
-     * \param key Name of the key within the table
-     * \return ConditionCheck 
-     *
-     */
-    ConditionCheck getConditionTest(const toml::table& config, const std::string& key);
-
-    /**
      * \brief Test if the current controller state matches the defined conditions
      * 
      * \param conditions A vector of the conditions to check
-     * \param cond_type The type of test to apply to the conditions (all, any, none)
-     * \return true 
-     * \return false 
+     * \return true If all conditions in the vector return true
      */
-    bool testConditions(std::vector<std::shared_ptr<GameCondition>> conditions, ConditionCheck cond_type);
+    bool testConditions(std::vector<std::shared_ptr<GameCondition>>& conditions);
 
   public:
     /**
@@ -404,12 +376,15 @@ namespace Chaos {
      */
     double lifetime() { return timer.runningTime() - pause_time_accumulator; }
     
-    double getLifetime() {
-      return lifetime();
-     }
+    /**
+     * \brief Get the time this modifier should operate before removal
+     * 
+     * \return double
+     */
+    double lifespan() { return total_lifespan; }
 
-    double lifespan() { return totalLifespan; }
-    double getLifespan() { return lifespan(); }
+    void setLifespan(double time) { total_lifespan = time; }
+
     /**
      * \brief Common entry point into the begin function
      *
@@ -459,38 +434,6 @@ namespace Chaos {
      * Child classes implement this function to handle type-specific initialization.
      */
     virtual void finish();
-
-    /**
-     * \brief Common entry point into the apply function
-     *
-     * This function is called directly by the ChaosEngine class after a mod has being removed from
-     * the list. It gives a place to handle any common tasks required for all modifiers, after which
-     * we call the virtual apply() function implemented by the concrete child class.
-     */
-    void _apply();
-
-    /**
-     * \brief Commands to execute after another mod has executed its finish() routine.
-     *
-     * This routine will be executed for active mods _after_ another mod is removed from the
-     * stack. It can be used to regenerate states that might be affected by that other mod. For
-     * example, it is used by remap mods to rebuild the remap table in the event that more than
-     * one active mod is remapping things.
-     */ 
-    virtual void apply();
-
-    /**
-     * \brief Common entry point into the remap function
-     * \param[in,out] event The event coming from the controller
-     * \return true if the event is valid and should be passed on to other mods and the controller
-     * \return false if the event should be dropped and not sent to other mods or the controller
-     *
-     * This function is called directly by the ChaosEngine class for each incomming event. It
-     * gives a place to handle any common tasks required for all modifiers, after which we call the
-     * virtual remap() function implemented by the
-     * concrete child class.
-     */
-    bool _remap(DeviceEvent& event);
 
     /**
      * \brief Remap incomming commands
@@ -558,18 +501,17 @@ namespace Chaos {
     /**
      * \brief Checks the list of negative game conditions 
      * 
-     * \return true if we're in the defined state
-     * \return false if we're not in the defined state, or if the list is empty
+     * \return true if all conditions in the list return true
+     * \return false any condition in the list returns false, or if the list is empty
      *
      * Traverses the list of GameCondition objects stored in #unless_conditions. The state of 
      * #unlessTest determines the logic for how to chain together multiple conditions.
      *
      * Note that the test on a non-empty list is conducted the same way as the one for
-     * inCondition(). For example, if #unlessTest is set to ConditionCheck::ALL and all
-     * conditions are true, this function returns true. You should think of the return value
-     * as answering the question "Are we in the state defined in this list?" and not "should we
-     * take action?" The answer to the second question is one to be determined by the child
-     * mod that makes use of this function.
+     * inCondition(). In other words, if all conditions are true, this function returns true.
+     * You should think of the return value as answering the question "Are we in the state
+     * defined in this list?" and not "should we take action?" The answer to the second question
+     * is one to be determined by the child mod that makes use of this function.
      * 
      * If the #unless_conditions list is empty, always returns false.
      */

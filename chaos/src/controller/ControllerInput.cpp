@@ -117,12 +117,20 @@ short ControllerInput::getMax(std::shared_ptr<ControllerInput> signal) {
   return signal->getMax(TYPE_AXIS);
 }
 
-short ControllerInput::getState() {
-  return (getType() == ControllerSignalType::DUMMY) ? 0 :
-    controller.getState(button_id, getButtonType());  
+short ControllerInput::getState(bool hybrid_axis) {
+  short rval;
+  if (getType() == ControllerSignalType::DUMMY) {
+    return 0;
+  } else if (getType() == ControllerSignalType::HYBRID && hybrid_axis) {
+    return controller.getState(hybrid_axis, TYPE_AXIS);
+  }
+  return controller.getState(button_id, getButtonType());
 }
 
 bool ControllerInput::matches(const DeviceEvent& event) {
-  return (event.index() == button_index || 
+  bool rval = (event.index() == button_index || 
     (input_type == ControllerSignalType::HYBRID && event.index() == hybrid_index));
+  PLOG_VERBOSE << name << ": button_index=" << button_index << "; hybrid_index=" << hybrid_index << "; event index=" << 
+    event.index() << "; match=" << (rval ? "YES" : "NO");
+  return rval;
 }

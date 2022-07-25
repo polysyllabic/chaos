@@ -42,24 +42,32 @@ CooldownModifier::CooldownModifier(toml::table& config, EngineInterface* e) {
   }
 
   engine->addGameCommands(config, "trigger", trigger);
-  
+
   time_on = config["time_on"].value_or(0.0);
-  if (time_on == 0) {
-    PLOG_WARNING << "The time_on for this cooldown mod is 0 seconds!";
+  if (time_on <= 0.0) {
+    throw std::runtime_error("Cooldown time_on must be a positive number");
   }
   
   time_off = config["time_off"].value_or(0.0);
-  if (time_off == 0) {
-    PLOG_WARNING << "The time_off for this cooldown mod is 0 seconds!";
+  if (time_off <= 0.0) {
+    throw std::runtime_error("Cooldown time_off must be a positive number");
   }
-  PLOG_VERBOSE << " time_on: " << time_on << "; time_off: " << time_off;
 
   cumulative = config["cumulative"].value_or(false);
+
+  PLOG_VERBOSE << "Cooldown " << getName() << ": time_on = " << time_on << "; time_off = " << time_off << "; cumulative = " << cumulative;
+  for (auto& t : trigger) {
+    PLOG_VERBOSE << "Trigger on event " << t->getName();
+  }
+  for (auto& c : conditions) {
+    PLOG_VERBOSE << "With condition" << c->getName();
+  }
 }
 
 void CooldownModifier::begin() {
   cooldown_timer = 0;
   state = CooldownState::UNTRIGGERED;
+  PLOG_DEBUG << "Initialized " << getName();
 }
 
 void CooldownModifier::update() {
@@ -80,13 +88,18 @@ void CooldownModifier::update() {
     // if the while condition is true
     if (!cumulative || inCondition()) {
       cooldown_timer += deltaT;
+      PLOG_DEBUG << "timer_on period = " << cooldown_timer;
     }
     if (cooldown_timer > time_on) {
       PLOG_DEBUG << "Cooldown for " << getName() << " started";
 	    cooldown_timer = time_off;
 	    state = CooldownState::BLOCK;
-      // Disable event necessary?
-      // engine->fakePipelinedEvent(cooldown_event, getptr());
+      // Turn off all the commands we're blocking.
+      // This was formerly done through fakePipelinedEvent(), but since remapping is now done
+      // before we see this event, I don't think it needs to be pipelined.
+      for (auto& cmd : commands) {
+        engine->setOff(cmd);
+      }
     }
   }
 }
@@ -94,8 +107,9 @@ void CooldownModifier::update() {
 bool CooldownModifier::tweak(DeviceEvent& event) {
   if (state == CooldownState::UNTRIGGERED) {
     // Check any incomming event to start the trigger
-    for (auto& cmd : trigger) {
-      if (cmd->matches(event) && inCondition()) {
+    for (auto& sig : trigger) {
+      if (sig->matches(event) && inCondition()) {
+        PLOG_DEBUG << "Trigger matched on event " << (int) event.type << "." << (int) event.id;
         state = CooldownState::ALLOW;
         return true;
       }
@@ -103,7 +117,10 @@ bool CooldownModifier::tweak(DeviceEvent& event) {
   }
   // Block events in the command list while in cooldown
   for (auto& cmd : commands) {
-    if (cmd->getInput()->matches(event)) {
+    assert(cmd && cmd->getInput());
+    std::shared_ptr<ControllerInput> sig = cmd->getInput();
+    PLOG_VERBOSE << "Checking " << cmd->getName() << ", maps to " << ((sig) ? sig->getName() : "NULL");
+    if (sig && sig->matches(event)) {
       return state != CooldownState::BLOCK;
     }
   }

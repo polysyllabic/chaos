@@ -45,6 +45,7 @@ void GameCondition::addCondition(std::shared_ptr<GameCommand> command) {
 bool GameCondition::thresholdComparison(short value) {
   
   assert(threshold_type != ThresholdType::DISTANCE);
+  PLOG_DEBUG << "threshold = " << threshold << "; value = " << value;
   switch (threshold_type) {
     case ThresholdType::GREATER:
       return value > threshold;
@@ -61,16 +62,19 @@ bool GameCondition::thresholdComparison(short value) {
 
 void GameCondition::setThreshold(double proportion) {
   assert(proportion >= 0.0 && proportion <= 1.0);
+  threshold = 1;
+  std::shared_ptr<ControllerInput> signal;
 
   // Translate the threshold to an integer based on the signal of the first command in the commands list
   if (while_conditions.empty()) {
-    if (proportion < 1.0) {
-      PLOG_ERROR << "Can't set threshold until while_conditions is set; using 1";  
+    if (!set_on) {
+      PLOG_ERROR << "Internal error: while_conditions empty and set_on is null";  
+      return;
     }
-    threshold = 1;
-    return;
+    signal = set_on;
+  } else {
+    signal = while_conditions.front();
   }
-  std::shared_ptr<ControllerInput> signal = while_conditions.front();
 
   bool neg_extreme = (threshold_type == ThresholdType::LESS || threshold_type == ThresholdType::LESS_EQUAL);
 
@@ -86,7 +90,7 @@ void GameCondition::setThreshold(double proportion) {
     case ControllerSignalType::HYBRID:
       // If the threshold is 1, then look at the button; otherwise, we look at the fraction of the axis
       if (proportion == 1.0) {
-        threshold = 1;
+        break;
       }
       // falls through
     default:
@@ -97,8 +101,12 @@ void GameCondition::setThreshold(double proportion) {
   PLOG_DEBUG << "Threshold for " << name << " set to " << threshold;
 }
 
-// This routine should be called from _tweak, so child modifiers only need to check isTriggered.
+// This routine manages the state of persistent triggers. It is called from _tweak, so child modifiers
+// don't need to call this. They should check isTriggered for the result.
 void GameCondition::updateState(DeviceEvent& event) {
+  if (!set_on || !clear_on) {
+    return;
+  }
   if (persistent_state) {
     // Once triggered, only an explicit clear_on match will reset
     if (clear_on->getIndex() == event.index() && pastThreshold(event)) {
@@ -118,19 +126,18 @@ bool GameCondition::inCondition() {
   if (while_conditions.empty()) {
     return persistent_state;
   }
-  // We have 
   if (threshold_type == ThresholdType::DISTANCE) {
     if (while_conditions.size() != 2) {
       return false;
     }    
-    short x = while_conditions[0]->getState();
-    short y = while_conditions[1]->getState();
+    short x = while_conditions[0]->getState(true);
+    short y = while_conditions[1]->getState(true);
     PLOG_DEBUG << "x = " << x << "; y = " << y << "x^2+y^2 = " << (x*x +y*y) << "; dist^2 = " << threshold * threshold;    
     return (x*x + y*y >= threshold * threshold);
   }
 
   return std::all_of(while_conditions.begin(), while_conditions.end(), [&](std::shared_ptr<ControllerInput> c) {
-	  return thresholdComparison(c->getState()); });
+	  return thresholdComparison(c->getState(threshold != 1)); });
 
 }
 

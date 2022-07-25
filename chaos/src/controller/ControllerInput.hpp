@@ -223,13 +223,14 @@ namespace Chaos {
 
     /**
      * \brief Get the current state of the controller for this signal
-     * 
+     * \param hybrid_axis Return the axis component if this is a hybrid control
      * \return short Live controller state
      *
-     * This examines the current state of the controller for the actual signal, not its remapped
-     * state.
+     * This examines the current state of the controller. If the signal is a HYBRID type and
+     * hybrid_axis is false, the button value will be polled. If it is true, the axis value
+     * will be polled. This value is ignored for other types.
      */
-    short getState();
+    short getState(bool hybrid_axis);
 
     /**
      * \brief Does the command match the incomming device event

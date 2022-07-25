@@ -31,7 +31,7 @@ GameCommand::GameCommand(const std::string& cmd, std::shared_ptr<ControllerInput
                          name{cmd}, binding{bind} {
 }
 
-short GameCommand::getState() {
-  short state = binding->getState();
+short GameCommand::getState(bool hybrid_axis) {
+  short state = binding->getState(hybrid_axis);
   return state;
 }
