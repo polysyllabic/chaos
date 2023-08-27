@@ -57,30 +57,36 @@ showing extended gameplay with Chaos.
 
 ## How it Works
 
-Twitch Controls Chaos inserts a Raspberry Pi 4 (a small but capable computer) between your
-controller and console. Two programs are running on the Pi:
+Twitch Controls Chaos inserts a Raspberry Pi (a small but capable computer) between your
+controller and console. The Raspberry Pi intercepts signals coming from the controller and
+selectively passes them on to the console. It can change the signnals, block them, and even
+insert completely new commands that weren't sent from the controller.
 
-- The chaos engine, written in C++, which does the actual work of intercepting signals from the
+The TCC software consists of two programs. By default, they both run on the Raspberry Pi:
+
+- The Chaos engine, written in C++, does the actual work of intercepting signals from the
 controller, altering them or creating new signals, and passing them on to the console.
 
-- The chaos interface, a chatbot written in Python, which monitors the streamer's twitch chat,
+- The Chaos interface, a chatbot written in Python, monitors the streamer's twitch chat,
 conducts the votes on which mods to apply, and tells the engine what the winning mods are.
 The chatbot can be run on a separate computer, if you like.
 
 Modifiers and other information necessary to control a specific game are defined in configuration
 files. Each game has its own file, and you can switch games by loading a new configuration file.
 
-When Chaos is active, the chatbot selects a list of mods at random (3 by default) from the list of
-available mods and holds a vote. Anyone in chat can vote for their preferred mod by typing the
-number of the mod. When the voting window expires, the winning mod is applied and the voting
-process repeats with a new set of candidate mods. By default, each mod is active for 3 minutes,
-and 3 mods are active at any one time, so a new mod will be applied every minute.
+When Chaos is active, the chatbot selects modifiers at random from the list of available mods and
+holds a vote. Anyone in chat can vote for their preferred mod by typing the number of their
+preferred candidate mode in chat. The winning modifier is applied automatically, and the voting
+process repeats with a new set of candidate modifiers. By default, each modifier is active for 3
+minutes, and 3 mods are active at any one time, so a new vote is held every minute.
 
 By default, the winning mod is selected *proportionally*. That is, the chance that a particular
 mod wins the vote is equal to the proportion of votes that it received. So a mod that receives 25%
 of the votes has a 25% chance of winning. The streamer can also configure voting to be majority
 rule. In this case, the mod with the most votes always wins and any ties are decided by random
-selection.
+selection. Voting can even be disabled altogether, so that modifiers can only be applied manually.
+This last system may be useful if you want to apply some specific modifier as the result of
+events that the chatbot cannot track, such as reaching some custom channel goel.
 
 ## Limitations
 
@@ -100,37 +106,30 @@ be applied. In this case, you may need to pause the game and manually set the ne
 
 ## What's New In Chaos Unbound
 
-The following features have been implemented with this version of Chaos
+This version of Chaos is called "Chaos Unbound" because the system is no longer hard-coded to a
+specific game. Modifiers and other aspects of gameplay are now defined in a configuration file,
+which the engine reads when it initializes. Altering this configuration file allows you to add new
+modifiers easily, or even create support for an entirely new game, without needing to write any C++
+or Python code. The rules for creating  
+[configuration files](https://github.com/polysyllabic/chaos/blob/unbound/chaos/examples/tlou2.toml)
+are described 
 
-### Game-Independent Chaos Engine
+In the previous version of Chaos, a modifier that advertised itself, for example, as "no melee"
+actually functioned by blocking the square button. Other mods could also scramble the controls, for
+example swapping the square and triangle buttons. If those two mods were active simultaneously, this
+could result in melee becoming active again, depending on the order in which the modifiers maps were
+applied.
 
-The Chaos engine is no longer hard-coded specifically to TLOU2. Modifiers and other aspects of
-gameplay are now defined in a configuration file, which the engine reads when it initializes.
-Altering this configuration file easily allows you to add new mods, or even to create support for
-an entirely new game. The
-[configuration file for TLOU2](https://github.com/polysyllabic/chaos/blob/unbound/chaos/examples/tlou2.toml)
-contains extensive comments that document the available options, and can serve as a template for other games.
-
-### Semantic Mapping of Controls
-
-In earlier versions of Chaos, a modifier that advertised itself, for example, as "no melee" actually
-functioned by blocking the square button. Other mods could also scramble the controls, for example
-swapping the square and triangle buttons. If those two mods were active simultaneously, this could
-result in melee becoming active again (since it's mapped to a different control), depending on the
-order in which the maps were applied.
-
-In the current version, modifiers operate on game commands rather than low-level controls, and any
-remapping of signals occurs before the modifiers work their magic. This has the effect that any
-alterations to a particular command will continue to operate regardless of what control that command
-is currently mapped to.
-
-### Modifier Redemption
+In the current version, modifiers are defined based on game commands, and any remapping of
+controller inputs is performed before the modifiers work their magic. This has the effect that any
+modifiers that specify alterations to a particular command will continue to operate regardless of
+what control that command is currently mapped to.
 
 Streamers can now choose to allow chat to acquire "redemption" credits that entitle the person with
 that credit to apply a modifier of their choosing. The modifier is applied outside of the normal
 voting and occurs immediately (or after a cooldown period that you can be configured). This allows
-a member of chat to apply the most chaotic mod at a strategic time, rather than being subjected to
-the vagaries of the voting process.
+a member of chat to apply the most chaotic modifier at a strategic time, rather than being
+subjected to the vagaries of the voting process.
 
 Credits can be acquired by any of the following means, which the streamer can enable and configure
 individually:
@@ -140,20 +139,19 @@ individually:
 - Raffle
 - Gifting from those who have credits already
 
-### New Modifiers
 
 The switch to a configuration-file initialization for modifiers means that it is easy to create many
-types of new modifiers with only a few settings. The TLOU2 configuration file includes the following
-new modifiers (in addition to all those available in the older version of Chaos):
+types of new modifiers with only a few settings. Some examples of new modifiers included in the
+new TLOU2 configuration file include the following:
 
+- Sir Robin: Forced backwards running
 - No Aim Movement: Cannot move while aiming
 - No Aiming Camera: Cannot move the camera while aiming
 - Snapshot: You have 1 second to aim before it's canceled
+- Sniper Speed: Wait 5 seconds between each shot
 - Criss-Cross Joysticks: Vertical and horizontal axes of both joysticks are swapped
+- Drift Left: Add controller drift
 
-### Voting Methods
-
-You can configure whether you want the winning mod to be selected proportionally or by majority vote.
 
 ## Required Hardware
 

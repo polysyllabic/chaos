@@ -12,6 +12,7 @@ import threading
 import logging
 import json
 import random
+import asyncio
 import numpy as np
 from flexx import flx
 from twitchbot import is_config_valid, cfg
@@ -50,7 +51,8 @@ class ChaosModel(EngineObserver):
     while not self.complete_credentials():
       time.sleep(config.relay.sleep_time())
     # Start up the bot
-    config.relay.chatbot.run_threaded()
+    self.bot = config.relay.chatbot
+    self.bot.run_threaded()
 
   # Ask the engine to tell us about the game we're playing
   # TODO: Request a list of available games
@@ -82,10 +84,20 @@ class ChaosModel(EngineObserver):
               "time": config.relay.get_attribute('modifier_time')}
     message = self.chaos_communicator.send_message(json.dumps(toSend))
 
+  def remove_mod(self, mod_name):
+    logging.debug("Removing mod: " + mod_name)
+    toSend = {"remove": mod_name}
+    message = self.chaos_communicator.send_message(json.dumps(toSend))
+
+
   def reset_mods(self, mod_name):
     logging.debug("Resetting mods")
     toSend = {"reset": True }
     message = self.chaos_communicator.send_message(json.dumps(toSend))
+
+  def send_chat_message(self, msg: str):
+    if config.relay.chatbot:
+      self.bot._get_event_loop().run_until_complete(self.bot.send_message(msg))
 
   def flash_pause(self):
     if self.paused_flashing_timer > 0.5 and config.relay.paused_bright == True:
@@ -104,7 +116,10 @@ class ChaosModel(EngineObserver):
   def select_winning_modifier(self):
     tally = list(config.relay.votes)
     index = 0
-    if config.relay.voting_type == 'Proportional':
+    if config.relay.voting_type == 'Authoritarian':
+      return config.relay.get_random_mod()
+
+    elif config.relay.voting_type == 'Proportional':
       total_votes = sum(tally)
       if total_votes < 1:
         for i in range(len(tally)):
@@ -147,7 +162,9 @@ class ChaosModel(EngineObserver):
       flx.loop.call_soon(config.relay.replace_mod, mod_key)
     else:
       logging.debug(f'Mod key "{mod_key}" not in list (not sent)')
-    # Pick new candidates
+    # Pick new candidates, if we're voting
+    if config.relay.voting_type == 'DISABLED' or config.relay.voting_type == 'DISABLED':
+      return
     flx.loop.call_soon(config.relay.get_new_voting_pool)
 
   def _loop(self):
@@ -213,18 +230,12 @@ class ChaosModel(EngineObserver):
         if not config.relay.valid_data or config.relay.voting_type == 'DISABLE':
           continue
         
-        # Pick the winner
+        # Pick the winner        
         mod_key = self.select_winning_modifier()
         self.replace_mod(mod_key)
 
-        #if config.relay.announce_winner:
-        #  config.relay.send_winning_mod_to_chat(mod_key)
-
-        #if config.relay.announce_active:
-        #  config.relay.send_active_mods_to_chat()
-
-        #if config.relay.announce_candidates:
-        #  config.relay.send_candidate_mods_to_chat()
+        if config.relay.announce_winner and mod_key:
+          self.send_chat_message(config.relay.list_winning_mod(mod_key))
 
       # Update elapsed voting time
       flx.loop.call_soon(config.relay.set_vote_time, self.vote_time/config.relay.time_per_vote())

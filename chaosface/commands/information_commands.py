@@ -25,8 +25,8 @@ async def cmd_chaos(msg: Message, *args):
 async def cmd_chaos_vote(msg: Message, *args):
   await msg.reply(config.relay.explain_voting())
 
-@SubCommand(cmd_chaos, 'redeem',
-            help='How to redeem modifier credits',
+@SubCommand(cmd_chaos, 'apply',
+            help='How to apply modifier credits',
             cooldown=config.relay.get_attribute('info_cmd_cooldown'))
 async def cmd_chaos_redeem(msg: Message, *args):
   await msg.reply(config.relay.explain_redemption())

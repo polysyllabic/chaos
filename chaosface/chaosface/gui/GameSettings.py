@@ -40,7 +40,8 @@ class GameSettings(flx.PyWidget):
                   flx.Label(style=label_style, text="Voting method:")
                 with flx.VBox():
                   self.vote_options = flx.LineEdit(style=field_style, text=str(config.relay.vote_options))
-                  self.voting_type = flx.ComboBox(options=['Proportional','Majority','DISABLED'], selected_key='Proportional')
+                  self.voting_type = flx.ComboBox(options=['Proportional','Majority', 'Authoritarian', 'DISABLED'],
+                                                  selected_key='Proportional')
                 flx.Widget(flex=1)
               self.announce_candidates = flx.CheckBox(text="Announce candidates in chat", checked=config.relay.announce_candidates, style="text-align:left")
               self.announce_winner = flx.CheckBox(text="Announce winner in chat", checked=config.relay.announce_winner, style="text-align:left")
