@@ -83,6 +83,16 @@ namespace Chaos {
     int getNumActiveMods() { return active_modifiers; }
 
     /**
+     * \brief Set the maximum number of active primary mods to run
+     * 
+     * \param new_mods Number of modifiers
+     * 
+     * This number does not include the children of parent modifiers.
+     */
+    void setNumActiveMods(int new_mods) { active_modifiers = new_mods; }
+
+
+    /**
      * \brief Get the default time that a modifier remains active before it is removed.
      * 
      * \return double 
