@@ -57,10 +57,10 @@ showing extended gameplay with Chaos.
 
 ## How it Works
 
-Twitch Controls Chaos inserts a Raspberry Pi (a small but capable computer) between your
-controller and console. The Raspberry Pi intercepts signals coming from the controller and
-selectively passes them on to the console. It can change the signnals, block them, and even
-insert completely new commands that weren't sent from the controller.
+Twitch Controls Chaos inserts a Raspberry Pi (a small computer) between your controller and
+console. The Raspberry Pi intercepts signals coming from the controller and selectively passes them
+on to the console. It can change the signals, block them, and even insert completely new commands
+that weren't sent from the controller.
 
 The TCC software consists of two programs. By default, they both run on the Raspberry Pi:
 
@@ -117,7 +117,7 @@ are described
 In the previous version of Chaos, a modifier that advertised itself, for example, as "no melee"
 actually functioned by blocking the square button. Other mods could also scramble the controls, for
 example swapping the square and triangle buttons. If those two mods were active simultaneously, this
-could result in melee becoming active again, depending on the order in which the modifiers maps were
+could result in melee becoming active again, depending on the order in which the modifiers were
 applied.
 
 In the current version, modifiers are defined based on game commands, and any remapping of
@@ -193,7 +193,8 @@ This software tool is convenient to flash SD cards: [Raspberry Pi Imager](https:
 
 - Connect your SD card to your computer using an SD card reader
 - Select the SD card in the Raspberry Pi Imager
-- Under "Choose OS" select Raspberry Pi OS (other) -> Raspberry Pi OS Lite (32-bit)
+- Under "Choose OS" select Raspberry Pi OS (other) -> Raspberry Pi OS Lite (32-bit). This is the version without
+  a desktop environment (which you don't need).
 - In advanced options:
 
     - Set image customization options to "to always use":
@@ -237,7 +238,7 @@ the host address. If that does not work, you may need to find the local IP addre
 router has assigned to the Pi. Go to your router's admin page and look for the list of connected
 devices. 
 
->Note: The password field will look like nothing is being typed, but it will be reading the password
+Note: The password field will look like nothing is being typed, but it will be reading the password
 as you type it.
 
 7. (*If using WiFi only*). Configure your WiFi connection using the
@@ -248,7 +249,8 @@ manage all the files you will need to run TCC. After you have logged in to the P
 time, run the the following command:
 
 ```bash
-sudo apt update && sudo apt upgrade && sudo apt install git -y
+sudo apt update && sudo apt upgrade -y
+sudo apt install git -y
 ```
 
 This will ensure that you are running the latest stable versions of all the necessary tools. The
@@ -258,16 +260,13 @@ process may take a while. Be patient
 necessary files and install them in your home directory:
 
 ```bash
-cd
 git clone https://github.com/polysyllabic/chaos.git
 cd chaos
 ./install.sh
 ```
 
->Note: The engine and chatbot both expect the "chaos" directory to be in your home directory. This
+Note: The engine and chatbot both expect the "chaos" directory to be in your home directory. This
 may change later, but for now, you should not try to move it.
-
-TODO: Add alternate instructions for installation variants
 
 Running the install command above will take ~5 minutes.
 
