@@ -34,25 +34,19 @@ make -j4
 make install
 cd ..
 
-# add dwc2 to /boot/config.txt
+# add dwc2 to /boot/config.txt (lets us run the raspberry pi as a gadget)
 sudo -s eval "grep -qxF 'dtoverlay=dwc2' /boot/config.txt  || echo 'dtoverlay=dwc2' >> /boot/config.txt "
 
 sudo -s eval "pip3 install flexx pyzmq numpy pygame --system"
 
-#TODO: Push these into the make install process above
-if [ ! -f "/home/pi/chaosConfig.json" ];
+#TODO: Push this into the make install process above
+if [ ! -d "~/chaosLogs" ];
 then
-	cp blankConfig.json /home/pi/chaosConfig.json
-fi
+	mkdir ~/chaosLogs
 
-if [ ! -d "/home/pi/chaosLogs" ];
-then
-	mkdir /home/pi/chaosLogs
-fi
-
-cd scripts/
-sudo bash installservices.sh
-cd ..
+# cd scripts/
+# sudo bash installservices.sh
+# cd ..
 
 echo "Done."
 echo "--------------------------------------------------------"
