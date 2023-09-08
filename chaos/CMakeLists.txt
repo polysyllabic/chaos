@@ -71,7 +71,7 @@ ExternalProject_Add(
 	GIT_REPOSITORY https://github.com/polysyllabic/raw-gadget.git
 	GIT_TAG	       origin/master
   CONFIGURE_COMMAND ""
-  BUILD_COMMAND ${MAKE_EXECUTABLE} raw_gadget
+  BUILD_COMMAND ${MAKE_EXECUTABLE} -C ${SOURCE_DIR}/raw_gadget
 )
 
 # Header-only libraries

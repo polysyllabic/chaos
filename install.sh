@@ -24,6 +24,7 @@ then
 	sudo apt-get install -y ${toInstall[@]}
 fi
 
+cd chaos
 if [ ! -d "build" ];
 then
 	mkdir build
@@ -40,9 +41,9 @@ sudo -s eval "grep -qxF 'dtoverlay=dwc2' /boot/config.txt  || echo 'dtoverlay=dw
 sudo -s eval "pip3 install flexx pyzmq numpy pygame --system"
 
 #TODO: Push this into the make install process above
-if [ ! -d "~/chaosLogs" ];
-then
-	mkdir ~/chaosLogs
+#if [ ! -d "~/chaosLogs" ];
+#then
+#	mkdir ~/chaosLogs
 
 # cd scripts/
 # sudo bash installservices.sh
