@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 Restart=always
 RestartSec=1
-ExecStart=/bin/bash /home/pi/chaos/start.sh
+ExecStart=/bin/bash /usr/local/chaos/startchaos.sh
 
 [Install]
 WantedBy=multi-user.target
