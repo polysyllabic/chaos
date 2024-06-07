@@ -66,14 +66,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/")
 # Raw gadget kernel module; This is a makefile external project
 find_program(MAKE_EXECUTABLE NAMES gmake make mingw32-make REQUIRED)
 
-ExternalProject_Add(
-	rawgadget
-	GIT_REPOSITORY https://github.com/polysyllabic/raw-gadget.git
-	GIT_TAG	       origin/master
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND ${MAKE_EXECUTABLE} -C ${SOURCE_DIR}/raw_gadget
-)
-
 # Header-only libraries
 FetchContent_Declare(
 	tomlplusplus
@@ -178,6 +170,9 @@ target_link_libraries(chaos	PUBLIC chaos_communicator
     chaos_controller #chaos_engine chaos_menus chaos_mods
 		sniffify
 		${LIBUSB_LIBRARIES})
+
+install(TARGETS chaos DESTINATION chaos)
+install(FILES startchaos.sh DESTINATION chaos)
 
 find_package(Doxygen)
 if (DOXYGEN_FOUND)
