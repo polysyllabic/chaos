@@ -13,16 +13,18 @@
 
   FROM OTHER THREADS: flx.loop.call_soon(config.relay.set_num_active_mods, 3)
 """
-import logging
-import asyncio
-import json
-import math
 import copy
-import numpy as np
+import json
+import logging
+import math
+import queue
 from copy import deepcopy
 from pathlib import Path
+
+import numpy as np
 from flexx import flx
 from twitchbot import cfg
+
 from chaosface.chatbot.ChaosBot import ChaosBot
 
 _chaos_description = ("Twitch Controls Chaos lets chat interfere with a streamer playing a "
@@ -35,8 +37,7 @@ _chaos_how_to_vote = ("Each cycle you can vote for one modifier. Type the number
   "the game is paused. ")
 
 _chaos_how_to_redeem = ("With a mod credit, apply a modifier of your choice immediately "
-"(subject to a {cooldown}-second cooldown) with '!apply <mod name>' (ignored if in "
-"cooldown), or queue the mod to run once the cooldown is over with '!queue <mod name>'")
+"(subject to a {cooldown}-second cooldown) with '!apply <mod name>' (ignored if in cooldown)")
 
 
 # We use these values when we can't read a value from the json file, typically because it hasn't
@@ -48,6 +49,9 @@ chaos_defaults = {
   'softmax_factor': 33,
   'vote_options': 3,
   'voting_type': 'Proportional',
+  'voting_cycle': 'Continuous',
+  'vote_time': 60.0,
+  'vote_delay': 0.0,
   'announce_candidates': False,
   'announce_winner': False,
   'announce_active': False,
@@ -116,6 +120,7 @@ class ChaosRelay(flx.Component):
   keep_going = True
   valid_data = False
   chatbot: ChaosBot
+  bot_reboot = False
 
   modifier_data = {}
   enabled_mods = []
@@ -124,6 +129,7 @@ class ChaosRelay(flx.Component):
   candidate_keys = []
   force_mod:str = ''
   reset_mods = False
+  engine_commands = queue.Queue()
   insert_cooldown = 0.0
   raffle_open = False
   raffle_start_time = None
@@ -148,7 +154,10 @@ class ChaosRelay(flx.Component):
   time_per_modifier = flx.FloatProp(settable=True)
   softmax_factor = flx.IntProp(settable=True)
   vote_options = flx.IntProp(settable=True)
-  voting_type = flx.EnumProp(['Proportional', 'Majority', 'Authoritarian', 'DISABLED'], 'Proportional', settable=True)
+  voting_type = flx.EnumProp(['Proportional', 'Majority', 'Authoritarian'], 'Proportional', settable=True)
+  voting_cycle = flx.EnumProp(['Continuous','Interval', 'Random', 'Triggered', 'DISABLED'], 'Continuous', settable=True)
+  vote_time = flx.FloatProp(settable=True)
+  vote_delay = flx.FloatProp(settable=True)
   bits_redemptions = flx.BoolProp(settable=True)
   bits_per_credit = flx.IntProp(settable=True)
   multiple_credits = flx.BoolProp(settable=True)
@@ -166,7 +175,7 @@ class ChaosRelay(flx.Component):
   bot_name = flx.StringProp(settable=True)
   bot_oauth = flx.StringProp(settable=True)
   pubsub_oauth = flx.StringProp(settable=True)
-  
+
   # Engine Settings
   pi_host = flx.StringProp(settable=True)
   listen_port = flx.IntProp(settable=True)
@@ -507,15 +516,18 @@ class ChaosRelay(flx.Component):
     else:
       print("Not announcing mods")
 
-
   def send_chat_message(self, msg: str):
     """
-    The chatbot's send_message routine is async, so we schedule it in the chatbot's event loop
-    with run_until_complete()
+    The chatbot's send_message routine is async, so we must schedule it in the chatbot's event loop
     """
     if self.chatbot:
-      #self.chatbot._get_event_loop().run_until_complete(self.chatbot.send_message(msg))
       self.chatbot._get_event_loop().create_task(self.chatbot.send_message(msg))
+
+  def queue_mod_command(self, command, mod_key):
+    if mod_key and mod_key in self.modifier_data:
+      mod_name = self.modifier_data[mod_key]['name']
+    
+
 
   def about_tcc(self):
     return self.get_attribute('msg_chaos_description')
