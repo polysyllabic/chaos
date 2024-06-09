@@ -3,43 +3,53 @@
 """
   Chatbot commands that ask for information about TCC
 """
-import logging
-from twitchbot import Command, SubCommand, Message
+from twitchbot import Command, Message, SubCommand
 
 import chaosface.config.globals as config
+
 
 @Command('chaos',
          help='How Twitch Controls Chaos works',
          cooldown=config.relay.get_attribute('info_cmd_cooldown'))
-async def cmd_chaos(msg: Message, *args):
+async def cmd_chaos(msg: Message):
   """
   Provide a general description of TCC and how it works
   """
-  if not args:
-    await msg.reply(config.relay.about_tcc())
+  await msg.reply(config.relay.about_tcc())
 
 # Explain the currently active voting method
 @SubCommand(cmd_chaos, 'voting',
             help='How voting works',
             cooldown=config.relay.get_attribute('info_cmd_cooldown'))
-async def cmd_chaos_vote(msg: Message, *args):
+async def cmd_chaos_vote(msg: Message):
+  """
+  Explain how the currently active voting method works
+  """
   await msg.reply(config.relay.explain_voting())
 
 @SubCommand(cmd_chaos, 'apply',
-            help='How to apply modifier credits',
+            help='How to use modifier credits',
             cooldown=config.relay.get_attribute('info_cmd_cooldown'))
-async def cmd_chaos_redeem(msg: Message, *args):
+async def cmd_chaos_redeem(msg: Message):
+  """
+  Explain how to use credits to apply a modifier
+  """
   await msg.reply(config.relay.explain_redemption())
 
 @SubCommand(cmd_chaos, 'credits',
             help='How to earn modifier credits',
             cooldown=config.relay.get_attribute('info_cmd_cooldown'))
-async def cmd_chaos_credits(msg: Message, *args):
+async def cmd_chaos_credits(msg: Message):
+  """
+  Explain how to acquire modifier credits
+  """
   await msg.reply(config.relay.explain_credits())
 
-# Describe one mod
 @Command('mod')
 async def cmd_mod(msg: Message, *args):
+  """
+  Describe the function of a particular mod
+  """
   if not args:
     await msg.reply("Usage: !mod <mod name>")
   else:
@@ -47,17 +57,24 @@ async def cmd_mod(msg: Message, *args):
     await msg.reply(config.relay.get_mod_description(mod))
 
 @Command('mods')
-async def cmd_mods(msg: Message, *args):
+async def cmd_mods(msg: Message):
+  """
+  Give a link to a complete list of available mods
+  """
   link = config.relay.get_attribute('mod_list_link')
   if link:
     await msg.reply(config.relay.get_attribute('msg_mod_list').format(link))
 
-# List currently active mods
 @SubCommand(cmd_mods, 'active')
-async def cmd_mods_active(msg: Message, *args):
+async def cmd_mods_active(msg: Message):
+  """
+  List currently active modifiers
+  """
   await msg.reply(config.relay.list_active_mods())
 
-# List the mods currently being voted on in chat
 @SubCommand(cmd_mods, 'voting')
 async def cmd_mods_voting(msg: Message, *args):
+  """
+  List the modifiers current being voted on
+  """
   await msg.reply(config.relay.list_candidate_mods())

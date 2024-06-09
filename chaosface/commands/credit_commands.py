@@ -1,4 +1,10 @@
-from twitchbot import (Command, Message, InvalidArgumentsError)
+# This file is part of Twitch Controls Chaos, written by blegas78 and polysyl.
+# License: GPL 3 or greater. See LICENSE file for details.
+"""
+  Chatbot commands that manage the modifier-credit system
+"""
+from twitchbot import Command, InvalidArgumentsError, Message
+
 import chaosface.config.globals as config
 
 MANAGE_CREDIT_PERMISSION = 'manage_credits'
@@ -55,24 +61,16 @@ async def cmd_add_credits(msg: Message, *args):
 
 @Command('setcredits', permission=MANAGE_CREDIT_PERMISSION, syntax='<user> <amount>',
   help='Set a user\'s credit balance to a specified amount')
-async def cmd_set_credits(msg: Message, *args):
-  if len(args) != 2:
-    raise InvalidArgumentsError('Must specify a user and an amount', cmd=cmd_set_credits)
+async def cmd_set_credits(msg: Message, target:str, amount:int):
   
-  target: str = validate_user_from_message(args[0], msg)
-  if not target:
-    raise InvalidArgumentsError(f'The user {args[0]} doesn\'t appear to be in chat. Start the name with an @ if you\'re sure you want this person to receive the credits.', cmd=cmd_set_credits)
+  user = validate_user_from_message(target, msg)
+  if not user:
+    raise InvalidArgumentsError(f'The user {target} doesn\'t appear to be in chat. Start the name with an @ if you\'re sure you want this person to receive the credits.', cmd=cmd_set_credits)
 
-  try:
-    amount = int(args[1])
-  except ValueError:
-    raise InvalidArgumentsError('The amount must be a valid integer', cmd=cmd_set_credits)
   if amount < 0:
     raise InvalidArgumentsError('The ammount cannot be negative', cmd=cmd_set_credits)
 
-  user = args[0]
-  new_balance = int(args[1])
-  config.relay.set_balance(user, new_balance)
+  config.relay.set_balance(user, amount)
   await msg.reply(config.relay.get_balance_message(msg.author))
   
 

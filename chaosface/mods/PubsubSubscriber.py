@@ -4,8 +4,11 @@
   Handle PubSub events
 """
 import logging
-from twitchbot import PubSubTopics, PubSubData, PubSubPointRedemption, Mod, get_pubsub
+
+from twitchbot import (Mod, PubSubData, PubSubPointRedemption, PubSubTopics,
+                       get_pubsub)
 from twitchbot.pubsub.bits_model import PubSubBits
+
 import chaosface.config.globals as config
 
 
