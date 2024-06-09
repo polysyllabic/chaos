@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # This file is part of Twitch Controls Chaos, written by blegas78 and polysyl.
 # License: GPL 3 or greater. See LICENSE file for details.
-"""
-  The ChaosCommunicator handles communications between the interface and the Chaos engine.
-  
-  Since both the engine and the interface can initiate communication, we maintain listen and talk
-  sockets on different ports. The talk port acts as a client, and the listen port acts as a server.
-"""
 import time
 from abc import ABC, abstractmethod
 from typing import List
@@ -24,11 +18,18 @@ class EngineObserver(ABC):
     pass
 
 class ChaosCommunicator():
+  """
+  The ChaosCommunicator handles communications between the interface and the Chaos engine.
+  
+  Since both the engine and the interface can initiate communication, we maintain listen and talk
+  sockets on different ports. The talk port acts as a client, and the listen port acts as a server.
+  """
   _observers: List[EngineObserver] = []
   request_retries = 3
   request_timeout = 30000
-  socket_listen = None 
-  socket_talk = None
+  poller:zmq.Poller = zmq.Poller()
+  socket_listen:zmq.Socket = None 
+  socket_talk:zmq.Socket = None
 
   def attach(self, observer: EngineObserver) -> None:
     logging.debug("Attached an observer.")
@@ -63,7 +64,11 @@ class ChaosCommunicator():
       self.socket_listen.close()
     self.socket_listen = self.context.socket(zmq.REP)
     logging.debug(f"Bind listener to tcp://*:{self.listen_port}")
-    self.socket_listen.bind(f"tcp://*:{self.listen_port}")
+    try:
+      self.socket_listen.bind(f"tcp://*:{self.listen_port}")
+    except zmq.error.ZMQError as e:
+      logging.error(f"Could not bind listener socket: {e}")
+      raise e
 
   def connect_talker(self, host_addr, port):
     self.pi_host = host_addr
@@ -74,7 +79,12 @@ class ChaosCommunicator():
       self.socket_talk.close()
     self.socket_talk = self.context.socket(zmq.REQ)
     logging.debug(f"Connect talker to tcp://{host_addr}:{self.talk_port}")
-    self.socket_talk.connect(f"tcp://{host_addr}:{self.talk_port}")
+    try:
+      self.socket_talk.connect(f"tcp://{host_addr}:{self.talk_port}")
+    except zmq.error.ZMQError as e:
+      logging.error(f"Could not connect to {host_addr}:{self.talk_port}")
+      raise e
+    self.socket_talk.setsockopt(zmq.RCVTIMEO, self.request_timeout)
 
   def stop(self):
     self.keep_running = False
@@ -82,13 +92,15 @@ class ChaosCommunicator():
     
   def _listen_loop(self):
     while self.keep_running:
-      #  Wait for next message from engine. This call is blocking.
-      message = self.socket_listen.recv()
-      # Return acknowledgment
-      self.socket_listen.send(b"Pong")
-      # Tell observers what we received, if the message is non-empty
-      if message:
-        self.notify(message.decode("utf-8"))
+      #  Poll for engine message.
+      socs = dict(self.poller(self.request_timeout))
+      if self.socket_listen in socs and socs[self.socket_listen] == zmq.POLLIN:
+        message = self.socket_listen.recv()
+        # Return acknowledgment
+        self.socket_listen.send(b"Pong")
+        # Tell observers what we received, if the message is non-empty
+        if message:
+          self.notify(message.decode("utf-8"))
   
   def send_message(self, message):
     logging.debug("Sending message: " + message)
