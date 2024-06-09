@@ -65,6 +65,7 @@ Setup the Computer for Chaosface:
 
 Running for the First Time
 --------------------------
+
 The first time you run chaosface, you need to authorize it in your channel. You can run the bot
 through a dedicated bot account that you control or through your main streamer account. Note that
 whichever you choose, the bot will write messages in chat from that account.
@@ -113,6 +114,7 @@ whichever you choose, the bot will write messages in chat from that account.
    entered for the first time, you will need to restart chaosface after saving new credentials in
    order to re-initialize the bot.
 
+If the OAuth tokens expire or are manually reset, you will need to repeat these steps.
 
 Configuring sources in OBS
 --------------------------
@@ -139,42 +141,109 @@ It's recommended to set these browser sources to refresh when not displayed so t
 be refreshed.
 
 
-Font and color adjustments
+Font and Color Adjustments
 --------------------------
 <to write>
 
 Operation
 =========
-When the chaos interface begins, it will log into chat and attempt to communicate with the chaos
-engine to get the game information. Until both connections are made, you cannot start playing
-chaos.
 
-If chaosface does not receive a response from the engine, it will re-try every 30 seconds until
-a response is received.
+When the chaos interface begins, it will log into your stream's chat and attempt to communicate
+with the chaos engine to get the game information. Until both connections are made, you cannot
+start playing chaos.
+
+If the interface does not receive a response from the engine, it will re-try every 30 seconds
+until a response is received.
+
+You can monitor the basic operation of chaos from your browser.
+  - If you're running chaosface on the Pi: http://raspberrypi.local/Chaos.
+  - If you're running chaosface on the same computer as the browser, go to http://localhost/Chaos
+
+This default tab on this page ("Streamer Interface") shows you what mods are currently active,
+whether chaos is running or paused, and a few other diagnostic features. It *does not* show what
+mods are currently being voted on. This allows chat to surprise you with their choice of modifiers,
+assuming you're not peeking at the sources in OBS.
+
+The following sections explain the basic concepts of the chaos system and how it can be
+customized. To change settings from their default values, go to the "Game Settings" tab of
+the Chaos browser page.
+
+Voting Cycle
+------------
+
+The voting cycle is the normal loop in which gameplay modifiers chosen and applied. It runs
+continuously as long as Chaos is not paused. In each cycle, a set of modifiers is selected, chat
+(normally) has the opportunity to vote on them, and a winner is chosen. You can modify many
+parameters of the voting cycle to customize how and when voting occurs.
+
+With the default settings, a new vote occurs once each minute, and the winning modifier is active
+for 3 minutes. This has the effect of keeping 3 modifiers always applied to your gameplay after the
+initial votes have populated the modifier list.
 
 Modifer Selections
 ------------------
 
-Modifiers are chosen for voting randomly among the available mods. 
+When voting begins, a set of modifiers is chosen randomly among the available mods and presented
+in a list. The number of options per voting cycle is set with the "Vote options" parameter.
 
 By default, the chaos bot uses a softmax algorithm to weight the probability that a mod should
 be selected based on the frequency with which it has been used. In other words, the more often a
 mod has been chosen in the past, the less likely it is to appear again. This feature helps reduce
-the liklihood of the same mods being applied over and over. If you disable softmax, mods will
-be selected with equal probability regardless of past use.
+the liklihood of the same mods being applied over and over.
 
+You can adjust the selection weighting by altering the "Chance of repeat modifier" setting. The
+lower the setting, less likely a previously used modifier is to be chosen. Setting this value to
+100 has the effect of disabling softmax weighting, in which case mods will be selected with equal
+probability regardless of past use.
+
+Voting Period
+-------------
+
+The voting period specifies when a voting cycle begins and how long votes last. Each user gets
+one vote per voting cycle. A second attempt to vote will be ignored.
+
+There are several options for the timing of the voting cycle.
+
+* Interval
+* Continuous (*Default*)
+* Random
+* Triggered
+* Disabled
+
+In interval voting votes occur at set intervals. You specify the length of time that a vote
+is open ("Time to vote") and the delay between the end of the previous vote and the start of the
+next one ("Time between votes"). For example, you could have the vote open for 2 minutes and a gap
+of 2 minutes between votes. With the default length of a 3-minute modifier, this would have the
+effect of applying 1 mod, for 3 minutes, once every 5 minutes, leaving you a few minutes of
+un-modded gameplay before chaos resumes.
+
+In continuous voting, the default method, the next voting cycle begins immediately after the
+previous vote has concluded. This option is a form of interval voting where the delay between
+votes is automatically set to 0 seconds and the vote length to [mod time / number of active mods].
+In other words, the winner of each vote will immediately replace the oldest mod, and you will
+always have a fixed number of mods active.
+
+Random voting is a form of interval voting where the gap between votes is randomly chosen to be
+between 0 seconds and the length of time specified in by the "Time between votes." In other words,
+the gap time functions as the maximum time between votes.
+
+With triggered voting, a new vote must be started manually with the `!newvote` command.
+It remains open for the time specified in the "Time to vote" parameter.
+
+Disabling voting prevents all votes from being held, including those started with the `!newvote`
+command. If voting is disabled, modifiers can only be applied manually with the `!apply` command.
+This mode is largely intended for testing new modifiers, but it might be useful if you wanted to
+apply chaos to a game where you need to manually apply modifiers only at times the interface cannot
+predict, e.g., at the beginning of a new PVP match.
 
 Voting Methods
 --------------
-The voting cycle occurs continuously as long as TCC is not paused. Each user gets one vote per
-voting cycle. A second attempt to vote will be ignored.
 
-There are four modes for modifier selection:
+There are three different methods available for selecting a winning modifier:
 
 * Proportional (*Default*)
 * Majority
-* Authoriatian
-* Disabled
+* Authoritarian
 
 By default, chaosface uses a proportional voting method to select the winner. When proportional
 voting is enabled, the chances that a particular modifier will win the vote are proportional to
@@ -186,18 +255,14 @@ With majority voting, the modifier with the greatest number of votes will always
 broken by random selection among those with the greatest votes.
 
 The 'Authoritarian' mode doesn't let chat vote at all. Instead, at the end of each voting cycle,
-a new modifier is chosen at random by the interface and applied. This feature is intended mostly
-for testing. If you use it for active play, note that you are removing the 'twitch controls' from
-the chaos by doing this.
-
-If voting is completely disabled, new mods are only applied manually. Like the Authoritarian mode,
-this mode is largely intended for testing new modifiers, but it might be useful if you wanted to
-apply chaos to a game where you need to manually apply modifiers only at times the interface cannot
-predict, e.g., at the beginning of a new PVP match.
+chaos chooses a modifier for you at random. This feature is mostly intended for testing. If you
+use it for active play, note that you are removing the 'twitch controls' from the chaos by doing
+this.
 
 
 Applying Modifiers
 ------------------
+
 You can apply a specific modifier without waiting for it to win a vote with the command
 `!apply <mod name>`. To execute this command, everyone except the streamer needs a modifier credit.
 Credits can be issued in various ways, which the streamer can choose to enable or diable
@@ -209,6 +274,7 @@ individually:
 
 Channel-Point Redemptions
 -------------------------
+
 To configure channel-points redemptions and bit donations, you must have stored a valid PubSub
 token for your channel. (See the setup instructions above.)
 
@@ -223,7 +289,7 @@ exact name of the redemption you created in the "Points Reward Title" field. (Th
 If your PubSub token is entered, any channel-points redemptions done while the chatbot is
 active will be recorded automatically. Note, however, that if you choose to leave this
 redemption active when you are not running the chatbot and someone redeems that reward, you will
-need either to give credits for those redemptions manually (with !addcredits) or to refund
+need either to give credits for those redemptions manually (with `!addcredits`) or to refund
 those redemptions.
 
 Note also that any cooldown you apply on the channel-point redemption applies only to users
@@ -232,6 +298,7 @@ is in effect regardless of how you earn the credit.
 
 Bit Donations
 -------------
+
 Bit donations work similarly to channel-points redemptions. You must have stored a valid PubSub
 token for your channel. (See the setup instructions above.)
 
@@ -239,7 +306,7 @@ When enabled, this feature monitors incomming cheers, and bit donations above a 
 will give the user modifier credits. You can set the number of bits required to earn a credit in
 the "Bits per mod credit" field.
 
-If you select "Allow multiple credits per cheer", The user can earn multiple credits by donating
+If you select "Allow multiple credits per cheer," The user can earn multiple credits by donating
 multiples of the base amount. For example, if the default for a credit is 100 bits, and the user
 donates 200 bits, they will earn 2 mod credits. If this option is disabled, the user will only
 get 1 credit per donation over the minimum threshold, regardless of the size of the donation.
@@ -254,6 +321,7 @@ other times, you need to add the credits manually.
 
 Raffles
 -------
+
 A raffle gives you a way to distribute modifier credits to users without them needing to spend
 channel points or bits. To enable raffles, check the "Conduct raffles" box in the "Game
 Settings" menu. You can set the default raffle time, in seconds, here.
@@ -277,10 +345,15 @@ General Information Commands:
 
 Modifier Commands:
 * !apply <mod name> -- Apply a modifier (requires modifier credit and subject to cooldown)
+* !remove <mod name> -- Manually remove a modifier immediately
 * !mod <mod name> -- Describe the function of a specific modifier. Not case sensitive.
 * !mods -- Link to list of all available modifiers
 * !mods active -- List currently active modifiers
 * !mods voting -- List modifiers currently up for a vote
+
+Voting Commands (require manage_voting permission):
+* !startvote (time) -- Manually open a new vote. If time omitted, default vote time used
+* !endvote -- End an open vote immediately and choose a winner
 
 Modifier Credit Commands:
 * !credits (user) -- Reports number of modifier credits that the user (message author if user name ommitted) currently has
@@ -290,8 +363,9 @@ Modifier Credit Commands:
 
 Raffle Commands:
 * !join -- Enters the user into an open raffle
+* !joinchaos -- An alias for !join
 * !raffle (time) -- Start a raffle for a modifier credit (if time is omitted, default raffle time is used) Requires 'manage_raffles' permission
-
+* !chaosraffle -- An alias for !raffle
 
 *Note:* The chat bot is built upon the PythonTwitchBotFramework package. This framework means you
 can implement other features common to many bots by means of chat commands. See the
