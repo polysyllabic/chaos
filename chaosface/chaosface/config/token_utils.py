@@ -1,6 +1,4 @@
-import logging
 import requests
-import logging
 
 class Scopes:
     PUBSUB_BITS = 'bits:read'
@@ -15,6 +13,10 @@ class Scopes:
     WHISPERS_READ = 'whispers:read'
     WHISPERS_EDIT = 'whispers:edit'
     CHANNEL_EDITOR = 'channel_editor'
+    MODERATOR_ANNOUNCEMENT_MANAGE = 'moderator:manage:announcements'
+    MODERATOR_SHOUTOUT_MANAGE = 'moderator:manage:shoutouts'
+    MODERATOR_BAN_MANAGE = 'moderator:manage:banned_users'
+    MODERATOR_READ_CHATTERS = 'moderator:read:chatters'
 
 VALIDATE_URL = 'https://id.twitch.tv/oauth2/validate'
 REDIRECT_URL = 'https://twitchapps.com/tmi/'
@@ -38,9 +40,5 @@ def validate_oauth(token: str) -> dict:
 def revoke_oauth_token(client_id: str, oauth: str):
     oauth = oauth.replace('oauth:', '')
     return requests.post(f'https://id.twitch.tv/oauth2/revoke?client_id={client_id}&token={oauth}')
-
-if __name__ == "__main__":
-  client_id = 'uic681f91dtxl3pdfyqxld2yvr82r1'
-  print(generate_irc_oauth(client_id, REDIRECT_URL))
 
   
