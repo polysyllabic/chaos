@@ -4,7 +4,9 @@
   View for whether or not the chaos engine is currently paused.
 """
 from flexx import flx
+
 import chaosface.config.globals as config
+
 
 class ChaosPausedView(flx.PyWidget):
 	def init(self):

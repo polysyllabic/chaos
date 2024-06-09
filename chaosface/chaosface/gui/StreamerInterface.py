@@ -3,13 +3,15 @@
 """
   The view for the main page streamers will look at while playing the game.
 """
-from flexx import flx, ui
+from flexx import flx
+
 import chaosface.config.globals as config
 
-from .ChaosPausedView import ChaosPausedView
-from .ChaosConnectionView import ChaosConnectionView
 from .ActiveMods import ActiveMods
+from .ChaosConnectionView import ChaosConnectionView
+from .ChaosPausedView import ChaosPausedView
 from .VoteTimer import VoteTimer
+
 
 class StreamerInterface(flx.PyWidget):
 

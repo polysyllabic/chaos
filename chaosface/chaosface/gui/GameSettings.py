@@ -3,9 +3,10 @@
 """
   View for chaos settings that control the gameplay
 """
-#import logging
 from flexx import flx
+
 import chaosface.config.globals as config
+
 
 class GameSettings(flx.PyWidget):
   def init(self):
@@ -38,10 +39,18 @@ class GameSettings(flx.PyWidget):
                 with flx.VBox():
                   flx.Label(style=label_style, text="Vote options:")
                   flx.Label(style=label_style, text="Voting method:")
+                  flx.Label(style=label_style, text="Voting cycle:")
+                  flx.Label(style=label_style, text="Time to vote (s):")
+                  flx.Label(style=label_style, text="Time between votes (s):")
                 with flx.VBox():
                   self.vote_options = flx.LineEdit(style=field_style, text=str(config.relay.vote_options))
-                  self.voting_type = flx.ComboBox(options=['Proportional','Majority', 'Authoritarian', 'DISABLED'],
+                  self.voting_type = flx.ComboBox(options=['Proportional','Majority','Authoritarian'],
                                                   selected_key='Proportional')
+                  self.voting_cycle = flx.ComboBox(options=['Continuous','Interval', 'Random', 'Triggered', 'DISABLED'],
+                                                  selected_key='Continuous')
+                  self.vote_time = flx.LineEdit(style=field_style, text=str(config.relay.vote_time))
+                  self.vote_delay = flx.LineEdit(style=field_style, text=str(config.relay.vote_delay))
+                                                
                 flx.Widget(flex=1)
               self.announce_candidates = flx.CheckBox(text="Announce candidates in chat", checked=config.relay.announce_candidates, style="text-align:left")
               self.announce_winner = flx.CheckBox(text="Announce winner in chat", checked=config.relay.announce_winner, style="text-align:left")
@@ -96,9 +105,9 @@ class GameSettings(flx.PyWidget):
       if modtime < 0:
         modtime = 30.0
         msg = "Do you think you're The Doctor? No negative times."
-      elif modtime > 3600.0:
-        modtime = 3600.0
-        msg = "Maximum time for mods is 1 hour."
+      elif modtime > 172800.0:
+        modtime = 172800.0
+        msg = "Maximum time for mods is 48 hours. Get some sleep!"
     except ValueError:
       msg = 'Value must be a number'
     if msg:
@@ -110,6 +119,44 @@ class GameSettings(flx.PyWidget):
   def _voteoptions_changed(self, *events):
     options = self.validate_int(self.vote_options.text, 2, 5, 'vote_options')
     self.vote_options.set_text(str(options))
+
+  @flx.reaction('vote_time.text')
+  def _votetime_changed(self, *events):
+    msg = ''
+    votetime = config.relay.get_attribute('vote_time')
+    try:
+      votetime = float(self.vote_time.text)
+      if votetime <= 0:
+        votetime = 60.0
+        msg = "Vote time must be greater than 0."
+      elif votetime > 3600.0:
+        votetime = 3600.0
+        msg = 'Maximum vote time is 1 hour'
+    except ValueError:
+      msg = 'Value must be a number'
+    if msg:
+      self.vote_time.set_text(str(votetime))
+    # Report any errors or clear the field
+    self.status_label.set_text(msg)
+
+  @flx.reaction('vote_delay.text')
+  def _votedelay_changed(self, *events):
+    msg = ''
+    votedelay = config.relay.get_attribute('vote_delay')
+    try:
+      votedelay = float(self.vote_delay.text)
+      if votedelay < 0.0:
+        votedelay = 0.0
+        msg = "Vote delay cannot be negative."
+      elif votedelay > 3600.0:
+        votedelay = 3600.0
+        msg = 'Maximum vote delay cannot be more than 1 hour'
+    except ValueError:
+      msg = 'Value must be a number'
+    if msg:
+      self.vote_time.set_text(str(votedelay))
+    # Report any errors or clear the field
+    self.status_label.set_text(msg)
 
   @flx.reaction('bits_per_credit.text')
   def _bitspercredit_changed(self, *events):

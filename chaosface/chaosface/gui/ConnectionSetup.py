@@ -4,10 +4,12 @@
   View for settings to connect to Twitch and to the Chaos engine
 """
 import logging
+
 from flexx import flx
+from twitchbot import cfg
+
 import chaosface.config.globals as config
 import chaosface.config.token_utils as util
-from twitchbot import cfg
 
 REDIRECT_URL = 'https://twitchapps.com/tmi/'
 
@@ -21,11 +23,12 @@ class ConnectionSetup(flx.PyWidget):
     logging.debug(f'Bot oauth url={bot_oauth}')
     pubsub_oauth = util.generate_auth_url(cfg['client_id'], util.Scopes.PUBSUB_CHANNEL_POINTS, util.Scopes.PUBSUB_BITS)
     logging.debug(f'Pubsub oauth url={pubsub_oauth}')
-    instructions=('To get the bot\'s OAuth token,  '
+    bot_instructions=('To get the bot\'s OAuth token, '
       '<a href="{bot}" target="_blank">log in as your bot and then click here.</a> ' 
-      'Paste the generated token into the Bot OAuth field. '
-      'To use points redemptions, you must also get a separate OAuth token. Log in with your '
-      'streamer\'s account <a href="{pubsub}"target="_blank">and click here for a PubSub token.</a>.')
+      'Paste the generated token into the Bot OAuth field.')
+    pubsub_instructions=('To use bits or points redemptions, you must also get a separate OAuth token. '
+      'Log in with your streamer\'s account <a href="{pubsub}"target="_blank">and click here for a '
+      'PubSub token.</a>.')
 
     with flx.VBox():
       with flx.GroupWidget(flex=1, title="Twitch Connection"):
@@ -41,7 +44,9 @@ class ConnectionSetup(flx.PyWidget):
               self.bot_name = flx.LineEdit(style=field_style, text=config.relay.bot_name)
               self.bot_oauth = flx.LineEdit(style=field_style, text=config.relay.bot_oauth, password_mode=True)
               self.pubsub_oauth = flx.LineEdit(style=field_style, text=config.relay.pubsub_oauth, password_mode=True)
-          flx.Label(flex=1, wrap=True, html=instructions.format(bot=bot_oauth, pubsub=pubsub_oauth))  
+          with flx.VBox(flex=1):
+            flx.Label(html=bot_instructions.format(bot=bot_oauth), wrap=True)
+            flx.Label(html=pubsub_instructions.format(pubsub=pubsub_oauth), wrap=True)
       with flx.GroupWidget(flex=1, title="Chaos Engine Connection"):
         with flx.HBox():
           with flx.VBox(flex=1):
@@ -108,19 +113,23 @@ class ConnectionSetup(flx.PyWidget):
     need_save = False
     if self.bot_name.text != config.relay.bot_name:
       need_save = True
-      config.relay.change_bot_name(self.bot_name.text)
+      config.relay.bot_reboot = True
+      config.relay.on_bot_name(self.bot_name.text)
     if self.bot_oauth.text != config.relay.bot_oauth:
       need_save = True   
-      config.relay.change_bot_oauth(self.bot_oauth.text)    
+      config.relay.bot_reboot = True
+      config.relay.on_bot_oauth(self.bot_oauth.text)    
     if self.pubsub_oauth.text != config.relay.pubsub_oauth:
       need_save = True   
-      config.relay.change_pubsub_oauth(self.pubsub_oauth.text)    
+      config.relay.bot_reboot = True
+      config.relay.on_pubsub_oauth(self.pubsub_oauth.text)    
     if self.channel_name.text != config.relay.channel_name:
       need_save = True
-      config.relay.change_channel_name(self.channel_name.text)
+      config.relay.bot_reboot = True
+      config.relay.on_channel_name(self.channel_name.text)
     if self.pi_host.text != config.relay.pi_host:
       need_save = True
-      config.relay.change_pi_host(self.pi_host.text)
+      config.relay.on_pi_host(self.pi_host.text)
     if int(self.listen_port.text) != config.relay.listen_port:
       need_save = True
       config.relay.change_listen_port(int(self.listen_port.text))
@@ -129,13 +138,11 @@ class ConnectionSetup(flx.PyWidget):
       config.relay.change_talk_port(int(self.talk_port.text))
     if need_save == True:
       config.relay.set_need_save(True)
-      self.status_message.set_text('Updated!')
+      if config.relay.bot_reboot:
+        self.status_message.set_text('Restarting bot with new credentials')
+      else:  
+        self.status_message.set_text('Updated!')
     else:
       self.status_message.set_text('No Change')
-
-#  @flx.reaction('generate_token_button.pointer_click')
-#  def on_generate_token(self, *events):
-#    oauth = util.generate_irc_oauth(cfg['client_id'])
-#    logging.debug(f'oauth url = {oauth}')
     
 

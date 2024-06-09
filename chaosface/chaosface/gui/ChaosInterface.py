@@ -6,11 +6,12 @@
   engine.
 """
 from flexx import flx, ui
-import chaosface.config.globals as config
 
-from chaosface.gui.StreamerInterface import StreamerInterface
-from chaosface.gui.GameSettings import GameSettings
+import chaosface.config.globals as config
 from chaosface.gui.ConnectionSetup import ConnectionSetup
+from chaosface.gui.GameSettings import GameSettings
+from chaosface.gui.StreamerInterface import StreamerInterface
+
 
 class ChaosInterface(flx.PyWidget):
 
