@@ -57,10 +57,10 @@ showing extended gameplay with Chaos.
 
 ## How it Works
 
-Twitch Controls Chaos inserts a Raspberry Pi (a small but capable computer) between your
-controller and console. The Raspberry Pi intercepts signals coming from the controller and
-selectively passes them on to the console. It can change the signnals, block them, and even
-insert completely new commands that weren't sent from the controller.
+Twitch Controls Chaos inserts a Raspberry Pi (a small computer) between your controller and
+console. The Raspberry Pi intercepts signals coming from the controller and selectively passes them
+on to the console. It can change the signals, block them, and even insert completely new commands
+that weren't sent from the controller.
 
 The TCC software consists of two programs. By default, they both run on the Raspberry Pi:
 
@@ -69,6 +69,7 @@ controller, altering them or creating new signals, and passing them on to the co
 
 - The Chaos interface, a chatbot written in Python, monitors the streamer's twitch chat,
 conducts the votes on which mods to apply, and tells the engine what the winning mods are.
+The chatbot can be run on a separate computer, if you like.
 
 Modifiers and other information necessary to control a specific game are defined in configuration
 files. Each game has its own file, and you can switch games by loading a new configuration file.
@@ -89,17 +90,19 @@ events that the chatbot cannot track, such as reaching some custom channel goel.
 
 ## Limitations
 
-Chaos only supports DualShock 4 controllers. You can still play on a PS 5 console, but Chaos is only
+Chaos requires a DualShock 4 controller. You can still play on a PS 5 console, but Chaos is only
 workable with games that support that controller. A PS5-only game such as Returnal will not work,
-since that game requires features found only on the unsupported DualSense controller.
+since that game requires features found only on the unsupported DualSense controller. If you
+want to make TCC work with a PS5-only game, see the notes below for some (currently untested)
+ideas.
 
-Chaos only sees the incoming pattern of controller signals. It has no idea what is actually happening
-in the game. During cutscenes, death animations, or other places where the ordinary controls are
-not available, the engine will not be able to apply new mods. For this reason, it's important to
-remember to hit "pause" when such events occur. If you forget and a vote ends during this period,
-some categories of mods, especially those that require setting menu options, the game may wind up
-in an inconsistent state. Old mods may not be removed correctly, and new ones may not be applied. In
-this case, you may need to pause the game and manually set the necessary options.
+Chaos only sees the incoming pattern of controller signals. It has no idea what is actually
+happening in the game. During cutscenes, death animations, or other places where the ordinary
+controls are not available, the engine will not be able to apply new mods. For this reason, it's
+important to remember to hit "pause" when such events occur. If you forget and a vote ends during
+this period, some categories of mods, including all those that require setting menu options, may
+put the game in an inconsistent state. Old mods may not be removed correctly, and new ones may not
+be applied. In this case, you may need to pause the game and manually set the necessary options.
 
 ## What's New In Chaos Unbound
 
@@ -114,7 +117,7 @@ are described
 In the previous version of Chaos, a modifier that advertised itself, for example, as "no melee"
 actually functioned by blocking the square button. Other mods could also scramble the controls, for
 example swapping the square and triangle buttons. If those two mods were active simultaneously, this
-could result in melee becoming active again, depending on the order in which the modifiers maps were
+could result in melee becoming active again, depending on the order in which the modifiers were
 applied.
 
 In the current version, modifiers are defined based on game commands, and any remapping of
@@ -175,7 +178,7 @@ chaos.
 
 **Important:** The only controller supported is the Dualshock 4 Generation 2, model CUH-ZCT2U. This
 version has the lightbar visible from the front at the top of the touchpad. This controller can be
-used even if you're playing on a PlayStation 5.
+used to play PS4 games like TLOU2 on a PlayStation 5.
 
 ## Installation
 
@@ -190,36 +193,52 @@ This software tool is convenient to flash SD cards: [Raspberry Pi Imager](https:
 
 - Connect your SD card to your computer using an SD card reader
 - Select the SD card in the Raspberry Pi Imager
-- Under "Choose OS" select Raspberry Pi OS (other) -> Raspberry Pi OS Lite (32-bit) [TODO: images for connection issues]
+- Under "Choose OS" select Raspberry Pi OS (other) -> Raspberry Pi OS Lite (32-bit). This is the version without
+  a desktop environment (which you don't need).
 - In advanced options:
 
     - Set image customization options to "to always use":
-    - Check "Set hostname" and accept raspberrypi.local
-    - If you want SSH, check "Enable SSH" and choose your method of authentication. (If you don't know how to set up public-key authentication, you can stick with a password), but for security you should change the password from the default
-    - Check Set username and password. The original version of Chaos is hard-coded to assume the username is pi. Chaos unbound theoretically removes this restriction, but it has not been fully tested. For now, leave the username as 'pi'. Do change the password, though, if you've enabled SSH.
-    - If you want WAN, configure that as well.
+    - Check "Set hostname" and accept raspberrypi.local. (If you need this to be something else,
+      it's OK to change this. Just substitute the hostname you choose for 'raspberrypi.local'
+      wherever that occurs in the instructions.)
+    - Check Set username and password. The original version of Chaos was hard-coded to assume the
+      username was pi. Chaos unbound removes this restriction, but these instructions use the
+      default username as an example.
+    - If you want to be able to access your Pi without plugging in a keyboard and monitor, check
+      "Enable SSH" and choose your method of authentication. If you don't know how to set up
+      public-key authentication, you can stick with a password, but for security you should
+      change the password from the default. If you need more help setting up SSH,
+      [follow the instructions here](https://www.raspberrypi.com/documentation/computers/remote-access.html#setting-up-an-ssh-server).
+      Note that the SSH shell is not required for ordinary operation of Chaos. Both the engine and
+      the chatbot start automaticlly when the power is applied.
+    - If you cannot plug your Pi into your network with an ethernet cable, enable WAN. Note:
+      this may have a performance impact. Ethernet cable is recommended whenever possible.
 
 - Click on the "Write" button.  If writing fails, simply try it again.
 
 2. Install the SD card into your Pi. The slot for this is on the bottom side of the board.
 
-3. Connect a monitor and keyboard. This is only required during the setup process, or later if you
-need to update anything and have not set up an SSH shell. After the setup is complete, you can run
-Chaos without either a keyboard or monitor connected to the Pi.
+3. IF you did not configure SSH, connect a monitor and keyboard. This is only required during the
+setup process, or later if you need to update anything and have not set up an SSH shell. After the
+setup is complete, you can run Chaos without either a keyboard or monitor connected to the Pi.
 
-4. Apply power over the Pi's USB-C connector by plugging the cable into the PlayStation and turning
-it on.
-
-5. (*Highly recommended*) Connect the Raspberry Pi to your router with an ethernet cable. If you
+4. (*Highly recommended*) Connect the Raspberry Pi to your router with an ethernet cable. If you
 cannot use wired ethernet, or prefer not to, you will need to set up WiFi below.
 
-6. When your Pi boots, log in using the following credentials:
+5. Apply power over the Pi's USB-C connector by plugging the cable into the PlayStation and turning
+it on.
+
+6. When your Pi boots, log in using the credentials you specified above. If you stuck with the
+system defaults, they will be the following:
 - Username: pi
 - Password: raspberry
 
-This will start a bash terminal session.
+This will start a bash terminal session. If you are connecting over SSH, try rapberypi.local as
+the host address. If that does not work, you may need to find the local IP address that your
+router has assigned to the Pi. Go to your router's admin page and look for the list of connected
+devices. 
 
->Note: The password field will look like nothing is being typed, but it will be reading the password
+Note: The password field will look like nothing is being typed, but it will be reading the password
 as you type it.
 
 7. (*If using WiFi only*). Configure your WiFi connection using the
@@ -230,45 +249,35 @@ manage all the files you will need to run TCC. After you have logged in to the P
 time, run the the following command:
 
 ```bash
-sudo apt update && sudo apt install git -y
+sudo apt update && sudo apt upgrade -y
+sudo apt install git -y
 ```
 
-Updating may take a while. You might want to get a coffee while you wait.
+This will ensure that you are running the latest stable versions of all the necessary tools. The
+process may take a while. Be patient
 
 9. Next, get the latest version of Chaos and install it. Run the following commands to get the
 necessary files and install them in your home directory:
 
 ```bash
-cd
-git clone https://github.com/polysyl/chaos.git
+git clone https://github.com/polysyllabic/chaos.git
 cd chaos
 ./install.sh
 ```
 
->Note: The engine and chatbot both expect the "chaos" directory to be in your home directory. This
+Note: The engine and chatbot both expect the "chaos" directory to be in your home directory. This
 may change later, but for now, you should not try to move it.
-
-TODO: Add alternate instructions for installation variants
 
 Running the install command above will take ~5 minutes.
 
-6. (Optional) If you want to access the Pi without needing to plug in a keyboard and monitor,
-you can set up SSH access. SSH is disabled by default. This will be particularly useful if you
-intend to edit or create your own configuration files.
-
-[Follow the instructions here](https://www.raspberrypi.com/documentation/computers/remote-access.html#setting-up-an-ssh-server).
-
->Note that the SSH shell is not required for ordinary operation of Chaos. Both the engine and the
-chatbot start automaticlly when the power is applied.
-
-7. A reboot is required to enable USB communication to hosts:
+10. A reboot is required to enable USB communication to hosts:
 
 ```bash
 sudo reboot
 ```
 
-Chaos should now be installed!  Now all that is needed is configuration and setup for OBS and your
-particular game.
+Chaos should now be installed!  Now all that is needed is configuration and setup for OBS and the
+game.
 
 ### Configuring the Console
 
@@ -282,7 +291,7 @@ controllers. Open the system menu on your console.
 
 Now that everything is installed, power up your Raspberry Pi and follow these steps:
 
-1. If you have not already created a bot account, do so here
+1. If you have not already created a bot account, do so here.
 TODO: bot account instructions
 
 If you prefer not to create a secondary account for your bot, you can still run most features
@@ -328,7 +337,6 @@ To add these overlays to OBS or SLOBS, perform the following steps:
 It's recommended to set these browser sources to refresh when not displayed so that they can
 easily be refreshed. Detailed setup instructions for OBS are available in the
 [stream setup](docs/streamSetup.md) guide.
-
 
 ## Running the Game
 
@@ -401,25 +409,34 @@ is that your console shows the "connect a contoller" screen, and when you press 
 sync the controller, the PlayStation shows the controller connecting momentarily and then announces
 it is disconnected.
 
-
-## TODO List
-
-### Video feedback
-Implementing video feedback in a similar form to video-based load removers can aid in providing game-state information so that Chaos can know when it can/cannot perform certain actions.  This would be a major overhaul and add complication to the game setup, so this is certainly a long-term stretch goal.
-
-
 ## Design
 
-The core of this Chaos implementation involves the Chaos engine, written in C++ for speed. At the lowest level, the Chaos engine works by forwarding USB protocols using the Linux raw-gadget kernel module. For every USB request, the engine duplicates the request and passes it along. However, in the case of messages corresponding to controller buttons/joysticks, the data is passed to other processes that can meddle with the data. This forwarding infrastructure is done by using [usb-sniffify](https://github.com/blegas78/usb-sniffify), a library that combines [raw-gadget](https://github.com/xairy/raw-gadget) and [libusb](https://libusb.info).
+The core of this Chaos implementation involves the Chaos engine, written in C++ for speed. At the
+lowest level, the Chaos engine works by forwarding USB protocols using the Linux raw-gadget kernel
+module. For every USB request, the engine duplicates the request and passes it along. However, in
+the case of messages corresponding to controller buttons/joysticks, the data is passed to other
+processes that can meddle with the data. This forwarding infrastructure is done by using
+[usb-sniffify](https://github.com/blegas78/usb-sniffify), a library that combines
+[raw-gadget](https://github.com/xairy/raw-gadget) and [libusb](https://libusb.info).
 
-The Twitch chatbot, stream overlays, and vote tracking are built using Python.
-- The chatbot is built  GUI and overlays are built using [PySimpleGui](https://github.com/PySimpleGUI/PySimpleGUI).  The IRC client code is unnecessarily custom (a library should be used).  
+The Chatbot, stream overlays, and vote tracking are written in Python. The chatbot's basic
+Twitch connectivity is implemented with [PythonTwitchBotFramework](https://github.com/sharkbound/PythonTwitchBotFramework).
+The chatbot's GUI and overlays are built using [Flexx](https://github.com/flexxui/flexx).
 
-Chaos uses [softmax](https://en.wikipedia.org/wiki/Softmax_function) to select modifiers for the voting pool.  This is implemented to reduce the probability that modifiers appear based on the number of times it has won.  This reduces the likelihood that modifiers repeat to create more diversity in each moment however it is still possible to see repeat modifiers.  Some viewers like [Chaos Coach Cholocco](https://www.twitch.tv/cholocco) will inform users to only vote on buff/visual modifiers during slow segments so that painful modifiers are more likely to appear during combat sections.
+Chaos uses [softmax](https://en.wikipedia.org/wiki/Softmax_function) to select modifiers for the
+voting pool. The effect is that the more times a particular modifier has previously won a vote,
+the less likely it is to appear in the voting list. If savvy viewers vote only for buffs or visual
+modifiers during a game's slow segments, this makes it more likely that the more painful modifiers
+will wind up in the voting list during combat sections.
 
-The ChaosEngine listens to the Python voting system using ZMQ with [zmqpp](https://github.com/zeromq/zmqpp).  When a winning modifier comes in, ChaosEngine adds the modifier to list of active modifiers.  After a set amount of time, the ChaosEngine will remove the modifier.
+The ChaosEngine listens to the Python voting system using ZMQ with [zmqpp](https://github.com/zeromq/zmqpp).
+When a winning modifier comes in, ChaosEngine adds the modifier to list of active modifiers. After
+a set amount of time, the ChaosEngine will remove the modifier.
 
-Each modifier can perform a set of actions at each of these transitions.  There can be unique actions performed as the modifier is added, while it's currently active, when it ends, and can also perform asynchronous actions that are controller event-based.  This effectively follows UML-style state machine with entry/do/exit/event actions.
+Each modifier can perform a set of actions at each of these transitions. There can be unique actions
+performed as the modifier is added, while it's currently active, when it ends, and can also perform
+asynchronous actions that are controller event-based. This effectively follows UML-style state machine
+with entry/do/exit/event actions.
 
 ChaosEngine is designed to allow for flexibility in modifiers using the following principles:
 
@@ -430,11 +447,14 @@ ChaosEngine is designed to allow for flexibility in modifiers using the followin
 - State Sampling - See what is being applied versus what is trying to be sent
 - Direct Control - Can send commands directly to the output
 
-Some other included helper utilities for modifiers include sequencers.  With the above list and utilities, Chaos is capable of behaviors including button macros and remmaping.  Such a framework can potentially be used as a TAS device, for "Twitch Plays ..." streams, or for modifying/boosting controller performance  (could be considered cheating in multiplayer games).
+With the above list and utilities, Chaos is capable of behaviors including button macros and
+remmaping. Such a framework can potentially be used as a TAS device, for "Twitch Plays ..."
+streams, or for modifying/boosting controller performance. (This could be considered cheating in
+multiplayer games.)
 
 ### Example Configuration File Entries
 
-The following give some indication of how the configuration file works:
+The following give some examples of how the configuration file works:
 
 Associate a game command with a controller button:
 
@@ -521,6 +541,15 @@ controller by using the chaos engine to emulate a DualShock controller, but this
 significant additional work and still not support games that made use of DualShock-specific features
 like haptic feedback.
 
+Note that it *may* be possible to work around this limitation with some additional hardware.
+The Besavior is a custom build PS5 controller that supports chaining other controllers into it,
+which should in theory let you use a PS4 controller for many PS5 games. To make this scenario
+work, you would need to connect your DualShock controller to the Raspberry Pi, and the USB-C
+output of the Pi to the Besavior, which is in turn connected to the console. I have no idea if
+the Besavior would supply enough power to the Pi to keep it stable. Assuming it does not, you
+would need to power the Pi through the GPIO power pins, using something like a UPS HAT. Testing
+this idea is on my to-do list.
+
 *Do I have to use a Rapberry Pi 4?*
 
 Currently the Raspberry Pi 4 is the only device tested. Some other Rasberry Pi models *may* work
@@ -531,7 +560,7 @@ That requires special hardware peripherals which the Pi 4 has on its USB-C power
 Pi models--and most, if not all, ordinary PCs--lack this hardware and so cannot run the chaos
 engine.
 
-There are other Pi variants that could work, but they are untested. The Raspberry Pi 0 W has the
+There are other Pi variants that could work, but they are untested. The Raspberry Pi 0W has the
 right hardware and is much less expensive than the Pi 4, but this has only one USB device to act as
 a client and lacks an ethernet plug, meaning that WiFi is the only method to connect to the network
 This means that the controller has to connect over Bluetooth, using the same device that's also used
@@ -550,12 +579,29 @@ cd chaos/raw-gadget-timeout/raw_gadget/
 make
 ```
 
-To restart chaos 
+Note that the original version of Chaos, or rather the sniffify library, depends on a specific,
+older version of the linux kernel headers that were altered in later releases. To get that
+library working, you will need to revert to an older image of the OS, which is
+[available here].(https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-05-28/)
+Once flashed and booted, downloaded the corresponding kernel using this command:
+
+```bash
+wget https://archive.raspberrypi.org/debian/pool/main/r/raspberrypi-firmware/raspberrypi-kernel-headers_1.20210430-1_armhf.deb 
+```
+
+Install the headers with the following:
+
+```bash
+sudo dpkg --install raspberrypi-kernel-headers_1.20210430-1_armhf.deb 
+```
+
+After that, you should be able to install git and chaos orginarily. But you should not run "sudo apt-get upgrade".
+
 
 ## Contributors
-
 The original version of controller-based Chaos is entirely due to the amazing work of
-[Blegas78](https://www.twitch.tv/blegas78).
+[Blegas78](https://www.twitch.tv/blegas78). [Polysyl](https://www.twitch.tv/polysyl) extensively rewrote most
+aspects of the code for this version, but without Blegas's efforts, none of this would have been possible.
 
 Many other people in the community have contributed ideas. Chaos would not be nearly as colorful or
 effective without their contributions, so thanks to everyone that has made this project better!

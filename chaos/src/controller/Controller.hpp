@@ -19,6 +19,7 @@
  */
 #pragma once
 #include <deque>
+#include <array>
 #include <memory>
 
 #include "DeviceEvent.hpp"

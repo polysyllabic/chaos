@@ -46,8 +46,8 @@ if(${ver} MATCHES "PRERELEASE[ \t]+([^\n]+)")
 endif()
 message(NOTICE "Configuring Chaos engine ${CHAOS_VERSION}")
 
-# GCC 8 (still in use by Raspberry Pi) requires an explicit link of libstdc++fs, the library for
-# std::filesystem. This is unnecessary on GCC 9 or later
+# GCC 8 requires an explicit link of libstdc++fs, the library for std::filesystem.
+# This is unnecessary on GCC 9 or later.
 function( set_required_build_settings_for_GCC8 )
   # Note: This command makes sure that this option comes pretty late on the cmdline.
   link_libraries( "$<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:-lstdc++fs>" )
@@ -57,10 +57,14 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/include/config.in ${CMAKE_CURRENT_LIST_
 
 # Standard CMake modules
 #include(CTest)
-#include(GNUInstallDirs)
+include(GNUInstallDirs)
 include(FetchContent)
+include(ExternalProject)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/")
+
+# Raw gadget kernel module; This is a makefile external project
+find_program(MAKE_EXECUTABLE NAMES gmake make mingw32-make REQUIRED)
 
 # Header-only libraries
 FetchContent_Declare(
@@ -84,15 +88,8 @@ FetchContent_Declare(
 	GIT_REPOSITORY https://github.com/polysyllabic/usb-sniffify.git
 	GIT_TAG	       origin/main
 )
-FetchContent_Declare(
-	rawgadget
-	GIT_REPOSITORY https://github.com/polysyllabic/raw-gadget.git
-	GIT_TAG	       origin/master
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND ""
-)
 
-FetchContent_MakeAvailable(tomlplusplus plog cppzmq sniffify rawgadget)
+FetchContent_MakeAvailable(tomlplusplus plog cppzmq sniffify)
 
 find_package (Threads REQUIRED)
 find_package (Libusb1 REQUIRED)
@@ -173,6 +170,9 @@ target_link_libraries(chaos	PUBLIC chaos_communicator
     chaos_controller #chaos_engine chaos_menus chaos_mods
 		sniffify
 		${LIBUSB_LIBRARIES})
+
+install(TARGETS chaos DESTINATION chaos)
+install(FILES startchaos.sh DESTINATION chaos)
 
 find_package(Doxygen)
 if (DOXYGEN_FOUND)

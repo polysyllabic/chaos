@@ -1,6 +1,6 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * Copyright 2021-2023 The Twitch Controls Chaos developers. See the AUTHORS
  * file in the top-level directory of this distribution for a list of the
  * contributers.
  *
@@ -100,8 +100,17 @@ void ChaosEngine::newCommand(const std::string& command) {
     reportGameStatus();
   }
 
-  // TODO: report available games
-  
+  if (root.isMember("nummods")) {
+    int nmods = root["nummods"].asInt();
+    if (nmods < 1) {
+      PLOG_ERROR << "Number of active modifiers must be at least one";
+    } else {
+      game.setNumActiveMods(nmods);
+      // If we've reduced the number of mods to less than the current number of active mods, the
+      // excess will be removed in the main loop
+    }    
+  }
+
   if (root.isMember("exit")) {
     keep_going = false;
   }
