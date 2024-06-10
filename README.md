@@ -90,11 +90,9 @@ events that the chatbot cannot track, such as reaching some custom channel goel.
 
 ## Limitations
 
-Chaos requires a DualShock 4 controller. You can still play on a PS 5 console, but Chaos is only
-workable with games that support that controller. A PS5-only game such as Returnal will not work,
-since that game requires features found only on the unsupported DualSense controller. If you
-want to make TCC work with a PS5-only game, see the notes below for some (currently untested)
-ideas.
+TCC requires specific hardware to run, including a Raspberry Pi 4 and a DualShock controller (the
+controller for the PlayStation 4), which may constitue a significant expense. To play PS5-only
+games like The Last of Us Part 1 Remake, you will require still more hardware.
 
 Chaos only sees the incoming pattern of controller signals. It has no idea what is actually
 happening in the game. During cutscenes, death animations, or other places where the ordinary
@@ -112,22 +110,22 @@ which the engine reads when it initializes. Altering this configuration file all
 modifiers easily, or even create support for an entirely new game, without needing to write any C++
 or Python code. The rules for creating  
 [configuration files](https://github.com/polysyllabic/chaos/blob/unbound/chaos/examples/tlou2.toml)
-are described 
+can be found in the [documentation files](https://github.com/polysyllabic/chaos/blob/unbound/chaos/docs/chaosConfigFiles.md).
 
 In the previous version of Chaos, a modifier that advertised itself, for example, as "no melee"
-actually functioned by blocking the square button. Other mods could also scramble the controls, for
-example swapping the square and triangle buttons. If those two mods were active simultaneously, this
-could result in melee becoming active again, depending on the order in which the modifiers were
-applied.
+actually functioned by blocking the square button. One drawback of this implementation is that
+ther mods can also scramble the controls, for example by swapping the square and triangle buttons.
+If those two mods were active simultaneously, this could result in melee becoming active again,
+depending on the order in which the modifiers were applied.
 
-In the current version, modifiers are defined based on game commands, and any remapping of
-controller inputs is performed before the modifiers work their magic. This has the effect that any
-modifiers that specify alterations to a particular command will continue to operate regardless of
-what control that command is currently mapped to.
+In Chaos Unbound, modifiers are defined based on game commands, and any remapping of controller
+inputs is performed before the other modifiers are applied. This has the effect that any modifiers
+that specify alterations to a particular command will continue to operate regardless of what
+control that command is currently mapped to.
 
 Streamers can now choose to allow chat to acquire "redemption" credits that entitle the person with
 that credit to apply a modifier of their choosing. The modifier is applied outside of the normal
-voting and occurs immediately (or after a cooldown period that you can be configured). This allows
+voting and occurs immediately (or after a cooldown period that can be configured). This allows
 a member of chat to apply the most chaotic modifier at a strategic time, rather than being
 subjected to the vagaries of the voting process.
 
@@ -152,7 +150,6 @@ new TLOU2 configuration file include the following:
 - Criss-Cross Joysticks: Vertical and horizontal axes of both joysticks are swapped
 - Drift Left: Add controller drift
 
-
 ## Required Hardware
 
 In order to stream with Chaos, you will need a PlayStation 4 or 5 console. Most of the instructions
@@ -160,9 +157,9 @@ here also assume that you also use streaming software such as OBS, which will re
 capture card as well. Note that is **is** possible to run Chaos without OBS, meaning that it should
 be possible to play Chaos while streaming directly from your PlayStation, or even without streaming
 at all, although you will not be able to use overlays to show the current status of votes or the
-modifiers in effect.
+modifiers in effect. (This has not been tested.)
 
-What else you need:
+Additional Hardware (for all steups):
 
 - A DualShock 4 model CUH-ZCT2U controller 
 - A Raspberry Pi 4
@@ -173,12 +170,18 @@ What else you need:
 - (recommended) A cat 5 ethernet cable
 - (optional) A case for the Raspberry Pi.
 
-Here is an [Amazon shopping list](https://a.co/fp7VGcb) with items that are used to install and run
-chaos.
+To play PS5-only games such as TLOU1 Remake or TLOU2 Remaster, you will also need a
+[Besavior PS5 controller](https://www.beloader.com/products/besavior-1.html) in addition to
+everything in the list above.
 
-**Important:** The only controller supported is the Dualshock 4 Generation 2, model CUH-ZCT2U. This
-version has the lightbar visible from the front at the top of the touchpad. This controller can be
-used to play PS4 games like TLOU2 on a PlayStation 5.
+**Important:** You must use the DualShock 4 Generation 2, model CUH-ZCT2U. This version has the
+lightbar visible from the front at the top of the touchpad. Gen-1 DualShocks connect to the console
+only through wifi, and a wired USB connection is needed to intercept the signals. Note also that you
+need this controller *in addition* to the Besavior to play PS5-only games.  
+
+*Note:* You may be able to adapt TCC to run on other setups, particularly using different models
+of the Raspberry Pi or alternatives to the Besavior, but these are untested. See the notes below
+for specific details explaining the requirements if you want to try something different.
 
 ## Installation
 
@@ -299,19 +302,20 @@ of Chaos by entering the information for the account you broadcast from. In this
 mod redemptions with channel points will not be available.
 
 2. On the same local network as the Raspberry Pi, open a browser and navigate to to
-[raspberrypi.local](http://raspberrypi.local).
+[raspberrypi.local](http://raspberrypi.local), assuming you did not change the Pi's hostname.
+If you did set the hostname during configuration, replace "raspberrypi" with whatever name
+you chose.
 
-If the address raspberripi.local does not work, you may need to find your Pi's IP address
-and use it directly. You can discover this address by going to your router's admin page, finding
-the list of connected devices, and see if you can identify which one is the Pi. Alternatively, run
+If this address does not work, you may need to find your Pi's IP address and use it directly.
+You can discover this address by going to your router's admin page, finding the list of
+connected devices, and seeing if you can identify which one is the Pi. Alternatively, run
 the command `hostname -I` on your Pi to get your Pi's IP address. Input this address in your
 browser instead.
 
 3. Click on the "Settings" tab. Enter your channel name and bot account credentials, or the
 credentials for your broadcaster account if you do not have a secondary custom bot account.
 
-4. Configure the overlay appearance to your liking. You can adjust the colors of the progress bars,
-the font, font size, and font colors to your taste.
+4. Configure the overlay appearance to your liking.
 
 ### Configuring OBS/SLOBS
 
@@ -338,31 +342,73 @@ It's recommended to set these browser sources to refresh when not displayed so t
 easily be refreshed. Detailed setup instructions for OBS are available in the
 [stream setup](docs/streamSetup.md) guide.
 
+### Running TCC Without Overlays
+If you are streaming directly from a console and cannot display local browser-source overlays,
+you can still run TCC, but you will need to make sure that you turn on the chatbot settings that
+announceme in chat which mods are available to vote on and which mods are currently active
+each time a new voting cycle begins.
+
+Note that you do not even need to be streaming for the chatbot to work. Merely by virtue of
+having a Twitch account, you have a chat, which can work even when you're offline. So in theory,
+you could have a group of friends over to your house and just play the game on your TV while
+they joined your twitch chat on their phones and voted without you ever needing to stream
+the game.
+
 ## Running the Game
 
-### Initial Startup
+### Cabling
 
-1. Each time you want to start Chaos, you must connect your controller through a USB cable to the
+The hardware chain differs depending on whether you are playing a PS4 game or a PS5 game.
+
+For all games:
+
+1. Connect the DualShock controller (the PS4 controller) through a USB cable to the
 lower left USB port on your Raspberry Pi. This is the USB 2.0 port furthest from the ethernet port
-and closest to circuit board. Then use a USB-C to USB-A cable to connect the Raspberry Pi's power
-to your console. Also connect the Raspberry Pi's ethernet port to your router, unless you're using
-WiFi.
+and closest to circuit board.
 
-![Cabling the Raspbery Pi](https://github.com/polysyllabic/chaos/blob/unbound/docs/images/chaos_plugging.jpg)
+2. Connect the Raspberry Pi's ethernet port to your router, unless you're using WiFi.
 
-2. Turn on your console.  On a PlayStation, pressing the PS button will turn on the console, which
-will then power the Raspberry Pi. During the Pi's boot process, the controller's bluetooth
-connection will let you navigate to your game. At some point, you'll see a USB connectivity
-notification, meaning that chaos is active.
+[Cabling the Raspbery Pi](https://github.com/polysyllabic/chaos/blob/unbound/docs/images/chaos_plugging.jpg)
 
-3. If OBS was already running, refresh your browser sources. The overlays should be active.
+3. The next step depends on whether you are playing a PS4 or PS5 game. If you're playing a PS4 game
+on a PS5 console, you can use the simpler, PS4 setup:
 
-4. Next, check that the controller is connected properly. Start up and load into your game so that
+For PS4 games:
+
+Use a USB-C to USB-A cable to connect the Raspberry Pi's USB-C port to the console. The
+Pi will get its power from this connection, as well as using it to communicate with the console.
+
+For PS5-only games:
+
+3a. Connect the Besavior controller to the PlayStation 5 with a USB-C to USB-A cable.
+
+3b. Connect the USB-C to USB-A adaptor that comes with the Besavior to the USB-C port on the Beloader
+device on the bottom of the Besavior controller. This is a short cable with a second USB-C port on
+the side.
+
+3c. Connect the Besavior to the Raspberry Pi's USB-C port with a USB-A to USB-C cable.
+
+3d. Connect another USB-C cable into this side port on the adapter and connect it to an external DC
+power source.
+
+The sequence of devices is DualShock -> Raspberry Pi -> Besavior -> PlayStation 5
+
+
+### Startup
+
+1. Turn on your console.  If using the Besavior setup, also ensure that the external power is
+connected. Once power is applied, the Raspberry Pi will boot up. During the Pi's boot sequence, the
+controller's bluetooth connection will let you navigate to your game. At some point, you'll see a USB
+connectivity notification, meaning that TCC is active.
+
+2. If OBS was already running, refresh your browser sources. The overlays should be active.
+
+3. Next, check that the controller is connected properly. Start up and load into your game so that
 you are controlling your character. After you press the "Share" button, the VoteTimer progress bar
 should start moving. If the timer runs and you can control your character, then the engine is
 running correctly and communicating with the interface.
 
-5. Finally, test the voting. Pull up your chat and try to vote while the engine is running. A vote
+4. Finally, test the voting. Pull up your chat and try to vote while the engine is running. A vote
 should appear on your overlay. If all these tests are OK, you are ready to go!
 
 ### Playing the Game
@@ -402,20 +448,13 @@ This can usually only currently be corrected with a reboot of the Pi. A check of
 many errors, and they are generally fine, but eventually the kernel will prevent raw-gadget from
 running. This may be a limitation of the raw-gadget Linux kernel module.
 
-### Controller failing to connect
-The current version of usb-sniffify has significant issues connecting a controller when run on
-compiles with recent versions of the Raspberry Pi OS (images since Nov. 2021).  A symptom of this
-is that your console shows the "connect a contoller" screen, and when you press the PS button to
-sync the controller, the PlayStation shows the controller connecting momentarily and then announces
-it is disconnected.
-
 ## Design
 
-The core of this Chaos implementation involves the Chaos engine, written in C++ for speed. At the
-lowest level, the Chaos engine works by forwarding USB protocols using the Linux raw-gadget kernel
-module. For every USB request, the engine duplicates the request and passes it along. However, in
-the case of messages corresponding to controller buttons/joysticks, the data is passed to other
-processes that can meddle with the data. This forwarding infrastructure is done by using
+The core of TCC involves the Chaos engine, written in C++ for speed. At the lowest level, the Chaos
+engine works by forwarding USB protocols using the Linux raw-gadget kernel module. For every USB
+request, the engine duplicates the request and passes it along. However, in the case of messages
+corresponding to controller buttons/joysticks, the data is passed to other processes that can meddle
+with the data. This forwarding infrastructure is done by using
 [usb-sniffify](https://github.com/blegas78/usb-sniffify), a library that combines
 [raw-gadget](https://github.com/xairy/raw-gadget) and [libusb](https://libusb.info).
 
@@ -429,100 +468,32 @@ the less likely it is to appear in the voting list. If savvy viewers vote only f
 modifiers during a game's slow segments, this makes it more likely that the more painful modifiers
 will wind up in the voting list during combat sections.
 
-The ChaosEngine listens to the Python voting system using ZMQ with [zmqpp](https://github.com/zeromq/zmqpp).
-When a winning modifier comes in, ChaosEngine adds the modifier to list of active modifiers. After
-a set amount of time, the ChaosEngine will remove the modifier.
+The Chaos engine listens to the Python voting system using ZMQ with [zmqpp](https://github.com/zeromq/zmqpp).
+When a winning modifier comes in, the engine adds the modifier to list of active modifiers. After
+a set amount of time, the engine will remove the modifier.
 
 Each modifier can perform a set of actions at each of these transitions. There can be unique actions
 performed as the modifier is added, while it's currently active, when it ends, and can also perform
 asynchronous actions that are controller event-based. This effectively follows UML-style state machine
 with entry/do/exit/event actions.
 
-ChaosEngine is designed to allow for flexibility in modifiers using the following principles:
+The Chaos engine offers the following capabilities for reading and altering controller data:
 
-- Sniffing - Can read input being sent along the way
-- Interception - Can block pipelined commands
-- Modification - Replace message data including the type, id, and value
-- Injection - Can generate and send arbitrary messages without any controller events
-- State Sampling - See what is being applied versus what is trying to be sent
-- Direct Control - Can send commands directly to the output
+- Sniffing - Read input packets being sent from the controller
+- State Sampling - See live controller state (as opposed to what is trying to be sent)
+- Interception - Block commands in the pipeline
+- Modification - Alter data including the command type, id, and value
+- Injection - Generate arbitrary messages without any controller events
+- Direct Control - Send commands directly to the output
 
-With the above list and utilities, Chaos is capable of behaviors including button macros and
-remmaping. Such a framework can potentially be used as a TAS device, for "Twitch Plays ..."
-streams, or for modifying/boosting controller performance. (This could be considered cheating in
-multiplayer games.)
+Chaos is capable of behaviors including creating macros and remmaping controls. The same framework can
+be used as a TAS device for "Twitch Plays ..." streams, or for modifying/boosting controller performance.
+(This could be considered cheating in multiplayer games.)
 
-### Example Configuration File Entries
+### Configuration=Based Game Support
+Individual games are supported through configuration files. If you want to use TCC with a new game, you
+merely need to create an appropriate configuration file.
 
-The following give some examples of how the configuration file works:
-
-Associate a game command with a controller button:
-
-```toml
-[[command]]
-name = "melee"
-binding = "SQUARE"
-```
-
-Define a condition that can be monitored and acted on. The following defines a trigger that is reads
-as true whenever the joystick controlling movement is deflected more than 20% of its maximum:
-
-```toml
-[[condition]]
-name = "movement"
-trueOn = [ "move forward/back", "move sideways" ]  
-threshold = 0.2
-thresholdType = "distance"
-```
-
-Define gameplay modifiers:
-
-```toml
-[[modifier]]
-name = "No Melee"
-description = "Disable melee attacks and stealth kills"
-type = "disable"
-groups = [ "combat" ]
-appliesTo = [ "melee" ]
-
-[[modifier]]
-name = "Bad Stamina"
-description = "Running is disabled after 2 seconds and takes 4 seconds to recharge."
-type = "cooldown"
-groups = [ "movement" ]
-appliesTo = [ "dodge/sprint" ]
-timeOn = 2.0
-timeOff = 4.0
-
-[[modifier]]
-name = "Swap Joysticks"
-description = "You may want to cross your thumbs to work with your muscle memory"
-type = "remap"
-remap = [
-      {from = "RX", to = "LX"},
-      {from = "RY", to = "LY"},
-      {from = "LX", to = "RX"},
-      {from = "LY", to = "RY"} ]
-
-[[modifier]]
-name = "Use Items"
-description = "Shoots or throws 6 of whatever item is currently equipped. No effect for medkits."
-type = "sequence"
-groups = [ "combat", "inventory" ]
-blockWhileBusy = [ "aiming", "reload/toss" ]
-beginSequence = [
-  { event="hold", command = "aiming", delay = 1.0 },
-  { event="press", command = "shoot", repeat = 6, delay = 0.25 },
-  { event="release", command = "aiming" } ]
-
-[[modifier]]
-name = "No Reticle"
-description = "Headshots just got trickier."
-type = "menu"
-groups = [ "UI" ]
-menu_items = [{entry = "reticle", value = 0 }]
-
-```
 
 ## Frequently Asked Questions
 
@@ -534,21 +505,18 @@ it unusable for this project.
 *I have a PlayStation 5. Why can't I use that controller?*
 
 The DualSense controller for the PS 5 sends signals to the console with an encrypted checksum, and
-the private key for that remains, well, private. This meaning that any attempts to alter the signals
-would result in a signal with a mismatched checksum, since we don't know how to spoof a valid one,
-and the signal will be rejected by the console. It should be theoretically possible to use this
-controller by using the chaos engine to emulate a DualShock controller, but this would require
-significant additional work and still not support games that made use of DualShock-specific features
-like haptic feedback.
+the private key for that remains, well, private. Although at least one key was hacked and released,
+Sony has patched that out. This meaning that any attempts to alter the signals would result in a
+signal with a mismatched checksum, since we don't know how to spoof a valid one, and the signal will
+be rejected by the console.
 
-Note that it *may* be possible to work around this limitation with some additional hardware.
-The Besavior is a custom build PS5 controller that supports chaining other controllers into it,
-which should in theory let you use a PS4 controller for many PS5 games. To make this scenario
-work, you would need to connect your DualShock controller to the Raspberry Pi, and the USB-C
-output of the Pi to the Besavior, which is in turn connected to the console. I have no idea if
-the Besavior would supply enough power to the Pi to keep it stable. Assuming it does not, you
-would need to power the Pi through the GPIO power pins, using something like a UPS HAT. Testing
-this idea is on my to-do list.
+One way to work around this limitation is with the Besavior, which is a custom-built PS5 controller
+that supports chaining other controllers into it. This means that, instead of plugging the Raspberry
+Pi directly into the PlayStation 5, you plug it into the Besavior and the Besavior into the
+PlayStation. The Besavior authenticates itself with the console as an authentic controller and handles
+the remapping of DualShock data to the DualSense format. Note that this method requires external
+power for the Raspberry Pi. The Besavior comes with an adaptor cable that contains a side-port for this
+power, so you should not need to supply that power through the Pi's GPIO pins.
 
 *Do I have to use a Rapberry Pi 4?*
 
@@ -581,7 +549,7 @@ make
 
 Note that the original version of Chaos, or rather the sniffify library, depends on a specific,
 older version of the linux kernel headers that were altered in later releases. To get that
-library working, you will need to revert to an older image of the OS, which is
+library working, you may need to revert to an older image of the OS, which is
 [available here].(https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-05-28/)
 Once flashed and booted, downloaded the corresponding kernel using this command:
 
