@@ -3,9 +3,11 @@
 """
   Chatbot commands that control modifier choice outside the voting mechanism
 """
-from twitchbot import Command, Message
-import chaosface.config.globals as config
 import logging
+
+from twitchbot import Command, Message
+
+import chaosface.config.globals as config
 
 MANAGE_MODIFIERS_PERMISSION = 'manage_modifiers'
 
@@ -14,12 +16,11 @@ MANAGE_MODIFIERS_PERMISSION = 'manage_modifiers'
          cooldown=config.relay.redemption_cooldown, cooldown_bypass=MANAGE_MODIFIERS_PERMISSION)
 async def cmd_apply_mod(msg: Message, *args):
   """
-  Manually insert a mod into the list immediately. Requires a credit unless the command comds from
+  Manually insert a mod into the list immediately. Requires a credit unless the command comes from
   the streamer. Credits are only deducted if the command is successfully applied. Admins bypass the
   cooldown.
   """
   # Check credit balance (bypass for streamer)
-  logging.debug(f'Sent by {msg.author} channel = {msg.channel_name}')
   if msg.author != msg.channel_name:
     balance = config.relay.get_balance(msg.author)
     if balance == 0:
@@ -34,7 +35,7 @@ async def cmd_apply_mod(msg: Message, *args):
     return
   if status:
     mod_key = request.lower()
-    config.relay.force_mod = mod_key
+    # config.relay.force_mod = mod_key
     # TODO: check for error reply from engine
     # Deduct from balance
     balance = config.relay.step_balance(msg.author, -1)
@@ -55,9 +56,14 @@ async def cmd_disable_mod(msg: Message, *args):
   request = ' '.join(args)
   await msg.reply(config.relay.set_mod_enabled(request, True))
 
-@Command('remove', permission=MANAGE_MODIFIERS_PERMISSION)
+@Command('remove', permission=MANAGE_MODIFIERS_PERMISSION, syntax='<mod name>',
+         help='Notify engine to remove an active modifier immediately')
 async def cmd_remove_mod(msg: Message, *args):
   request = ' '.join(args)
+  status = config.relay.mod_enabled(request)
+  if not status:
+    await msg.reply()
+  
 
 @Command('resetmods', permission=MANAGE_MODIFIERS_PERMISSION, help='Remove all active mods')
 async def cmd_reset_mods(msg: Message, *args):

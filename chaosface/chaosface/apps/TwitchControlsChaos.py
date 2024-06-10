@@ -8,21 +8,22 @@
   apply.
 """
 
+import argparse
 import asyncio
 import logging
+
 logging.basicConfig(level=logging.DEBUG)
 
 from flexx import flx
 
 import chaosface.config.globals as config
-
+from chaosface.ChaosModel import ChaosModel
 from chaosface.chatbot.ChaosBot import ChaosBot
 from chaosface.gui.ActiveMods import ActiveMods
+from chaosface.gui.ChaosInterface import ChaosInterface
 from chaosface.gui.CurrentVotes import CurrentVotes
 from chaosface.gui.VoteTimer import VoteTimer
-from chaosface.gui.ChaosInterface import ChaosInterface
 
-from chaosface.ChaosModel import ChaosModel
 
 def start_gui():
   # Set up GUI
@@ -33,7 +34,7 @@ def start_gui():
   flx.create_server(host='0.0.0.0', port=config.relay.get_attribute('ui_port'), loop=asyncio.new_event_loop())
   flx.start()
 
-def twitch_controls_chaos():
+def twitch_controls_chaos(args):
   # Load the chatbot, but don't start it running yet. This gives us a chance to set the bot's
   # credentials on an initial run.
   config.relay.chatbot = ChaosBot()
@@ -50,6 +51,9 @@ def twitch_controls_chaos():
 
 
 if __name__ == "__main__":
-  twitch_controls_chaos()
+  parser = argparse.ArgumentParser()
+  parser.add_argument("--reauthorize", help="Delete previous OAuth tokens and wait for new ones to attempt to connect")
+  args = parser.parse_args()
+  twitch_controls_chaos(args)
 
 

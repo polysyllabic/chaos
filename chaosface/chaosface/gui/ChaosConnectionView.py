@@ -4,8 +4,11 @@
   View to show when the chatbot is connected to Twitch
 """
 import logging
+
 from flexx import flx
+
 import chaosface.config.globals as config
+
 
 class ChaosConnectionView(flx.PyWidget):
   def init(self):

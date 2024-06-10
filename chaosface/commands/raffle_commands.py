@@ -1,47 +1,35 @@
+# This file is part of Twitch Controls Chaos, written by blegas78 and polysyl.
+# License: GPL 3 or greater. See LICENSE file for details.
+"""
+  Chatbot commands that control the raffle system
+"""
 import time
-from asyncio import sleep, ensure_future
+from asyncio import ensure_future, sleep
 from random import choice
 
-from twitchbot import (
-  Channel,
-  Command,
-  Message,
-  InvalidArgumentsError,
-)
+from twitchbot import Channel, Command, InvalidArgumentsError, Message
 
 import chaosface.config.globals as config
 
 MANAGE_RAFFLE_PERMISSION = 'manage_raffles'
 
 in_raffle = []
-
-@Command('rafflemsg', permission=MANAGE_RAFFLE_PERMISSION, syntax='<message>')
-async def cmd_set_raffle_message(msg: Message, *args):
-  if not args:
-    raise InvalidArgumentsError('', cmd=cmd_start_raffle)
-  raffle_msg = ' '.join(args)
     
 
 @Command('raffle', permission=MANAGE_RAFFLE_PERMISSION, syntax='(time)',
          help='Opens a raffle, with the winner receiving a modifier credit. If time omitted, uses default raffle length')
-async def cmd_start_raffle(msg: Message, *args):
+async def cmd_start_raffle(msg: Message, raffle_length:int = config.relay.get_attribute('raffle_time')):
   if config.relay.raffle_open:
     await msg.reply('A raffle is already open')
     return
-  length = config.relay.get_attribute('raffle_time')
-  if args:
-    try:
-      length = int(args[0])
-    except ValueError:
-      raise InvalidArgumentsError('The time must be an integer number of seconds', cmd=cmd_start_raffle)
-    if length < 30:
-      raise InvalidArgumentsError('Raffle time must be at least 30 seconds', cmd=cmd_start_raffle)
+  if raffle_length < 30:
+    raise InvalidArgumentsError('Raffle time must be at least 30 seconds', cmd=cmd_start_raffle)
 
-  task = ensure_future(_raffle_timer_loop(msg.channel, length))
+  task = ensure_future(_raffle_timer_loop(msg.channel, raffle_length))
 
 
 @Command('join')
-async def cmd_join_raffle(msg: Message, *args):
+async def cmd_join_raffle(msg: Message):
   if not config.relay.raffle_open:
     return
   if msg.author not in in_raffle:

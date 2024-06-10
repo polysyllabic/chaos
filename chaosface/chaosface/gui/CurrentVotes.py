@@ -4,7 +4,9 @@
   Browser source showing the current candidates and voting progress
 """
 from flexx import flx
+
 import chaosface.config.globals as config
+
 
 class CurrentVotes(flx.PyWidget):
   def init(self):

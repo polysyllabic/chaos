@@ -4,7 +4,9 @@
   View to configure the appearance of the UI and the broswer sources
 """
 from flexx import flx
+
 import chaosface.config.globals as config
+
 
 class GUISettings(flx.PyWidget):
   def init(self):

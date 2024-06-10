@@ -7,18 +7,18 @@
   Note that this event loop runs in a separate thread from the flexx UI, so we must schedule any
   routines that change flexx parameters with a call to flx.loop.call_soon(<function>, *args)
 """
-import time
-import threading
-import logging
 import json
+import logging
 import random
-import asyncio
+import threading
+import time
+
 import numpy as np
 from flexx import flx
-from twitchbot import is_config_valid, cfg
+from twitchbot import cfg, is_config_valid
+
 import chaosface.config.globals as config
-from chaosface.communicator import EngineObserver
-from chaosface.communicator import ChaosCommunicator
+from chaosface.communicator import ChaosCommunicator, EngineObserver
 
 
 class ChaosModel(EngineObserver):
@@ -41,21 +41,49 @@ class ChaosModel(EngineObserver):
     self.thread.start()
 
   def complete_credentials(self):
-    return is_config_valid() and config.relay.channel_name != 'your_channel'
+    """
+    Check if the user has entered complete credentials to log in to Twitch. This doesn't check
+    that the credentials are valid, just that the user has entered something for all necessary
+    fields.
+    """
+    need_pubsub = (config.relay.bits_redemptions or config.relay.points_redemptions)
+    return (is_config_valid() and config.relay.channel_name != 'your_channel'
+      and (need_pubsub == False or config.relay.pubsub_oauth != 'oauth:'))
 
   def configure_bot(self):
-    # If we don't yet have good bot credentials, we enter a special waiting loop until they are
-    # entered. The regular voting loop only starts after we have a verified chat connection.
+    """
+    Start the bot after all necessary parameters have been entered.
+    
+    The twitchbot framework we're using assumes the bot will start with good credentials to log
+    in, and if those credentials are changed, we need to completely restart the bot to log in
+    again. To handle the case of either a first run, where we have no log-in credentials at all,
+    or when we need to re-authorize the OAuth tokens, we enter a special waiting loop until the
+    necessary credentials are entered. The regular voting loop only starts after we have a
+    verified chat connection.
+    """
+    
     if cfg['client_id'] == 'CLIENT_ID':
       cfg['client_id'] = config.relay.get_attribute('client_id')
+    # Loop until user has entered the necessary credentials
     while not self.complete_credentials():
+      #logging.info("Waiting for user to enter complete bot credentials")
       time.sleep(config.relay.sleep_time())
     # Start up the bot
     self.bot = config.relay.chatbot
     self.bot.run_threaded()
 
+  def restart_bot(self):
+    """
+    Close and restart the bot. This is necessary if we change credentials, because the bot
+    framework assumes that the correct credentials will be entered on startup, so we can only
+    force a new authorization by restarting the thread.
+    """
+    if self.bot:
+      self.bot._get_event_loop().run_until_complete(self.bot.shutdown)
+      # start the bot again
+      self.configure_bot()    
+
   # Ask the engine to tell us about the game we're playing
-  # TODO: Request a list of available games
   # TODO: Send a config file from the computer running this bot
   def request_game_info(self):
     logging.debug("Asking engine about the game")
@@ -77,23 +105,39 @@ class ChaosModel(EngineObserver):
       flx.loop.call_soon(config.relay.initialize_game, received)
     else:
       logging.warn(f"Unprocessed message from engine: {received}")
-        
+
   def apply_new_mod(self, mod_name):
     logging.debug("Winning mod: " + mod_name)
-    toSend = {"winner": mod_name,
+    to_send = {"winner": mod_name,
               "time": config.relay.get_attribute('modifier_time')}
-    message = self.chaos_communicator.send_message(json.dumps(toSend))
+    config.relay.engine_commands.put(to_send)
+    # message = self.chaos_communicator.send_message(json.dumps(toSend))
+
+  def replace_mod(self, mod_key):
+    # If this is the first time, the candidate pool will be empty. Skip in this case.
+    if mod_key and mod_key in config.relay.modifier_data:
+      mod_name = config.relay.modifier_data[mod_key]['name']
+      logging.debug(f'Telling engine about new mod {mod_name}')
+      # Tell the engine
+      self.apply_new_mod(mod_name)
+      flx.loop.call_soon(config.relay.replace_mod, mod_key)
+    else:
+      logging.debug(f'Mod key "{mod_key}" not in list (not sent)')
+    # Pick new candidates, if we're voting
+    if config.relay.voting_type == 'DISABLED' or config.relay.voting_type == 'DISABLED':
+      return
+    flx.loop.call_soon(config.relay.get_new_voting_pool)
+
 
   def remove_mod(self, mod_name):
     logging.debug("Removing mod: " + mod_name)
-    toSend = {"remove": mod_name}
-    message = self.chaos_communicator.send_message(json.dumps(toSend))
+    to_send = {"remove": mod_name}
+    config.relay.engine_commands.put(to_send)
 
-
-  def reset_mods(self, mod_name):
-    logging.debug("Resetting mods")
-    toSend = {"reset": True }
-    message = self.chaos_communicator.send_message(json.dumps(toSend))
+  def reset_mods(self):
+    logging.debug("Resetting all mods")
+    to_send = {"reset": True }
+    config.relay.engine_commands.put(to_send)
 
   def send_chat_message(self, msg: str):
     if config.relay.chatbot:
@@ -152,29 +196,16 @@ class ChaosModel(EngineObserver):
     logging.info(f'Winning Mod: #{index+1} {new_mod_key}')
     return new_mod_key
   
-  def replace_mod(self, mod_key):
-    # If this is the first time, the candidate pool will be empty. Skip in this case.
-    if mod_key and mod_key in config.relay.modifier_data:
-      mod_name = config.relay.modifier_data[mod_key]['name']
-      logging.debug(f'Telling engine about new mod {mod_name}')
-      # Tell the engine
-      self.apply_new_mod(mod_name)
-      flx.loop.call_soon(config.relay.replace_mod, mod_key)
-    else:
-      logging.debug(f'Mod key "{mod_key}" not in list (not sent)')
-    # Pick new candidates, if we're voting
-    if config.relay.voting_type == 'DISABLED' or config.relay.voting_type == 'DISABLED':
-      return
-    flx.loop.call_soon(config.relay.get_new_voting_pool)
 
   def _loop(self):
-    begin_time = time.time()
-    now = begin_time
+    now = time.time()
+    start_voting = now
     delta_time = config.relay.sleep_time()
-    prior_time = begin_time - delta_time
+    prior_time = now - delta_time
     last_engine_request = 0.0
     self.paused_flashing_timer = 0.0
     self.disconnected_flashing_timer = 0.0
+    # Ask engine for information about game modifiers
     self.request_game_info()
 
     while config.relay.keep_going:
@@ -193,7 +224,7 @@ class ChaosModel(EngineObserver):
           last_engine_request = 0.0
 
       if config.relay.paused:
-        begin_time += delta_time
+        start_voting += delta_time
         delta_time = 0
         self.flash_pause()
           
@@ -204,18 +235,20 @@ class ChaosModel(EngineObserver):
       if delta_time > 0:
         flx.loop.call_soon(config.relay.decrement_mod_times, delta_time)
         
-      self.vote_time =  now - begin_time
+      self.vote_time =  now - start_voting
 
       if self.first_time and config.relay.valid_data:
         # As soon as the data is ready, start the vote
         self.vote_time = config.relay.time_per_vote() + 1
         self.first_time = False
 
-      # Check for an immediate mod insertion
+      # Check for queued commands to send
+
+      # Check for an immediate mod insertion/removal
       if config.relay.force_mod:
         self.replace_mod(config.relay.force_mod)
         config.relay.force_mod = ''
-        begin_time = now
+        start_voting = now
 
       if config.relay.reset_mods:
         self.reset_mods()
@@ -225,7 +258,7 @@ class ChaosModel(EngineObserver):
 
       if self.vote_time >= config.relay.time_per_vote():
         # Reset voting time
-        begin_time = now
+        start_voting = now
         # Skip voting if no data yet or voting is disabled
         if not config.relay.valid_data or config.relay.voting_type == 'DISABLE':
           continue

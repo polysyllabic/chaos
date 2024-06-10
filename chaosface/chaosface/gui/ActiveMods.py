@@ -5,7 +5,9 @@
 """
 
 from flexx import flx
+
 import chaosface.config.globals as config
+
 
 class ActiveMods(flx.PyWidget):
   def init(self):

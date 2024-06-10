@@ -4,7 +4,9 @@
   Browser source showing the time remaining for the current voting round
 """
 from flexx import flx
+
 import chaosface.config.globals as config
+
 
 class VoteTimer(flx.PyWidget):
   def init(self):

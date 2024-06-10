@@ -5,9 +5,12 @@
   The Twitch Bot to monitor chat for votes and other commands.
 """
 import logging
-from twitchbot import BaseBot, Message, Channel
+
 from flexx import flx
+from twitchbot import BaseBot, Channel, Message
+
 import chaosface.config.globals as config
+
 
 class ChaosBot(BaseBot):
 
