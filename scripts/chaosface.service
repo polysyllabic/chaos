@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 Restart=always
 RestartSec=2
-ExecStart=/usr/bin/python3 /home/pi/chaos/python/main.py
+ExecStart=/usr/bin/python3 /home/pi/chaos/chaosface/chaosface/apps/TwitchControlsChaos.py
 #User=pi
 
 [Install]

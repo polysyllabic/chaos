@@ -13,7 +13,7 @@
 chaos_toml = "1.0"
 
 # game: User-friendly name of the game this configuration file defines.
-game = "The Last of Us Part II"
+game = "The Last of Us Part II (PS4)"
 
 # General controller "settings"
 [controller]

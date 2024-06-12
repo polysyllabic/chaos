@@ -70,7 +70,7 @@ find_program(MAKE_EXECUTABLE NAMES gmake make mingw32-make REQUIRED)
 FetchContent_Declare(
 	tomlplusplus
 	GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
-	GIT_TAG	       v2.5.0
+	GIT_TAG	       origin/master
 )
 FetchContent_Declare(
 	plog
@@ -172,7 +172,8 @@ target_link_libraries(chaos	PUBLIC chaos_communicator
 		${LIBUSB_LIBRARIES})
 
 install(TARGETS chaos DESTINATION chaos)
-install(FILES startchaos.sh DESTINATION chaos)
+install(PROGRAMS startchaos.sh DESTINATION chaos)
+install(DIRECTORY examples/ DESTINATION chaos/games)
 
 find_package(Doxygen)
 if (DOXYGEN_FOUND)
