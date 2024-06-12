@@ -97,7 +97,7 @@ games like The Last of Us Part 1 Remake, you will require still more hardware.
 Chaos only sees the incoming pattern of controller signals. It has no idea what is actually
 happening in the game. During cutscenes, death animations, or other places where the ordinary
 controls are not available, the engine will not be able to apply new mods. For this reason, it's
-important to remember to hit "pause" when such events occur. If you forget and a vote ends during
+important to remember to hit pause when such events occur. If you forget and a vote ends during
 this period, some categories of mods, including all those that require setting menu options, may
 put the game in an inconsistent state. Old mods may not be removed correctly, and new ones may not
 be applied. In this case, you may need to pause the game and manually set the necessary options.
@@ -136,7 +136,6 @@ individually:
 - Bits donation
 - Raffle
 - Gifting from those who have credits already
-
 
 The switch to a configuration-file initialization for modifiers means that it is easy to create many
 types of new modifiers with only a few settings. Some examples of new modifiers included in the
@@ -229,7 +228,7 @@ setup is complete, you can run Chaos without either a keyboard or monitor connec
 cannot use wired ethernet, or prefer not to, you will need to set up WiFi below.
 
 5. Apply power over the Pi's USB-C connector by plugging the cable into the PlayStation and turning
-it on.
+it on. (You can use an external USB-C power supply as well, but it should supply at least 3A.)
 
 6. When your Pi boots, log in using the credentials you specified above. If you stuck with the
 system defaults, they will be the following:
@@ -244,10 +243,7 @@ devices.
 Note: The password field will look like nothing is being typed, but it will be reading the password
 as you type it.
 
-7. (*If using WiFi only*). Configure your WiFi connection using the
-[WiFi instructions here](https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md).
-
-8. Update your OS and system tools, and install the version-control system *git*, which is used to
+7. Update your OS and system tools, and install the version-control system *git*, which is used to
 manage all the files you will need to run TCC. After you have logged in to the Pi for the first
 time, run the the following command:
 
@@ -257,30 +253,46 @@ sudo apt install git -y
 ```
 
 This will ensure that you are running the latest stable versions of all the necessary tools. The
-process may take a while. Be patient
+process may take a while. Be patient.
 
-9. Next, get the latest version of Chaos and install it. Run the following commands to get the
-necessary files and install them in your home directory:
+9. Next, get TCC from the online repository. The following command will fetch the latest version
+and copy all the files you need to build TCC into the directory 'chaos':
 
 ```bash
 git clone https://github.com/polysyllabic/chaos.git
+```
+
+10. To build TCC and install it, run the installation script with these commands:
+
+```bash
 cd chaos
 ./install.sh
 ```
 
-Note: The engine and chatbot both expect the "chaos" directory to be in your home directory. This
-may change later, but for now, you should not try to move it.
+The script will ask you a number of questions. The most important one is whether you plan to
+run the chatbot/UI chaosface from the Raspberry Pi or from a different computer. If you run
+it from the Pi, the install process will set it up to run automatically each time you apply
+power to the Pi. If you choose to run it from a different computer, it will ask you what
+that computer's IP address is. If you don't know this at the moment, you can enter a random
+value and change the setting in the chaosconfig.toml file later. 
 
-Running the install command above will take ~5 minutes.
+You will also be asked if you want to develop TCC on this device. Answering yes will install
+additional packages to help developers (including doxygen), but unless you're planning to
+do development work, this just increases the time it takes to install everything.
 
-10. A reboot is required to enable USB communication to hosts:
+If you have installed a recent version of the OS (buster or later), a reboot will be required
+halfway through the installation process. You will be prompted to re-run the install script
+after you have rebooted. The installation will resume where it left off.
+
+At the end of the installation, you will have to reboot one more time. If you choose not to
+reboot when prompted, enter the following command when you are ready to reboot.
 
 ```bash
 sudo reboot
 ```
 
-Chaos should now be installed!  Now all that is needed is configuration and setup for OBS and the
-game.
+After this final reboot, chaos should be installed and will run automatically each time you turn
+on the Raspberry Pi.
 
 ### Configuring the Console
 
@@ -291,6 +303,9 @@ controllers. Open the system menu on your console.
 - On a PS4, Navigate to Settings -> Devices -> Controllers -> Communication Method -> Use USB Cable
 
 ### Configuring the Chatbot
+*Note:* If you are installing chaosface on a separate computer, see the installation instructions
+in the [chaosface documentation](docs/chaosface.md). You should install and run chaosface from
+that computer before performing the next steps.
 
 Now that everything is installed, power up your Raspberry Pi and follow these steps:
 
@@ -389,7 +404,9 @@ the side.
 3c. Connect the Besavior to the Raspberry Pi's USB-C port with a USB-A to USB-C cable.
 
 3d. Connect another USB-C cable into this side port on the adapter and connect it to an external DC
-power source.
+power source that can supply at least 3A. *Note:* If you use a lower-rated power supply, you may
+experience brown-outs when the Pi starts trying to draw more power than is available under load. In
+this case, you may find the Pi hanging and rebooting at inconvenient times.
 
 The sequence of devices is DualShock -> Raspberry Pi -> Besavior -> PlayStation 5
 

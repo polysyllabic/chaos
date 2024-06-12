@@ -1,0 +1,15 @@
+- Engine Tasks
+    - Remember last game config file
+    - Send available games to chaosface
+    - Create config file for TLOU2 remaster
+    - Create config file for TLOU1 remake
+- Chaosface Tasks
+    - Receive available-games list
+    - Select-game interface
+    - Send new config files to engine
+    - Convert chaosface UI from flexx to niceui
+- Create config file documentation
+- Test raw_gadget on bookworm
+- Package chaosface with pyinstaller
+- Test complete installation chain
+
