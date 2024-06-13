@@ -10,6 +10,7 @@ __pycache__
 *.slo
 *.lo
 *.o
+*.ko
 *.obj
 
 # Precompiled Headers
@@ -20,10 +21,6 @@ __pycache__
 *.so
 *.dylib
 *.dll
-
-# Fortran module files
-*.mod
-*.smod
 
 # Compiled Static libraries
 *.lai
@@ -36,10 +33,11 @@ __pycache__
 *.out
 *.app
 
-# Emacs backups, logs, and the generated json file
+# Emacs backups, logs, and generated files
 *~
 *.log
 chaosConfig.json
+include/config.hpp
 
 # VS Code directory
 .vscode/*
