@@ -25,8 +25,9 @@ modes, but the low-level programming made it non-trivial to extend to other game
 This version of Chaos (Chaos Unbound) is a major rewrite of the code by
 [Polysyl](https://www.twitch.tv/polysyl) to add a number of enhancements, the most important
 being that the Chaos engine is now a general-purpose gameplay modification system that uses a text
-file to specify gameplay modifiers. You can now bring Chaos to most PlayStation games simply by
-creating an appropriate configuration file. Knowledge of C++ or Python is not required.
+file to specify gameplay modifiers. You can now bring Chaos to PlayStation games (or PC games that
+are controller-based) simply by creating an appropriate configuration file. Knowledge of C++ or
+Python is not required.
 
 When the original version was written (and when work began on Chaos Unbound), TLOU2 was a
 PlayStation exclusive, and so the design of the system was specifically intended to work with
