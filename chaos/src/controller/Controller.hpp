@@ -35,6 +35,9 @@ namespace Chaos {
   /**
    * \brief Abstract class to manage the gamepad controller.
    *
+   * Currently we only have one concrete class instantiating Controller. The old code also had a GPIO-based controller,
+   * but that hasn't been ported over, since it seems like an unnecessary interface with USB interception available.
+   * Leaving this as abstract, however, to let us implement keyboard emulation down the line.
    */
   class Controller {
   protected:
@@ -42,17 +45,19 @@ namespace Chaos {
  	  // based on DS4 and Dualsense sizes
 	  std::deque<std::array<unsigned char,64>> deviceEventQueue;
 
-    virtual bool applyHardware(const DeviceEvent& event) = 0;
+    // no longer necessary without the GPIO interface
+    //virtual bool applyHardware(const DeviceEvent& event) = 0;
 
     void storeState(const DeviceEvent& event);
 
     void handleNewDeviceEvent(const DeviceEvent& event);
-
 	
     /**
-     * Database for tracking current button states:
-     * Input: ((int)event->type<<8) + (int)event->id ] = event->value;
-     *  Output: state of that type/id combo
+     * \brief Array holding the current controller-signal states.
+     * 
+     * The following formula will give an index to lookup the value of a particular signal:
+     * 
+     *     [((int) event->type << 8) + (int) event->id ]
      */
     short controllerState[1024];
 	

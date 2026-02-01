@@ -104,11 +104,10 @@ namespace Chaos {
     void addRelease(std::shared_ptr<ControllerInput> signal, unsigned int release_time);
     /**
      * \brief Add a delay
-     * \param delay Time to delay in seconds
+     * \param delay Time to delay in microseconds
      *
      */
     void addDelay(unsigned int delay);
-    //void addDelay(double delay);
 
     void addSequence(std::shared_ptr<Sequence> seq);
 

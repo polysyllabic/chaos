@@ -22,7 +22,8 @@
 #include <cstdint>
 #include <map>
 
-#include <DeviceEvent.hpp>
+#include "DeviceEvent.hpp"
+#include "Touchpad.hpp"
 
 namespace Chaos {
   
@@ -40,21 +41,23 @@ namespace Chaos {
     void* trueState;
     void* hackedState;
 
-    // Helper functions for raw interpretation:
-    
+    // Helper functions for interpreting raw controller data
     inline short int unpackJoystick(uint8_t& input) { return ((short int) input) - 128;}
     inline uint8_t packJoystick(short int& input) { return input + 128; }
-
-    short int fixShort(short int input) {
-      return input;
-      // return ((input & 0x00ff) << 8) | ((input & 0xff00) >> 8);
-    }
-
     short int positionDY(const uint8_t& input);
     short int positionDX(const uint8_t& input);
     uint8_t packDpad(const short int& dx, const short int& dy);
     
   public:
+    /**
+     * \brief Factory to create the appropriate controller-state class based on the type of controller reported.
+     * 
+     * \param vendor Vendor ID received from controller
+     * \param product Product ID received from controller
+     * \return ControllerState* 
+     * 
+     * Currently only the DualShock is supported, but we could expand this with other controllers if we wanted.
+     */
     static ControllerState* factory(int vendor, int product);
 
     virtual void getDeviceEvents(unsigned char* buffer, int length, std::vector<DeviceEvent>& events) = 0;

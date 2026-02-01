@@ -41,8 +41,8 @@ namespace Chaos {
     ControllerInputTable(Controller& c);
 
     /**
-     * \brief Accessor for the class object identified by name.
-     * \param name Name of the input
+     * \brief Get the ControllerInput object by name.
+     * \param name Input signal name
      * \return The ControllerInput object identified by the given string
      *
      * Used for processing the TOML file.

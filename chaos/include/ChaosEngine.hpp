@@ -86,10 +86,13 @@ namespace Chaos {
     ChaosEngine(Controller& c, const std::string& listener_endpoint,
                 const std::string& talker_endpoint);
     
-    void loadConfigFile(const std::string& configfile, EngineInterface* engine);
-
     void sendInterfaceMessage(const std::string& msg);
 
+    /**
+     * \brief Initialize the game data from the supplied configuration file
+     * 
+     * \param name File name of the TOML configuration file holding the definitions for the game to be played.
+     */
     void setGame(const std::string& name) {
       game.loadConfigFile(name, this);
     } 
@@ -114,11 +117,19 @@ namespace Chaos {
 
     /**
      * \brief Remove mod with the least time remaining
+     * 
+     * This removes the oldest mod without consideration for the number of mods on the stack.
      */
     void removeOldestMod();
 
     short getState(uint8_t id, uint8_t type) { return controller.getState(id, type); }
 
+    /**
+     * \brief Is the event an instance of the specified input command?
+     * 
+     * This tests both that the event against the defined signal and that any defined condition
+     * is also in effect.
+     */
     bool eventMatches(const DeviceEvent& event, std::shared_ptr<GameCommand> command);
 
     void setOff(std::shared_ptr<GameCommand> command);
@@ -194,13 +205,6 @@ namespace Chaos {
       return game.makeSequence(config, key, required);
     }
 
-    /**
-     * \brief Is the event an instance of the specified input command?
-     * 
-     * This tests both that the event against the defined signal and that any defined condition
-     * is also in effect.
-     */
-    bool matches(const DeviceEvent& event, std::shared_ptr<GameCommand> command);
  
     /**
      * \brief Observer function for input from the interface

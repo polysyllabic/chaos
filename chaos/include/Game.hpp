@@ -43,9 +43,9 @@ namespace Chaos {
   /**
    * \brief Main container for the information needed to run a game
    * 
-   * The Game class is the facade for all the various classes containing information we need to
-   * inject chaos into a game. It also contains most of the logic to translate the TOML
-   * configuration file into the actual objects we use during operation.
+   * The Game class is the facade for all the various classes containing information we need to inject chaos into a
+   * game. It also contains most of the logic to translate the TOML configuration file into the actual objects we use
+   * during operation.
    */
   class Game {
   public:
@@ -91,11 +91,12 @@ namespace Chaos {
      */
     void setNumActiveMods(int new_mods) { active_modifiers = new_mods; }
 
-
     /**
      * \brief Get the default time that a modifier remains active before it is removed.
      * 
      * \return double 
+     * 
+     *  Time is in seconds.
      */
     double getTimePerModifier() { return time_per_modifier; }
 
@@ -184,11 +185,7 @@ namespace Chaos {
      * \param required 
      * \return std::shared_ptr<Sequence> 
      */
-    std::shared_ptr<Sequence> makeSequence(toml::table& config, 
-                                           const std::string& key,
-                                           bool required);
-
-
+    std::shared_ptr<Sequence> makeSequence(toml::table& config, const std::string& key, bool required);
     
   private:
     /**
@@ -222,21 +219,24 @@ namespace Chaos {
     GameMenu menu;
     
     /**
-     * Container for defined sequences
+     * \brief Container for defined sequences
+     * 
+     * A sequence is a predefined series of signals sent to the console as a batch.
      */
     std::shared_ptr<SequenceTable> sequences;
     //std::unordered_map<std::string, std::shared_ptr<Sequence>> sequences;
 
     /**
-     * Container for defined game commands
+     * \brief Container for defined game commands
+     * 
+     * This map associates names for various commands in the game with their specific controller bindings in the
+     * game.
      */
-    //GameCommandTable game_commands;
     std::unordered_map<std::string, std::shared_ptr<GameCommand>> game_commands;
 
     /**
      * Container for defined game conditions
      */
-    // GameConditionTable game_conditions;
     std::unordered_map<std::string, std::shared_ptr<GameCondition>> game_conditions;
 
     //std::unordered_map<std::string, std::shared_ptr<ConditionTrigger>> condition_triggers;

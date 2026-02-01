@@ -117,8 +117,6 @@ namespace Chaos {
 
   /**
    * \brief Structure to hold the hard-coded information about the signals coming from the controller.
-   * 
-   * \todo Add ability to translate all signals so a dualsense can pretend to be a dualshock.
    */
   struct SignalSettings {
     const std::string name;

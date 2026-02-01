@@ -62,9 +62,9 @@ void Dualshock::applyHackedState(unsigned char* buffer, short* chaosState) {
   report->GD_GamePadZ = packJoystick(chaosState[((int)TYPE_AXIS<<8) + (int)AXIS_RX]);
   report->GD_GamePadRz = packJoystick(chaosState[((int)TYPE_AXIS<<8) + (int)AXIS_RY]);
   
-  report->GD_ACC_X = fixShort(chaosState[((int)TYPE_AXIS<<8) + (int)AXIS_ACCX]);
-  report->GD_ACC_Y = fixShort(chaosState[((int)TYPE_AXIS<<8) + (int)AXIS_ACCY]);
-  report->GD_ACC_Z = fixShort(chaosState[((int)TYPE_AXIS<<8) + (int)AXIS_ACCZ]);
+  report->GD_ACC_X = chaosState[((int)TYPE_AXIS<<8) + (int)AXIS_ACCX];
+  report->GD_ACC_Y = chaosState[((int)TYPE_AXIS<<8) + (int)AXIS_ACCY];
+  report->GD_ACC_Z = chaosState[((int)TYPE_AXIS<<8) + (int)AXIS_ACCZ];
 	
   report->GD_GamePadRx = packJoystick(chaosState[((int)TYPE_AXIS<<8) + (int)AXIS_L2]);
   report->GD_GamePadRy = packJoystick(chaosState[((int)TYPE_AXIS<<8) + (int)AXIS_R2]);
@@ -166,11 +166,11 @@ void Dualshock::getDeviceEvents(unsigned char* buffer, int length, std::vector<D
   if (currentState.GD_GamePadRy != ((inputReport*)trueState)->GD_GamePadRy ) {
     events.push_back({0, unpackJoystick(currentState.GD_GamePadRy), TYPE_AXIS, AXIS_R2}); }
   if (currentState.GD_ACC_X != ((inputReport*)trueState)->GD_ACC_X ) {
-    events.push_back({0, fixShort(currentState.GD_ACC_X), TYPE_AXIS, AXIS_ACCX}); }
+    events.push_back({0, currentState.GD_ACC_X, TYPE_AXIS, AXIS_ACCX}); }
   if (currentState.GD_ACC_Y != ((inputReport*)trueState)->GD_ACC_Y ) {
-    events.push_back({0, fixShort(currentState.GD_ACC_Y), TYPE_AXIS, AXIS_ACCY}); }
+    events.push_back({0, currentState.GD_ACC_Y, TYPE_AXIS, AXIS_ACCY}); }
   if (currentState.GD_ACC_Z != ((inputReport*)trueState)->GD_ACC_Z ) {
-    events.push_back({0, fixShort(currentState.GD_ACC_Z), TYPE_AXIS, AXIS_ACCZ}); }
+    events.push_back({0, currentState.GD_ACC_Z, TYPE_AXIS, AXIS_ACCZ}); }
 	
   if (currentState.GD_GamePadHatSwitch != ((inputReport*)trueState)->GD_GamePadHatSwitch ) {
     short int currentX = positionDX( currentState.GD_GamePadHatSwitch );

@@ -23,7 +23,6 @@
 #include <thread.hpp>
 #include <raw-gadget.hpp> // for EndpointObserver and RawGadgetPassthrough
 
-#include "DeviceEvent.hpp"
 #include "Controller.hpp"
 
 namespace Chaos {
@@ -40,7 +39,7 @@ namespace Chaos {
   private:
 	  ControllerState* mControllerState;
 
-  	bool applyHardware(const DeviceEvent& event);
+  	// bool applyHardware(const DeviceEvent& event);
 	
 	  // Handles the DeviceEvent queue 
 	  void doAction();

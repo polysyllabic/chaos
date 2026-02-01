@@ -47,7 +47,7 @@ namespace Chaos {
    * This allows for aliases, in case you want to use different command names in different
    * contexts.
    * - binding: The controller signal (button, axis, etc.) attached to this command. The
-   * information about these signals are stored in ControllerInput opbects, and the particular
+   * information about these signals are stored in ControllerInput objects, and the particular
    * labels ("L1", "X", etc.) are hard-coded.
    * 
    * Example TOML defintition:

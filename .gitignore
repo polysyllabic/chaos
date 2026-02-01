@@ -38,6 +38,7 @@ __pycache__
 *.log
 chaosConfig.json
 include/config.hpp
+chaos/include/config.hpp
 
 # VS Code directory
 .vscode/*

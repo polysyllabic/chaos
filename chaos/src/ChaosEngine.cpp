@@ -140,7 +140,7 @@ void ChaosEngine::doAction() {
   if (pausedPrior) {
     PLOG_DEBUG << "Resuming after pause";
   }
-  // Initialize the mods that are waiting
+  // Initialize the mods that are waiting to start
   lock();  
   while(!modifiersThatNeedToStart.empty()) {
     std::shared_ptr<Modifier> mod = modifiersThatNeedToStart.front();
@@ -168,7 +168,7 @@ void ChaosEngine::doAction() {
   for  (auto& mod : modifiers) {        
     if (mod->lifetime() > mod->lifespan()) {
       removeMod(mod);
-      // Mods added one at a time, so we can stop searching on the first expired mod
+      // Mods are added one at a time, so we can stop searching on the first expired mod
       break;
     }
   }

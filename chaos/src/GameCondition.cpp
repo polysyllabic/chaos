@@ -24,7 +24,6 @@
 #include <plog/Log.h>
 
 #include "GameCondition.hpp"
-//#include "GameCommandTable.hpp"
 #include "GameCommand.hpp"
 #include "ControllerInput.hpp"
 #include "TOMLUtils.hpp"

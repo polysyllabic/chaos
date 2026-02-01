@@ -55,10 +55,12 @@ void ControllerRaw::initialize() {
   }
 }
 
+/* applyHardware() was a function for the GPIO interface. Does nothing now, so removed. 
 bool ControllerRaw::applyHardware(const DeviceEvent& event) {
 	//	State will already be stored, nothing to be done for raw
 	return true;
 }
+*/
 
 void ControllerRaw::doAction() {
   while (!deviceEventQueue.empty()) {
@@ -67,7 +69,7 @@ void ControllerRaw::doAction() {
     deviceEventQueue.pop_front();
     unlock();
 		
-    // First convert the incoming buffer into a device event. A buffer can contain multiple events.
+    // Convert the incoming buffer into a series of device events.
     std::vector<DeviceEvent> deviceEvents;
     mControllerState->getDeviceEvents(bufferFront.data(), 64, deviceEvents);
 		

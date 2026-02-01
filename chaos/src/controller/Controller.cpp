@@ -107,8 +107,8 @@ void Controller::setOn(std::shared_ptr<ControllerInput> signal) {
 }
 
 void Controller::applyEvent(const DeviceEvent& event) {
-	if (!applyHardware(event)) {
-		return;
-	}
+	//if (!applyHardware(event)) {
+	//	return;
+	//}
 	storeState(event);
 }
