@@ -3,9 +3,9 @@
 ![Chaos](https://github.com/polysyllabic/chaos/blob/main/docs/images/chaos.jpg?raw=true)
 
 ## What is Chaos?
-Twitch Controls Chaos, TCC or Chaos for short, lets Twitch chat interfere with a streamer
-playing a PlayStation game. It uses a Raspberry Pi to modify controller input based on a
-series of gameplay modifiers that chat can select by voting for their favorites.
+Twitch Controls Chaos, TCC or Chaos for short, lets Twitch chat interfere with a streamer's
+game-play. It uses a Raspberry Pi to modify controller
+input based on a series of gameplay modifiers that chat can select by voting for their favorites.
 
 [Watch a minute-long video explanation of how users can interact with a controller.](https://www.twitch.tv/blegas78/clip/SmellyDepressedPancakeKappaPride-llz6ldXSKjSJLs9s)
 ![Twitch Clip](https://github.com/polysyllabic/chaos/blob/main/docs/images/explain.png?raw=true)
@@ -28,10 +28,22 @@ being that the Chaos engine is now a general-purpose gameplay modification syste
 file to specify gameplay modifiers. You can now bring Chaos to most PlayStation games simply by
 creating an appropriate configuration file. Knowledge of C++ or Python is not required.
 
-*Important*: Chaos Unbound is currently in alpha status: The engine compiles and runs (probably,
-though I tend to break things while making changes), but don't expect it to be functional just yet.
-If you want to play Chaos% now, you should, for the time being, continue to use Blegas's original
-version.
+When the original version was written (and when work began on Chaos Unbound), TLOU2 was a
+PlayStation exclusive, and so the design of the system was specifically intended to work with
+that console. However, the same setup should work fine for PC games that can be played with a
+controller. Mouse-and-keyboard remapping is not (yet) supported.
+
+Chaos Unbound is currently in alpha status: The engine compiles and runs (probably) but don't
+expect it to be functional just yet. If you want to play Chaos% now, you should, for the time
+being, continue to use Blegas's original version.
+
+Note also that if you attempt to use this system in a competitive multiplayer game, it could
+be seen as cheating, since the fundamental processes here (intercept and modify the signals
+coming from the controller) are parallel to those that cheaters use to do things such as
+eliminate reoil or patch in an aim bot. Of course cheating mods make the game easier to play,
+whereas TCC makes the game substantially more difficult (and amusing for your audience), but
+given that _any_ modification runs against the spirit of fair play in a multiplayer context,
+I wouldn't recommend that you try it with such games.
 
 ## Examples of Chaos
 
@@ -92,7 +104,7 @@ events that the chatbot cannot track, such as reaching some custom channel goel.
 
 TCC requires specific hardware to run, including a Raspberry Pi 4 and a DualShock controller (the
 controller for the PlayStation 4), which may constitue a significant expense. To play PS5-only
-games like The Last of Us Part 1 Remake, you will require still more hardware.
+games on the PlayStation, you will require still more hardware.
 
 Chaos only sees the incoming pattern of controller signals. It has no idea what is actually
 happening in the game. During cutscenes, death animations, or other places where the ordinary
@@ -151,14 +163,8 @@ new TLOU2 configuration file include the following:
 
 ## Required Hardware
 
-In order to stream with Chaos, you will need a PlayStation 4 or 5 console. Most of the instructions
-here also assume that you also use streaming software such as OBS, which will require you to have a
-capture card as well. Note that is **is** possible to run Chaos without OBS, meaning that it should
-be possible to play Chaos while streaming directly from your PlayStation, or even without streaming
-at all, although you will not be able to use overlays to show the current status of votes or the
-modifiers in effect. (This has not been tested.)
-
-Additional Hardware (for all steups):
+Apart from a PlayStation (or PC if you're playing a PC game), you will need the following
+hardware (for all steups):
 
 - A DualShock 4 model CUH-ZCT2U controller 
 - A Raspberry Pi 4
@@ -169,14 +175,21 @@ Additional Hardware (for all steups):
 - (recommended) A cat 5 ethernet cable
 - (optional) A case for the Raspberry Pi.
 
-To play PS5-only games such as TLOU1 Remake or TLOU2 Remaster, you will also need a
-[Besavior PS5 controller](https://www.beloader.com/products/besavior-1.html) in addition to
-everything in the list above.
+To play PS5-only games such as TLOU1 Remake or TLOU2 Remaster, you will also need hardware to let
+you use a non-PS5 controller without having the console reject your commands. I successfully
+used a [Besavior PS5 controller](https://www.beloader.com/products/besavior-1.html).
+
+Most of the instructions here also assume that you also use streaming software such as OBS, which will
+require you to have a capture card as well. Note that is **is** possible to run Chaos without OBS,
+meaning that it should be possible to play Chaos while streaming directly from your PlayStation,
+or even without streaming at all, although you will not be able to use overlays to show the current
+status of votes or the modifiers in effect. (This has not been tested, but suggestions for what
+to try will be found below.)
 
 **Important:** You must use the DualShock 4 Generation 2, model CUH-ZCT2U. This version has the
 lightbar visible from the front at the top of the touchpad. Gen-1 DualShocks connect to the console
 only through wifi, and a wired USB connection is needed to intercept the signals. Note also that you
-need this controller *in addition* to the Besavior to play PS5-only games.  
+need this controller *in addition* to the Besavior to play PS5-only games.
 
 *Note:* You may be able to adapt TCC to run on other setups, particularly using different models
 of the Raspberry Pi or alternatives to the Besavior, but these are untested. See the notes below
@@ -395,9 +408,9 @@ Pi will get its power from this connection, as well as using it to communicate w
 
 For PS5-only games:
 
-3a. Connect the Besavior controller to the PlayStation 5 with a USB-C to USB-A cable.
+3a. Connect the Besavior controller (or equivalent device) to the PlayStation 5 with a USB-C to USB-A cable.
 
-3b. Connect the USB-C to USB-A adaptor that comes with the Besavior to the USB-C port on the Beloader
+3b. Connect the USB-C to USB-A adaptor that comes with the Besavior to the USB-C port on the Beloaderth
 device on the bottom of the Besavior controller. This is a short cable with a second USB-C port on
 the side.
 
@@ -534,6 +547,15 @@ PlayStation. The Besavior authenticates itself with the console as an authentic 
 the remapping of DualShock data to the DualSense format. Note that this method requires external
 power for the Raspberry Pi. The Besavior comes with an adaptor cable that contains a side-port for this
 power, so you should not need to supply that power through the Pi's GPIO pins.
+
+*Does this work with the PC version of TLOU2?*
+
+If you simply plug the DualShock + Pi into your PC instead of a console, it _should_ work with a few
+tweaks to the configuration file. (Testing this is high on my to-do list.) If you're asking for a
+version that works _without_ a Raspberry Pi to handle the signal conversions, that would require a
+major effort. In essence, we'd need to create some sort of driver to intercept not only controller
+input but mouse-and-keyboard inputs as well. I might consider attempting this at some point, after
+the Pi version is stable, but it's not a priority for me.
 
 *Do I have to use a Rapberry Pi 4?*
 
