@@ -133,7 +133,7 @@ install_engine() {
   cd build
   cmake ..
   make -j4
-  make install  
+  sudo make install  
   sudo cp ~/scripts/chaos.service /etc/systemd/system/
   sudo systemctl daemon-reload
   sudo systemctl enable chaos

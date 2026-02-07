@@ -12,7 +12,12 @@ endif()
 set(CMAKE_BUILD_TYPE Debug)
 set(RASPBERRY_PI TRUE)
 set(USE_DUALSENSE FALSE)
- 
+
+# Install root for the Chaos runtime bundle.
+# This is intentionally an absolute path so the systemd unit can rely on it.
+set(CHAOS_INSTALL_ROOT "/usr/local/chaos"
+    CACHE PATH "Absolute install directory for Chaos (used by chaos.service)")
+
 # Parse version variables
 file(READ "VERSION" ver)
 
@@ -170,8 +175,9 @@ target_link_libraries(chaos	PUBLIC chaos_communicator
 		sniffify
 		${LIBUSB_LIBRARIES})
 
-install(TARGETS chaos DESTINATION chaos)
-install(DIRECTORY examples/ DESTINATION chaos/games)
+install(TARGETS chaos RUNTIME DESTINATION "${CHAOS_INSTALL_ROOT}")
+install(FILES chaosconfig.toml DESTINATION "${CHAOS_INSTALL_ROOT}")
+install(DIRECTORY examples/ DESTINATION "${CHAOS_INSTALL_ROOT}/games")
 
 find_package(Doxygen)
 if (DOXYGEN_FOUND)
