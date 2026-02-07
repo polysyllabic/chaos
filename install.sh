@@ -39,7 +39,15 @@ install_questions() {
   echo "Install chatbot and user interface on a separate computer?"
   select yn in "Yes" "No"; do
     case $yn in
-      Yes) remote_ui=1; echo "You must manually install chaosface on another computer"; break;;
+      Yes)
+        remote_ui=1
+        if [ -f /etc/systemd/system/chaosface.service ]; then
+          sudo systemctl disable chaosface
+          echo "Disabled local chaosface service"
+        fi
+        echo "You must manually install chaosface on another computer"
+        break
+        ;;
       No)  echo "Chaosface will be installed on this Raspberry Pi"; break;;
     esac
   done
@@ -143,7 +151,6 @@ install_engine() {
 
 install_chaosface() {
   # Get the python modules we need for chaosface
-  # TO DO: package chaosface with pyinstaller
   if (( $is_developer > 0 || $remote_ui == 0 )); then
     sudo -s eval "pip3 install flexx pyzmq numpy pygame pythontwitchbotframework --system"
   fi
