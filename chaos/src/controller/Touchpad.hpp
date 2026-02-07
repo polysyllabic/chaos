@@ -44,11 +44,6 @@ namespace Chaos {
      */
     bool disableAxes;
 
-    /**
-     * Should axis values be calculated using velocity?
-     */
-    bool useVelocity;
-
     typedef struct _DerivData {
       short prior[5];
       double timestampPrior[5];
