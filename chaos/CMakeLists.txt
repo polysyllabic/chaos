@@ -171,7 +171,6 @@ target_link_libraries(chaos	PUBLIC chaos_communicator
 		${LIBUSB_LIBRARIES})
 
 install(TARGETS chaos DESTINATION chaos)
-install(PROGRAMS ../scripts/startchaos.sh DESTINATION chaos)
 install(DIRECTORY examples/ DESTINATION chaos/games)
 
 find_package(Doxygen)
