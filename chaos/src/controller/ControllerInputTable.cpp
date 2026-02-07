@@ -1,6 +1,6 @@
 /*
  * Twitch Controls Chaos (TCC)
- * Copyright 2021-2022 The Twitch Controls Chaos developers. See the AUTHORS
+ * Copyright 2021, 2025 The Twitch Controls Chaos developers. See the AUTHORS
  * file in the top-level directory of this distribution for a list of the
  * contributers.
  *
@@ -129,13 +129,13 @@ std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const toml::tabl
 // This is the game-specific initialization
 int ControllerInputTable::initializeInputs(const toml::table& config) {
   int errors = 0;
-  double scale = config["remapping"]["touchpad_scale"].value_or(1.0);
+  double scale = config["remapping"]["touchpad_velocity_scale"].value_or(1.0);
   if (scale == 0) {
-    PLOG_ERROR << "Touchpad scale cannot be 0. Setting to 1";
+    PLOG_ERROR << "Touchpad velocity scale cannot be 0. Setting to 1";
     ++errors;
     scale = 1;
   }
-  Touchpad::setDefaultScale(scale);
+  Touchpad::setDefaultVelocityScale(scale);
 
   short skew = config["remapping"]["touchpad_skew"].value_or(0);
   Touchpad::setDefaultSkew(skew);

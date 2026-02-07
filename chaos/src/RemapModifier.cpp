@@ -202,7 +202,7 @@ bool RemapModifier::remap(DeviceEvent& event) {
     if (from->getSignal() == ControllerSignal::TOUCHPAD_ACTIVE) {
       if (! touchpad.isActive() && event.value == 0) {
         PLOG_DEBUG << "Begin touchpad use";
-        touchpad.clearPrior();
+        touchpad.firstTouch();
         touchpad.setActive(true);
       } else if (touchpad.isActive() && event.value) {
         PLOG_DEBUG << "End touchpad use";
@@ -325,7 +325,7 @@ bool RemapModifier::remap(DeviceEvent& event) {
       break;
     case ControllerSignalType::TOUCHPAD:
       if (to_console->getType() == ControllerSignalType::AXIS) {
-	      modified.value = touchpadToAxis(from->getSignal(), event.value);
+	      modified.value = touchpad.getAxisValue(from->getSignal(), event.value);
       }
       break;
     case ControllerSignalType::DUMMY:
@@ -346,19 +346,4 @@ bool RemapModifier::remap(DeviceEvent& event) {
     event.value = modified.value;
   }
   return true;
-}
-
-short RemapModifier::touchpadToAxis(ControllerSignal tp_axis, short value) {
-  short ret;
-  // Use the touchpad value to update the running derivative count
-  short derivativeValue = touchpad.getVelocity(tp_axis, value) * touchpad.getScale();
-
-  if (derivativeValue > 0) {
-    ret = derivativeValue + touchpad.getSkew();
-  }
-  else if (derivativeValue < 0) {
-    ret = derivativeValue - touchpad.getSkew();
-  }
-  PLOG_DEBUG << "Derivative: " << derivativeValue << ", skew = " << touchpad.getSkew() << ", returning " << ret;
-  return ret;
 }

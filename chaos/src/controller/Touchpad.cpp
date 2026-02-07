@@ -26,44 +26,48 @@
 
 using namespace Chaos;
 
-double Touchpad::default_scale;
-short Touchpad::default_skew;
-
 Touchpad::Touchpad() {
   timer.initialize();
-  scale = default_scale;
-  skew = default_skew;
 }
 
-void Touchpad::clearPrior() {
+void Touchpad::firstTouch() {
   dX.priorActive = false;
   dY.priorActive = false;
-  dX_2.priorActive = false;
-  dY_2.priorActive = false;
 }
 
-short Touchpad::getVelocity(ControllerSignal tp_axis, short value) {
-  int ret = 0;
-  double derivativeValue;
+short Touchpad::getAxisValue(ControllerSignal tp_axis, short value) {
+  short axis_val;
+  double scaling;
   DerivData* dd = nullptr;
-
   switch (tp_axis) {
   case ControllerSignal::TOUCHPAD_X:
 	  dd = &dX;
+    scaling = scale_x;
 	  break;
   case ControllerSignal::TOUCHPAD_Y:
 	  dd = &dY;
+    scaling = scale_y;
 	  break;
   case ControllerSignal::TOUCHPAD_X_2:
-	  dd = &dX_2;
-	  break;
   case ControllerSignal::TOUCHPAD_Y_2:
-	  dd = &dY_2;
-    break;
+    return 0;
   default:
     throw std::runtime_error("Event passed to Touchpad::getVelocity not a TOUCHAPD axis signal");
   }  
-  return derivative(dd, value, timer.runningTime());
+  
+  if (useVelocity) {
+    axis_val = (short) (derivative(dd, value, timer.runningTime()) * velocity_scale);
+  } else {
+    axis_val = (short) (distance(dd, value, timer.runningTime()) * scaling);
+  }
+
+  if (axis_val > 0) {
+    axis_val += skew;
+  }
+  else if (axis_val < 0) {
+    axis_val -= skew;
+  }
+  return axis_val;
 }
 
 double Touchpad::derivative(DerivData* d, short current, double timestamp) {
@@ -79,16 +83,26 @@ double Touchpad::derivative(DerivData* d, short current, double timestamp) {
     d->prior[1] = d->prior[2] = d->prior[3] = d->prior[4] = current;
     d->timestampPrior[1] = d->timestampPrior[2] = d->timestampPrior[3] = d->timestampPrior[4] = timestamp;
   }
-  d->prior[0] = d->prior[1];
-  d->prior[1] = d->prior[2];
-  d->prior[2] = d->prior[4];
-  d->prior[3] = d->prior[5];
+  for (int i=0; i < 4; i++) {
+    d->prior[i] = d->prior[i+1];
+    d->timestampPrior[i] = d->timestampPrior[i+1];
+  }
   d->prior[4] = current;
-  d->timestampPrior[0] = d->timestampPrior[1];
-  d->timestampPrior[1] = d->timestampPrior[2];
-  d->timestampPrior[2] = d->timestampPrior[3];
-  d->timestampPrior[3] = d->timestampPrior[4];
   d->timestampPrior[4] = timestamp;
   return ret;
 }
 
+double Touchpad::distance(DerivData* d, short current, double timestamp) {
+  double ret = 0;
+  // The timestamp difference won't be relevant unless we check for inactive time
+  if (d->priorActive) {
+    d->prior[1] = current;
+    d->timestampPrior[1] = timestamp;
+    ret = d->prior[1] - d->prior[0];
+  } else {
+    d->priorActive = true;
+    d->prior[0] = current;
+    d->timestampPrior[0] = timestamp;
+  }
+  return ret;
+}

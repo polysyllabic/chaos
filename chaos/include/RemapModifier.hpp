@@ -103,18 +103,9 @@ namespace Chaos {
     std::vector<std::shared_ptr<ControllerInput>> signals;
     
     /**
-     * Helper class to manage velocity calculations
+     * Helper class to manage touchpad calculations
      */
     Touchpad touchpad;
-
-    /**
-     * \brief Convert the touchpad signal to an axis signal
-     * 
-     * \param tp_axis The axis of the touchpad to convert
-     * \param value The value of the incoming raw touchpad event
-     * \return short Converted axis value
-     */
-    short touchpadToAxis(ControllerSignal signal, short value);
 
     std::shared_ptr<ControllerInput> lookupInput(const toml::table& config, const std::string& key, bool required);
 
