@@ -88,15 +88,21 @@ namespace Chaos {
 
     Timer timer;
 
-    bool use_velocity;
+    /**
+     * Should we use finger velocity to calculate an axis value?
+     */
+    static bool use_velocity;
+
     /**
      * Scale applied to the x axis when converting from touchpad to axis values
      */
-    double scale_x = 1.1;
+    static double scale_x;
+
     /**
      * Scale applied to the y axis when converting from touchpad to axis values
      */
-    double scale_y = 1.1;
+    static double scale_y;
+
     /**
      * \brief The default scaling applied to convert touchpad input to axis events.
      * 
@@ -105,8 +111,8 @@ namespace Chaos {
      * This result is then clipped to the limits of the joystick value. This is the default scaling
      * factor applied if there is no touchpad condition or that condition is false.
      */
-    double velocity_scale = 0.12;
-    static double default_velocity_scale;
+    static double velocity_scale;
+
     /**
      * \brief Offset to apply to the axis value when the axis calculation is non-zero.
      * 
@@ -114,8 +120,7 @@ namespace Chaos {
      * touchpad calculation. The sign of the skew is the same as the sign of the calculated touchpad value.
      * This serves to ensure that the resulting axis signal is large enough to escape from the dead zone.
      */
-    short skew;
-    static short default_skew;
+    static short skew;
 
   public:
     Touchpad();
@@ -127,9 +132,9 @@ namespace Chaos {
      */
     void firstTouch();
 
-    bool velocityCalc() { return use_velocity; }
+    bool useVelocity() { return use_velocity; }
 
-    void useVelocity(bool state) { use_velocity = state; }
+    static void setVelocity(bool state) { use_velocity = state; }
 
     /**
      * Query whether the touchpad is currently in use
@@ -156,15 +161,15 @@ namespace Chaos {
     double getScaleY() { return scale_y; }
     double getVelocityScale() { return velocity_scale; }
 
-    void setVelocityScale(double new_scale) { velocity_scale = new_scale; }
-    static void setDefaultVelocityScale(double scale) { default_velocity_scale = scale; }
+    static void setVelocityScale(double new_scale) { velocity_scale = new_scale; }
     
-    void setScaleX(double new_scale) { scale_x = new_scale; }
-    void setScaleY(double new_scale) { scale_y = new_scale; }
+    static void setScaleXY(double new_x, double new_y) {
+      scale_x = new_x;
+      scale_y = new_y;
+    }
 
     short getSkew() { return skew; }
-    void setSkew(short new_skew) { skew = new_skew; }
-    static void setDefaultSkew(short skew) { default_skew = skew; }
+    static void setSkew(short new_skew) { skew = new_skew; }
   };
   
 };

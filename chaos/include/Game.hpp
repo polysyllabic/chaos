@@ -108,7 +108,7 @@ namespace Chaos {
     int getErrors() { return parse_errors; }
 
     /**
-     * \brief Get the modifier's pointer base don its name
+     * \brief Get the modifier's pointer based on its name
      * 
      * \param name The name by which this modifier is identified in the TOML file
      * \return std::shared_ptr<Sequence> Pointer to the Modifier object.
@@ -123,10 +123,7 @@ namespace Chaos {
 
     Json::Value getModList() { return modifiers.getModList(); }
 
-    //GameCommandTable& getGameCommandTable() { return game_commands; }
-    //GameConditionTable& getGameConditionTable() { return game_conditions; }
     ControllerInputTable& getSignalTable() { return signal_table; }
-    //std::shared_ptr<SequenceTable> getSequenceTable() { return sequences; }
     
     /**
      * \brief Tests if an event matches this signal
@@ -224,7 +221,6 @@ namespace Chaos {
      * A sequence is a predefined series of signals sent to the console as a batch.
      */
     std::shared_ptr<SequenceTable> sequences;
-    //std::unordered_map<std::string, std::shared_ptr<Sequence>> sequences;
 
     /**
      * \brief Container for defined game commands
@@ -238,9 +234,7 @@ namespace Chaos {
      * Container for defined game conditions
      */
     std::unordered_map<std::string, std::shared_ptr<GameCondition>> game_conditions;
-
-    //std::unordered_map<std::string, std::shared_ptr<ConditionTrigger>> condition_triggers;
-
+    
     /**
      * Container for defined modifiers
      */
@@ -263,15 +257,12 @@ namespace Chaos {
      * Controller signal definitions
      */
     ControllerInputTable signal_table;
-    //std::unordered_map<std::string, std::shared_ptr<ControllerInput>> controller_signals;
 
     void buildCommandList(toml::table& config);
     void buildConditionList(toml::table& config);
-    //void buildTriggerList(toml::table& config);
     void buildSequenceList(toml::table& config);
 
     std::shared_ptr<GameCondition> makeCondition(toml::table& config);
-    //std::shared_ptr<ConditionTrigger> makeTrigger(toml::table& config);
 
     void makeMenu(toml::table& config);
     void addMenuItem(toml::table& config);

@@ -35,20 +35,50 @@ time_per_modifier = 180.0
 # This section defines the parameters controlling how controller signals are remapped from one
 # class of signal to another
 [remapping]
-# The touchpad parameters control the formula to convert from touchpad to axis events based on the
-# change in axis value over time (derivative). The basic formula is scale * derivative + skew.
-# This result is then clipped to the limits of the joystick value. Individual modifiers can apply
-# further scaling during the remapping process.
+# Time (in seconds) since last received touchpad axis event before the touchpad will be reset
+# to inactive. (The default here is 5 ticks assuming 250MHz polling.)
+touchpad_inactive_delay = 0.02
+# The touchpad can be used to generate axis events based either on the distance travelled from the
+# first touch point or the change in the touchpad axis values over time. Set touchpad_velocity to
+# true if you want the second method.
+touchpad_velocity = false
+# When touchpad_velocity is false, the converted axis value is the difference between the point
+# where the user's finger first touched the pad and its current position. This is scaled from
+# the touchpad range to a standard axis range, and then an additional scale factor can be applied
+# separately for each axis.
+touchpad_scale_x = 1.1
+touchpad_scale_y = 1.1
+# When touchpad_velocity is true, the conversion from touchpad to axis events is based on the
+# change in axis value over time. An average value of the velocity over the previous 5 polling
+# intervals is used. The same scaling factor is used for both axes for velocity calculations.
+touchpad_velocity_scale = 0.12
 #
-# touchpad_scale defines the default scaling applied.
-touchpad_scale = 0.12
-# touchpad_skey defines an offset to apply to the axis value when the derivative is non-zero. The
+# touchpad_skew defines an offset to apply to the axis value when the derivative is non-zero. The
 # sign of the skew is the same as the sign of the derivative. In other words, if the derivative is
 # positive, the skew is added to the result, and the derivative is negative, the skew is subtractecd.
 touchpad_skew = 30
 
 #--------------------------------------------------------------------------------------------------
 # Command Map
+#
+# Defines a semantic map between the game's controls and the controller buttons/axes that the game
+# expects. If you have altered your command mapping in the game, you can change the default values
+# here. This defines a series of command names for the modifiers. Modifiers that reference command
+# names rather than hard-coded button or axis values should work as intended no matter how the
+# controller might be remapped.
+#
+# Note that these commands are currently always simple. They associate one button press or axis
+# event with one command. They do not currently support associating simultaneous presses of
+# controls with one command. Currently, those states are modeled by checking for a condition
+# when a particular signal comes in. For example, "shoot" in TLOU2 is equivalent to
+# "reload/toss" with the condition "aiming".
+#
+# A command is defined by specifying a name and controllor signal to bind to it.
+# - name: The label used to refer to the action in the elsewhere in this configuration file.
+#     Command names must be unique, but you can define multiple names to point to the same signal.
+#     This allows for aliases, so you can use different command names in different contexts.
+# - binding: The controller signal (button, axis, etc.) attached to this command. These labels
+#     ("L1", "X", etc.) are hard-coded values and cannot be altered in the configuration file.
 [[command]]
 name = "interact"
 binding = "TRIANGLE"
@@ -157,6 +187,55 @@ binding = "DY"
 
 #--------------------------------------------------------------------------------------------------
 # Game Conditions
+#
+# Conditions are used to test check the state of events coming from the controller. There are
+# two types of conditions: transient and persistent. A transient condition polls the current
+# state of the controller. A persistent condition is set to true when a particular condition
+# arrives and remains true until a different condition arrives that clears the condition.
+# Transient conditions are defined in the 'while' parameter and the condition will be true
+# as long as the current state of the controller exceeds the defined threshold value and false
+# otherwise. More than one command can appear in the while parameter, but how multiple commands
+# are processed depends on the threshold type.
+#
+# Persistent events define one command in set_on that sets the state and a different command in
+# set_off that clears it. Multiple commands within set_on and set_off are not currently
+# supported.
+#  
+# Transient and persistent are mutually exclusive states, so a condition must define either the
+# while parameter or the set_on and clear_on parameters, but not both.
+#
+# - name: The name by which the condition is identified in the TOML file (Required)
+# - while: A list of commands that must be true according to the real-time state of the controller
+# - set_on: A command that will set a persistent trigger to true when its incomming state exceeds
+#     the threshold
+# - clear_on: A command that will set a persistent trigger to false when its incomming state
+#     exceeds the threshold
+# - threshold: The threshold that a signal value must reach to trigger the condition, expressed as
+#      an absolute proportion of the maximum value. (Optional. Default = 1)
+#      The threshold must be a number between 0 and 1, even when ythat thresholds are always
+#      checked against the absolute values of signals. For example, if the threshold is set to be greater
+#      than 0.5 for an axis, this means that the condition will be true whenever the axis value
+#      exceeds 50% of the maximum deflection in either axis direction. The threshold is ignored for
+#      buttons and will always be 1.
+# - thresholdType: The test applied to the threshold. The following keys correspond to the types
+#       defined in ThresholdType.
+#        - "greater" or ">": The value of the signal must be greater than the specified proportion
+#        - "greater_equal" or ">=": The value of the signal must be greater than or equal to the
+#          specified proportion
+#        - "less" or "<": The value of signal must be less than the specified proportion
+#        - "less_equal" or "<=" absolute value of signal must be less than or equal to the specified
+#          proportion
+#        - "magnitude": The absolute value of the signal must be greater than or equal to the
+#              specified proportion (Default)
+#        - "distance": requires 2 axes in the condition: Checks the Pythagorean distance of both axes
+#              from center.
+#
+# Notes: for >, >=, <, and <= types, the sign of the signal matters. For all threhold types except
+# distance, if more than one command is defined in 'while', the same threshold applies to all. This
+# means the test will only work if each command has the same maximum value. If you have different
+# categories of signal or different thresholds, you should create separate conditions and
+# chain them together in a condition trigger.
+#
 [[condition]]
 name = "aiming"
 while = [ "aiming" ]
@@ -195,6 +274,8 @@ clear_on = "select weapon"
 
 #--------------------------------------------------------------------------------------------------
 # Sequences
+# A sequence holds a series of predefined inputs that are sent as a batch. 
+# There are three basic events that can be sent: hold, release, and press. 
 #
 # Zero out all relevant controls. This is used to stop users from whatever they are doing while
 # we take control of the controller, especially before issuing menu commands.

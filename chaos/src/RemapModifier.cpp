@@ -309,7 +309,6 @@ bool RemapModifier::remap(DeviceEvent& event) {
       }
       case ControllerSignalType::THREE_STATE:
         if (event.value > 0) {
-          // if to_negative not set, to_console is the right signal to send to
           modified.value = (event.value >= remap.threshold) ? 1 : 0;
           }
         else if (event.value < 0) {

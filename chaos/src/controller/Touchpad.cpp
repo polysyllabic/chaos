@@ -50,12 +50,13 @@ short Touchpad::getAxisValue(ControllerSignal tp_axis, short value) {
 	  break;
   case ControllerSignal::TOUCHPAD_X_2:
   case ControllerSignal::TOUCHPAD_Y_2:
+    // We're ignoring the second finger for now
     return 0;
   default:
     throw std::runtime_error("Event passed to Touchpad::getVelocity not a TOUCHAPD axis signal");
   }  
   
-  if (useVelocity) {
+  if (useVelocity()) {
     axis_val = (short) (derivative(dd, value, timer.runningTime()) * velocity_scale);
   } else {
     axis_val = (short) (distance(dd, value, timer.runningTime()) * scaling);

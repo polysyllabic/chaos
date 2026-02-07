@@ -129,18 +129,39 @@ std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const toml::tabl
 // This is the game-specific initialization
 int ControllerInputTable::initializeInputs(const toml::table& config) {
   int errors = 0;
+
+  bool use_velocity = config["remapping"]["touchpad_velosity"].value_or(false);
+  Touchpad::setVelocity(use_velocity);
+
   double scale = config["remapping"]["touchpad_velocity_scale"].value_or(1.0);
   if (scale == 0) {
     PLOG_ERROR << "Touchpad velocity scale cannot be 0. Setting to 1";
     ++errors;
     scale = 1;
   }
-  Touchpad::setDefaultVelocityScale(scale);
+  Touchpad::setVelocityScale(scale);
 
   short skew = config["remapping"]["touchpad_skew"].value_or(0);
-  Touchpad::setDefaultSkew(skew);
+  Touchpad::setSkew(skew);
 
-  PLOG_VERBOSE << "Touchpad scale = " << scale << "; skew = " << skew;
+  PLOG_VERBOSE << "Touchpad velocity scale = " << scale << "; skew = " << skew;
+
+  if (! use_velocity) {
+    double scale_x = config["remapping"]["touchpad_scale_x"].value_or(1.0);
+    if (scale_x == 0) {
+      PLOG_ERROR << "Touchpad scale_x cannot be 0. Setting to 1";
+      ++errors;
+      scale_x = 1;
+    }
+    double scale_y = config["remapping"]["touchpad_scale_y"].value_or(1.0);
+    if (scale_y == 0) {
+      PLOG_ERROR << "Touchpad scale_y cannot be 0. Setting to 1";
+      ++errors;
+      scale_y = 1;
+    }
+    Touchpad::setScaleXY(scale_x, scale_y);
+  }
+
   return errors;
 }
 

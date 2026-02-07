@@ -35,16 +35,27 @@ time_per_modifier = 180.0
 # This section defines the parameters controlling how controller signals are remapped from one
 # class of signal to another
 [remapping]
-# The touchpad parameters control the formula to convert from touchpad to axis events based on the
-# change in axis value over time (derivative). The basic formula is scale * derivative + skew.
-# This result is then clipped to the limits of the joystick value. Individual modifiers can apply
-# further scaling during the remapping process.
+# Time (in seconds) since last received touchpad axis event before the touchpad will be reset
+# to inactive. (The default here is 5 ticks assuming 250MHz polling.)
+touchpad_inactive_delay = 0.02
+# The touchpad can be used to generate axis events based either on the distance travelled from the
+# first touch point or the change in the touchpad axis values over time. Set touchpad_velocity to
+# true if you want the second method.
+touchpad_velocity = false
+# When touchpad_velocity is false, the converted axis value is the difference between the point
+# where the user's finger first touched the pad and its current position. This is scaled from
+# the touchpad range to a standard axis range, and then an additional scale factor can be applied
+# separately for each axis.
+touchpad_scale_x = 1.1
+touchpad_scale_y = 1.1
+# When touchpad_velocity is true, the conversion from touchpad to axis events is based on the
+# change in axis value over time. An average value of the velocity over the previous 5 polling
+# intervals is used. The same scaling factor is used for both axes for velocity calculations.
+touchpad_velocity_scale = 0.12
 #
-# touchpad_scale defines the default scaling applied.
-touchpad_scale = 0.12
-# touchpad_skey defines an offset to apply to the axis value when the derivative is non-zero. The
+# touchpad_skew defines an offset to apply to the axis value when the derivative is non-zero. The
 # sign of the skew is the same as the sign of the derivative. In other words, if the derivative is
-# positive, the skew is added to the result, and the derivative is negative, the skew is subtracted.
+# positive, the skew is added to the result, and the derivative is negative, the skew is subtractecd.
 touchpad_skew = 30
 
 #--------------------------------------------------------------------------------------------------
