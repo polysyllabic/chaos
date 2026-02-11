@@ -1,54 +1,75 @@
 # This file is part of Twitch Controls Chaos, written by blegas78 and polysyl.
 # License: GPL 3 or greater. See LICENSE file for details.
+"""OBS overlay HTML for active modifiers."""
+
+
+def active_mods_overlay_html() -> str:
+  return """<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Active Mods</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: transparent;
+        color: #fff;
+        text-shadow: -1px 0 #000, 0 1px #000, 1px 0 #000, 0 -1px #000;
+      }
+      .wrap { width: 100%; max-width: 1100px; padding: 8px 12px; }
+      .title { text-align: center; font-weight: bold; font-size: 24px; margin-bottom: 8px; }
+      .row {
+        display: grid;
+        grid-template-columns: 2fr 3fr;
+        gap: 10px;
+        margin-bottom: 8px;
+        align-items: center;
+      }
+      .mod-label { font-size: 20px; font-weight: bold; min-height: 28px; }
+      .bar {
+        height: 24px;
+        border: 1px solid #000;
+        border-radius: 6px;
+        background: rgba(128, 128, 128, 0.6);
+        overflow: hidden;
+      }
+      .bar-fill {
+        height: 100%;
+        width: 0%;
+        background: rgba(245, 245, 245, 0.75);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="title">Active Mods</div>
+      <div id="mods"></div>
+    </div>
+    <script>
+      async function refresh() {
+        const response = await fetch('/api/overlay/state', { cache: 'no-store' });
+        const state = await response.json();
+        const modsRoot = document.getElementById('mods');
+        const names = state.active_mods || [];
+        const times = state.mod_times || [];
+        const count = Math.max(state.num_active_mods || 0, names.length, times.length);
+        let html = '';
+        for (let i = 0; i < count; i++) {
+          const modName = names[i] || '';
+          const progress = Math.max(0, Math.min(1, Number(times[i] || 0)));
+          html += `
+            <div class="row">
+              <div class="mod-label">${modName}</div>
+              <div class="bar"><div class="bar-fill" style="width:${progress * 100}%"></div></div>
+            </div>`;
+        }
+        modsRoot.innerHTML = html;
+      }
+      setInterval(refresh, 250);
+      refresh();
+    </script>
+  </body>
+</html>
 """
-  Generates the source to show which modifiers are currently active and how much time remains for each.
-"""
-
-from flexx import flx
-
-import chaosface.config.globals as config
-
-
-class ActiveMods(flx.PyWidget):
-  def init(self):
-    super().init()
-    
-    self.label = []
-    self.progress = []
-    
-    mod_text_style = "color:white;text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;text-align:left;font-weight: bold; vertical-align: middle; line-height: 1.5; min-width:250px;"
-    title_text_style = "color:white;text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;text-align:center;font-weight: bold; vertical-align: bottom; line-height: 1.5; min-width:250px;"
-    progress_style = "background-color:#808080; foreground-color:#808080; color:#FFFFFF; border-color:#000000; border-radius:5px; width:1050px;"
-    
-    with flx.VBox(flex=0):
-      with flx.HFix(flex=1):
-        self.vote_label = flx.Label(flex=0,style=title_text_style, text="Active Mods" )
-        flx.Label(flex=0,style=title_text_style, text=" ")
-        
-      with flx.HFix(flex=1):
-        with flx.VFix(flex=1):
-          for i in range(config.relay.num_active_mods):
-            self.progress.append(flx.ProgressBar(flex=2, value=config.relay.mod_times[i], text='', style=progress_style))
-        with flx.VFix(flex=1):
-          for i in range(config.relay.num_active_mods):
-            self.label.append(flx.Label(flex=1,style=mod_text_style, text=config.relay.active_mods[i]))
-
-  @config.relay.reaction('update_mod_times')
-  def _update_mod_times(self, *events):
-    for ev in events:
-      self.update_time(ev.value)
-      
-  @config.relay.reaction('update_active_mods')
-  def _updateActiveMods(self, *events):
-    for ev in events:
-      self.update_mods(ev.value)
-
-  @flx.action
-  def update_mods(self, active_mods):
-    for i in range(config.relay.num_active_mods):
-      self.label[i].set_text(active_mods[i])
-    
-  @flx.action
-  def update_time(self, mod_times):
-    for i in range(config.relay.num_active_mods):
-      self.progress[i].set_value(mod_times[i])

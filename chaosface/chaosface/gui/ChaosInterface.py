@@ -1,34 +1,31 @@
 # This file is part of Twitch Controls Chaos, written by blegas78 and polysyl.
 # License: GPL 3 or greater. See LICENSE file for details.
-"""
-  The main page for the streamer while running the game. It provides both the streamer's view to
-  look at while playing as well as tabs with the settings for the game, the chatbot, and the chaos
-  engine.
-"""
-from flexx import flx, ui
+"""Main NiceGUI page composition for Twitch Controls Chaos."""
 
-import chaosface.config.globals as config
-from chaosface.gui.ConnectionSetup import ConnectionSetup
-from chaosface.gui.GameSettings import GameSettings
-from chaosface.gui.StreamerInterface import StreamerInterface
+from __future__ import annotations
+
+from typing import Callable
+
+from nicegui import ui
+
+from .ConnectionSetup import build_connection_tab
+from .GameSettings import build_game_settings_tab
+from .StreamerInterface import build_streamer_tab
 
 
-class ChaosInterface(flx.PyWidget):
+def build_chaos_interface(*, ensure_runtime_started: Callable[[], None], shutdown_runtime: Callable[[], None]) -> None:
+  ensure_runtime_started()
+  ui.label('Twitch Controls Chaos').classes('text-h4')
+  tabs = ui.tabs().classes('w-full')
+  with tabs:
+    streamer_tab = ui.tab('Streamer Interface')
+    game_settings_tab = ui.tab('Game Settings')
+    connection_tab = ui.tab('Connection Setup')
 
-  def init(self):
-    self.model = config
-    self.set_title('Twitch Controls Chaos')
-    with ui.TabLayout(style="background: #aaa; color: #000; text-align: center; foreground-color:#808080"):
-      self.interface = StreamerInterface(title='Streamer Interface')
-      self.game_settings = GameSettings(title='Game Settings')
-#     self.ui_settings = GUISettings(title='UI Settings')    
-      self.botSetup = ConnectionSetup(title='Connection Setup')
-
-  def dispose(self):
-    super().dispose()
-    # ... do clean up or notify other parts of the app
-    self.interface.dispose()
-    self.game_settings.dispose()
-    self.botSetup.dispose()
-
- 
+  with ui.tab_panels(tabs, value=streamer_tab).classes('w-full'):
+    with ui.tab_panel(streamer_tab):
+      build_streamer_tab(shutdown_runtime=shutdown_runtime)
+    with ui.tab_panel(game_settings_tab):
+      build_game_settings_tab()
+    with ui.tab_panel(connection_tab):
+      build_connection_tab()

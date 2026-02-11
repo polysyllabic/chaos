@@ -10,7 +10,7 @@ import random
 import threading
 import time
 from contextlib import suppress
-from typing import Callable, Optional, Protocol
+from typing import Any, Callable, Optional, Protocol
 
 from twitchAPI.chat import Chat, ChatEvent, ChatMessage, EventData
 from twitchAPI.eventsub.websocket import EventSubWebsocket
@@ -104,7 +104,7 @@ class ChaosBotContext(Protocol):
   def force_mod(self, value: str) -> None:
     ...
 
-  def get_attribute(self, key: str):
+  def get_attribute(self, key: str) -> Any:
     ...
 
   def get_mod_description(self, mod: str) -> str:
@@ -160,25 +160,47 @@ class ChaosBot:
     on_vote: Optional[Callable[[int, str], None]] = None,
   ):
     self._ctx = context
-    self._thread: threading.Thread = None
-    self._loop: asyncio.AbstractEventLoop = None
+    self._thread: Optional[threading.Thread] = None
+    self._loop: Optional[asyncio.AbstractEventLoop] = None
     self._ready = threading.Event()
     self._shutdown = threading.Event()
     self._channel_name = ''
 
-    self._chat_twitch: Twitch = None
-    self._event_twitch: Twitch = None
-    self._chat: Chat = None
-    self._eventsub: EventSubWebsocket = None
+    self._chat_twitch: Optional[Twitch] = None
+    self._event_twitch: Optional[Twitch] = None
+    self._chat: Optional[Chat] = None
+    self._eventsub: Optional[EventSubWebsocket] = None
 
-    self._raffle_task: asyncio.Task = None
+    self._raffle_task: Optional[asyncio.Task] = None
     self._raffle_entries = set()
     self._last_apply_time = 0.0
     self._on_connected = on_connected or (lambda value: None)
     self._on_vote = on_vote or (lambda index, user: None)
 
-  def _get_event_loop(self):
+  def _get_event_loop(self) -> Optional[asyncio.AbstractEventLoop]:
     return self._loop
+
+  def _attr_str(self, key: str, fallback: str = '') -> str:
+    value = self._ctx.get_attribute(key)
+    if value is None:
+      return fallback
+    if isinstance(value, str):
+      return value
+    return str(value)
+
+  def _attr_int(self, key: str, fallback: int = 0) -> int:
+    value = self._ctx.get_attribute(key)
+    try:
+      return int(float(value))
+    except (TypeError, ValueError):
+      return fallback
+
+  def _attr_float(self, key: str, fallback: float = 0.0) -> float:
+    value = self._ctx.get_attribute(key)
+    try:
+      return float(value)
+    except (TypeError, ValueError):
+      return fallback
 
   def run_threaded(self):
     if self._thread and self._thread.is_alive():
@@ -219,7 +241,7 @@ class ChaosBot:
         await asyncio.sleep(5.0)
 
   async def _connect(self):
-    client_id = self._ctx.get_attribute('client_id')
+    client_id = self._attr_str('client_id')
     self._channel_name = self._ctx.channel_name.strip().lstrip('#').lower()
     bot_token = _clean_oauth(self._ctx.bot_oauth)
     event_token = _clean_oauth(self._ctx.pubsub_oauth)
@@ -371,9 +393,9 @@ class ChaosBot:
         self._raffle_entries.add(author)
       return
     if cmd == 'startvote':
-      link = self._ctx.get_attribute('mod_list_link')
+      link = self._attr_str('mod_list_link')
       if link:
-        await self.send_message(self._ctx.get_attribute('msg_mod_list').format(link))
+        await self.send_message(self._attr_str('msg_mod_list').format(link))
 
   async def _cmd_chaos(self, args):
     if not args:
@@ -389,9 +411,9 @@ class ChaosBot:
 
   async def _cmd_mods(self, args):
     if not args:
-      link = self._ctx.get_attribute('mod_list_link')
+      link = self._attr_str('mod_list_link')
       if link:
-        await self.send_message(self._ctx.get_attribute('msg_mod_list').format(link))
+        await self.send_message(self._attr_str('msg_mod_list').format(link))
       return
     sub = args[0].lower()
     if sub == 'active':
@@ -469,26 +491,26 @@ class ChaosBot:
     if not is_streamer:
       elapsed = time.monotonic() - self._last_apply_time
       if elapsed < self._ctx.redemption_cooldown:
-        await self.send_message(self._ctx.get_attribute('msg_in_cooldown'))
+        await self.send_message(self._attr_str('msg_in_cooldown'))
         return
       if self._ctx.get_balance(author) <= 0:
-        await self.send_message(self._ctx.get_attribute('msg_no_credits'))
+        await self.send_message(self._attr_str('msg_no_credits'))
         return
 
     request = ' '.join(args)
     status = self._ctx.mod_enabled(request)
     if status is None:
-      await self.send_message(self._ctx.get_attribute('msg_mod_not_found').format(request))
+      await self.send_message(self._attr_str('msg_mod_not_found').format(request))
       return
     if not status:
-      await self.send_message(self._ctx.get_attribute('msg_mod_not_active').format(request))
+      await self.send_message(self._attr_str('msg_mod_not_active').format(request))
       return
 
     self._ctx.force_mod = request.lower()
     self._last_apply_time = time.monotonic()
     if not is_streamer:
       self._ctx.step_balance(author, -1)
-    await self.send_message(self._ctx.get_attribute('msg_mod_applied'))
+    await self.send_message(self._attr_str('msg_mod_applied'))
 
   async def _cmd_enable_disable(self, args, enabled: bool, is_streamer: bool):
     if not is_streamer:
@@ -505,7 +527,7 @@ class ChaosBot:
     if self._ctx.raffle_open:
       await self.send_message('A raffle is already open')
       return
-    raffle_length = int(self._ctx.get_attribute('raffle_time'))
+    raffle_length = self._attr_int('raffle_time', 60)
     if args:
       try:
         raffle_length = int(args[0])
@@ -521,14 +543,14 @@ class ChaosBot:
     self._raffle_entries = set()
     self._ctx.raffle_open = True
     self._ctx.raffle_start_time = time.time()
-    interval = float(self._ctx.get_attribute('raffle_message_interval'))
+    interval = self._attr_float('raffle_message_interval', 15.0)
     time_elapsed = 0.0
     while time_elapsed < raffle_length and not self._shutdown.is_set():
       if time_elapsed == 0:
         status = 'has begun'
       else:
         status = f'will close in {int(raffle_length - time_elapsed)} seconds'
-      notice = self._ctx.get_attribute('msg_raffle_open')
+      notice = self._attr_str('msg_raffle_open')
       await self.send_message(notice.format(status=status))
       await asyncio.sleep(interval)
       time_elapsed = time.time() - self._ctx.raffle_start_time
@@ -552,7 +574,7 @@ class ChaosBot:
     user_name = (getattr(event, 'user_name', '') or '').lower()
     if user_name:
       balance = self._ctx.step_balance(user_name, 1)
-      await self.send_message(self._ctx.get_attribute('msg_user_balance').format(
+      await self.send_message(self._attr_str('msg_user_balance').format(
         user=user_name,
         balance=balance,
         plural='' if balance == 1 else 's',
@@ -569,7 +591,7 @@ class ChaosBot:
     user_name = (getattr(event, 'user_name', '') or '').lower()
     if user_name and credits > 0:
       balance = self._ctx.step_balance(user_name, credits)
-      await self.send_message(self._ctx.get_attribute('msg_user_balance').format(
+      await self.send_message(self._attr_str('msg_user_balance').format(
         user=user_name,
         balance=balance,
         plural='' if balance == 1 else 's',

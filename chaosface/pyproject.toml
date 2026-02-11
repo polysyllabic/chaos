@@ -8,11 +8,12 @@ readme = "README.rst"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-flexx = "*"
 twitchAPI = "*"
 pyzmq = "*"
 numpy = "*"
 requests = "*"
+fastapi = "*"
+nicegui = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

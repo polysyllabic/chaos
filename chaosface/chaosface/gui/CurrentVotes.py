@@ -1,63 +1,106 @@
 # This file is part of Twitch Controls Chaos, written by blegas78 and polysyl.
 # License: GPL 3 or greater. See LICENSE file for details.
+"""OBS overlay HTML for current vote standings."""
+
+
+def current_votes_overlay_html() -> str:
+  return """<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Current Votes</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: transparent;
+        color: #fff;
+        text-shadow: -1px 0 #000, 0 1px #000, 1px 0 #000, 0 -1px #000;
+      }
+      .wrap { width: 100%; max-width: 900px; padding: 8px 12px; }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 8px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 3fr 2fr;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .label {
+        font-size: 20px;
+        font-weight: bold;
+        min-height: 28px;
+      }
+      .bar {
+        height: 24px;
+        border: 1px solid #000;
+        border-radius: 6px;
+        background: rgba(128, 128, 128, 0.7);
+        overflow: hidden;
+        position: relative;
+      }
+      .bar-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 0%;
+        background: rgba(245, 245, 245, 0.8);
+      }
+      .bar-text {
+        position: absolute;
+        width: 100%;
+        line-height: 24px;
+        text-align: center;
+        font-size: 14px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="header">
+        <span id="voteTotal">Total Votes: 0</span>
+        <span>&nbsp;</span>
+      </div>
+      <div id="votes"></div>
+    </div>
+    <script>
+      async function refresh() {
+        const response = await fetch('/api/overlay/state', { cache: 'no-store' });
+        const state = await response.json();
+        const names = state.candidate_mods || [];
+        const votes = state.votes || [];
+        const totalVotes = Number(state.vote_total || 0);
+        const count = Math.max(names.length, votes.length);
+        document.getElementById('voteTotal').textContent = `Total Votes: ${totalVotes}`;
+        let html = '';
+        for (let i = 0; i < count; i++) {
+          const name = names[i] || '';
+          const vote = Number(votes[i] || 0);
+          const percent = totalVotes > 0 ? (vote / totalVotes) : (count > 0 ? 1 / count : 0);
+          const pctText = `${Math.round(percent * 100)}%`;
+          html += `
+            <div class="row">
+              <div class="label">${i + 1} ${name}</div>
+              <div class="bar">
+                <div class="bar-fill" style="width:${percent * 100}%"></div>
+                <div class="bar-text">${pctText}</div>
+              </div>
+            </div>`;
+        }
+        document.getElementById('votes').innerHTML = html;
+      }
+      setInterval(refresh, 250);
+      refresh();
+    </script>
+  </body>
+</html>
 """
-  Browser source showing the current candidates and voting progress
-"""
-from flexx import flx
-
-import chaosface.config.globals as config
-
-
-class CurrentVotes(flx.PyWidget):
-  def init(self):
-    super().init()
-    
-    self.label = []
-    self.progress = []
-    
-    mod_text_style = "color:white;text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;text-align:left;font-weight: bold; vertical-align: middle; line-height: 1.5; min-width:250px;"
-    title_text_style = "color:white;text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;text-align:center;font-weight: bold; vertical-align: bottom; line-height: 1.5; min-width:250px;"
-    progress_style = " background-color:#808080; foreground-color:#808080; color:#FFFFFF; border-color:#000000; border-radius:5px; text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black; font-weight: bold;"
-
-    votes = sum(config.relay.votes)
-    with flx.VBox(flex=0):
-      with flx.HFix(flex=1):
-        self.vote_total = flx.Label(flex=0,style=title_text_style, text=f"Total Votes: {votes}")
-        self.blank_label = flx.Label(flex=0,style=title_text_style, text=" ")
-        
-      with flx.HFix(flex=1):
-        with flx.VFix(flex=1):
-          for i in range(len(config.relay.votes)):
-            if votes > 0:
-              self.progress.append(flx.ProgressBar(flex=2, value=config.relay.votes[i]/votes, text='{percent}', style=progress_style))
-            else:
-              self.progress.append( flx.ProgressBar(flex=2, value=1.0/len(config.relay.votes), text='{percent}', style=progress_style))
-              
-        with flx.VFix(flex=1):
-          for i in range(len(config.relay.votes)):
-            self.label.append(flx.Label(flex=1,style=mod_text_style, text=str(i+1) + " " + config.relay.candidate_mods[i]))
-
-  @config.relay.reaction('update_candidate_mods')
-  def _update_candidates(self, *events):
-    for ev in events:
-      self.update_candidates(ev.value)
-      
-  @config.relay.reaction('update_votes')
-  def _update_votes(self, *events):
-    for ev in events:
-      self.update_voting(ev.value)
-
-  @flx.action
-  def update_candidates(self, mods):
-    for i in range(len(mods)):
-      self.label[i].set_text(f"{i+1} {mods[i]}")
-  
-  @flx.action
-  def update_voting(self, votes):
-    total = sum(votes)
-    self.vote_total.set_text(f"Total Votes: {total}")
-    for i in range(len(votes)):
-      if total > 0:
-        self.progress[i].set_value(votes[i]/total)
-      else:
-        self.progress[i].set_value(1.0/len(votes))

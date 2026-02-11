@@ -4,8 +4,8 @@
 """
   The ChaosModel contains the central loop for modifier selection and updating the UI.
 
-  Note that this event loop runs in a separate thread from the flexx UI, so we must schedule any
-  routines that change flexx parameters with a call to flx.loop.call_soon(<function>, *args)
+  Note that this event loop runs in a separate thread from the web UI, so we must schedule any
+  routines that change relay properties on the main asyncio loop.
 """
 import json
 import logging
@@ -13,18 +13,21 @@ import random
 import threading
 import time
 import asyncio
+from typing import Optional
 
 import numpy as np
-from flexx import flx
 
 import chaosface.config.globals as config
+from chaosface.chatbot.ChaosBot import ChaosBot
 from chaosface.communicator import ChaosCommunicator, EngineObserver
+from chaosface.gui import ui_dispatch
 
 
 class ChaosModel(EngineObserver):
   def __init__(self):
     self.thread = None
     self.first_time = True
+    self.bot: Optional[ChaosBot] = None
 
     #  Socket to talk to server
     logging.info("Connecting to chaos server")
@@ -73,7 +76,11 @@ class ChaosModel(EngineObserver):
     if not config.relay.keep_going:
       return
     # Start up the bot
-    self.bot = config.relay.chatbot
+    bot = config.relay.chatbot
+    if bot is None:
+      logging.warning("Chatbot is not configured; cannot start bot thread")
+      return
+    self.bot = bot
     self.bot.run_threaded()
 
   def restart_bot(self):
@@ -102,11 +109,11 @@ class ChaosModel(EngineObserver):
     if "pause" in received:
       paused = bool(received["pause"])
       logging.info("Got a pause command of: {paused}")
-      flx.loop.call_soon(config.relay.set_paused, paused)
+      ui_dispatch.call_soon(config.relay.set_paused, paused)
 
     elif "game" in received:
       logging.debug("Received game info!")
-      flx.loop.call_soon(config.relay.initialize_game, received)
+      ui_dispatch.call_soon(config.relay.initialize_game, received)
     else:
       logging.warn(f"Unprocessed message from engine: {received}")
 
@@ -124,13 +131,13 @@ class ChaosModel(EngineObserver):
       logging.debug(f'Telling engine about new mod {mod_name}')
       # Tell the engine
       self.apply_new_mod(mod_name)
-      flx.loop.call_soon(config.relay.replace_mod, mod_key)
+      ui_dispatch.call_soon(config.relay.replace_mod, mod_key)
     else:
       logging.debug(f'Mod key "{mod_key}" not in list (not sent)')
     # Pick new candidates, if we're voting
     if config.relay.voting_type == 'DISABLED' or config.relay.voting_type == 'DISABLED':
       return
-    flx.loop.call_soon(config.relay.get_new_voting_pool)
+    ui_dispatch.call_soon(config.relay.get_new_voting_pool)
 
 
   def remove_mod(self, mod_name):
@@ -151,16 +158,16 @@ class ChaosModel(EngineObserver):
 
   def flash_pause(self):
     if self.paused_flashing_timer > 0.5 and config.relay.paused_bright == True:
-      flx.loop.call_soon(config.relay.set_paused_bright, False)
+      ui_dispatch.call_soon(config.relay.set_paused_bright, False)
     elif self.paused_flashing_timer > 1.0 and config.relay.paused_bright == False:
-      flx.loop.call_soon(config.relay.set_paused_bright, True)
+      ui_dispatch.call_soon(config.relay.set_paused_bright, True)
       self.paused_flashing_timer = 0.0
         
   def flash_disconnected(self):
     if self.disconnected_flashing_timer > 0.5 and config.relay.connected_bright == True:
-      flx.loop.call_soon(config.relay.set_connected_bright, False)
+      ui_dispatch.call_soon(config.relay.set_connected_bright, False)
     elif self.disconnected_flashing_timer > 1.0 and config.relay.connected_bright == False:
-      flx.loop.call_soon(config.relay.set_connected_bright, True)
+      ui_dispatch.call_soon(config.relay.set_connected_bright, True)
       self.disconnected_flashing_timer = 0.0
   
   def select_winning_modifier(self):
@@ -239,7 +246,7 @@ class ChaosModel(EngineObserver):
 
       # Update remaining time for modifiers if not paused      
       if delta_time > 0:
-        flx.loop.call_soon(config.relay.decrement_mod_times, delta_time)
+        ui_dispatch.call_soon(config.relay.decrement_mod_times, delta_time)
         
       self.vote_time =  now - start_voting
 
@@ -258,7 +265,7 @@ class ChaosModel(EngineObserver):
 
       if config.relay.reset_mods:
         self.reset_mods()
-        flx.loop.call_soon(config.relay.reset_current_mods)
+        ui_dispatch.call_soon(config.relay.reset_current_mods)
         config.relay.reset_mods = False
 
 
@@ -277,7 +284,7 @@ class ChaosModel(EngineObserver):
           self.send_chat_message(config.relay.list_winning_mod(mod_key))
 
       # Update elapsed voting time
-      flx.loop.call_soon(config.relay.set_vote_time, self.vote_time/config.relay.time_per_vote())
+      ui_dispatch.call_soon(config.relay.set_vote_time, self.vote_time/config.relay.time_per_vote())
 
     # Exitiing loop: clean up
     self.chaos_communicator.stop()

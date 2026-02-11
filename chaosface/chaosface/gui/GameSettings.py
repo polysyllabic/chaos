@@ -1,315 +1,176 @@
 # This file is part of Twitch Controls Chaos, written by blegas78 and polysyl.
 # License: GPL 3 or greater. See LICENSE file for details.
-"""
-  View for chaos settings that control the gameplay
-"""
-from flexx import flx
+"""Game settings tab UI for the NiceGUI operator interface."""
+
+from __future__ import annotations
+
+from nicegui import ui
 
 import chaosface.config.globals as config
 
+from .ui_helpers import relay_config_float, safe_float, safe_int, sync_enabled_mods
 
-class GameSettings(flx.PyWidget):
-  def init(self):
-    super().init()
-    self.mod_items = []
-    label_style = "text-align:right"
-    field_style = "background-color:#BBBBBB;text-align:left"
-    
-    with flx.VBox():
-      self.game_name = flx.Label(style="text-align:center", text=f'Game: {config.relay.game_name}', wrap=1)
-      with flx.HSplit():
-        with flx.VBox(flex=1):
-          with flx.GroupWidget(title='Modifier Selection'):
-            with flx.HBox():
-              with flx.VBox():
-                flx.Label(style=label_style, text="Active modifiers:")
-                flx.Label(style=label_style, text="Time per modifier (s):")
-                flx.Label(style=label_style, text="Chance of repeat modifier:")
-                flx.Label(style=label_style, text="Clear modifier-use history:")
-              with flx.VBox():
-                self.num_active_mods = flx.LineEdit(style=field_style, text=str(config.relay.num_active_mods))
-                self.time_per_modifier = flx.LineEdit(style=field_style, text=str(config.relay.time_per_modifier))
-                self.softmax_factor = flx.Slider(min=1, max=100, step=1, value=config.relay.softmax_factor)
-                self.reset_button = flx.Button(text="Reset")
-              flx.Widget(flex=1)
-        
-          with flx.GroupWidget(flex=0, title='Modifier Voting'):
-            with flx.VBox():
-              with flx.HBox():
-                with flx.VBox():
-                  flx.Label(style=label_style, text="Vote options:")
-                  flx.Label(style=label_style, text="Voting method:")
-                  flx.Label(style=label_style, text="Voting cycle:")
-                  flx.Label(style=label_style, text="Time to vote (s):")
-                  flx.Label(style=label_style, text="Time between votes (s):")
-                with flx.VBox():
-                  self.vote_options = flx.LineEdit(style=field_style, text=str(config.relay.vote_options))
-                  self.voting_type = flx.ComboBox(options=['Proportional','Majority','Authoritarian'],
-                                                  selected_key='Proportional')
-                  self.voting_cycle = flx.ComboBox(options=['Continuous','Interval', 'Random', 'Triggered', 'DISABLED'],
-                                                  selected_key='Continuous')
-                  self.vote_time = flx.LineEdit(style=field_style, text=str(config.relay.vote_time))
-                  self.vote_delay = flx.LineEdit(style=field_style, text=str(config.relay.vote_delay))
-                                                
-                flx.Widget(flex=1)
-              self.announce_candidates = flx.CheckBox(text="Announce candidates in chat", checked=config.relay.announce_candidates, style="text-align:left")
-              self.announce_winner = flx.CheckBox(text="Announce winner in chat", checked=config.relay.announce_winner, style="text-align:left")
-              self.announce_active = flx.CheckBox(text="Announce active mods in chat", checked=config.relay.announce_active, style="text-align:left")
-              flx.Widget(flex=1)
-          with flx.GroupWidget(flex=0, title='Modifier Redemption'):
-            with flx.HBox():
-              with flx.VBox():
-                flx.Label(style=label_style, text='Redemption Cooldown (s):')              
-                self.bits_redemptions = flx.CheckBox(text='Allow bits redemptions', checked=config.relay.bits_redemptions, style="text-align:left")
-                self.points_redemptions = flx.CheckBox(text='Channel points redemption', checked=config.relay.points_redemptions, style="text-align:left")
-                self.raffles = flx.CheckBox(text='Conduct raffles', checked=config.relay.raffles, style="text-align:left")
-              with flx.VBox():
-                self.redemption_cooldown = flx.LineEdit(style=field_style, text=str(config.relay.redemption_cooldown))
-                flx.Label(style=label_style, text='Bits per mod credit:')
-                flx.Label(style=label_style, text='Points Reward Title:')
-                flx.Label(style=label_style, text='Default Raffle Time:')
-              with flx.VBox():
-                flx.Label(style=label_style, text=' ')
-                self.bits_per_credit = flx.LineEdit(style=field_style, text=str(config.relay.bits_per_credit))
-                self.points_reward_title = flx.LineEdit(style=field_style, text=str(config.relay.points_reward_title))
-                self.raffle_time = flx.LineEdit(style=field_style, text=str(config.relay.raffle_time))
-              with flx.VBox():
-                flx.Label(style=label_style, text=' ')
-                self.multiple_credits = flx.CheckBox(text='Allow multiple credits per cheer', checked=config.relay.multiple_credits, style="text-align:left")
-                flx.Label(style=label_style, text=' ')
-                flx.Label(style=label_style, text=' ')
-        with flx.VBox(flex=1):
-          self.available_mods = ModifierView()
-        # End of HSplit
-      with flx.HBox():
-        self.save_button = flx.Button(text="Save")
-        self.restore_button = flx.Button(text="Restore")
-        self.status_label = flx.Label(flex=1, style="text-align:center", text='')
-        flx.Widget(flex=1)
-      flx.Widget(flex=1)
 
-    self.available_mods.set_data(config.relay.modifier_data)
+def build_game_settings_tab() -> None:
+  with ui.card().classes('w-full'):
+    ui.label('Game Settings').classes('text-h6')
 
-  # Validation when changed
-  @flx.reaction('num_active_mods.text')
-  def _nummods_changed(self, *events):
-    nmods = self.validate_int(self.num_active_mods.text, 1, 10, 'active_modifiers')
-    self.num_active_mods.set_text(str(nmods))
+    status_label = ui.label('').classes('text-sm')
 
-  @flx.reaction('time_per_modifier.text')
-  def _modtime_changed(self, *events):
-    msg = ''
-    modtime = config.relay.get_attribute('modifier_time')
-    try:
-      modtime = float(self.time_per_modifier.text)
-      if modtime < 0:
-        modtime = 30.0
-        msg = "Do you think you're The Doctor? No negative times."
-      elif modtime > 172800.0:
-        modtime = 172800.0
-        msg = "Maximum time for mods is 48 hours. Get some sleep!"
-    except ValueError:
-      msg = 'Value must be a number'
-    if msg:
-      self.time_per_modifier.set_text(str(modtime))
-    # Report any errors or clear the field
-    self.status_label.set_text(msg)
+    with ui.row().classes('w-full gap-8'):
+      with ui.column().classes('w-96'):
+        num_active_mods = ui.number('Active modifiers', value=int(config.relay.num_active_mods), min=1, max=10, step=1)
+        time_per_modifier = ui.number('Time per modifier (s)', value=float(config.relay.time_per_modifier), min=1, max=172800, step=1)
+        softmax_factor = ui.slider(min=1, max=100, value=int(config.relay.softmax_factor))
+        vote_options = ui.number('Vote options', value=int(config.relay.vote_options), min=2, max=5, step=1)
+        voting_type = ui.select(['Proportional', 'Majority', 'Authoritarian'], value=config.relay.voting_type, label='Voting method')
+        voting_cycle = ui.select(
+          ['Continuous', 'Interval', 'Random', 'Triggered', 'DISABLED'],
+          value=config.relay.voting_cycle,
+          label='Voting cycle',
+        )
+        vote_time = ui.number(
+          'Vote time (s)',
+          value=relay_config_float('vote_time', 60.0, 1.0, 3600.0),
+          min=1,
+          max=3600,
+          step=1,
+        )
+        vote_delay = ui.number(
+          'Vote delay (s)',
+          value=relay_config_float('vote_delay', 0.0, 0.0, 3600.0),
+          min=0,
+          max=3600,
+          step=1,
+        )
 
-  @flx.reaction('vote_options.text')
-  def _voteoptions_changed(self, *events):
-    options = self.validate_int(self.vote_options.text, 2, 5, 'vote_options')
-    self.vote_options.set_text(str(options))
+      with ui.column().classes('w-96'):
+        announce_candidates = ui.checkbox('Announce candidates in chat', value=bool(config.relay.announce_candidates))
+        announce_winner = ui.checkbox('Announce winner in chat', value=bool(config.relay.announce_winner))
+        announce_active = ui.checkbox('Announce active mods in chat', value=bool(config.relay.announce_active))
+        bits_redemptions = ui.checkbox('Allow bits redemptions', value=bool(config.relay.bits_redemptions))
+        points_redemptions = ui.checkbox('Allow points redemptions', value=bool(config.relay.points_redemptions))
+        raffles = ui.checkbox('Conduct raffles', value=bool(config.relay.raffles))
+        multiple_credits = ui.checkbox('Allow multiple credits per cheer', value=bool(config.relay.multiple_credits))
+        redemption_cooldown = ui.number('Redemption cooldown (s)', value=float(config.relay.redemption_cooldown), min=0, max=86400, step=1)
+        bits_per_credit = ui.number('Bits per mod credit', value=int(config.relay.bits_per_credit), min=1, max=100000, step=1)
+        points_reward_title = ui.input('Points reward title', value=str(config.relay.points_reward_title))
+        raffle_time = ui.number('Default raffle time (s)', value=float(config.relay.raffle_time), min=10, max=3600, step=1)
 
-  @flx.reaction('vote_time.text')
-  def _votetime_changed(self, *events):
-    msg = ''
-    votetime = config.relay.get_attribute('vote_time')
-    try:
-      votetime = float(self.vote_time.text)
-      if votetime <= 0:
-        votetime = 60.0
-        msg = "Vote time must be greater than 0."
-      elif votetime > 3600.0:
-        votetime = 3600.0
-        msg = 'Maximum vote time is 1 hour'
-    except ValueError:
-      msg = 'Value must be a number'
-    if msg:
-      self.vote_time.set_text(str(votetime))
-    # Report any errors or clear the field
-    self.status_label.set_text(msg)
+    ui.separator()
+    ui.label('Available Modifiers').classes('text-subtitle1')
+    mod_toggles = ui.column().classes('w-full gap-1')
 
-  @flx.reaction('vote_delay.text')
-  def _votedelay_changed(self, *events):
-    msg = ''
-    votedelay = config.relay.get_attribute('vote_delay')
-    try:
-      votedelay = float(self.vote_delay.text)
-      if votedelay < 0.0:
-        votedelay = 0.0
-        msg = "Vote delay cannot be negative."
-      elif votedelay > 3600.0:
-        votedelay = 3600.0
-        msg = 'Maximum vote delay cannot be more than 1 hour'
-    except ValueError:
-      msg = 'Value must be a number'
-    if msg:
-      self.vote_time.set_text(str(votedelay))
-    # Report any errors or clear the field
-    self.status_label.set_text(msg)
+    def render_mod_toggles():
+      mod_toggles.clear()
+      mods = sorted(
+        config.relay.modifier_data.items(),
+        key=lambda item: str(item[1].get('name', item[0])).lower(),
+      )
+      with mod_toggles:
+        for key, mod_data in mods:
+          def _on_toggle(event, mod_key=key):
+            config.relay.enable_mod(mod_key, bool(event.value))
+            sync_enabled_mods()
+            config.relay.save_mod_info()
 
-  @flx.reaction('bits_per_credit.text')
-  def _bitspercredit_changed(self, *events):
-    bits = self.validate_int(self.bits_per_credit.text, minval=1, fallback='bits_per_credit')
-    self.bits_per_credit.set_text(str(bits))
+          ui.checkbox(mod_data.get('name', key), value=bool(mod_data.get('active', True)), on_change=_on_toggle)
 
-  @flx.reaction('raffle_time.text')
-  def _raffletime_changed(self, *events):
-    time = self.validate_int(self.raffle_time.text, minval=10, fallback='raffle_time')
-    self.raffle_time.set_text(str(time))
+    def set_all_mods(value: bool):
+      for key in list(config.relay.modifier_data.keys()):
+        config.relay.enable_mod(key, value)
+      sync_enabled_mods()
+      config.relay.save_mod_info()
+      render_mod_toggles()
 
-  @flx.reaction('redemption_cooldown.text')
-  def _cooldown_changed(self, *events):
-    cooldown = self.validate_int(self.redemption_cooldown.text, minval=0, fallback='redemption_cooldown')
-    self.redemption_cooldown.set_text(str(cooldown))
+    with ui.row().classes('gap-2'):
+      ui.button('Enable All', on_click=lambda: set_all_mods(True))
+      ui.button('Disable All', on_click=lambda: set_all_mods(False))
 
-  def validate_int(self, field: str, minval=None, maxval=None, fallback=None):
-    good = True    
-    value = config.relay.get_attribute(fallback) if fallback is not None else 0
-    if not field.isdigit():
-      good = False      
-    else:
-      value = int(field)
-      if minval is not None and value < minval:
-        value = minval
-        good = False
-      elif maxval is not None and value > maxval:
-        value = maxval
-        good = False
-    if good:
-      self.status_label.set_text('')
-    else:
-      if minval is None and maxval is None:      
-        self.status_label.set_text(f"Enter an integer.")
-      elif minval is None:
-        self.status_label.set_text(f"Enter an integer less than or equal to {maxval}.")
-      elif maxval is None:
-        self.status_label.set_text(f"Enter an integer greater than or equal to {minval}.")
+    render_mod_toggles()
+
+    def save_settings():
+      need_save = False
+
+      def set_if_changed(current, value, setter):
+        nonlocal need_save
+        if current != value:
+          setter(value)
+          need_save = True
+
+      set_if_changed(config.relay.num_active_mods, safe_int(num_active_mods.value, config.relay.num_active_mods, 1, 10), config.relay.set_num_active_mods)
+      set_if_changed(
+        config.relay.time_per_modifier,
+        safe_float(time_per_modifier.value, config.relay.time_per_modifier, 1.0, 172800.0),
+        config.relay.set_time_per_modifier,
+      )
+      set_if_changed(config.relay.softmax_factor, safe_int(softmax_factor.value, config.relay.softmax_factor, 1, 100), config.relay.set_softmax_factor)
+      set_if_changed(config.relay.vote_options, safe_int(vote_options.value, config.relay.vote_options, 2, 5), config.relay.set_vote_options)
+      set_if_changed(config.relay.voting_type, str(voting_type.value), config.relay.set_voting_type)
+      set_if_changed(config.relay.voting_cycle, str(voting_cycle.value), config.relay.set_voting_cycle)
+      current_vote_time = relay_config_float('vote_time', 60.0, 1.0, 3600.0)
+      new_vote_time = safe_float(vote_time.value, current_vote_time, 1.0, 3600.0)
+      if current_vote_time != new_vote_time:
+        config.relay.chaos_config['vote_time'] = new_vote_time
+        need_save = True
+      current_vote_delay = relay_config_float('vote_delay', 0.0, 0.0, 3600.0)
+      new_vote_delay = safe_float(vote_delay.value, current_vote_delay, 0.0, 3600.0)
+      if current_vote_delay != new_vote_delay:
+        config.relay.chaos_config['vote_delay'] = new_vote_delay
+        need_save = True
+      set_if_changed(config.relay.announce_candidates, bool(announce_candidates.value), config.relay.set_announce_candidates)
+      set_if_changed(config.relay.announce_winner, bool(announce_winner.value), config.relay.set_announce_winner)
+      set_if_changed(config.relay.announce_active, bool(announce_active.value), config.relay.set_announce_active)
+      set_if_changed(config.relay.bits_redemptions, bool(bits_redemptions.value), config.relay.set_bits_redemptions)
+      set_if_changed(config.relay.points_redemptions, bool(points_redemptions.value), config.relay.set_points_redemptions)
+      set_if_changed(config.relay.raffles, bool(raffles.value), config.relay.set_raffles)
+      set_if_changed(config.relay.multiple_credits, bool(multiple_credits.value), config.relay.set_multiple_credits)
+      set_if_changed(
+        config.relay.redemption_cooldown,
+        safe_int(redemption_cooldown.value, int(config.relay.redemption_cooldown), 0, 86400),
+        config.relay.set_redemption_cooldown,
+      )
+      set_if_changed(config.relay.bits_per_credit, safe_int(bits_per_credit.value, config.relay.bits_per_credit, 1, 100000), config.relay.set_bits_per_credit)
+      set_if_changed(config.relay.points_reward_title, str(points_reward_title.value), config.relay.set_points_reward_title)
+      set_if_changed(config.relay.raffle_time, safe_float(raffle_time.value, config.relay.raffle_time, 10.0, 3600.0), config.relay.set_raffle_time)
+      sync_enabled_mods()
+      config.relay.save_mod_info()
+
+      if need_save:
+        config.relay.set_need_save(True)
+        status_label.text = 'Settings updated'
       else:
-        self.status_label.set_text(f"Enter an integer between {minval} and {maxval}.")
-    return value
+        status_label.text = 'No settings changed'
 
+    def restore_settings():
+      config.relay.reset_all()
+      num_active_mods.value = int(config.relay.num_active_mods)
+      time_per_modifier.value = float(config.relay.time_per_modifier)
+      softmax_factor.value = int(config.relay.softmax_factor)
+      vote_options.value = int(config.relay.vote_options)
+      voting_type.value = config.relay.voting_type
+      voting_cycle.value = config.relay.voting_cycle
+      vote_time.value = relay_config_float('vote_time', 60.0, 1.0, 3600.0)
+      vote_delay.value = relay_config_float('vote_delay', 0.0, 0.0, 3600.0)
+      announce_candidates.value = bool(config.relay.announce_candidates)
+      announce_winner.value = bool(config.relay.announce_winner)
+      announce_active.value = bool(config.relay.announce_active)
+      bits_redemptions.value = bool(config.relay.bits_redemptions)
+      points_redemptions.value = bool(config.relay.points_redemptions)
+      raffles.value = bool(config.relay.raffles)
+      multiple_credits.value = bool(config.relay.multiple_credits)
+      redemption_cooldown.value = int(config.relay.redemption_cooldown)
+      bits_per_credit.value = int(config.relay.bits_per_credit)
+      points_reward_title.value = str(config.relay.points_reward_title)
+      raffle_time.value = float(config.relay.raffle_time)
+      render_mod_toggles()
+      status_label.text = 'Restored saved settings'
 
-  @flx.reaction('save_button.pointer_click')
-  def _save_button_clicked(self, *events):
-    need_save = False
-    if (config.relay.num_active_mods != int(self.num_active_mods.text)):
-      config.relay.set_num_active_mods(int(self.num_active_mods.text))
-      need_save = True
-    if (config.relay.time_per_modifier != float(self.time_per_modifier.text)):
-      config.relay.set_time_per_modifier(float(self.time_per_modifier.text))
-      need_save = True
-    if (config.relay.softmax_factor != self.softmax_factor.value):
-      config.relay.set_softmax_factor(self.softmax_factor.value)
-      need_save = True
-    if (config.relay.vote_options != int(self.vote_options.text)):
-      temp = int(self.vote_options.text)
-      config.relay.set_vote_options(temp)
-      need_save = True
-    if (config.relay.voting_type != self.voting_type.text):
-      config.relay.set_voting_type(self.voting_type.text)
-      need_save = True
-    if (config.relay.announce_candidates != self.announce_candidates.checked):
-      config.relay.set_announce_candidates(self.announce_candidates.checked)
-      need_save = True
-    if (config.relay.announce_winner != self.announce_winner.checked):
-      config.relay.set_announce_winner(self.announce_winner.checked)
-      need_save = True
-    if (config.relay.bits_redemptions != self.bits_redemptions.checked):
-      config.relay.set_bits_redemptions(self.bits_redemptions.checked)
-      need_save = True
-    if (config.relay.multiple_credits != self.multiple_credits.checked):
-      config.relay.set_multiple_credits(self.multiple_credits.checked)
-      need_save = True
-    if (config.relay.bits_per_credit != int(self.bits_per_credit.text)):
-      config.relay.set_bits_per_credit(int(self.bits_per_credit.text))
-      need_save = True
-    if (config.relay.points_redemptions != self.points_redemptions.checked):
-      config.relay.set_points_redemptions(self.points_redemptions.checked)
-      need_save = True
-    if (config.relay.points_reward_title != self.points_reward_title.text):
-      config.relay.set_points_reward_title(self.points_reward_title.text)
-      need_save = True
-    if (config.relay.raffles != self.raffles.checked):
-      config.relay.set_raffles(self.raffles.checked)
-      need_save = True
-    if (config.relay.raffle_time != float(self.raffle_time.text)):
-      config.relay.set_raffle_time(float(self.time_per_modifier.text))
-      need_save = True
-    if (config.relay.redemption_cooldown != float(self.redemption_cooldown.text)):
-      config.relay.set_redemption_cooldown(float(self.redemption_cooldown.text))
-      need_save = True
-    if need_save:
-      config.relay.set_need_save(True)
-      self.status_label.set_text('Settings updated')
-    else:
-      self.status_label.set_text('No settings were changed')
+    def reset_softmax():
+      config.relay.reset_softmax()
+      status_label.text = 'Modifier history reset'
 
-  @flx.reaction('restore_button.pointer_click')
-  def _default_button_clicked(self, *events):
-    config.relay.resetAll()
-    self.status_label.set_text('Reset to saved values')
-
-  @flx.reaction('reset_button.pointer_click')
-  def _reset_button_clicked(self, *events):
-    config.relay.reset_softmax()
-    self.status_label.set_text('Modifier history reset')
-
-
-class ModifierView(flx.VBox):
-
-  def init(self):
-    with flx.HBox():
-      flx.Label(style="text-align:left", text='Available Modifiers')
-      self.enable_all = flx.Button(text='Enable All')
-      self.disable_all = flx.Button(text='Disable All')
-      flx.Label(flex=1, text=' ')
-    with flx.TreeWidget(flex=1, max_selected=1, minsize=(300,300)) as self.tree:
-      if len(config.relay.modifier_data) > 0:
-        for mod, data in config.relay.modifier_data.items():
-          self.mod_items.append(flx.TreeItem(text=data['name'], checked=data['active']))
-        else:
-          for i in range(4):
-            self.mod_items.append(flx.TreeItem(text='Modifier ' + str(i+1), checked=False))
-    self.debug_line = flx.Label(text='')
-
-  @flx.action
-  def set_data(self, data):
-    # This is a brute-force way to do it. Update only what's necessary?
-    # Remove old tree items
-    for item in self.tree.children:
-      item.set_parent(None)
-      item.dispose()
-    for mod, mod_data in data:
-      with self.tree:
-        flx.TreeItem(text=mod_data['name'], checked=mod_data['active'])
-
-  @flx.reaction('enable_all.pointer_click')
-  def _enable_all_button_clicked(self, *events):
-    pass
-
-  @flx.reaction('disable_all.pointer_click')
-  def _disable_all_button_clicked(self, *events):
-    pass
-  
-  @flx.reaction('tree.children**.checked')
-  def on_tree_checked(self, *events):
-    for ev in events:
-      key = ev.source.text.lower()
-      if key in config.relay.modifier_data:
-        config.relay.modifier_data[key]['active'] = ev.new_data
-        self.debug_line.set_text('Modifier ' + ev.source.text + ' active = ' + ev.new_data)
-      else:
-        self.debug_line.set_text('Fake Modifier ' + ev.source.text + ' active = ' + ev.new_data)
-
-  
+    with ui.row().classes('gap-2'):
+      ui.button('Save', on_click=save_settings)
+      ui.button('Restore', on_click=restore_settings)
+      ui.button('Reset Modifier History', on_click=reset_softmax)

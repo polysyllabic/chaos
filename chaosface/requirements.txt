@@ -1,5 +1,6 @@
 numpy
-flexx
 twitchAPI
 requests
 tomlkit
+fastapi
+nicegui
