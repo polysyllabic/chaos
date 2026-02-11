@@ -1,9 +1,10 @@
 #---------------------------------------------------------------------------------------------------
 # Twitch Controls Chaos (TCC)
-# Configuration file to support a TCC  game.
+# Configuration file to support a TCC game.
 #
 # The settings defined here are those that are required to run a specific game through the Chaos
 # engine. The basic settings for the engine itself are controlled in the chaosconfig.toml file.
+# The syntax for this file is documented in chaosConfigFiles.md
 #
 # Note that if you edit this file while the chaos engine is running, you must reload the game
 # so the chaos engine can re-read the updated file.
@@ -40,28 +41,16 @@ touchpad_inactive_delay = 0.02
 # true if you want the second method.
 touchpad_velocity = false
 
-# After the touchpad value is calculated by one of the two algorithms above, the resulting value
-# is multiplied by this scaling factor. Scaling can be set separately for each axis.
+# Scaling factor to apply to the reslt of the velocity/distance calculation.
 # For touchpad_velocity = true, try [ 0.12, 0.12 ] for the x/y scales
 touchpad_scale_x = 1.1
 touchpad_scale_y = 1.1
 
-# The skew defines an offset to apply to the axis value when the velocity is non-zero. The
-# sign of the skew is the same as the sign of the velocity. In other words, if the derivative is
-# positive, the skew is added to the result; if the velocity is negative, the skew is subtractecd.
+# Offset to apply to non-zero axis values.
 touchpad_skew = 30
 
 #--------------------------------------------------------------------------------------------------
 # Command Map
-#
-# Defines a semantic map between the game's controls and the controller buttons/axes that the game
-# expects. If you have altered your command mapping in the game, you can change the default values
-# here. A command is defined by specifying a name and controllor signal to bind to it.
-# - name: The label used to refer to the action in the elsewhere in this configuration file.
-#     Command names must be unique, but you can define multiple names to point to the same signal.
-#     This allows for aliases, so you can use different command names in different contexts.
-# - binding: The controller signal (button, axis, etc.) attached to this command. These labels
-#     ("L1", "X", etc.) are hard-coded values and cannot be altered in the configuration file.
 [[command]]
 name = "interact"
 binding = "TRIANGLE"
@@ -170,37 +159,6 @@ binding = "DY"
 
 #--------------------------------------------------------------------------------------------------
 # Game Conditions
-#
-# Conditions are used to test the state of events coming from the controller.
-#
-# - name: The name by which the condition is identified in the TOML file (Required)
-# - while: (for tranient conditions only) A list of commands that must be true according to the
-#   real-time state of the controller
-# - set_on: (for persistent conditions only) A command that will set a persistent trigger to true
-#   when its incomming state exceeds the threshold
-# - clear_on (for persisent conditions only): A command that will set a persistent trigger to false
-#   when its incomming state exceeds the threshold
-# - threshold: The threshold proportion (between 0 and 1) that a signal value must reach to trigger
-#   the condition. (Optional. Default = 1) The threshold is ignored for buttons.
-# - thresholdType: The test applied to the threshold. The following keys correspond to the types
-#       defined in ThresholdType.
-#        - "greater" or ">": The value of the signal must be greater than the specified proportion
-#        - "greater_equal" or ">=": The value of the signal must be greater than or equal to the
-#          specified proportion
-#        - "less" or "<": The value of signal must be less than the specified proportion
-#        - "less_equal" or "<=" absolute value of signal must be less than or equal to the specified
-#          proportion
-#        - "magnitude": The absolute value of the signal must be greater than or equal to the
-#              specified proportion (Default)
-#        - "distance": requires 2 axes in the condition: Checks the Pythagorean distance of both axes
-#              from center.
-#
-# Notes: for >, >=, <, and <= types, the sign of the signal matters. For all threhold types except
-# distance, if more than one command is defined in 'while', the same threshold applies to all. This
-# means the test will only work if each command has the same maximum value. If you have different
-# categories of signal or different thresholds, you should create separate conditions and
-# chain them together in a condition trigger.
-#
 [[condition]]
 name = "aiming"
 while = [ "aiming" ]
@@ -1229,7 +1187,7 @@ amplitude = 1.0
 
 [[modifier]]
 name = "Random Movement"
-description = "Random joystick motion."
+description = "Random joystick motion"
 type = "formula"
 applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", "vertical camera"  ]
 groups = [ "movement", "view" ]

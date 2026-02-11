@@ -13,7 +13,7 @@
 chaos_toml = "1.0"
 
 # game: User-friendly name of the game this configuration file defines.
-game = "Horizon Zero Dawn"
+game = "Horizon Zero Dawn (PS4)"
 
 # General controller settings
 [controller]
@@ -32,27 +32,19 @@ active_modifiers = 3
 # Lifetime (exclusive of pauses) of an individual modifier, in seconds.
 time_per_modifier = 180.0
 
-# This section defines the parameters controlling how controller signals are remapped from one
-# class of signal to another
-[remapping]
-# The touchpad parameters control the formula to convert from touchpad to axis events based on the
-# change in axis value over time (derivative). The formula is scale * derivative + skew. This
-# result is then clipped to the limits of the joystick value.
-# touchpad_scale defines the default scaling applied.
-touchpad_scale = 0.12
-# touchpad_condition specifies a condition for which an alternate scaling is defined. If the
-# condition is defined, the engine will check the if this condition is currently met, and if it is,
-# the derivative will be multiplied by the value of touchpad_scale_if. If the condition is false,
-# or if touchpad_condition is not defined, then touchpad_scale is used. The touchpad_condition
-# value must be a defined command. If you want the same scaling to apply to all states, comment out
-# both the scale_on and the scale_if lines.
-touchpad_condition = "aiming"
-# touchpad_scale_if is the scaling factor used when touchpad_condition is true
-touchpad_scale_if = 0.04
-# An offset to apply to the axis value when the derivative is non-zero. The sign of the skew is
-# the same as the sign of the derivative. In other words, if the derivative is positive, the skew
-# is added to the result, and the derivative is negative, the skew is subtractecd.
+# Time (in seconds) before the touchpad will be reset to inactive.
+touchpad_inactive_delay = 0.02
+
+# If true, use velocity, if false, use distance for calculation
+touchpad_velocity = true
+
+# Multiply touchpad value by this factor
+touchpad_scale_x = 0.12
+touchpad_scale_y = 0.12
+
+# Skew to add to touchpad result
 touchpad_skew = 30
+
 #--------------------------------------------------------------------------------------------------
 # Command Mapping
 [[command]]
@@ -193,20 +185,6 @@ name = "menu exit"
 sequence = [ { event="press", command = "deselect" },
              { event="delay", delay= 0.05 } ]
 
-# Tab left through sub-menus on the same basic parent menu screen. We don't use this in TLOU 2,
-# so the sequence is left blank. (This sequence must exist with this name if the chaos engine needs
-# to scroll through a set of menu tabs.)
-[[sequence]]
-name = "tab left"
-sequence = [ ]
-
-# Tab right through sub-menus on the same basic parent menu screen. We don't use this in TLOU 2,
-# so the sequence is left blank. (This sequence must exist with this name if the chaos engine needs
-# to scroll through a set of menu tabs.)
-[[sequence]]
-name = "tab right"
-sequence = [ ]
-
 # Navigate upward one item in a list of menu options. (This sequence must exist with this name if
 # the chaos engine uses the menu.)
 [[sequence]]
@@ -260,22 +238,22 @@ name = "No Reload/Shoot"
 description = "Can't reload or draw the bow while aiming."
 type = "disable"
 groups = [ "combat" ]
-appliesTo = [ "reload", "shoot" ]
-condition = [ "aiming" ]
+applies_to = [ "reload", "shoot" ]
+while = [ "aiming" ]
 
 [[modifier]]
 name = "No Weapon Wheel"
 description = "You can't open the weapon wheel"
 type = "disable"
 groups = [ "combat" ]
-appliesTo = [ "weapon wheel" ]
+applies_to = [ "weapon wheel" ]
 
 [[modifier]]
 name = "Hoarder"
 description = "Cannot use bombs or traps"
 type = "disable"
 groups = [ "combat" ]
-appliesTo = [ "use" ]
+applies_to = [ "use" ]
 filter = "above"
 
 [[modifier]]
@@ -290,110 +268,110 @@ name = "Literally Melee Only"
 description = "Nothing but melee. Literally"
 type = "disable"
 groups = [ "combat" ]
-appliesTo = ["interact", "dodge", "jump", "slide", "weapon wheel", "aiming", "move sideways",
+applies_to = ["interact", "dodge", "jump", "slide", "weapon wheel", "aiming", "move sideways",
              "move forward/back", "horizontal camera", "vertical camera", "cycle toos/traps", "use"]
 
 [[modifier]]
 name = "Pacifist%"
-description = "No shooting or melee. Good luck, NPC friends!"
+description = "No shooting or melee."
 type = "disable"
 groups = [ "combat" ]
-appliesTo = [ "light melee", "heavy melee", "shoot" ]
+applies_to = [ "light melee", "heavy melee", "shoot" ]
 
 [[modifier]]
 name = "No Jumping"
 description = "No climbing or jumping"
 type = "disable"
 groups = [ "movement" ]
-appliesTo = [ "jump" ]
+applies_to = [ "jump" ]
 
 [[modifier]]
 name = "No Slow-Mo"
 description = "No slow motion. Aiming is still allowed"
 type = "disable"
 groups = [ "combat" ]
-appliesTo = [ "jump" ]
-condition = [ "aiming" ]
+applies_to = [ "jump" ]
+while = [ "aiming" ]
 
 [[modifier]]
 name = "No Multi-Shot"
 description = "Double and triple shots are disabled"
 type = "disable"
 groups = [ "combat" ]
-appliesTo = [ "reload" ]
-condition = [ "aiming" ]
+applies_to = [ "reload" ]
+while = [ "aiming" ]
 
 [[modifier]]
 name = "No Grab"
 description = "Swiper no swiping! No looting or interacting with anything. Say goodbye to the everything button."
 type = "disable"
 groups = [ "interact" ]
-appliesTo = [ "interact" ]
+applies_to = [ "interact" ]
 
 [[modifier]]
 name = "No Crouching"
 description = "And you thought you were going to sneak through this area"
 type = "disable"
 groups = [ "movement" ]
-appliesTo = [ "crouch" ]
-beginSequence = [ { event = "release", command = "crouch" } ]
+applies_to = [ "crouch" ]
+begin_sequence = [ { event = "release", command = "crouch" } ]
 
 [[modifier]]
 name = "No Dodge Roll"
 description = "Stand and fight!"
 type = "disable"
 groups = [ "movement" ]
-appliesTo = [ "dodge" ]
-beginSequence = [ { event = "release", command = "dodge" } ]
+applies_to = [ "dodge" ]
+begin_sequence = [ { event = "release", command = "dodge" } ]
 
 [[modifier]]
 name = "No Horizontal Aim"
 description = "The horizontal camera is disabled"
 type = "disable"
 groups = [ "view" ]
-appliesTo = [ "horizontal camera" ]
+applies_to = [ "horizontal camera" ]
 
 [[modifier]]
 name = "Disable Camera"
 description = "Good luck with aiming and looking around!"
 type = "disable"
 groups = [ "view" ]
-appliesTo = [ "vertical camera", "horizontal camera" ]
+applies_to = [ "vertical camera", "horizontal camera" ]
 
 [[modifier]]
 name = "Disable D-pad"
 description = "Inventory selection is disabled"
 type = "disable"
 groups = [ "combat", "inventory" ]
-appliesTo = [ "select weapon", "select consumable" ]
+applies_to = [ "select weapon", "select consumable" ]
 
 [[modifier]]
 name = "Moose"
 description = "The moose is dead. The moose does not move. (Disables movement)"
 type = "disable"
 groups = [ "movement" ]
-appliesTo = [ "move forward/back", "move sideways" ]
+applies_to = [ "move forward/back", "move sideways" ]
 
 [[modifier]]
 name = "Only Strafe Movement"
 description = "Side-to-side movement is disabled. Only forward/back motion is allowed."
 type = "disable"
 groups = [ "movement" ]
-appliesTo = [ "move sideways" ]
+applies_to = [ "move sideways" ]
 
 [[modifier]]
 name = "No Strafing"
 description = "Forwards/back movement is disabled. Only side-to-side motion is allowed."
 type = "disable"
 groups = [ "movement" ]
-appliesTo = [ "move forward/back" ]
+applies_to = [ "move forward/back" ]
 
 [[modifier]]
 name = "Only Aim Movement"
 description = "Movement is disabled if not aiming"
 type = "disable"
 groups = [ "movement" ]
-appliesTo = [ "move forward/back", "move sideways" ]
+applies_to = [ "move forward/back", "move sideways" ]
 unless = [ "aiming" ]
 
 [[modifier]]
@@ -401,23 +379,23 @@ name = "Aim In Place"
 description = "Movement is disabled if aiming"
 type = "disable"
 groups = [ "movement" ]
-appliesTo = [ "move forward/back", "move sideways" ]
-condition = [ "aiming" ]
+applies_to = [ "move forward/back", "move sideways" ]
+while = [ "aiming" ]
 
 [[modifier]]
 name = "No Aiming Camera"
 description = "Camera is disabled if aiming"
 type = "disable"
 groups = [ "view" ]
-appliesTo = [ "vertical camera", "horizontal camera" ]
-condition = [ "aiming" ]
+applies_to = [ "vertical camera", "horizontal camera" ]
+while = [ "aiming" ]
 
 [[modifier]]
 name = "Nascar"
 description = "There is no going right in Nascar. Right movement/camera disabled"
 type = "disable"
 groups = [ "movement", "view" ]
-appliesTo = [ "move sideways", "horizontal camera" ]
+applies_to = [ "move sideways", "horizontal camera" ]
 filter = "above"
 
 [[modifier]]
@@ -425,7 +403,7 @@ name = "Zoolander"
 description = "We are not an ambiturner, but at least we can look right. Left movement/camera disabled."
 type = "disable"
 groups = [ "movement", "view" ]
-appliesTo = [ "move sideways", "horizontal camera" ]
+applies_to = [ "move sideways", "horizontal camera" ]
 filter = "below"
 
 [[modifier]]
@@ -433,7 +411,7 @@ name = "No Backward Movement"
 description = "Moving backwards is not allowed"
 type = "disable"
 groups = [ "movement" ]
-appliesTo = [ "move forward/back" ]
+applies_to = [ "move forward/back" ]
 filter = "above"
 
 [[modifier]]
@@ -441,30 +419,49 @@ name = "No Forward Movement"
 description = "Moving forward is not allowed"
 type = "disable"
 groups = [ "movement" ]
-appliesTo = [ "move forward/back" ]
+applies_to = [ "move forward/back" ]
 filter = "below"
 
-# == Invert Modifiers
+# == Scaling Modifiers
 [[modifier]]
 name = "Inverted"
 description = "Inverts the vertical axis for aiming"
-type = "invert"
+type = "scaling"
 groups = [ "view" ]
-appliesTo = [ "vertical camera" ]
+applies_to = [ "vertical camera" ]
+amplitude = -1
 
 [[modifier]]
 name = "Moonwalk"
 description = "Be like Michael Jackson! Trying to walk forward will actually make you go backward."
-type = "invert"
+type = "scaling"
 groups = [ "movement" ]
-appliesTo = [ "move forward/back" ]
+applies_to = [ "move forward/back" ]
+amplitude = -1
 
 [[modifier]]
 name = "Sideways Moonwalk"
 description = "Go left to go right and go right to go left"
-type = "invert"
+type = "scaling"
 groups = [ "movement" ]
-appliesTo = [ "move sideways" ]
+applies_to = [ "move sideways" ]
+amplitude = -1
+
+[[modifier]]
+name = "Max Sensitivity"
+description = "Goodbye precision aiming. Joystick postions multiplied by 5."
+type = "scaling"
+groups = [ "movement", "view" ]
+applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", "vertical camera"  ]
+amplitude = 5.0
+
+[[modifier]]
+name = "Min Sensitivity"
+description = "It's like slomo, but not for the enemies. Joystick positions divided by 2.5."
+type = "scaling"
+groups = [ "movement", "view" ]
+applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", "vertical camera"  ]
+amplitude = 0.4
 
 # == Cooldown Modifiers ==
 [[modifier]]
@@ -472,111 +469,104 @@ name = "Bad Stamina"
 description = "Running is disabled after 2 seconds and takes 4 seconds to recharge."
 type = "cooldown"
 groups = [ "movement" ]
-appliesTo = [ "dodge/sprint" ]
-timeOn = 2.0
-timeOff = 4.0
+applies_to = [ "dodge/sprint" ]
+while = [ "movement", "sprint" ]
+trigger = [ "dodge/sprint", "vertical movement", "horizontal movement" ]
+cumulative = true
+time_on = 2.0
+time_off = 4.0
 
 [[modifier]]
 name = "Snapshot"
 description = "You can only aim for 1 second at a time, so take that shot quickly."
 type = "cooldown"
 groups = [ "combat" ]
-appliesTo = [ "aiming" ]
-timeOn = 1.0
-timeOff = 3.0
+applies_to = [ "aiming" ]
+trigger = [ "aiming" ]
+time_on = 1.0
+time_off = 3.0
 
 # == Repeat Modifiers ==
-#
-# Repeat modifiers apply a command in a cycle
-#
-# In addition to the general parameters required for all modules, the following parameters are
-# defined:
-# - timeOn: Length of time to allow the command before going into cooldown. (Required)
-# - timeOff: Length of time spent in cooldown, where the command is blocked. (Required)
-#
-# Note: Although the appliesTo key takes an array, this mod type expects only a single
-# command. All but the first will be ignored.
-#
 [[modifier]]
 name = "Factions Pro"
 description = "Keeping things toxic with teabagging"
 type = "repeat"
 groups = [ "movement" ]
-appliesTo = [ "crouch" ]
-timeOn = 0.1
-timeOff = 0.6
-beginSequence = [{ event = "release", command = "crouch" }]
-finishSequence = [{ event = "release", command = "crouch" }]
+applies_to = [ "crouch" ]
+time_on = 0.1
+time_off = 0.6
+begin_sequence = [{ event = "release", command = "crouch" }]
+finish_sequence = [{ event = "release", command = "crouch" }]
 
 [[modifier]]
 name = "Keep Jumping"
 description = "Repeated presses of jump"
 type = "repeat"
 groups = [ "movement" ]
-appliesTo = [ "jump" ]
-timeOn = 0.1
-timeOff = 2.0
-beginSequence = [{ event = "release", command = "jump" }]
-finishSequence = [{ event = "release", command = "jump" }]
+applies_to = [ "jump" ]
+time_on = 0.1
+time_off = 2.0
+begin_sequence = [{ event = "release", command = "jump" }]
+finish_sequence = [{ event = "release", command = "jump" }]
 
 [[modifier]]
 name = "Rachy Flail"
 description = "The only way to melee is to follow the master techniques of RachyMonster"
 type = "repeat"
 groups = [ "combat" ]
-appliesTo = [ "melee" ]
-timeOn = 0.1
-timeOff = 1.1
-beginSequence = [{ event = "release", command = "melee" }]
-finishSequence = [{ event = "release", command = "melee" }]
+applies_to = [ "melee" ]
+time_on = 0.1
+time_off = 1.2
+begin_sequence = [{ event = "release", command = "melee" }]
+finish_sequence = [{ event = "release", command = "melee" }]
 
 [[modifier]]
 name = "Keep Dodging"
 description = "Repeaated dodges. Don't stand too near a ledge"
 type = "repeat"
 groups = [ "movement" ]
-appliesTo = [ "dodge" ]
-timeOn = 0.1
-timeOff = 2.0
-beginSequence = [{ event = "release", command = "dodge" }]
-finishSequence = [{ event = "release", command = "dodge" }]
+applies_to = [ "dodge" ]
+time_on = 0.1
+time_off = 2.0
+begin_sequence = [{ event = "release", command = "dodge" }]
+finish_sequence = [{ event = "release", command = "dodge" }]
 
 [[modifier]]
 name = "Periodic Focus Mode"
 description = "Stop, look, listen to your heart, hear what it's saying."
 type = "repeat"
 groups = [ "view" ]
-appliesTo = [ "focus" ]
-timeOn = 3.0
-timeOff = 8.0
-beginSequence = [{ event = "release", command = "swap/listen" }]
-finishSequence = [{ event = "release", command = "swap/listen" }]
+applies_to = [ "focus" ]
+time_on = 3.0
+time_off = 8.0
+begin_sequence = [{ event = "release", command = "swap/listen" }]
+finish_sequence = [{ event = "release", command = "swap/listen" }]
 
 [[modifier]]
 name = "Force Running"
 description = "To move is to run (mostly)"
 type = "repeat"
 groups = [ "movement" ]
-appliesTo = [ "dodge/sprint" ]
-timeOn = 4.0
-timeOff = 0.1
-forceOn = true
-beginSequence = [{ event = "release", command = "dodge/sprint" }]
-finishSequence = [{ event = "release", command = "dodge/sprint" }]
+applies_to = [ "dodge/sprint" ]
+time_on = 4.0
+time_off = 0.1
+force_on = [ 1 ]
+begin_sequence = [{ event = "release", command = "dodge/sprint" }]
+finish_sequence = [{ event = "release", command = "dodge/sprint" }]
 
 [[modifier]]
 name = "Leeroy Jenkins"
 description = "Alright let's do this! LEEEEROOOOOY NNNJEEEENNKIINNS!!! (Holds forward and sprint)"
 type = "repeat"
 groups = [ "movement" ]
-appliesTo = [ "dodge/sprint" ]
-beginSequence = [ { event="release", command = "dodge/sprint"},
+applies_to = [ "dodge/sprint" ]
+begin_sequence = [ { event="release", command = "dodge/sprint"},
       { event ="hold", command = "move forward/back", value = -128 } ]
-forceOn = true
-blockWhileBusy = [ "move forward/back" ]
-timeOn = 4.0
-timeOff = 0.1
-finishSequence = [ { event="release", command = "move forward/back"},
+force_on = [ 1, -128 ]
+block_while_busy = [ "vertical movement" ]
+time_on = 4.0
+time_off = 0.1
+finish_sequence = [ { event="release", command = "move forward/back"},
        { event="release", command = "dodge/sprint"}  ]
 
 [[modifier]]
@@ -584,29 +574,12 @@ name = "Force Aiming"
 description = "The aiming button is held"
 type = "repeat"
 groups = [ "combat" ]
-appliesTo = [ "aiming" ]
-timeOn = 4.0
-timeOff = 0.1
-forceOn = true
+applies_to = [ "aiming" ]
+time_on = 4.0
+time_off = 0.1
+force_on = [ 1 ]
 
 # == Remap Modifiers ==
-#
-# Remap modifiers swap controller signals. Unlike other types of modifiers, these operate on the
-# signal names (L1, RX, etc.) rather than the defined commands.
-#
-# In addition to the general parameters required for all modules, the following parameters are
-# defined:
-#
-# remap: an array of inline tables defining the remapping. The following keys are defined:
-#   - from: The signal as received from the controller
-#   - to: The signal that will be sent to the console in place of the 'from' signal. If an
-#     axis is being mapped to a button, positive axis signals are mapped to this button.
-#   - to_neg: When an axis is mapped to a button, negative axis values are sent to this signal.
-#   - to_min: Boolean. If true, the 'to' signal will be set to the minimum value when mapping
-#     a button to an axis. If false, the 'to' signal will be set to the maximum value.
-#   - threshold: Proportion of maximum axis signal before sending the signal to a button.
-#   - invert: Boolean. If true, the sign of the signal is flipped (e.g., -1 becomes 1, etc.)
-#   - sensitivity: A scaling factor. The from signal is divided by this factor during remapping
 [[modifier]]
 name = "D-pad Rotate"
 description = "Rotates the D-pad inputs clockwise"
@@ -640,7 +613,7 @@ name = "Swap D-Pad/Left Joystick"
 description = "Retro-style motion and an odd analog inventory selector"
 type = "remap"
 signals = [ "LX", "LY" ]
-disableSignals = true
+disable_signals = true
 remap = [
       {from = "DX", to = "LX"},
       {from = "DY", to = "LY"},
@@ -652,7 +625,7 @@ name = "Swap Shapes/Right Joystick"
 description = "Analog actions and digital camera movement"
 type = "remap"
 signals = [ "RX", "RY" ]
-disableSignals = true
+disable_signals = true
 remap = [
       {from = "RX", to = "SQUARE", to_neg = "CIRCLE", threshold=0.5},
       {from = "RY", to = "X", to_neg = "TRIANGLE", threshold=0.5},
@@ -687,7 +660,7 @@ remap = [
 name = "Touchpad Aiming"
 description = "No more aiming with the joystick. Finally making use of the touchpad!"
 type = "remap"
-signals = [ "RX", "RY" ]
+disable_signals = [ "RX", "RY" ]
 remap = [
       {from = "TOUCHPAD_ACTIVE", to="NOTHING"},
       {from = "TOUCHPAD_X", to="RX"},
@@ -750,54 +723,36 @@ description = "Randomly remaps trigger/bumper buttons (L1, R1, L2, R2)"
 type = "remap"  
 random_remap = [ "L1", "L2", "R1", "R2" ]
 
+# === Formula Modifiers ===
 [[modifier]]
-name = "Max Sensitivity"
-description = "Goodbye precision aiming. Joystick postions multiplied by 5."
+name = "Random Movement"
+description = "Random joystick motion"
 type = "formula"
+applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", "vertical camera"  ]
 groups = [ "movement", "view" ]
-appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
-scaling = 5.0
-
-[[modifier]]
-name = "Min Sensitivity"
-description = "It's like slomo, but not for the enemies. Joystick positions divided by 2.5."
-type = "formula"
-groups = [ "movement", "view" ]
-appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
-scaling = 0.4
-
-[[modifier]]
-name = "Drunk"
-description = "Random joystick motion. Also don't push things too far, or you may stumble (go prone)"
-type = "formula"
-appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
-groups = [ "movement", "view" ]
-offsetMagnitute = 78
-offsetPeriod = 2.0
-onMinMax = [ "crouch/prone" ]
-minMaxLength = 1.0
+formula_type = "janky"
+amplitude = 0.6
+period_length = 5.0
 
 [[modifier]]
 name = "Mega Scope Sway"
 description = "Good luck landing shots"
 type = "formula"
 groups = [ "combat", "view" ]
-appliesTo = [ "horizontal camera", "vertical camera" ]
-condition =  [ "aiming" ]
-offsetMagnitude = 4.0 # sin(((t+1.6)*i )*4.0) * JOYSTICK_MAX
-timerAmp = 3.0
+applies_to = [ "horizontal camera", "vertical camera" ]
+while =  [ "aiming" ]
+formula_type = "eight_curve"
+period_length = 0.5 
+amplitude = 0.5
 
 # === Sequence Modifier ===
-#
-# Sequence modifiers execute an arbitrary sequence of commands, either once (at the start or end of
-# the mod's lifetime), or in a cycle.
 [[modifier]]
 name = "Desk Pop"
 description = "We honor the flag, and you crap on it when you don't shoot your gun https://www.youtube.com/watch?v=wWZTTtE5_zQ"
 type = "sequence"
 groups = [ "combat" ]
-blockWhileBusy = "ALL"
-beginSequence = [
+block_while_busy = "ALL"
+begin_sequence = [
   { event = "press", command = "select weapon", delay = 1.0 },
   { event = "hold", command = "aiming", delay = 1.0 },
   { event = "press", command ="shoot" },
@@ -805,14 +760,35 @@ beginSequence = [
   ]
 
 [[modifier]]
+name = "Stumblebum"
+description = "Fast movement will make you go prone"
+type = "sequence"
+groups = [ "movement"]
+block_while_busy = [ "dodge/sprint", "crouch/prone" ]
+while = [ "fast movement" ]
+trigger = [ "vertical movement", "horizontal movement", "dodge/sprint" ]
+cycle_delay = 1.0
+repeat_sequence = [  
+  { event = "press", command = "dodge/sprint", delay = 0.1 },
+  { event = "press", command = "crouch/prone", delay = 0.8 },
+  { event = "release", command = "crouch/prone"},
+  { event = "release", command = "dodge/sprint"}
+  ]
+begin_sequence = [ { event = "release", command = "dodge/sprint" },
+                  { event = "release", command = "crouch/prone" }]
+finish_sequence = [{ event = "release", command = "dodge/sprint" },
+                  { event = "release", command = "crouch/prone" }]
+
+[[modifier]]
 name = "Double Tap"
 description = "It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins."
 type = "sequence"
 groups = [ "combat" ]
-blockWhileBusy = [ "shoot" ]
-condition = [ "shooting" ]
-startDelay = 0.2
-repeatSequence = [
+block_while_busy = [ "aiming", "shoot" ]
+while = [ "aiming" ]
+trigger = [ "shoot" ]
+start_delay = 0.2
+repeat_sequence = [
   { event = "release", command = "shoot", delay = 1.0 },
   { event = "hold", command = "shoot", delay = 0.2 },
   { event = "release", command = "shoot" }
@@ -823,22 +799,21 @@ name = "Use Items"
 description = "Shoots or throws 6 of whatever item is currently equipped. No effect for medkits."
 type = "sequence"
 groups = [ "combat", "inventory" ]
-blockWhileBusy = [ "aiming", "reload/toss" ]
-beginSequence = [
+block_while_busy = [ "aiming", "reload/toss" ]
+begin_sequence = [
   { event="hold", command = "aiming", delay = 1.0 },
   { event="press", command = "shoot", repeat = 6, delay = 0.25 },
   { event="release", command = "aiming" }
   ]
-
 
 [[modifier]]
 name = "Rubbernecking"
 description = "Woah! What's behind you? Invokes a periodic, 180-degree quick turn."
 type = "sequence"
 groups = [ "movement" ]
-blockWhileBusy = [ "jump", "aiming", "move forward/back", "move sideways" ]
-startDelay = 6.0
-cycleDelay = 0.1
+block_while_busy = [ "jump", "aiming", "vertical movement", "horizontal movement" ]
+start_delay = 6.0
+cycle_delay = 0.1
 repeatSequence = [
    { event = "release", command = "jump" },
    { event = "release", command = "aiming" },
@@ -848,33 +823,13 @@ repeatSequence = [
    { event = "release", command = "jump" }
    ]
 
-# === Menu Modifiers ===
-#
-# Menu modifiers select an item in the game menu and (if applicable) set it to a particular
-# value for the lifetime of the modifier. When the modifier is removed, the value is restored
-# to its previous state.
-#
-# In addition to the general parameters required for all modules, the following parameters are
-# defined:
-#
-# item:  The menu item to be selected. This must be the name of an item/submenu defined in the menu
-#        layout.
-# value: An integer indicating the value to set the menu item to. Items that are "select" types do
-#        not require a value.
-[[modifier]]
-name = "Restart Checkpoint"
-description = "Best served prior to the end of a long encounter."
-groups = [ "debuff" ]
-type = "menu"
-menu_items = [{entry = "restart" }]
-reset_on_finish = false
-
+# === Delay Modifiers ===
 [[modifier]]
 name = "Input Delay"
 description = "Introduces a 0.2 second delay to the controller"
 type = "delay"
 groups = [ "debuff", "movement", "view", "inventory", "combat" ]
-appliesTo = "ALL"
+applies_to = "ALL"
 delay = 0.2
 
 [[modifier]]
@@ -882,7 +837,7 @@ name = "Melee Delay"
 description = "Introduces a 0.5 second delay to melee presses"
 type = "delay"
 groups = [ "debuff", "combat" ]
-appliesTo = [ "light melee", "heavy melee" ]
+applies_to = [ "light melee", "heavy melee" ]
 delay = 0.5
 
 [[modifier]]
@@ -890,7 +845,7 @@ name = "Jump Delay"
 description = "Introduces a 2.0 second delay to jump presses"
 type = "delay"
 groups = [ "debuff", "movement" ]
-appliesTo = [ "jump" ]  
+applies_to = [ "jump" ]  
 delay = 2.0
 
 [[modifier]]
@@ -898,7 +853,7 @@ name = "Dodge Delay"
 description = "Introduces a 0.5 second delay to dodging"
 type = "delay"
 groups = [ "debuff", "movement" ]
-appliesTo = [ "dodge" ]  
+applies_to = [ "dodge" ]  
 delay = 0.5
 
 [[modifier]]
@@ -906,7 +861,7 @@ name = "Aim Delay"
 description = "Introduces a 1 second delay to aiming"
 type = "delay"
 groups = [ "debuff", "combat" ]
-appliesTo = [ "aiming" ]  
+applies_to = [ "aiming" ]  
 delay = 1.0
 
 [[modifier]]
@@ -914,7 +869,7 @@ name = "Shooting Delay"
 description = "Introduces a 0.5 second delay to shooting"
 type = "delay"
 groups = [ "debuff", "combat" ]
-appliesTo = [ "shoot" ]  
+applies_to = [ "shoot" ]  
 delay = 0.5
 
 [[modifier]]
@@ -922,7 +877,7 @@ name = "Select Delay"
 description = "Introduces a 5 second delay to selecting weapons or consumables"
 type = "delay"
 groups = [ "debuff", "inventory" ]
-appliesTo = [ "select weapon", "select consumable" ]
+applies_to = [ "select weapon", "select consumable" ]
 delay = 5.0
 
 [[modifier]]
@@ -930,9 +885,10 @@ name = "Joystick Delay"
 description = "Introduces a 0.2 second delay to movement and aiming."
 type = "delay"
 groups = [ "debuff", "movement", "view" ]
-appliesTo = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
+applies_to = [ "move sideways", "move forward/back", "horizontal camera", "vertical camera"  ]
 delay = 0.2
 
+#=== Parent Modifiers ===
 [[modifier]]
 name = "Mystery"
 description = "Applies a random modifier"
@@ -948,8 +904,10 @@ random = true
 value = 5
 
 [[modifier]]
-name = "Navigation Assistance"
-description = "Keeps pointing camera in direction of story progression"
+name = "Drunk"
+description = "Random joystick motion. Also don't push things too far, or you may stumble (go prone)"
 type = "parent"
-children = [ "Enable Navigation Assistance", "Periodic Navigation Assistance"]
+groups = [ "movement", "view" ]
+children = ["Random Movement", "Stumblebum"]
+
 
