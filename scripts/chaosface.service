@@ -1,12 +1,14 @@
 [Unit]
-Description=ChaosController interceptor
+Description=Twitch Controls Chaos interface
 After=network.target
 
 [Service]
 Type=simple
+WorkingDirectory=/usr/local/chaos
+Environment=PYTHONUNBUFFERED=1
 Restart=always
 RestartSec=2
-ExecStart=/usr/bin/python3 /home/pi/chaos/chaosface/chaosface/apps/TwitchControlsChaos.py
+ExecStart=/usr/local/chaos/venv/bin/python -m chaosface.apps.TwitchControlsChaos
 #User=pi
 
 [Install]

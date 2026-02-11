@@ -1,12 +1,13 @@
 [Unit]
-Description=ChaosController interceptor
+Description=Twitch Controls Chaos engine
 After=network.target
 
 [Service]
 Type=simple
+WorkingDirectory=/usr/local/chaos
 Restart=always
 RestartSec=1
-ExecStart=/bin/bash /usr/local/chaos/startchaos.sh
+ExecStart=/usr/local/chaos/startchaos.sh
 
 [Install]
 WantedBy=multi-user.target
