@@ -6,7 +6,6 @@
 import logging
 
 from flexx import flx
-from twitchbot import cfg
 
 import chaosface.config.globals as config
 import chaosface.config.token_utils as util
@@ -19,16 +18,19 @@ class ConnectionSetup(flx.PyWidget):
     
     label_style = "text-align:right"
     field_style = "background-color:#BBBBBB;text-align:center"
-    bot_oauth = util.generate_irc_oauth(cfg['client_id'])
+    client_id = config.relay.get_attribute('client_id')
+    bot_oauth = util.generate_irc_oauth(client_id)
     logging.debug(f'Bot oauth url={bot_oauth}')
-    pubsub_oauth = util.generate_auth_url(cfg['client_id'], util.Scopes.PUBSUB_CHANNEL_POINTS, util.Scopes.PUBSUB_BITS)
-    logging.debug(f'Pubsub oauth url={pubsub_oauth}')
+    eventsub_oauth = util.generate_auth_url(
+      client_id, util.Scopes.CHANNEL_READ_REDEMPTIONS, util.Scopes.BITS_READ
+    )
+    logging.debug(f'EventSub oauth url={eventsub_oauth}')
     bot_instructions=('To get the bot\'s OAuth token, '
       '<a href="{bot}" target="_blank">log in as your bot and then click here.</a> ' 
       'Paste the generated token into the Bot OAuth field.')
-    pubsub_instructions=('To use bits or points redemptions, you must also get a separate OAuth token. '
-      'Log in with your streamer\'s account <a href="{pubsub}"target="_blank">and click here for a '
-      'PubSub token.</a>.')
+    eventsub_instructions=('To use bits or points redemptions, you must also get a separate OAuth token. '
+      'Log in with your streamer\'s account <a href="{eventsub}"target="_blank">and click here for an '
+      'EventSub token.</a>.')
 
     with flx.VBox():
       with flx.GroupWidget(flex=1, title="Twitch Connection"):
@@ -38,7 +40,7 @@ class ConnectionSetup(flx.PyWidget):
               flx.Label(style=label_style, text="Streamer Channel:")
               flx.Label(style=label_style, text="Bot Name:")
               flx.Label(style=label_style, text="Bot OAuth Token:")
-              flx.Label(style=label_style, text="PubSub OAuth Token:")
+              flx.Label(style=label_style, text="EventSub OAuth Token:")
             with flx.VBox(flex=1):
               self.channel_name = flx.LineEdit(style=field_style, text=config.relay.channel_name)
               self.bot_name = flx.LineEdit(style=field_style, text=config.relay.bot_name)
@@ -46,7 +48,7 @@ class ConnectionSetup(flx.PyWidget):
               self.pubsub_oauth = flx.LineEdit(style=field_style, text=config.relay.pubsub_oauth, password_mode=True)
           with flx.VBox(flex=1):
             flx.Label(html=bot_instructions.format(bot=bot_oauth), wrap=True)
-            flx.Label(html=pubsub_instructions.format(pubsub=pubsub_oauth), wrap=True)
+            flx.Label(html=eventsub_instructions.format(eventsub=eventsub_oauth), wrap=True)
       with flx.GroupWidget(flex=1, title="Chaos Engine Connection"):
         with flx.HBox():
           with flx.VBox(flex=1):
@@ -145,4 +147,3 @@ class ConnectionSetup(flx.PyWidget):
     else:
       self.status_message.set_text('No Change')
     
-

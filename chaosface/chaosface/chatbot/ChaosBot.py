@@ -4,42 +4,609 @@
 """
   The Twitch Bot to monitor chat for votes and other commands.
 """
+import asyncio
 import logging
+import random
+import threading
+import time
+from contextlib import suppress
+from typing import Callable, Optional, Protocol
 
-from flexx import flx
-from twitchbot import BaseBot, Channel, Message
+from twitchAPI.chat import Chat, ChatEvent, ChatMessage, EventData
+from twitchAPI.eventsub.websocket import EventSubWebsocket
+from twitchAPI.helper import first
+from twitchAPI.twitch import Twitch
+from twitchAPI.type import AuthScope
 
-import chaosface.config.globals as config
+
+def _clean_oauth(token: str) -> str:
+  if not token:
+    return ''
+  return token.removeprefix('oauth:').strip()
 
 
-class ChaosBot(BaseBot):
+class ChaosBotContext(Protocol):
+  """Strict behavior contract expected by ChaosBot."""
 
-  def __init__(self):
-    super().__init__()
-    self.channel: Channel = None
+  @property
+  def channel_name(self) -> str:
+    ...
+
+  @property
+  def bot_oauth(self) -> str:
+    ...
+
+  @property
+  def pubsub_oauth(self) -> str:
+    ...
+
+  @property
+  def points_redemptions(self) -> bool:
+    ...
+
+  @property
+  def bits_redemptions(self) -> bool:
+    ...
+
+  @property
+  def connected(self) -> bool:
+    ...
+
+  @property
+  def voting_type(self) -> str:
+    ...
+
+  @property
+  def redemption_cooldown(self) -> float:
+    ...
+
+  @property
+  def points_reward_title(self) -> str:
+    ...
+
+  @property
+  def bits_per_credit(self) -> int:
+    ...
+
+  @property
+  def multiple_credits(self) -> bool:
+    ...
+
+  @property
+  def raffle_open(self) -> bool:
+    ...
+
+  @raffle_open.setter
+  def raffle_open(self, value: bool) -> None:
+    ...
+
+  @property
+  def raffle_start_time(self):
+    ...
+
+  @raffle_start_time.setter
+  def raffle_start_time(self, value) -> None:
+    ...
+
+  @property
+  def reset_mods(self) -> bool:
+    ...
+
+  @reset_mods.setter
+  def reset_mods(self, value: bool) -> None:
+    ...
+
+  @property
+  def force_mod(self) -> str:
+    ...
+
+  @force_mod.setter
+  def force_mod(self, value: str) -> None:
+    ...
+
+  def get_attribute(self, key: str):
+    ...
+
+  def get_mod_description(self, mod: str) -> str:
+    ...
+
+  def get_balance_message(self, user: str) -> str:
+    ...
+
+  def about_tcc(self) -> str:
+    ...
+
+  def explain_voting(self) -> str:
+    ...
+
+  def explain_redemption(self) -> str:
+    ...
+
+  def explain_credits(self) -> str:
+    ...
+
+  def list_active_mods(self) -> str:
+    ...
+
+  def list_candidate_mods(self) -> str:
+    ...
+
+  def step_balance(self, user: str, delta: int) -> int:
+    ...
+
+  def set_balance(self, user: str, balance: int) -> int:
+    ...
+
+  def get_balance(self, user: str) -> int:
+    ...
+
+  def mod_enabled(self, mod: str):
+    ...
+
+  def set_mod_enabled(self, mod: str, enabled: bool) -> str:
+    ...
+
+
+class ChaosBot:
+  """
+  Twitch bot runtime with no direct dependency on UI globals.
+
+  The `context` object is expected to provide the attributes/methods used throughout this class.
+  """
+  def __init__(
+    self,
+    context: ChaosBotContext,
+    on_connected: Optional[Callable[[bool], None]] = None,
+    on_vote: Optional[Callable[[int, str], None]] = None,
+  ):
+    self._ctx = context
+    self._thread: threading.Thread = None
+    self._loop: asyncio.AbstractEventLoop = None
+    self._ready = threading.Event()
+    self._shutdown = threading.Event()
+    self._channel_name = ''
+
+    self._chat_twitch: Twitch = None
+    self._event_twitch: Twitch = None
+    self._chat: Chat = None
+    self._eventsub: EventSubWebsocket = None
+
+    self._raffle_task: asyncio.Task = None
+    self._raffle_entries = set()
+    self._last_apply_time = 0.0
+    self._on_connected = on_connected or (lambda value: None)
+    self._on_vote = on_vote or (lambda index, user: None)
+
+  def _get_event_loop(self):
+    return self._loop
+
+  def run_threaded(self):
+    if self._thread and self._thread.is_alive():
+      return
+    self._ready.clear()
+    self._shutdown.clear()
+    self._thread = threading.Thread(target=self._run_forever, daemon=True)
+    self._thread.start()
+    self._ready.wait(timeout=10.0)
+
+  def _run_forever(self):
+    self._loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(self._loop)
+    self._ready.set()
+    try:
+      self._loop.run_until_complete(self._main())
+    finally:
+      with suppress(Exception):
+        pending = asyncio.all_tasks(self._loop)
+        for task in pending:
+          task.cancel()
+        self._loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+      self._loop.close()
+      self._loop = None
+
+  async def _main(self):
+    while not self._shutdown.is_set():
+      try:
+        await self._connect()
+        while not self._shutdown.is_set():
+          await asyncio.sleep(0.25)
+      except Exception:
+        logging.exception('Chatbot connection failed')
+      finally:
+        await self._disconnect()
+        self._emit_connected(False)
+      if not self._shutdown.is_set():
+        await asyncio.sleep(5.0)
+
+  async def _connect(self):
+    client_id = self._ctx.get_attribute('client_id')
+    self._channel_name = self._ctx.channel_name.strip().lstrip('#').lower()
+    bot_token = _clean_oauth(self._ctx.bot_oauth)
+    event_token = _clean_oauth(self._ctx.pubsub_oauth)
+
+    if not client_id:
+      raise ValueError('No Twitch client_id is configured')
+    if not self._channel_name:
+      raise ValueError('No channel name is configured')
+    if not bot_token:
+      raise ValueError('No bot OAuth token is configured')
+
+    self._chat_twitch = await Twitch(client_id, authenticate_app=False)
+    await self._chat_twitch.set_user_authentication(
+      bot_token,
+      [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT],
+      validate=False,
+    )
+
+    self._chat = await Chat(self._chat_twitch)
+    self._chat.register_event(ChatEvent.READY, self._on_chat_ready)
+    self._chat.register_event(ChatEvent.MESSAGE, self._on_chat_message)
+    self._chat.start()
+
+    await self._start_eventsub(client_id, event_token)
+    self._emit_connected(True)
+    logging.info('Connected to Twitch chat for channel %s', self._channel_name)
+
+  async def _start_eventsub(self, client_id: str, event_token: str):
+    need_eventsub = self._ctx.points_redemptions or self._ctx.bits_redemptions
+    if not need_eventsub:
+      return
+    if not event_token:
+      logging.warning('Bits/points redemptions are enabled, but EventSub OAuth token is missing')
+      return
+
+    self._event_twitch = await Twitch(client_id, authenticate_app=False)
+    scopes = [AuthScope.BITS_READ, AuthScope.CHANNEL_READ_REDEMPTIONS]
+    await self._event_twitch.set_user_authentication(event_token, scopes, validate=False)
+
+    broadcaster_id = await self._get_broadcaster_id(self._event_twitch, self._channel_name)
+    if not broadcaster_id:
+      logging.warning('Unable to resolve broadcaster ID for %s', self._channel_name)
+      return
+
+    self._eventsub = EventSubWebsocket(self._event_twitch)
+    self._eventsub.start()
+
+    if self._ctx.points_redemptions:
+      await self._eventsub.listen_channel_points_custom_reward_redemption_add(
+        broadcaster_id, self._on_points_redemption
+      )
+    if self._ctx.bits_redemptions:
+      await self._eventsub.listen_channel_cheer(broadcaster_id, self._on_channel_cheer)
+
+  async def _get_broadcaster_id(self, twitch: Twitch, channel_name: str) -> str:
+    try:
+      user = await first(twitch.get_users(logins=[channel_name]))
+      if user:
+        return user.id
+    except Exception:
+      logging.exception('Could not resolve broadcaster id')
+      return ''
+    return ''
+
+  async def _on_chat_ready(self, ready_event: EventData):
+    await ready_event.chat.join_room(self._channel_name)
+
+  async def _on_chat_message(self, msg: ChatMessage):
+    message = (msg.text or '').strip()
+    user_name = (getattr(getattr(msg, 'user', None), 'name', None) or '').strip().lower()
+    if not message or not user_name:
+      return
+
+    if message.startswith('!'):
+      await self._handle_command(user_name, message)
+      return
+
+    if not self._ctx.connected or self._ctx.voting_type == 'DISABLED':
+      return
+    if message.isdigit():
+      vote_num = int(message) - 1
+      if vote_num < 0:
+        return
+      self._emit_vote(vote_num, user_name)
+
+  def _emit_connected(self, value: bool):
+    try:
+      self._on_connected(value)
+    except Exception:
+      logging.exception('Connected callback failed')
+
+  def _emit_vote(self, index: int, user: str):
+    try:
+      self._on_vote(index, user)
+    except Exception:
+      logging.exception('Vote callback failed')
+
+  async def _handle_command(self, author: str, message: str):
+    parts = message[1:].split()
+    if not parts:
+      return
+    cmd = parts[0].lower()
+    args = parts[1:]
+    is_streamer = author == self._channel_name
+
+    if cmd == 'chaos':
+      await self._cmd_chaos(args)
+      return
+    if cmd == 'mod':
+      if args:
+        await self.send_message(self._ctx.get_mod_description(' '.join(args)))
+      else:
+        await self.send_message('Usage: !mod <mod name>')
+      return
+    if cmd == 'mods':
+      await self._cmd_mods(args)
+      return
+    if cmd == 'credits':
+      target = args[0].lstrip('@').lower() if args else author
+      await self.send_message(self._ctx.get_balance_message(target))
+      return
+    if cmd == 'addcredits':
+      await self._cmd_add_credits(args, is_streamer)
+      return
+    if cmd == 'setcredits':
+      await self._cmd_set_credits(args, is_streamer)
+      return
+    if cmd in ('givecredits', 'givecredit'):
+      await self._cmd_give_credits(author, args)
+      return
+    if cmd == 'apply':
+      await self._cmd_apply(author, args, is_streamer)
+      return
+    if cmd == 'enable':
+      await self._cmd_enable_disable(args, True, is_streamer)
+      return
+    if cmd == 'disable':
+      await self._cmd_enable_disable(args, False, is_streamer)
+      return
+    if cmd == 'resetmods':
+      if is_streamer:
+        self._ctx.reset_mods = True
+      return
+    if cmd == 'raffle':
+      await self._cmd_raffle(args, is_streamer)
+      return
+    if cmd == 'join':
+      if self._ctx.raffle_open:
+        self._raffle_entries.add(author)
+      return
+    if cmd == 'startvote':
+      link = self._ctx.get_attribute('mod_list_link')
+      if link:
+        await self.send_message(self._ctx.get_attribute('msg_mod_list').format(link))
+
+  async def _cmd_chaos(self, args):
+    if not args:
+      await self.send_message(self._ctx.about_tcc())
+      return
+    sub = args[0].lower()
+    if sub == 'voting':
+      await self.send_message(self._ctx.explain_voting())
+    elif sub == 'apply':
+      await self.send_message(self._ctx.explain_redemption())
+    elif sub == 'credits':
+      await self.send_message(self._ctx.explain_credits())
+
+  async def _cmd_mods(self, args):
+    if not args:
+      link = self._ctx.get_attribute('mod_list_link')
+      if link:
+        await self.send_message(self._ctx.get_attribute('msg_mod_list').format(link))
+      return
+    sub = args[0].lower()
+    if sub == 'active':
+      await self.send_message(self._ctx.list_active_mods())
+    elif sub == 'voting':
+      await self.send_message(self._ctx.list_candidate_mods())
+
+  async def _cmd_add_credits(self, args, is_streamer: bool):
+    if not is_streamer:
+      return
+    if not args:
+      await self.send_message('Must specify a user to receive credits')
+      return
+    target = args[0].lstrip('@').lower()
+    amount = 1
+    if len(args) > 1:
+      try:
+        amount = int(args[1])
+      except ValueError:
+        await self.send_message('The amount must be a valid integer')
+        return
+      if amount <= 0:
+        await self.send_message('Amount to add must be positive')
+        return
+    self._ctx.step_balance(target, amount)
+    await self.send_message(self._ctx.get_balance_message(target))
+
+  async def _cmd_set_credits(self, args, is_streamer: bool):
+    if not is_streamer:
+      return
+    if len(args) < 2:
+      await self.send_message('Usage: !setcredits <user> <amount>')
+      return
+    target = args[0].lstrip('@').lower()
+    try:
+      amount = int(args[1])
+    except ValueError:
+      await self.send_message('The amount must be a valid integer')
+      return
+    if amount < 0:
+      await self.send_message('The amount cannot be negative')
+      return
+    self._ctx.set_balance(target, amount)
+    await self.send_message(self._ctx.get_balance_message(target))
+
+  async def _cmd_give_credits(self, author: str, args):
+    if not args:
+      await self.send_message('Usage: !givecredits <user> (amount)')
+      return
+    target = args[0].lstrip('@').lower()
+    amount = 1
+    if len(args) > 1:
+      try:
+        amount = int(args[1])
+      except ValueError:
+        await self.send_message('The amount must be a valid integer')
+        return
+      if amount < 1:
+        await self.send_message('The amount must be positive')
+        return
+    donor_balance = self._ctx.get_balance(author)
+    if donor_balance < amount and author != self._channel_name:
+      await self.send_message(self._ctx.get_balance_message(author))
+      return
+    self._ctx.step_balance(target, amount)
+    if author != self._channel_name:
+      self._ctx.step_balance(author, -amount)
+    plural = 's' if amount == 1 else ''
+    await self.send_message(f'@{author} has given @{target} {amount} mod credit{plural}')
+
+  async def _cmd_apply(self, author: str, args, is_streamer: bool):
+    if not args:
+      await self.send_message('Usage: !apply <mod name>')
+      return
+    if not is_streamer:
+      elapsed = time.monotonic() - self._last_apply_time
+      if elapsed < self._ctx.redemption_cooldown:
+        await self.send_message(self._ctx.get_attribute('msg_in_cooldown'))
+        return
+      if self._ctx.get_balance(author) <= 0:
+        await self.send_message(self._ctx.get_attribute('msg_no_credits'))
+        return
+
+    request = ' '.join(args)
+    status = self._ctx.mod_enabled(request)
+    if status is None:
+      await self.send_message(self._ctx.get_attribute('msg_mod_not_found').format(request))
+      return
+    if not status:
+      await self.send_message(self._ctx.get_attribute('msg_mod_not_active').format(request))
+      return
+
+    self._ctx.force_mod = request.lower()
+    self._last_apply_time = time.monotonic()
+    if not is_streamer:
+      self._ctx.step_balance(author, -1)
+    await self.send_message(self._ctx.get_attribute('msg_mod_applied'))
+
+  async def _cmd_enable_disable(self, args, enabled: bool, is_streamer: bool):
+    if not is_streamer:
+      return
+    if not args:
+      await self.send_message('Usage: !enable <mod name>' if enabled else 'Usage: !disable <mod name>')
+      return
+    request = ' '.join(args)
+    await self.send_message(self._ctx.set_mod_enabled(request, enabled))
+
+  async def _cmd_raffle(self, args, is_streamer: bool):
+    if not is_streamer:
+      return
+    if self._ctx.raffle_open:
+      await self.send_message('A raffle is already open')
+      return
+    raffle_length = int(self._ctx.get_attribute('raffle_time'))
+    if args:
+      try:
+        raffle_length = int(args[0])
+      except ValueError:
+        await self.send_message('Raffle time must be an integer')
+        return
+    if raffle_length < 30:
+      await self.send_message('Raffle time must be at least 30 seconds')
+      return
+    self._raffle_task = asyncio.create_task(self._raffle_timer_loop(raffle_length))
+
+  async def _raffle_timer_loop(self, raffle_length: int):
+    self._raffle_entries = set()
+    self._ctx.raffle_open = True
+    self._ctx.raffle_start_time = time.time()
+    interval = float(self._ctx.get_attribute('raffle_message_interval'))
+    time_elapsed = 0.0
+    while time_elapsed < raffle_length and not self._shutdown.is_set():
+      if time_elapsed == 0:
+        status = 'has begun'
+      else:
+        status = f'will close in {int(raffle_length - time_elapsed)} seconds'
+      notice = self._ctx.get_attribute('msg_raffle_open')
+      await self.send_message(notice.format(status=status))
+      await asyncio.sleep(interval)
+      time_elapsed = time.time() - self._ctx.raffle_start_time
+
+    self._ctx.raffle_open = False
+    if not self._raffle_entries:
+      await self.send_message('No one joined the raffle :(')
+    else:
+      winner = random.choice(list(self._raffle_entries))
+      self._ctx.step_balance(winner, 1)
+      await self.send_message(f"Congratulations @{winner}! You've won a modifier credit.")
+
+  async def _on_points_redemption(self, payload):
+    if not self._ctx.points_redemptions:
+      return
+    event = getattr(payload, 'event', payload)
+    reward = getattr(event, 'reward', None)
+    title = getattr(reward, 'title', '')
+    if title != self._ctx.points_reward_title:
+      return
+    user_name = (getattr(event, 'user_name', '') or '').lower()
+    if user_name:
+      balance = self._ctx.step_balance(user_name, 1)
+      await self.send_message(self._ctx.get_attribute('msg_user_balance').format(
+        user=user_name,
+        balance=balance,
+        plural='' if balance == 1 else 's',
+      ))
+
+  async def _on_channel_cheer(self, payload):
+    if not self._ctx.bits_redemptions:
+      return
+    event = getattr(payload, 'event', payload)
+    bits = int(getattr(event, 'bits', 0))
+    if bits < self._ctx.bits_per_credit:
+      return
+    credits = bits // self._ctx.bits_per_credit if self._ctx.multiple_credits else 1
+    user_name = (getattr(event, 'user_name', '') or '').lower()
+    if user_name and credits > 0:
+      balance = self._ctx.step_balance(user_name, credits)
+      await self.send_message(self._ctx.get_attribute('msg_user_balance').format(
+        user=user_name,
+        balance=balance,
+        plural='' if balance == 1 else 's',
+      ))
 
   async def send_message(self, msg: str):
-    if self.channel and msg:
-      await self.channel.send_message(msg)
+    if self._chat and msg:
+      await self._chat.send_message(self._channel_name, msg)
 
+  async def _disconnect(self):
+    if self._raffle_task and not self._raffle_task.done():
+      self._raffle_task.cancel()
+    self._raffle_task = None
+    self._ctx.raffle_open = False
 
-  # All we do here is look for potential votes. Commands are dispatched by the parent class and
-  # handled by the commands defined in the commands subdirectory
-  async def on_privmsg_received(self, msg: Message):
-    if config.relay.connected and config.relay.voting_type != 'DISABLED':
-      # A vote message must be a pure number
-      if msg.content.isdigit():
-        vote_num = int(msg.content) - 1
-        if vote_num >= 0:
-          flx.loop.call_soon(config.relay.tally_vote, vote_num, msg.author)
+    if self._eventsub:
+      with suppress(Exception):
+        await self._eventsub.stop()
+      self._eventsub = None
+    if self._chat:
+      with suppress(Exception):
+        self._chat.stop()
+      self._chat = None
+    if self._event_twitch:
+      with suppress(Exception):
+        await self._event_twitch.close()
+      self._event_twitch = None
+    if self._chat_twitch:
+      with suppress(Exception):
+        await self._chat_twitch.close()
+      self._chat_twitch = None
 
-  async def on_connected(self):
-    flx.loop.call_soon(config.relay.set_connected, True)
-
-  async def on_channel_joined(self, channel: Channel):
-    self.channel = channel
-
-if __name__ == "__main__":
-  logging.info("Starting ChaosBot...")
-  ChaosBot().run()
-  
+  def shutdown(self):
+    self._shutdown.set()
+    if self._loop and self._loop.is_running():
+      fut = asyncio.run_coroutine_threadsafe(self._disconnect(), self._loop)
+      with suppress(Exception):
+        fut.result(timeout=10.0)
+    if self._thread and self._thread.is_alive():
+      self._thread.join(timeout=10.0)

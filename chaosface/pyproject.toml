@@ -7,11 +7,12 @@ license = "GPL 3.0"
 readme = "README.rst"
 
 [tool.poetry.dependencies]
-python = "^3.6"
-PySimpleGUIWeb = "*"
-PythonTwitchbotFramework = "*"
+python = "^3.8"
+flexx = "*"
+twitchAPI = "*"
 pyzmq = "*"
 numpy = "*"
+requests = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

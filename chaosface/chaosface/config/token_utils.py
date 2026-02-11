@@ -1,12 +1,8 @@
 import requests
 
 class Scopes:
-    PUBSUB_BITS = 'bits:read'
-    PUBSUB_BITS_BADGE = 'bits:read'
-    PUBSUB_CHANNEL_POINTS = 'channel:read:redemptions'
-    PUBSUB_CHANNEL_SUBSCRIPTION = 'channel_subscriptions'
-    PUBSUB_MODERATOR_ACTIONS = 'channel:moderate'
-    PUBSUB_WHISPERS = 'whispers:read'
+    BITS_READ = 'bits:read'
+    CHANNEL_READ_REDEMPTIONS = 'channel:read:redemptions'
     CHAT_READ = 'chat:read'
     CHAT_EDIT = 'chat:edit'
     CHANNEL_MODERATE = 'channel:moderate'
@@ -17,6 +13,12 @@ class Scopes:
     MODERATOR_SHOUTOUT_MANAGE = 'moderator:manage:shoutouts'
     MODERATOR_BAN_MANAGE = 'moderator:manage:banned_users'
     MODERATOR_READ_CHATTERS = 'moderator:read:chatters'
+    PUBSUB_BITS = BITS_READ
+    PUBSUB_BITS_BADGE = BITS_READ
+    PUBSUB_CHANNEL_POINTS = CHANNEL_READ_REDEMPTIONS
+    PUBSUB_CHANNEL_SUBSCRIPTION = 'channel_subscriptions'
+    PUBSUB_MODERATOR_ACTIONS = CHANNEL_MODERATE
+    PUBSUB_WHISPERS = WHISPERS_READ
 
 VALIDATE_URL = 'https://id.twitch.tv/oauth2/validate'
 REDIRECT_URL = 'https://twitchapps.com/tmi/'

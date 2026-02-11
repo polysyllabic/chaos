@@ -18,12 +18,12 @@ import json
 import logging
 import math
 import queue
+import asyncio
 from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
 from flexx import flx
-from twitchbot import cfg
 
 from chaosface.chatbot.ChaosBot import ChaosBot
 
@@ -243,7 +243,6 @@ class ChaosRelay(flx.Component):
     for ev in events:
       if ev.new_value == True:
         self.save_config_info()
-        cfg.save()
         self.set_need_save(False)
 
   def save_config_info(self):
@@ -521,7 +520,9 @@ class ChaosRelay(flx.Component):
     The chatbot's send_message routine is async, so we must schedule it in the chatbot's event loop
     """
     if self.chatbot:
-      self.chatbot._get_event_loop().create_task(self.chatbot.send_message(msg))
+      loop = self.chatbot._get_event_loop()
+      if loop and loop.is_running():
+        loop.call_soon_threadsafe(asyncio.create_task, self.chatbot.send_message(msg))
 
   def queue_mod_command(self, command, mod_key):
     if mod_key and mod_key in self.modifier_data:
@@ -753,22 +754,18 @@ class ChaosRelay(flx.Component):
   def on_channel_name(self, *events):
     for ev in events:
       self.chaos_config['channel'] = ev.new_value
-      cfg['owner'] = ev.new_value
-      cfg['channels'] = [ev.new_value]
       self.update_channel_name(ev.new_value)
 
   @flx.reaction('bot_name')
   def on_bot_name(self, *events):
     for ev in events:
       self.chaos_config["nick"] = ev.new_value
-      cfg['nick'] = ev.new_value
       self.update_bot_name(ev.new_value)
       
   @flx.reaction('bot_oauth')
   def on_bot_oauth(self, *events):
     for ev in events:
       self.chaos_config["oauth"] = ev.new_value
-      cfg['oauth'] = ev.new_value
       self.update_bot_oauth(ev.new_value)
       
   @flx.reaction('pubsub_oauth')

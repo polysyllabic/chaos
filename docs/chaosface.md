@@ -6,7 +6,7 @@ Overview
 ========
 
 The Chaos interface, *chaosface*, is one of two main parts of the Twitch Controls Chaos (TCC)
-system for allowing Twitch chat to alter various aspects of gameplay in a Playstation game.
+system for allowing Twitch chat to alter various aspects of gameplay in a PlayStation game.
 Chaosface is a Python application that provides the connection between viewers in Twitch chat
 and the chaos engine that directly controls gameplay modifications (mods). This file provides
 reference documentation for the chaos interface. For a general overview and quick guide,

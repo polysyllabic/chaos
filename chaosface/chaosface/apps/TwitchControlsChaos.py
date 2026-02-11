@@ -19,10 +19,19 @@ from flexx import flx
 import chaosface.config.globals as config
 from chaosface.ChaosModel import ChaosModel
 from chaosface.chatbot.ChaosBot import ChaosBot
+from chaosface.chatbot.context import RelayBotContext
 from chaosface.gui.ActiveMods import ActiveMods
 from chaosface.gui.ChaosInterface import ChaosInterface
 from chaosface.gui.CurrentVotes import CurrentVotes
 from chaosface.gui.VoteTimer import VoteTimer
+
+
+def _on_bot_connected(connected: bool):
+  flx.loop.call_soon(config.relay.set_connected, connected)
+
+
+def _on_bot_vote(vote_num: int, user: str):
+  flx.loop.call_soon(config.relay.tally_vote, vote_num, user)
 
 
 def start_gui():
@@ -37,7 +46,12 @@ def start_gui():
 def twitch_controls_chaos(args):
   # Load the chatbot, but don't start it running yet. This gives us a chance to set the bot's
   # credentials on an initial run.
-  config.relay.chatbot = ChaosBot()
+  bot_context = RelayBotContext(config.relay)
+  config.relay.chatbot = ChaosBot(
+    context=bot_context,
+    on_connected=_on_bot_connected,
+    on_vote=_on_bot_vote,
+  )
 
   # Event loop to select the modifiers and communicate with the chaos engine
   model = ChaosModel()
@@ -55,5 +69,3 @@ if __name__ == "__main__":
   parser.add_argument("--reauthorize", help="Delete previous OAuth tokens and wait for new ones to attempt to connect")
   args = parser.parse_args()
   twitch_controls_chaos(args)
-
-

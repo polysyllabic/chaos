@@ -12,10 +12,10 @@ import logging
 import random
 import threading
 import time
+import asyncio
 
 import numpy as np
 from flexx import flx
-from twitchbot import cfg, is_config_valid
 
 import chaosface.config.globals as config
 from chaosface.communicator import ChaosCommunicator, EngineObserver
@@ -46,28 +46,32 @@ class ChaosModel(EngineObserver):
     that the credentials are valid, just that the user has entered something for all necessary
     fields.
     """
-    need_pubsub = (config.relay.bits_redemptions or config.relay.points_redemptions)
-    return (is_config_valid() and config.relay.channel_name != 'your_channel'
-      and (need_pubsub == False or config.relay.pubsub_oauth != 'oauth:'))
+    need_pubsub = config.relay.bits_redemptions or config.relay.points_redemptions
+    bot_oauth = (config.relay.bot_oauth or '').removeprefix('oauth:').strip()
+    pubsub_oauth = (config.relay.pubsub_oauth or '').removeprefix('oauth:').strip()
+    return (
+      config.relay.channel_name != 'your_channel'
+      and config.relay.bot_name != 'your_bot'
+      and bool(bot_oauth)
+      and (not need_pubsub or bool(pubsub_oauth))
+    )
 
   def configure_bot(self):
     """
     Start the bot after all necessary parameters have been entered.
     
-    The twitchbot framework we're using assumes the bot will start with good credentials to log
-    in, and if those credentials are changed, we need to completely restart the bot to log in
-    again. To handle the case of either a first run, where we have no log-in credentials at all,
-    or when we need to re-authorize the OAuth tokens, we enter a special waiting loop until the
-    necessary credentials are entered. The regular voting loop only starts after we have a
-    verified chat connection.
+    The chatbot implementation starts with whatever credentials currently exist, and if those
+    credentials are changed, we need to restart the bot to log in again. To handle either a first
+    run (no credentials yet) or OAuth re-authorization, we wait until required fields are filled
+    before starting the bot. The regular voting loop only starts after a verified chat connection.
     """
     
-    if cfg['client_id'] == 'CLIENT_ID':
-      cfg['client_id'] = config.relay.get_attribute('client_id')
     # Loop until user has entered the necessary credentials
-    while not self.complete_credentials():
+    while config.relay.keep_going and not self.complete_credentials():
       #logging.info("Waiting for user to enter complete bot credentials")
       time.sleep(config.relay.sleep_time())
+    if not config.relay.keep_going:
+      return
     # Start up the bot
     self.bot = config.relay.chatbot
     self.bot.run_threaded()
@@ -79,7 +83,7 @@ class ChaosModel(EngineObserver):
     force a new authorization by restarting the thread.
     """
     if self.bot:
-      self.bot._get_event_loop().run_until_complete(self.bot.shutdown)
+      self.bot.shutdown()
       # start the bot again
       self.configure_bot()    
 
@@ -140,8 +144,10 @@ class ChaosModel(EngineObserver):
     config.relay.engine_commands.put(to_send)
 
   def send_chat_message(self, msg: str):
-    if config.relay.chatbot:
-      self.bot._get_event_loop().run_until_complete(self.bot.send_message(msg))
+    if config.relay.chatbot and self.bot:
+      loop = self.bot._get_event_loop()
+      if loop and loop.is_running():
+        loop.call_soon_threadsafe(asyncio.create_task, self.bot.send_message(msg))
 
   def flash_pause(self):
     if self.paused_flashing_timer > 0.5 and config.relay.paused_bright == True:
