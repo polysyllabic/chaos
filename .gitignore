@@ -48,6 +48,9 @@ chaos/.vscode/settings.json
 # generated json files
 *.json
 
+# DOxygen files
+chaos/doc/html/*
+
 # virtual environments
 chaosface/venv/*
 chaosface/database.sqlite
