@@ -96,12 +96,14 @@ namespace Chaos {
      * portion is set to 1 regardless.
      */
     void addHold(std::shared_ptr<ControllerInput> signal, short value, unsigned int hold_time);
+
     /**
      * \brief Turns off the gamapad input signal.
      * \param signal The input signal the console expects to receive
-     * \param hold_time Time to hold the signal in microseconds.
+     * \param release_time Time to hold the signal in microseconds.
      */
     void addRelease(std::shared_ptr<ControllerInput> signal, unsigned int release_time);
+    
     /**
      * \brief Add a delay
      * \param delay Time to delay in microseconds

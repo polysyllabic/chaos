@@ -49,12 +49,18 @@ namespace Chaos {
    */
   class Game {
   public:
+    /**
+     * \brief Construct a new Game object
+     * 
+     * \param c Refernce to the controller object
+     */
     Game(Controller& c);
 
     /**
      * \brief Load game configuration file
      * 
      * \param configfile Name of the configuration file
+     * \param engine Pointer to the Chaos engine
      * \return true If loaded with non-fatal errors
      * \return false If had a fatal error while loading
      * 
@@ -117,11 +123,27 @@ namespace Chaos {
      */
     std::shared_ptr<Modifier> getModifier(const std::string& name) { return modifiers.getModifier(name); }
 
+    /**
+     * \brief Get the total number of defined modifiers available
+     * 
+     * 
+     */
     int getNumModifiers() { return modifiers.getNumModifiers(); } 
 
+    /**
+     * \brief Get the map that associates modifiers with their names
+     * 
+     * \return std::unordered_map<std::string, std::shared_ptr<Modifier>>& 
+     */
     std::unordered_map<std::string, std::shared_ptr<Modifier>>& getModifierMap() { return modifiers.getModMap();}
 
+    /**
+     * \brief Get the list of modifiers as a Json object
+     * 
+     * \return Json::Value 
+     */
     Json::Value getModList() { return modifiers.getModList(); }
+
 
     ControllerInputTable& getSignalTable() { return signal_table; }
     
@@ -138,6 +160,11 @@ namespace Chaos {
       return signal_table.matchesID(event, to_match);
     }
 
+    /**
+     * \brief Get the a reference to the game-menu object
+     * 
+     * \return GameMenu& 
+     */
     GameMenu& getMenu() { return menu; }
 
     std::shared_ptr<GameCommand> getCommand(const std::string& name);
@@ -264,7 +291,18 @@ namespace Chaos {
 
     std::shared_ptr<GameCondition> makeCondition(toml::table& config);
 
+    /**
+     * \brief Construct the menu from the configuraiton file
+     * 
+     * \param config The TOML configuration file
+     */
     void makeMenu(toml::table& config);
+
+    /**
+     * \brief Construct a menu item from the configuration file
+     *
+     * \param config The TOML configuration file
+     */
     void addMenuItem(toml::table& config);
 
   };

@@ -80,11 +80,11 @@ namespace Chaos {
     GameCommand(const std::string& cmd, std::shared_ptr<ControllerInput> bind);
 
     /**
-     * \brief Returns #this as a shared pointer
+     * \brief Returns shared pointer
      * 
      * \return std::shared_ptr<GameCommand> 
      *
-     * Since the pointer for this object is managed by std::shared_ptr, using #this
+     * Since the pointer for this object is managed by std::shared_ptr, using 'this'
      * directly is dangerous. Use this function instead.
      */
     std::shared_ptr<GameCommand> getptr() { return shared_from_this(); }

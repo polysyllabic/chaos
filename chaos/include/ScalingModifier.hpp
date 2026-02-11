@@ -33,18 +33,7 @@ namespace Chaos {
    * The incoming signal, x, will be transformed to $amplitude * x + offset$ and clipped to the
    * min/max values of the signal.
    * 
-   * The following keys are defined for this class of modifier:
-   *
-   * - name: A unique string identifying this mod. (_Required_)
-   * - description: An explanatation of the mod for use by the chat bot. (_Required_)
-   * - type = "scaling" (_Required_)
-   * - groups: A list of functional groups to classify the mod for voting. (_Optional_)
-   * - appliesTo: A commands affected by the mod. (_Required_)
-   * - amplitude: Amount to multiply the incoming signal by (_Optional. Default = 1_)
-   * - offset: Ammount to add to the incomming signal (_Optional. Default = 0_)
-   * - beginSequence: A sequence of button presses to apply during the begin() routine. (_Optional_)
-   * - finishSequence: A sequence of button presses to apply during the finish() routine. (_Optional_)
-   * - unlisted: A boolian that, if true, will cause the mod not to be reported to the chaos interface (_Optional_)
+   * The TOML syntax defining menu items is described in chaosConfigFiles.md
    */
   class ScalingModifier : public Modifier::Registrar<ScalingModifier> {
   private:

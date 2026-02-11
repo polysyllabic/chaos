@@ -56,8 +56,8 @@ namespace Chaos {
     /**
      * \brief Append a delay to the end of a sequence
      * 
-     * \param seq The sequence that is being created
-     * \param name The name of the defined sequence as given in the TOML file
+     * \param sequence The sequence that is being created
+     * \param delay The time in seconds to delay
      */
     void addDelayToSequence(Sequence& sequence, double delay);
     

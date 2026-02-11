@@ -34,65 +34,23 @@ namespace Chaos {
    * \brief Defines a single test of a game condition
    * 
    * Conditions are used to test check the state of events coming from the controller. There are
-   * two types of conditions: transient and persistent. A transient condition polls the current
-   * state of the controller. A persistent condition is set to true when a particular condition
-   * arrives and remains true until a different condition arrives that clears the condition.
-
-   * Transient conditions are defined in the 'while' parameter and compare the current state of
-   * the controller to the defined threshold value. More than one command can appear in the while
-   * parameter. How multiple commands are processed depends on the threshold type.  
+   * two types of conditions: transient and persistent.
    * 
-   * Persistent events define one command that sets the state and a different command that clears
-   * it. Only one command at a time can be checked for setting and clearing a persistent state.
+   * A transient condition polls the current state of the controller and compares the current
+   * state of a list of controller signals held in #while_conditions to a defined threshold value.
+   * More than one command can appear in the while parameter, but the way multiple commands are
+   * processed depends on the threshold type.
+   * 
+   * A persistent condition is set to true when a particular condition arrives and remains true
+   * until a different condition arrives that clears the condition. Persistent events define one
+   * command that sets the state and a different command that clears it. Only one command at a
+   * time can be checked for setting and clearing a persistent state.
    * 
    * Transient and persistent are mutually exclusive states, so a condition must define either the
    * while parameter or the set_on and clear_on parameters, but not both.
    * 
-   * Conditions are defined in the TOML file, and the following keys are allowed:
+   * The syntax for defining conditions in the TOML file is described in chaosCoonfigFiles.md
    *
-   * - name: The name by which the condition is identified in the TOML file (_Required_)
-   * - while: A list of commands that must be true according to the real-time state of the
-   * controller
-   *  - set_on: A command that will set a persistent trigger to true when its incomming state
-   * exceeds the threshold
-   *  - clear_on: A command that will set a persistent trigger to false when its incomming state
-   * exceeds the threshold
-   * - threshold: For axes, the threshold that a signal value must reach to trigger the condition,
-   * expressed as a proportion of the maximum value. (_Optional. Default = 1_)
-   * - thresholdType: The test applied to the threshold. The following keys correspond to the types
-   # defined in ThresholdType.
-   *     - "greater" or ">": ThresholdType::GREATER
-   *     - "greater_equal" or ">=": ThresholdType::GREATER_EQUAL
-   *     - "less" or "<": ThresholdType::LESS
-   *     - "less_equal" or "<=" ThresholdType::LESS_EQUAL
-   *     - "magnitude": ThresholdType::MAGNITUDE (_Default_)
-   *     - "distance": ThresholdType::DISTANCE
-   *
-   * The threshold must be a number in the range $0 \le x \le 1$ that reflects the proportion of
-   * the maximum value. It should therefore always be positive even when the sign of the incoming
-   * signal is negative. The threshold is ignored for buttons and will always be 1.
-   *
-   * If more than one command is defined in #while, the same threshold applies to all. This means
-   * the test will only work if each command has the same maximum value. If you have different
-   * categories of signal or different thresholds, you should create separate conditions and
-   * chain them together in a ConditionTrigger.
-   *
-   * The 'distance' threshold type checks the Pythagorean distance.
-   * 
-   * The default threshold and #thresholdType settings have the effect of returning a true
-   * condition on any non-zero signal from the specified game commands.
-   *
-   * Example TOML configuation settings:
-   *
-   *    [[condition]]
-   *    name = "aiming"
-   *    while = [ "aiming" ]
-   * 
-   *    [[condition]]
-   *    name = "movement"
-   *    while = [ "move forward/back", "move sideways" ]  
-   *    threshold = 0.2
-   *    threshold_type = "distance"
    *
    * You can test a condition in two ways. Calling the member function inCondition() polls
    * the real-time state of the controller for the condition. The function inCondition(event) 
@@ -203,7 +161,14 @@ namespace Chaos {
      */
     bool pastThreshold(DeviceEvent& event);
 
+    /**
+     * \brief Check if this condition is transient or persistent
+     * 
+     * \return true This condition tests the live state of the controller (transient)
+     * \return false This condition maintains a persistent state
+     */
     bool isTransient() { return !while_conditions.empty(); }
+
     /**
      * \brief Get the name of the condition as used in the TOML file
      * 

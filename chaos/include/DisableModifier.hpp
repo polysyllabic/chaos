@@ -26,48 +26,18 @@
 
 namespace Chaos {
 
-  enum class DisableFilter { ALL, ABOVE_THRESHOLD, BELOW_THRESHOLD };
+  enum class DisableFilter { ALL, ABOVE, BELOW};
 
   /**
    * \brief A modifier that disables a particullar list of commands from being passed to the
    * controller.
    *
-   * The following keys are defined for this class of modifier:
-   *
-   * - name: A unique string identifying this mod. (_Required_)
-   * - description: An explanatation of the mod for use by the chat bot. (_Required_)
-   * - type = "disable" (_Required_)
-   * - groups: A list of functional groups to classify the mod for voting. (_Optional_)
-   * - appliesTo: An array of commands affected by the mod. (_Required_)
-   * - filter: The portion of the values to block. (_Optional_) The following values are legal:
-   *     - all: All non-zero values are blocked, i.e., set to zero. (_Default_)
-   *     - below: Any values less than the threshold are blocked
-   *     - above: Any values greater than the threshold are blocked
-   *     .
-   * The default is 'all'.
-   * - filterThreshold: The threshold state above or below which signals will be filtered.
-   * The default is 0. (_Optional_)
-   * - condition: Specifies a game command other than those in the appliesTo list. The appliesTo
-   * commands will be blocked only if if the input signal of condition is equal to, above (for
-   * positive
-   *   thresholds) or below (for negative thresholds) the conditionThreshold.
-   * - conditionThreshold: The default is 1.
-   * - unless: Equivalent to 'condition', but the commands are disabled if the condition is NOT true.
-   * - gamestate: Only take action if the specified gamestate is true.
-   * - disableOnBegin: Game commands to disable (set to zero) when the mod is initialized.
-   *  The value can be either an array of game commands or the single string "ALL". The latter
-   *  is a shortcut to disable all defined game commands. (_Optional_)
-   * - beginSequence: A sequence of commands to execute during the begin() routine. See 
-   * SequenceModifier for an explanation of the TOML format for sequences. (_Optional_)
-   * - finishSequence: A sequence of commands to execute during the finish() routine. See 
-   * SequenceModifier for an explanation of the TOML format for sequences. (_Optional_)
+   * By default, we completely block the relevant signals, i.e., set them to 0. If a filter
+   * is set, we only block negative or positive values, which allows us to stop movement in
+   * one direction while allowing the other.
    */
   class DisableModifier : public Modifier::Registrar<DisableModifier> {
   protected:
-    /**
-     * Limit above or below which values will be disabled
-     */
-    int filterThreshold;
     /**
      * What type of filtering to apply to the signal
      */
@@ -78,7 +48,8 @@ namespace Chaos {
     /**
      * \brief The public constructor
      * \param config A TOML modifier-table object. If the constructor is properly dispatched, this
-     * object will contain the key/value pair 'type=disable'.
+     *        object will contain the key/value pair 'type=disable'.
+     * \param e Engine interface
      */
     DisableModifier(toml::table& config, EngineInterface* e);
 

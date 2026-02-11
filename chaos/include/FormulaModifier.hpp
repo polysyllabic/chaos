@@ -35,23 +35,25 @@ namespace Chaos {
    * \brief Modifier that alters the signal through a formula.
    *
    * Formula modifiers apply an offset to incoming signals according to a specified, time-dependent
-   * formula. Currently, we don't have the ability to parse a general formula, so you must select
-   * from a pre-defined formula types.
+   * formula, chosen from a pre-defined set. Currently, we support circles, figure-8s, and a "janky"
+   * pattern that produces an irregular up and down pattern.
    * 
-   * The following keys are defined for this class of modifier:
-   *
-   * - name: A unique string identifying this mod. (_Required_)
-   * - description: An explanatation of the mod for use by the chat bot. (_Required_)
-   * - type = "formula" (_Required_)
-   * - groups: A list of functional groups to classify the mod for voting. (_Optional_)
-   * - appliesTo: A commands affected by the mod. (_Required_)
-   * - amplitude: Proportion of the maximum  signal by (_Optional. Default = 1_)
-   * - period_length: Time in seconds before the formula completes its cycle (_Optional. Default = 1_)
-   * - beginSequence: A sequence of button presses to apply during the begin() routine. (_Optional_)
-   * - finishSequence: A sequence of button presses to apply during the finish() routine. (_Optional_)
-   * - unlisted: A boolian that, if true, will cause the mod not to be reported to the chaos interface (_Optional_)
+   * The modifier sets an amplitude, set by the user as a proportion of JOYSTICK_MAXIMUM (i.e.,
+   * approximately half the full range of an axis), and then multiplies that value by the formula
    * 
-   * Notes:
+   * Normally, axes should be passed in matched pairs, and the formula calculations assume that is
+   * true. If a single axis is passed, or if the axes are passed in irregular orders, the modifier
+   * will still run, but the results may not be what you expect give the name of the formula.
+   * 
+   * Formulas (all results multiplied by amplitude):
+   * 
+   * - circle:      axis 1 = sin(t)
+   *                axis 2 = cos(t)
+   * - eight_curve: axis 1 = sin(t)*cos(t)
+   *                axis 2 = sin(t)
+   * - janky:       axis 1 = (cos(t) + cos(2t)/2) * sin(t/5)/2
+   *                axis 2 = (cos(t+4) + cos(2t)/2) * sin((t+4)/5)/2
+   * 
    * Commands altered by formula modifiers should be axes only.
    */
   class FormulaModifier : public Modifier::Registrar<FormulaModifier> {

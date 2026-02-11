@@ -46,40 +46,41 @@ namespace Chaos {
     std::unordered_map<std::string, std::shared_ptr<MenuItem>> menu;
 
     std::shared_ptr<SequenceTable> defined_sequences;
-    // std::unordered_map<std::string, std::shared_ptr<Sequence>> defined_sequences;
-
-    bool remember_last;
-    bool hide_guarded;
 
     /**
-     * \brief Add commands necessary to navigate to this item from the top of main menu
-     * 
-     * \param seq Sequence to which the commands should be appended
-     *
-     * This only creates the commands to move to the menu item. It does not select or set it.
+     * Does this game leave each menu in the position that it was when the user left it.
      */
-    void moveTo(Sequence& seq);
+    bool remember_last;
+
+    /**
+     * Are guarded items skipped over or hidden from the user while the guard is true?
+     */
+    bool hide_guarded;
 
   public:
+    /**
+     * \brief Construct a new GameMenu object
+     */
     GameMenu() {}
 
     /**
-     * \brief Initialize the GameMenu from the game's configuration file
+     * \brief Cache a pointer to the list of defined sequences
      * 
      * \param sequences Pointer to the table of defined sequences
+     * 
+     * The menu system requires a series of sequences with fixed names to operate.
      */
     void setDefinedSequences(std::shared_ptr<SequenceTable> sequences) { defined_sequences = sequences; }
 
     /**
-     * \brief Set whether the menu system remembers the last position that the user left the
-     * menu.
+     * \brief Set whether the menu system remembers the last position that the user left the menu.
      * 
      * \param remember Does game re-enter menu sytem where last exited?
      * 
      * If true, we must reset each menu we enter to the top item (offset 0) before exiting, so that
      * we are in a known position when we open the menu the next time. Note: we do it this way
      * rather than remembering the position ourselves because the user may pause the game and use
-     * menu options themselves. In that circumstance, it's more practical for the user to remember
+     * menu options themselves. In that circumstance, it's more practical to ask the user to remember
      * to leave everything at the top rather than to try to remember and restore whatever position
      * the menus were in when the pause occurred.
      */
@@ -127,7 +128,7 @@ namespace Chaos {
 
     /**
      * \brief Update the offset correction when menu items are hidden or revealed
-     * \param The item whose visibility has changed
+     * \param changed The item whose visibility has changed
      *
      * This function is called by the menu item that has been hidden or revealed, so we alter the
      * offset correction for all other items that share the same parent and tab group.

@@ -37,28 +37,7 @@ namespace Chaos {
    * order ensures that all signals are in their ready-for-the-console state before modifiers
    * that are defined by game commands are applied.
    *
-   * The following fields are used to define a remap modifier in the TOML file:
-   *
-   * - name (required)
-   * - description (required)
-   * - type = "remap"
-   * - signals: An array of signals (expected to be axes) that the remap needs to process.
-   * - disableSignals: If true, all the signals lised in the signals list will all receive a 0 signal
-   * when the mod is initialized.
-   * - remap An array of the signals that will be remapped. Each remap definition should be
-   * contained in an inline table with the following possible keys:
-   *   - from (required): The signal we intercept from the controller
-   *   - to (required): The signal we pass to the console. For axis-to-button mapping, this is the
-   * button that receives positive signals.
-   *   - to_neg (optional): For axis-to-button mapping, this is the button that receives negative
-   * signals.
-   *   - threshold (optional): The absolute value of the signal that must be received in order to
-   * trigger the remapping.
-   *   - to_min (optional): When mapping buttons-to-axis, if true, the axis is set to the joystick
-   * minimum. If false, it is set to the joystick maximum.
-   *   - sensitivity (optional): A divisor that scales the incomming accelerometer signal down.
-   *   .
-   * - random_remap: A list of controls that will be randomly remapped among one another.
+   * The TOML syntax defining menu items is described in chaosConfigFiles.md
    * 
    * A remap modifier may specify *either* a fixed list of remaps with the "remap" key *or* a list
    * of controls that will be randomly scrambled with the "random_remap" key, but not both.
@@ -89,11 +68,6 @@ namespace Chaos {
      * 
      */
     bool random;
-
-    /**
-     * If true, sends events to zero out the button on initialization.
-     */
-    bool disable_signals;
 
     /**
      * \brief The list of signals affected by this mod.

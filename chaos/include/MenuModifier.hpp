@@ -27,10 +27,12 @@
 namespace Chaos {
 
   /**
-   * \brief A modifier that executes a particular commands in the game's menu system.
+   * \brief A modifier that executes specified commands in the game's menu system.
    *
-   * Mods of this type are defined in the TOML configuration file with the following keys in
-   * adition to the required name and description:
+   * These mods reference and depend on the menu layout defined in the GameMenu and MenuItem
+   * classes.
+   * 
+   * The TOML syntax defining menu modifiers is described in chaosConfigFiles.md
    */
   class MenuModifier : public Modifier::Registrar<MenuModifier> {
   private:
@@ -48,9 +50,16 @@ namespace Chaos {
     bool reset_on_finish;
 
   public:
+    /**
+     * \brief Construct a new Menu Modifier object
+     * 
+     * \param config Handle to the TOML configuraiton file
+     * \param e Pointer to the Chaos engine
+     */
     MenuModifier(toml::table& config, EngineInterface* e);
 
     static const std::string mod_type;
+
     const std::string& getModType() { return mod_type; }
     
     void begin();

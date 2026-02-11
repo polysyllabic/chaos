@@ -28,54 +28,55 @@
 
 namespace Chaos {
 
+  /**
+   * \brief Enumeration of possible cooldown states
+   * 
+   * UNTRIGERED: The trigger condition for the monitored action hasn't occurred yet.
+   * ALLOW: The action has been triggered and we're allowing it for a set period of time.
+   * BLOCK: The allow-time has expired and we are in the cooldown period.
+   */
   enum class CooldownState { UNTRIGGERED, ALLOW, BLOCK };
+
   /**
    * \brief Modifier that allows an action for a set period of time and then blocks it until a
    * cooldown period has expired.
    *
-   * Example TOML definition:
-   *     [[modifier]]
-   *     name = "Bad Stamina"
-   *     description = "Running is disabled after 2 seconds and takes 4 seconds to recharge."
-   *     type = "cooldown"
-   *     groups = [ "movement" ]
-   *     applies_to = [ "dodge/sprint" ]
-   *     while = [ "movement", "sprint" ]
-   *     trigger = [ "dodge/sprint", "vertical movement", "horizontal movement" ]
-   *     cumulative = true
-   *     time_on = 2.0
-   *     time_off = 4.0
-   *
-   * The following keys are defined for this class of modifier:
-   *
-   * - name: A unique string identifying this mod. (_Required_)
-   * - description: An explanatation of the mod for use by the chat bot. (_Required_)
-   * - type = "cooldown" (_Required_)
-   * - groups: A list of functional groups to classify the mod for voting. (_Optional_)
-   * - appliesTo: A commands affected by the mod. (_Required_)
-   * - timeOn: Length of time to allow the command. (_Required_)
-   * - timeOff: Length of time spent in cooldown, where the command is blocked. (_Required_)
-   *
-   * Note: Although the appliesTo key takes an array, this mod type expects only a single
-   * command. All but the first will be ignored.
-   * 
    * \todo Allow cooldown to do things other than block a signal
    */
   class CooldownModifier : public Modifier::Registrar<CooldownModifier> {
 
   private:
+    /**
+     * Timer to track the cooldown cycle. While we're in the ALLOW phase, this timer
+     * increments until it hits the time_on limit. While we're in the BLOCK phase, this
+     * timer decrements until it hits 0, and then the cooldown is reset to INACTIVE.
+     */
     double cooldown_timer;
+
+    /**
+     * Current state of the cooldown
+     */
     CooldownState state;
+
+    /**
+     * If true, the allow-period only accumulates when the while-condition is true.
+     * If false, the cycle occurs whether or not a condition applies.
+     */
     bool cumulative;
+
     /**
      * Time that the event is allowed before we block it
      */
     double time_on;
+
     /**
      * Time that the event is held in cooldown before re-enabled.
      */
     double time_off;
 
+    /**
+     * Vector of signals that will start the trigger
+     */
     std::vector<std::shared_ptr<ControllerInput>> trigger;
 
   public:

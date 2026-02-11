@@ -29,33 +29,12 @@ namespace Chaos {
    * \brief Subclass of modifiers that cycles a command repeatedly throughout the lifetime of the
    * modifier.
    *
-   * These sequences can be set to repeat unconditionally or to begin only when triggered by a
-   * particular input condition.
+   * This is effectively a specialized sequence. It can be set to repeat unconditionally or to
+   * begin only when triggered by a particular input condition.
    *
-   * The following keys are defined for this class of modifier:
+   * The TOML syntax defining menu items is described in chaosConfigFiles.md
    *
-   * - name: A unique string identifying this mod. (_Required_)
-   * - description: An explanatation of the mod for use by the chat bot. (_Required_)
-   * - type = "repeat" (_Required_)
-   * - groups: A list of functional groups to classify the mod for voting. (_Optional_)
-   * - appliesTo: A commands affected by the mod. (_Required_)
-   * - forceOn: A boolean flag that, if true, sets any incoming signals in the appliesTo list to
-   * - timeOn: Time in seconds to apply the command. (_Required_)
-   * - timeOff: Time in seconds to turn the command off. (_Required_)
-   * - disableOnStart: A boolean flag indicating whether to zero the commands listed in appliesTo
-   * during the begin() routine. (_Optional; default = false_)
-   * - disableOnFinish: A boolean flag indicating whether to zero the commands listed in appliesTo
-   * during the finish() routine. (_Optional; default = false_)
-   * - repeat: Number of times to repeat the on/off event before starting a new cycle. (_Optional_)
-   * - cycleDelay: Time in seconds to delay after one iteration of a cycle (all the repeats) before
-   * starting the next cycle. (_Optional; default = 0_)
-   * - blockWhileBusy: List of commands to block while the sequence is on.
-   * - startSequence: A sequence of commands to execute once in the begin() routine. (_Optional_)
-   * - finishSequence: A sequence of commands to execute once in the finish() routine. (_Optional_)
-   *
-   * Sequences are build up of individual commands. Each command is defined in an inline table. See
-   * the SequenceModifier documentation for the format of commands.
-   *
+   * \todo Support cycling between an on-sequence and an of-sequence (defined in the config file)
    */
   class RepeatModifier : public Modifier::Registrar<RepeatModifier> {
 

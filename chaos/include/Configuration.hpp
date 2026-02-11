@@ -95,6 +95,12 @@ namespace Chaos {
      */
     std::string getListenerAddress() { return "tcp://*:" + std::to_string(listener_port); }
 
+    /**
+     * \brief Check if version found in TOML file matches what we expect
+     * 
+     * \param ver The version we expect
+     * \return true if matches, false otherwise
+     */
     bool matchVersion(const std::string& ver) { return toml_version == ver; }
   };
 };
