@@ -26,6 +26,11 @@
 
 using namespace Chaos;
 
+bool Touchpad::use_velocity;
+double Touchpad::scale_x;
+double Touchpad::scale_y;
+short Touchpad::skew;
+
 Touchpad::Touchpad() {
   timer.initialize();
 }
@@ -53,11 +58,11 @@ short Touchpad::getAxisValue(ControllerSignal tp_axis, short value) {
     // We're ignoring the second finger for now
     return 0;
   default:
-    throw std::runtime_error("Event passed to Touchpad::getVelocity not a TOUCHAPD axis signal");
+    throw std::runtime_error("Event passed to Touchpad::getVAxisValue not a TOUCHAPD axis signal");
   }  
   
   if (useVelocity()) {
-    axis_val = (short) (derivative(dd, value, timer.runningTime()) * velocity_scale);
+    axis_val = (short) (derivative(dd, value, timer.runningTime()) * scaling);
   } else {
     axis_val = (short) (distance(dd, value, timer.runningTime()) * scaling);
   }
@@ -97,10 +102,11 @@ double Touchpad::distance(DerivData* d, short current, double timestamp) {
   double ret = 0;
   // The timestamp difference won't be relevant unless we check for inactive time
   if (d->priorActive) {
-    d->prior[1] = current;
-    d->timestampPrior[1] = timestamp;
-    ret = d->prior[1] - d->prior[0];
+    // d->prior[1] = current;
+    // d->timestampPrior[1] = timestamp;
+    ret = current - d->prior[0];
   } else {
+    // Going active; set our base position
     d->priorActive = true;
     d->prior[0] = current;
     d->timestampPrior[0] = timestamp;

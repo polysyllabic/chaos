@@ -112,8 +112,11 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
 
 void Game::makeMenu(toml::table& config) {
   PLOG_VERBOSE << "Creating menu items menu";
+
+  // keep a pointer to the defined sequences for quick access
   menu.setDefinedSequences(sequences);
 
+  // General menuing options
   toml::table* menu_list = config["menu"].as_table();
   if (! config.contains("menu")) {
     PLOG_ERROR << "No 'menu' table found in configuration file";
@@ -155,7 +158,7 @@ void Game::makeMenu(toml::table& config) {
 void Game::addMenuItem(toml::table& config) {
 
   TOMLUtils::checkValid(config, std::vector<std::string>{"name", "type", "offset", "tab", "confirm",
-                        "initialState", "parent", "guard", "hidden", "counter", "counterAction"});
+                        "initial", "parent", "guard", "hidden", "counter", "counter_action"});
 
   std::optional<std::string> entry_name = config["name"].value<std::string>();
   if (! entry_name) {
@@ -187,12 +190,12 @@ void Game::addMenuItem(toml::table& config) {
   }
   short off = config["offset"].value_or(0);
   short tab = config["tab"].value_or(0);
-  short initial = config["initialState"].value_or(0);
+  short initial = config["initial"].value_or(0);
   bool hide = config["hidden"].value_or(false);
   bool confirm = config["confirm"].value_or(false);
 
   PLOG_VERBOSE << "-- offset = " << off << "; tab = " << tab <<
-      "; initial_state = " << initial << "; hidden = " << hide <<
+      "; initial state = " << initial << "; hidden = " << hide <<
       "; confirm = " << confirm;
 
   std::shared_ptr<MenuItem> parent;
@@ -222,23 +225,22 @@ void Game::addMenuItem(toml::table& config) {
     PLOG_ERROR << e.what();
   }
 
-  // CounterAction ignored for now
-/* 
   CounterAction action = CounterAction::NONE;
-  std::optional<std::string> action_name = config["counterAction"].value<std::string>();  
+  std::optional<std::string> action_name = config["counter_action"].value<std::string>();  
   if (action_name) {
     if (*action_name == "reveal") {
       action = CounterAction::REVEAL;
-    } else if (*action_name == "zeroReset") {
+    } else if (*action_name == "zero_reset") {
       action = CounterAction::ZERO_RESET;
     } else if (*action_name != "none") {
-      throw std::runtime_error("Unknown counterAction type: " + *action_name);
+      ++parse_errors;
+      PLOG_ERROR << "Unknown counter_action type: " << *action_name;
     }
-  } */
+  }
 
   PLOG_VERBOSE << "constructing menu item";
   std::shared_ptr<MenuItem> m = std::make_shared<MenuItem>(menu, *entry_name,
-      off, tab, initial, hide, opt, sel, confirm, parent, guard, counter);
+      off, tab, initial, hide, opt, sel, confirm, parent, guard, counter, action);
   
   if (! menu.insertMenuItem(*entry_name, m)) {
     ++parse_errors;
@@ -411,34 +413,38 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
   ret->setClearOn(cmd);
   }
 
-  // Default type is magnitude
-  ThresholdType threshold_type = ThresholdType::MAGNITUDE;
+  // Default type is above
+  ThresholdType threshold_type = ThresholdType::ABOVE;
   std::optional<std::string_view> thtype = config["threshold_type"].value<std::string_view>();
   if (thtype) {
-    if (*thtype == "greater" || *thtype == ">") {
+    if (*thtype == "greater") {
       threshold_type = ThresholdType::GREATER;
-    } else if (*thtype == "greater_equal" || *thtype == ">=") {
-      threshold_type = ThresholdType::GREATER_EQUAL;
-    } else if (*thtype == "less" || *thtype == "<") {
+    } else if (*thtype == "below") {
+      threshold_type = ThresholdType::BELOW;
+    } else if (*thtype == "less") {
       threshold_type = ThresholdType::LESS;
-    } else if (*thtype == "less_equal" || *thtype == "<=") {
-      threshold_type = ThresholdType::LESS_EQUAL;
     } else if (*thtype == "distance") {
-    threshold_type = ThresholdType::DISTANCE;
-    } else if (*thtype != "magnitude") {
-      PLOG_WARNING << "Invalid threshold_type '" << *thtype;
+      threshold_type = ThresholdType::DISTANCE;
+    } else if (*thtype != "above") {
+      PLOG_WARNING << "Invalid threshold_type '" << *thtype << "'. Using 'above'.";
     }
   }
 
   double proportion = config["threshold"].value_or(1.0);
-  if (proportion < 0 || proportion > 1) {
+  if (proportion < -1 || proportion > 1) {
     ++parse_warnings;
-    PLOG_WARNING << "Condition threshold must be between 0 and 1. Using 1";
+    PLOG_WARNING << "Condition threshold must be between -1 and 1. Using 1";
     proportion = 1.0;
+  } else if (proportion < 0) {
+    // Negative proportions only sensible for GREATER/LESS (signed) comnparisons
+    if (threshold_type != ThresholdType::GREATER && threshold_type != ThresholdType::LESS) {
+      proportion = std::abs(proportion);
+      PLOG_WARNING << "Proportion should be positive. Using absolute value.";
+    }
   }
   ret->setThreshold(proportion);
 
-  PLOG_VERBOSE << "Transient condition: " << *condition_name <<  "; " << ((thtype) ? *thtype : "magnitude") <<
+  PLOG_VERBOSE << "Condition: " << *condition_name <<  "; " << ((thtype) ? *thtype : "magnitude") <<
       " threshold proportion = " << proportion << " -> " << ret->getThreshold();
 
   return ret;
@@ -446,7 +452,7 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
 
 void Game::buildSequenceList(toml::table& config) {
 
-  // Set global parameters for sequences
+  // Set global parameters for controller
   Sequence::setPressTime(config["controller"]["button_press_time"].value_or(0.0625));
   Sequence::setReleaseTime(config["controller"]["button_release_time"].value_or(0.0625));
   

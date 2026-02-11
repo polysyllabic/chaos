@@ -33,15 +33,12 @@ namespace Chaos {
    * The following options are currently supported:
    * - NONE: Do nothing (_Default_)
    * - REVEAL: The menu item is shown when the counter is non-zero, hidden when it is zero.
-   * - ZERO_RESET:  
+   * - ZERO_RESET: When the counter reaches zero, reset this item to its default state
    */
   enum class CounterAction { NONE, REVEAL, ZERO_RESET};
 
   /**
    * \brief An object to hold a single entry in the game's menu system
-   *
-   * This is a virtual parent class. Different types of menu items are implemented as child
-   * classes.
    *
    * In order to support modifiers that alter game play by changing basic game settings, we need
    * to track the structure of the menu system. We do this by defining the a menu as a series of
@@ -51,69 +48,15 @@ namespace Chaos {
    * Menu modifiers reference the menu option they want to invoke and the engine will calculate
    * the complete series of button presses necessary to navigate to that option.
    * 
-   * A menu item has the following parameters defined in the configuration file:
-   * - name: A unique name for this menu item (_Required_)
-   * - type: The category of menu item (_Required_). The available types are:
-   *     - menu: Item is a submenu that appears in a standard list. These items serve as parents
-   * to other menu items.
-   *     - command: Item executes some command (e.g., restart encounter) rather than allowing
-   * a choice from a number of values. This type is a terminal leaf in the menu tree and
-   * declare it as a parent of another menu item will generate an error when the configuration
-   * file is parsed.
-   *     - option: Item selects an option from among a discrete number of values. The selected
-   * option is represented as an unsigned integer, where 0 represents the minimum possible
-   * value achieved by executing the #option_less sequence until the first item in the list is
-   * reached. A maximum value is not currently specified. We rely on the configuration file to
-   * have correct values. This type is a terminal leaf of the menu structure and declaring it as
-   * a parent of another menu item will generate an error when the configuration file is parsed.
-   *     - guard: Item is a boolean option that protects options that appear beneath it in the
-   * same menu. The subordinate options are only active if the guard option is true. Note that
-   * if the guard is actually a sub-menu that must be selected to reveal the options, you should
-   * implement that with the "guarded" option in the "menu" type. See the SubMenu class.
-   *     .
-   * - parent: The parent menu for this item. If omitted, this item belongs to the root (main)
-   * menu. Parents must be declared before any children that reference them, and only items of
-   * the menu type can serve as parents. (_Optional_)
-   *- offset: The number of actions required to reach this item from the first item in the list.
-   * Must be an integer. Positive values navigate down, negative values navigate up. If the
-   * menu contains potentially hidden items, the offset should be the value required to reach the
-   * item when all menu items are unhidden. The engine will adjust automatically for any hidden
-   * items. (_Required_)
-   * - tab: An integer indicating a group of items within a parent menu. Items in this group are
-   * displayed together and you must navigate from tab to tab with a different command from the
-   * normal menu up/down items. The value of the integer indicates the number of tab button
-   * presses required to reach this group from the default tab. Positive values mean tab right,
-   * negative values mean tab left. (_Optional_)
-   * - hidden: A boolean value which, if true, indicates that the menu item is not displayed in
-   * the list currently. Menu items can be hidden or revealed as a result of other actions in
-   * the game. The default value is false. (_Optional_)
-   * - confirm: Setting this option requires a yes/no confirmation after setting/selection.
-   * (_Optional_)
-   * - initialState: The starting value for the menu item, expressed as an unsigned integer. For
-   * menu items of the option and guard type, this value indicates the number of #option_greater
-   * actions required to reach this value from the minimum value. When used with a menu item, the
-   * initialState is interpreted as the currently selected child that has this item as a parent.
-   * If omitted, the default value is 0. (_Optional_)
-   * - guard: This item is guarded by a guard item of this name.
-   * - counter: references a menu item and increments the counter for that menu item when the
-   * mod referencing this item is initialized, and decrements the counter when the mod referencing
-   * this item is finished. 
-   * - counterAction: Action to take after this menu option's counter changes. The currently
-   * supported values are:
-   *     - reveal: Menu option is shown when the counter is non-zero, hidden when zero
-   *     - zeroReset: Restore the menu value to default only when the counter is zero.
-   *     .
-
-   * Parent menu items and guards must be declared before they are referenced, but the definition
-   * order is otherwise unconstrained.
+   * The TOML syntax defining menu items is described in chaosConfigFiles.md
    *
-   * \todo Allow shortcut commands to invoke menus
    */
   class MenuItem : public std::enable_shared_from_this<MenuItem> {
   protected:
     MenuInterface& menu_items;
 
     std::string name;
+
     /**
      * Vertical navigation from menu top to reach this item
      */
@@ -146,7 +89,7 @@ namespace Chaos {
     /**
      * \brief The parent to this menu item
      * 
-     * If the #parent is NULL, this item is part of the root (main) menu.
+     * If the parent is NULL, this item is part of the root (main) menu.
      */
     std::shared_ptr<MenuItem> parent{nullptr};
 
@@ -165,17 +108,19 @@ namespace Chaos {
      */
     std::shared_ptr<MenuItem> sibling_counter{nullptr};
 
-    // Type of action to take when the counter changes value
+    /**
+     * Type of action to take when the counter changes value
+     */
     CounterAction counter_action;
 
     /**
-     * \brief The current state of the menu item.
+     * The current state of the menu item
      * 
      */
     short current_state;
 
     /**
-     * \brief Internal counter for this item.
+     * \brief Internal counter for this item
      * 
      * Mods can increment or decrement the item to track particular states.
      */
@@ -188,9 +133,16 @@ namespace Chaos {
      */
     bool confirm;
 
+    /**
+     * Is the menu item an option type?
+     */
     bool is_option;
 
+    /**
+     * Will selecting the item currently have any effect?
+     */
     bool is_selectable;
+
 
     void setMenuOption(Sequence& seq, unsigned int new_val);
 
@@ -198,7 +150,7 @@ namespace Chaos {
     /**
      * \brief Construct a new Menu Item object
      * 
-     * \param menu Pointer to the menu table
+     * \param menu Reference to the menu table
      * \param name Name of this menu entry
      * \param off Offset
      * \param tab Tab group
@@ -210,19 +162,21 @@ namespace Chaos {
      * \param par Parent of item
      * \param grd Guard for item
      * \param cnt Associated counter for item
+     * \param act Action on counter change
      */
     MenuItem(MenuInterface& menu, std::string name, short off, short tab,
              short initial, bool hide, bool opt, bool sel, bool conf,
              std::shared_ptr<MenuItem> par,
              std::shared_ptr<MenuItem> grd,
-             std::shared_ptr<MenuItem> cnt);
+             std::shared_ptr<MenuItem> cnt,
+             CounterAction act);
 
     /**
-     * \brief Returns #this as a shared pointer
+     * \brief Returns 'this' as a shared pointer
      * 
      * \return std::shared_ptr<MenuItem> 
      *
-     * Since the pointer for this object is managed by std::shared_ptr, using #this
+     * Since the pointer for this object is managed by std::shared_ptr, using 'this'
      * directly is dangerous. Use this function instead.
      */
     std::shared_ptr<MenuItem> getptr() { return shared_from_this(); }
@@ -236,12 +190,14 @@ namespace Chaos {
     std::shared_ptr<MenuItem> getParent() { return parent; }
 
     /**
-     * \brief Add commands necessary to navigate back to the top of the menu after selecting
+     * \brief Creates the sequence of commands necessary to navigate to the top of the menu after
+     * selecting it.
      * 
      * \param seq Sequence to which the commands should be appended
      *
      * For games that leave the menu in the last state the user left it, we need to navigate
-     * everything back to the top of each menu so the menu system is in a known state.
+     * everything back to the top of each menu so the menu system is in a known state. If a game
+     * always starts you in the same place with the menus, this is unnecessary.
      */
     void navigateBack(Sequence& seq);
 
@@ -255,6 +211,11 @@ namespace Chaos {
      */
     void selectItem(Sequence& seq);
 
+    /**
+     * \brief Get the name of this menu item by which it is referenced in the TOML file
+     * 
+     * \return std::string& 
+     */
     std::string& getName() { return name; }
     
     /**
@@ -263,29 +224,93 @@ namespace Chaos {
      * \return int The offset with corrections for any hidden items
      */
     short getOffset() { return offset + offset_correction; }
+
+    /**
+     * \brief Get the default state of the menu item
+     * 
+     * This lets us return the game settings to their earlier state when we tear down the mod.
+     * 
+     * \return short 
+     */
     short getDefault() { return default_state; }
     
     void adjustOffset(int delta) { offset_correction += delta; }
 
+    /**
+     * \brief Get the tab group to which this menu item belongs
+     * 
+     * \return short 
+     */
     short getTab() { return tab_group; }
 
+    /**
+     * \brief Get the the current state of the menu item
+     * 
+     * \return short 
+     */
     short getState() { return current_state; }
     
+    /**
+     * \brief Set the current state of the State object
+     * 
+     * \param seq The sequence to issue in order to change the state
+     * \param new_state 
+     * \param restore 
+     */
     void setState(Sequence& seq, unsigned int new_state, bool restore);
 
+    
     bool isOption() { return is_option; }
+
     bool isSelectable() { return is_selectable; }
 
     void setHidden(bool hide) { hidden = hide; }
     bool isHidden() { return hidden; }
 
+    /**
+     * \brief Increase the value of the counter by one
+     * 
+     * If this item has the counter action REVEAL associated with it, it will be unhidden when
+     * the counter goes from 0 to 1.
+     */
     void incrementCounter();
+
+    /**
+     * \brief Decrease the value of the counter by one
+     * 
+     * If this item has the counter action REVEAL associated with it, it will be hidden when the
+     * counter goes from 1 to 0.
+     */
     void decrementCounter();
 
-    void setCounter(int val) { counter = val; }
+    /**
+     * \brief Set the counter to an arbitrary value
+     * 
+     * \param val New value for the counter
+     * 
+     * If this item has the counter action REVEAL associated with it, it will be unhidden when the
+     * counter goes from 0 to a non-zero value and hidden when the counter goes to 0 from a non-zero
+     * value.
+     */
+    void setCounter(int val);
+
+    /**
+     * \brief Get the current state of the counter for this item
+     * 
+     * \return int 
+     */
     int getCounter() { return counter; }
 
+    /**
+     * \brief Is this menu item guarded by another menu item
+     */
     bool isGuarded() { return (guard != nullptr); }
+
+    /**
+     * \brief Get the menu item that is guarding this one
+     * 
+     * \return std::shared_ptr<MenuItem> 
+     */
     std::shared_ptr<MenuItem> getGuard() { return guard; }
 
   };

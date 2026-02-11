@@ -39,96 +39,17 @@
 
 namespace Chaos {
 
-
   /**
    * \brief Definition of the abstract base Modifier class for TCC.
    *
    * A modifier is a specific alteration of a game's operation, for example disabling a particular
-   * control, or inverting the direction of a joystick movement. Specific classes of modifiers
+   * control or inverting the direction of a joystick movement. Specific classes of modifiers
    * are implemented as subclasses.
    *
    * Individual modifiers are objects of a particular child class of Modifier and are created
    * during initialization based on a definition in the TOML configuration file.
    *
-   * Within the TOML file, each mod is defined in a [[modifier]] table.
-   * The following keys are defined for all modifiers:
-   *
-   * - name: A unique string identifying this mod (_Required_)
-   * - description: An explanatation of the mod for use by the chat bot (_Required_)
-   * - type: The class of modifier (_Required_). The following modifier classes are currently implemented:
-   *       - cooldown: Allow a command for a set time then force a recharge period before it can be used again.
-   *       - delay: Wait for a set amount of time before sending a command.
-   *       - disable: Block commands from being sent to the console.
-   *       - formula: Alter the magnitude and/or offset of the signal through a formula
-   *       - invert: Invert the sign of the signal.
-   *       - menu: Apply a setting from the game's menus.
-   *       - parent: A mod that contains other mods as children.
-   *       - remap: Change which controls issue which commands.
-   *       - repeat: Repeat a particular command at intervals.
-   *       - sequence: Issue an arbitrary sequence of actions.
-   *       .
-   * - group: A group (separate from the type) to classify the mod for voting by the chatbot. IF
-   * omitted, the mod will be assigned to the default "general" group. (_Optional_)
-   *
-   * Each type of modifier accepts a different subset of additional parameters. Some parameters,
-   * however, are parsed by the general initialization routine called by all child classes and so
-   * are available for any class that needs to use them. Note that the parent Modifier class parses
-   * these entries, and provides variables to store the result and functions to perform the most
-   * common actions, but child classes must implement the logic for handling this information and
-   * determining its consequences for manipulating the signal stream.
-   *
-   * The following parameters are available for use by all child mods. Whether they are required,
-   * optional, or unused by the child mods depends on the type of modifier:
-   *
-   * - appliesTo: A list of GameCommand objects affected by the mod.
-   * - condition: A list of GameCondition objects whose total evaluation returns true or false.
-   * Mods that use conditions should do something when the evaluation is true.
-   * - unless: A list of GameCondition objects whose total evaluation returns true or false. The
-   * evaluation of conditions occurs the same way Mods
-   * that use condiditions should do something when the evaluation is false.
-   * take place. The test of listed commands functions exactly as 'condition', but the commands are
-   * disabled only if test of the conditions returns false.
-   * - conditionTest: Type of test to perform on the conditions in the array.
-   * - unlessTest: Type of test to perform on the conditions in the unless array.
-   * - sequenceBegin:  A sequence of commands to issue when the mod is activated. Mods that want
-   * to use this command can call sendBeginSequence() in their #begin routine. 
-   * - sequenceFinish: A sequence of commands to issue when the mod is deactivated. Mods that want
-   * to use this command can call sendFinishSequence() in their #finish routine.
-   *
-   * Both conditionTest and unlessTest accept the following values:
-   * - all: All conditions must be true (for condition) or false (for unless) simultaneously
-   * - any: Any one condition must be true (for condition) or false (for unless) at one time
-   * - none: None of the defined conditions must be true (for condition) or false (for unless)
-   * 
-   * Additional parameters that are specific to individual types of mods are listed in the
-   * documentation for those classes.
-   *
-   * Example TOML definitions:
-   *
-   *    [[modifier]]
-   *    name = "Moose"
-   *    description = "The moose is dead. The moose does not move. (Disables movement)"
-   *    type = "disable"
-   *    appliesTo = [ "move forward/back", "move sideways" ]
-   * 
-   *    [[modifier]]
-   *    name = "Moonwalk"
-   *    description = "Be like Michael Jackson! Trying to walk forward will actually make you go backward."
-   *    type = "invert"
-   *    appliesTo = [ "move forward/back" ]
-   *
-   *    [[modifier]]
-   *    name = "Touchpad Aiming"
-   *    description = "No more aiming with the joystick. Finally making use of the touchpad!"
-   *    type = "remap"
-   *    signals = [ "RX", "RY" ]
-   *    remap = [
-   *          {from = "TOUCHPAD_ACTIVE", to="NOTHING"},
-   *          {from = "TOUCHPAD_X", to="RX"},
-   *          {from = "TOUCHPAD_Y", to="RY"},
-   *          {from = "RX", to="NOTHING"},
-   *          {from = "RY", to="NOTHING"}
-   *          ]
+   * The syntax for defining modifiers within a TOML file is explained in chaosConfigFiles.md.
    *
    * Specific types of modifiers are built in a self-registering factory. In order to ensure that
    * each child class is registered properly, the child class is prevented from inherited directly
@@ -142,10 +63,10 @@ namespace Chaos {
    * initialized.
    * 
    * Modifiers are initialized last, so all general configuration parameters, the GameCommand,
-   * GameCondition, #Sequence, and #Menu items, as well as the data on any modifiers already
+   * GameCondition, #Sequence, and #MenuItem entries, as well as the data on any modifiers already
    * initialized, are available to the constructor.
    * 
-   * A modifier class also must declare a public static string named #mod_type, whose value is
+   * A modifier class also must declare a public static string named mod_type, whose value is
    * declared in the source module and is unique among the different modifiers. This string will be
    * used in the value of the type field in TOML modifier definitions.
    * 
@@ -254,6 +175,14 @@ namespace Chaos {
      */
     bool lock_all;
 
+    /**
+     * \brief A flag to indicate that this modifier should not appear in the list sent to users
+     * 
+     * Setting this to true will prevent the mod from being voted on and applied directly, but
+     * it can still be inserted directly or appear as part of a child modifier that only makes
+     * sense as part of a larger modifier. The latter is the primary use-case for setting this
+     * true.
+     */
     bool unlisted;
     
     /**
@@ -282,7 +211,10 @@ namespace Chaos {
      */
     double total_lifespan;
     
-    bool allow_recursion;
+    /**
+     * \brief Can this modifier function as a child modifier?
+     */
+    bool allow_as_child;
 
     EngineInterface* engine;
 
@@ -367,7 +299,6 @@ namespace Chaos {
      * independently of their parent can be declared unlisted so that they cannot appear as
      * candidates for voting.
      */
-
     bool isUnlisted() { return unlisted; }
     
     /**
@@ -388,7 +319,7 @@ namespace Chaos {
     /**
      * \brief Common entry point into the begin function
      *
-     * This function is called directly by the ChaosEngine class. We handle any common
+     * This non-virtual function is called directly by the ChaosEngine class. We handle any common
      * initialization required for all modifiers and then call the virtual begin function
      * implemented by the concrete child class.
      */
@@ -443,7 +374,6 @@ namespace Chaos {
      *
      * This function is called directly by the ChaosEngine class for each incomming event. Modifiers
      * 
-     * Both remap() and tweak() are conceptually similar. The difference is that the remap() function
      */
     virtual bool remap(DeviceEvent& event);
 
@@ -491,10 +421,10 @@ namespace Chaos {
      * \return false if we're not in the defined state
      *
      * Traverses the list of GameCondition objects stored in #conditions. The state of 
-     * #conditionTest determines the logic for how to chain together multiple conditions.
+     * inCondition() determines the logic for how to chain together multiple conditions.
      *
      * If the #conditions list is empty, always returns true. In other words, defining no
-     * conditions is equivalent to "always do this".
+     * conditions is equivalent to "always do this action."
      */
     bool inCondition();
     
@@ -505,7 +435,7 @@ namespace Chaos {
      * \return false any condition in the list returns false, or if the list is empty
      *
      * Traverses the list of GameCondition objects stored in #unless_conditions. The state of 
-     * #unlessTest determines the logic for how to chain together multiple conditions.
+     * inUnless() determines the logic for how to chain together multiple conditions.
      *
      * Note that the test on a non-empty list is conducted the same way as the one for
      * inCondition(). In other words, if all conditions are true, this function returns true.
@@ -523,7 +453,7 @@ namespace Chaos {
      * Ordinary modifiers have this set to true by default. Parent modifiers that select children
      * randomly have this set as false so we don't get recursion in the selection process.
      */
-    bool allowRecursion() { return allow_recursion; }
+    bool allowAsChild() { return allow_as_child; }
 
     /**
      * \brief Set whether this mod can be used as a child modifier
@@ -531,7 +461,7 @@ namespace Chaos {
      * The default for most modifiers is true. Parent modifiers that select children randomly have
      * this set as false so we don't get recursion in the selection process.
      */
-    void setRecursion(bool recursion) { allow_recursion = recursion; }
+    void setAllowAsChild(bool recursion) { allow_as_child = recursion; }
     
     /**
      * \brief Get the metadata about this modifier as a Json object

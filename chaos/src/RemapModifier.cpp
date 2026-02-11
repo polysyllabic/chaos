@@ -32,14 +32,12 @@ const std::string RemapModifier::mod_type = "remap";
 RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "description", "type", "groups", "signals", "disable_signals", "remap",
+      "name", "description", "type", "groups", "disable_signals", "remap",
       "random_remap", "unlisted"});
 
   initialize(config, e);
   
-  engine->addControllerInputs(config, "signals", signals);
-
-  disable_signals = config["disable_signals"].value_or(false);
+  engine->addControllerInputs(config, "disable_signals", signals);
 
   // remap
   if (config.contains("remap")) {
@@ -109,7 +107,7 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
     }
   }
 
-  // Note: Random remapping mmay break if axes and buttons are included in the same list.
+  // Note: Random remapping may break if axes and buttons are included in the same list.
   // Currently we don't check for this.
   if (config.contains("random_remap")) {
     random = true;
@@ -174,7 +172,7 @@ void RemapModifier::begin() {
       PLOG_DEBUG << key->getName() << " remapped to " << (value.to_console)->getName();
     }
   }
-  if (disable_signals) {
+  if (signals.size() > 0) {
     for (auto& sig : signals) {
       event.value = 0;
       event.id = sig->getID();

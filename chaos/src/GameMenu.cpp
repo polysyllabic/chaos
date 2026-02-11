@@ -16,10 +16,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-// TODO: menu shortcuts
-// TODO: override default menu actions
-
 #include <stdexcept>
 #include <cmath>
 #include <stack>

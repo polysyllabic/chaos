@@ -33,7 +33,7 @@ using namespace Chaos;
 GameCondition::GameCondition(const std::string& condition_name) :
   name{condition_name},
   threshold{1},
-  threshold_type{ThresholdType::MAGNITUDE} {}
+  threshold_type{ThresholdType::ABOVE} {}
 
 void GameCondition::addCondition(std::shared_ptr<GameCommand> command) {
   // Translate command to the index of the device event for fast comparison
@@ -46,21 +46,21 @@ bool GameCondition::thresholdComparison(short value) {
   assert(threshold_type != ThresholdType::DISTANCE);
   PLOG_DEBUG << "threshold = " << threshold << "; value = " << value;
   switch (threshold_type) {
+    case ThresholdType::ABOVE:
+      return std::abs(value) >= threshold;
+    case ThresholdType::BELOW:
+      return std::abs(value) < threshold;
     case ThresholdType::GREATER:
-      return value > threshold;
-    case ThresholdType::GREATER_EQUAL:
       return value >= threshold;
     case ThresholdType::LESS:
       return value < threshold;
-    case ThresholdType::LESS_EQUAL:
-      return value <= threshold;
   }
-  // default, check absolute value
-  return std::abs(value) >= threshold;
+  PLOG_ERROR << "Internal error. Should not reach here";
+  return false;
 }
 
 void GameCondition::setThreshold(double proportion) {
-  assert(proportion >= 0.0 && proportion <= 1.0);
+  assert(proportion >= -1.0 && proportion <= 1.0);
   threshold = 1;
   std::shared_ptr<ControllerInput> signal;
 
@@ -75,27 +75,21 @@ void GameCondition::setThreshold(double proportion) {
     signal = while_conditions.front();
   }
 
-  bool neg_extreme = (threshold_type == ThresholdType::LESS || threshold_type == ThresholdType::LESS_EQUAL);
-
   // Proportions only make sense for axes.
   switch (signal->getType()) {
     case ControllerSignalType::BUTTON:
-      threshold = 1;
-      break;
     case ControllerSignalType::THREE_STATE:
-      // For buttons/tri-state, a proportion makes no sense
-      threshold = (neg_extreme) ? -1 : 1;
       break;
     case ControllerSignalType::HYBRID:
-      // If the threshold is 1, then look at the button; otherwise, we look at the fraction of the axis
+      // If the threshold proportion is 1, then look at the button; otherwise, we look at the fraction of the axis
       if (proportion == 1.0) {
         break;
       }
       // falls through
     default:
       // Axis of some sort: calculate the threshold value as a proportion of the extreme.
-      short extreme = (neg_extreme) ? signal->getMin(TYPE_AXIS) : signal->getMax(TYPE_AXIS);
-      threshold = (short) ((double) extreme * proportion);
+      threshold = (short) ((double) signal->getMax(TYPE_AXIS) * proportion);
+      threshold = fmin(fmax(threshold, JOYSTICK_MIN), JOYSTICK_MAX);
   }
   PLOG_DEBUG << "Threshold for " << name << " set to " << threshold;
 }
@@ -121,17 +115,19 @@ void GameCondition::updateState(DeviceEvent& event) {
 }
 
 bool GameCondition::inCondition() {
-  // No while -- this is a persistent state
+  // No while-conditions are set, so return the persistent state
   if (while_conditions.empty()) {
     return persistent_state;
   }
+  // If we get here, we're returning the conditions based on the current state of the controller
   if (threshold_type == ThresholdType::DISTANCE) {
     if (while_conditions.size() != 2) {
       return false;
     }    
     short x = while_conditions[0]->getState(true);
     short y = while_conditions[1]->getState(true);
-    PLOG_DEBUG << "x = " << x << "; y = " << y << "x^2+y^2 = " << (x*x +y*y) << "; dist^2 = " << threshold * threshold;    
+    PLOG_DEBUG << "x = " << x << "; y = " << y << "x^2+y^2 = " << (x*x +y*y) << "; dist^2 = "
+      << threshold * threshold;
     return (x*x + y*y >= threshold * threshold);
   }
 

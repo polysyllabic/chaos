@@ -31,7 +31,7 @@ const std::string FormulaModifier::mod_type = "formula";
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "applies_to", "begin_sequence", "finish_sequence",
-      "condition", "formula_type", "amplitude", "period_length", "unlisted"});
+      "while", "unless", "formula_type", "amplitude", "period_length", "unlisted"});
   initialize(config, e);
 
   if (commands.empty()) {
@@ -52,6 +52,8 @@ const std::string FormulaModifier::mod_type = "formula";
     throw std::runtime_error("Unrecognized formula type: " + *formula);
   }
 
+  // User sets amplitude as the proportion of JOYSTICK_MAX. We store it as the actual
+  // size of the input signal.
   amplitude = config["amplitude"].value_or(1.0);
   if (amplitude < 0.0 || amplitude > 1.0) {
     PLOG_WARNING << "Amplitude must be a proportion between 0 and 1. Setting to 0.5";
@@ -82,14 +84,12 @@ void FormulaModifier::update() {
   DeviceEvent event;
   event.type = TYPE_AXIS;
 
-  bool apply_formula = inCondition();
-
   double t = timer.runningTime() * period_length;
   int i = 0;
 
   for (auto& cmd : commands) {
     
-    if (apply_formula) {
+    if (inCondition()) {
       switch (formula_type) {
         case FormulaTypes::CIRCLE:
           if (i % 2) {
@@ -106,7 +106,8 @@ void FormulaModifier::update() {
           }
           break;
         case FormulaTypes::JANKY:
-          command_offset[cmd] = (int) (amplitude * (std::cos(t+4.0*i) + std::cos(2.0*t)/2.0) * std::sin(t+4.0*i)*0.2/2.0);
+          command_offset[cmd] = (int) (amplitude * (std::cos(t+4.0*i) + std::cos(2.0*t)/2.0) *
+                                       std::sin((t+4.0*i)/5.0)/2.0);
       }
       event.id = cmd->getInput()->getID();
       event.value = fmin(fmax(command_value[cmd] + command_offset[cmd], JOYSTICK_MIN), JOYSTICK_MAX);

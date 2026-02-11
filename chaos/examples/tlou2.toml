@@ -15,7 +15,14 @@ chaos_toml = "1.0"
 # game: User-friendly name of the game this configuration file defines.
 game = "The Last of Us Part II (PS4)"
 
-# General controller "settings"
+# Modifier defaults
+[mod_defaults]
+# Number of modifiers simultaneously in effect
+active_modifiers = 3
+# Lifetime (exclusive of pauses) of an individual modifier, in seconds.
+time_per_modifier = 180.0
+
+# General settings for the controller
 [controller]
 # Default time, in seconds, to hold down a button when issuing a command in a sequence.
 button_press_time = 0.0625
@@ -24,38 +31,24 @@ button_press_time = 0.0625
 # in the sequence.
 button_release_time = 0.0625
 
-#--------------------------------------------------------------------------------------------------
-# Modifier defaults
-[mod_defaults]
-# Number of modifiers simultaneously in effect
-active_modifiers = 3
-# Lifetime (exclusive of pauses) of an individual modifier, in seconds.
-time_per_modifier = 180.0
-
-# This section defines the parameters controlling how controller signals are remapped from one
-# class of signal to another
-[remapping]
 # Time (in seconds) since last received touchpad axis event before the touchpad will be reset
 # to inactive. (The default here is 5 ticks assuming 250MHz polling.)
 touchpad_inactive_delay = 0.02
+
 # The touchpad can be used to generate axis events based either on the distance travelled from the
 # first touch point or the change in the touchpad axis values over time. Set touchpad_velocity to
 # true if you want the second method.
 touchpad_velocity = false
-# When touchpad_velocity is false, the converted axis value is the difference between the point
-# where the user's finger first touched the pad and its current position. This is scaled from
-# the touchpad range to a standard axis range, and then an additional scale factor can be applied
-# separately for each axis.
+
+# After the touchpad value is calculated by one of the two algorithms above, the resulting value
+# is multiplied by this scaling factor. Scaling can be set separately for each axis.
+# For touchpad_velocity = true, try [ 0.12, 0.12 ] for the x/y scales
 touchpad_scale_x = 1.1
 touchpad_scale_y = 1.1
-# When touchpad_velocity is true, the conversion from touchpad to axis events is based on the
-# change in axis value over time. An average value of the velocity over the previous 5 polling
-# intervals is used. The same scaling factor is used for both axes for velocity calculations.
-touchpad_velocity_scale = 0.12
-#
-# touchpad_skew defines an offset to apply to the axis value when the derivative is non-zero. The
-# sign of the skew is the same as the sign of the derivative. In other words, if the derivative is
-# positive, the skew is added to the result, and the derivative is negative, the skew is subtractecd.
+
+# The skew defines an offset to apply to the axis value when the velocity is non-zero. The
+# sign of the skew is the same as the sign of the velocity. In other words, if the derivative is
+# positive, the skew is added to the result; if the velocity is negative, the skew is subtractecd.
 touchpad_skew = 30
 
 #--------------------------------------------------------------------------------------------------
@@ -63,17 +56,7 @@ touchpad_skew = 30
 #
 # Defines a semantic map between the game's controls and the controller buttons/axes that the game
 # expects. If you have altered your command mapping in the game, you can change the default values
-# here. This defines a series of command names for the modifiers. Modifiers that reference command
-# names rather than hard-coded button or axis values should work as intended no matter how the
-# controller might be remapped.
-#
-# Note that these commands are currently always simple. They associate one button press or axis
-# event with one command. They do not currently support associating simultaneous presses of
-# controls with one command. Currently, those states are modeled by checking for a condition
-# when a particular signal comes in. For example, "shoot" in TLOU2 is equivalent to
-# "reload/toss" with the condition "aiming".
-#
-# A command is defined by specifying a name and controllor signal to bind to it.
+# here. A command is defined by specifying a name and controllor signal to bind to it.
 # - name: The label used to refer to the action in the elsewhere in this configuration file.
 #     Command names must be unique, but you can define multiple names to point to the same signal.
 #     This allows for aliases, so you can use different command names in different contexts.
@@ -188,35 +171,17 @@ binding = "DY"
 #--------------------------------------------------------------------------------------------------
 # Game Conditions
 #
-# Conditions are used to test check the state of events coming from the controller. There are
-# two types of conditions: transient and persistent. A transient condition polls the current
-# state of the controller. A persistent condition is set to true when a particular condition
-# arrives and remains true until a different condition arrives that clears the condition.
-# Transient conditions are defined in the 'while' parameter and the condition will be true
-# as long as the current state of the controller exceeds the defined threshold value and false
-# otherwise. More than one command can appear in the while parameter, but how multiple commands
-# are processed depends on the threshold type.
-#
-# Persistent events define one command in set_on that sets the state and a different command in
-# set_off that clears it. Multiple commands within set_on and set_off are not currently
-# supported.
-#  
-# Transient and persistent are mutually exclusive states, so a condition must define either the
-# while parameter or the set_on and clear_on parameters, but not both.
+# Conditions are used to test the state of events coming from the controller.
 #
 # - name: The name by which the condition is identified in the TOML file (Required)
-# - while: A list of commands that must be true according to the real-time state of the controller
-# - set_on: A command that will set a persistent trigger to true when its incomming state exceeds
-#     the threshold
-# - clear_on: A command that will set a persistent trigger to false when its incomming state
-#     exceeds the threshold
-# - threshold: The threshold that a signal value must reach to trigger the condition, expressed as
-#      an absolute proportion of the maximum value. (Optional. Default = 1)
-#      The threshold must be a number between 0 and 1, even when ythat thresholds are always
-#      checked against the absolute values of signals. For example, if the threshold is set to be greater
-#      than 0.5 for an axis, this means that the condition will be true whenever the axis value
-#      exceeds 50% of the maximum deflection in either axis direction. The threshold is ignored for
-#      buttons and will always be 1.
+# - while: (for tranient conditions only) A list of commands that must be true according to the
+#   real-time state of the controller
+# - set_on: (for persistent conditions only) A command that will set a persistent trigger to true
+#   when its incomming state exceeds the threshold
+# - clear_on (for persisent conditions only): A command that will set a persistent trigger to false
+#   when its incomming state exceeds the threshold
+# - threshold: The threshold proportion (between 0 and 1) that a signal value must reach to trigger
+#   the condition. (Optional. Default = 1) The threshold is ignored for buttons.
 # - thresholdType: The test applied to the threshold. The following keys correspond to the types
 #       defined in ThresholdType.
 #        - "greater" or ">": The value of the signal must be greater than the specified proportion
@@ -244,29 +209,37 @@ while = [ "aiming" ]
 name = "sprint"
 while = [ "dodge/sprint" ]
 
+# The basic movement condition is %20 of full deflection. This means the user can get away with
+# very slow movement, and also prevents moderate joystick drift from triggering actions.
 [[condition]]
 name = "movement"
 while = [ "vertical movement", "horizontal movement" ]  
 threshold = 0.2
 threshold_type = "distance"
 
+# Fast movement triggers at 80% of full deflection
 [[condition]]
 name = "fast movement"
 while = [ "vertical movement", "horizontal movement" ]  
 threshold = 0.8
 threshold_type = "distance"
 
+# The equivalent of 'movement' for the camera joystick
 [[condition]]
 name = "camera"
 while = [ "horizontal camera", "vertical camera" ]  
 threshold = 0.2
 threshold_type = "distance"
 
+# The horizontal d-pad by default picks a weapon, which also puts away any consumable
+# currently held.
 [[condition]]
 name = "gun selected"
 set_on = "select weapon"
 clear_on = "select consumable"
 
+# The vertical d-pad by default picks a weapon, which also puts away any consumable
+# currently held.
 [[condition]]
 name = "consumable selected"
 set_on = "select consumable"
@@ -318,20 +291,6 @@ name = "menu exit"
 sequence = [ { event="press", command = "deselect" },
              { event="delay", delay= 0.05 } ]
 
-# Tab left through sub-menus on the same basic parent menu screen. We don't use this in TLOU 2,
-# so the sequence is left blank. (This sequence must exist with this name if the chaos engine needs
-# to scroll through a set of menu tabs.)
-[[sequence]]
-name = "tab left"
-sequence = [ ]
-
-# Tab right through sub-menus on the same basic parent menu screen. We don't use this in TLOU 2,
-# so the sequence is left blank. (This sequence must exist with this name if the chaos engine needs
-# to scroll through a set of menu tabs.)
-[[sequence]]
-name = "tab right"
-sequence = [ ]
-
 # Navigate upward one item in a list of menu options. (This sequence must exist with this name if
 # the chaos engine uses the menu.)
 [[sequence]]
@@ -361,6 +320,20 @@ name = "confirm"
 sequence = [ { event="press", command = "menu right/left", value = -1},
              { event="press", command = "select"} ]
 
+# Tab left through sub-menus on the same basic parent menu screen. We don't use this in TLOU 2,
+# so the sequence is left blank. (This sequence must exist with this name if the chaos engine needs
+# to scroll through a set of menu tabs.)
+[[sequence]]
+name = "tab left"
+sequence = [ ]
+
+# Tab right through sub-menus on the same basic parent menu screen. We don't use this in TLOU 2,
+# so the sequence is left blank. (This sequence must exist with this name if the chaos engine needs
+# to scroll through a set of menu tabs.)
+[[sequence]]
+name = "tab right"
+sequence = [ ]
+
 
 #--------------------------------------------------------------------------------------------------
 # Menus
@@ -383,7 +356,7 @@ layout = [
       # Main Menu Items
       {name = "options", type="menu", offset = 0},
       #{name = "photo mode", type="menu", offset = 1},
-      {name = "audio cues", type="menu", offset = 2, hidden = true, counterAction="reveal"},
+      {name = "audio cues", type="menu", offset = 2, hidden = true, counter_action="reveal"},
       {name = "extras", type="menu", offset = 2},
       #{name = "tutorials", type="menu", offset = 3},
       #{name = "save", type="menu", offset = 4},
@@ -403,88 +376,88 @@ layout = [
       {name = "accessibility", type="menu", parent="options", offset= -1},
 
       # Extras Menu
-      # The initialState setting for a submenu refers to which submenu item is selected by default.
+      # The initial setting for a submenu refers to which submenu item is selected by default.
       # That is the state to which the game will return when all mods changing the render mode are
       # removed.
-      {name = "render", type="menu", parent="extras", offset= 0, initialState=0},
+      {name = "render", type="menu", parent="extras", offset= 0, initial=0},
       {name = "gameplay", type="menu", parent="extras", offset= 1},
 
       # Options -> Controls 
       #{name = "view controls", type="menu", parent="controls", offset= 0},
       #{name = "customize controls", type="menu", parent="controls", offset= 1},
-      {name = "shoulder swap", type="option", parent="controls", offset= 2, initialState=0},
-      #{name = "photo mode shortcut", type="option", parent="controls", offset= 3, initialState=0},
-      {name = "listen mode", type="option", parent="controls", offset= 4, initialState=1},
-      #{name = "look sensitivity X", type="option", parent="controls", offset= 5, initialState=5},
-      #{name = "look sensitivity Y", type="option", parent="controls", offset= 6, initialState=5},
-      #{name = "aim sensitivity X", type="option", parent="controls", offset= 7, initialState=5},
-      #{name = "aim sensitivity Y", type="option", parent="controls", offset= 8, initialState=5},
-      #{name = "aim acceleration", type="option", parent="controls", offset= 9, initialState=10},
-      #{name = "aim ramp power", type="option", parent="controls", offset= 10, initialState=10},
-      #{name = "motion aim", type="option", parent="controls", offset= -9, initialState=0},
-      #{name = "motion sensitivity X", type="option", parent="motion aim", offset= -8, initialState=5},
-      #{name = "motion sensitivity Y", type="option", parent="motion aim", offset= -7, initialState=5},
-      #{name = "motion aim invert Y", type="option", parent="controls", offset= -6, initialState=0},
-      #{name = "motion aim mirror X", type="option", parent="controls", offset= -5, initialState=0},
-      {name = "camera assist", type="option", parent="controls", offset= -4, initialState=0},
-      {name = "aim assist", type="option", parent="controls", offset= -3, initialState=10},
-      {name = "lock-on aim", type="option", parent="controls", offset= -2, initialState=0},
-      {name = "lock-on strength", type="option", parent="controls", guard="lock-on aim", offset= -1, initialState=10},
+      {name = "shoulder swap", type="option", parent="controls", offset= 2, initial=0},
+      #{name = "photo mode shortcut", type="option", parent="controls", offset= 3, initial=0},
+      {name = "listen mode", type="option", parent="controls", offset= 4, initial=1},
+      #{name = "look sensitivity X", type="option", parent="controls", offset= 5, initial=5},
+      #{name = "look sensitivity Y", type="option", parent="controls", offset= 6, initial=5},
+      #{name = "aim sensitivity X", type="option", parent="controls", offset= 7, initial=5},
+      #{name = "aim sensitivity Y", type="option", parent="controls", offset= 8, initial=5},
+      #{name = "aim acceleration", type="option", parent="controls", offset= 9, initial=10},
+      #{name = "aim ramp power", type="option", parent="controls", offset= 10, initial=10},
+      #{name = "motion aim", type="option", parent="controls", offset= -9, initial=0},
+      #{name = "motion sensitivity X", type="option", parent="motion aim", offset= -8, initial=5},
+      #{name = "motion sensitivity Y", type="option", parent="motion aim", offset= -7, initial=5},
+      #{name = "motion aim invert Y", type="option", parent="controls", offset= -6, initial=0},
+      #{name = "motion aim mirror X", type="option", parent="controls", offset= -5, initial=0},
+      {name = "camera assist", type="option", parent="controls", offset= -4, initial=0},
+      {name = "aim assist", type="option", parent="controls", offset= -3, initial=10},
+      {name = "lock-on aim", type="option", parent="controls", offset= -2, initial=0},
+      {name = "lock-on strength", type="option", parent="controls", guard="lock-on aim", offset= -1, initial=10},
 
       # Options -> HUD Menu Items
       # reticle states: 0 = off, 1 = simple, 2 = default
-      {name = "reticle", type="option", parent="HUD", offset=0, initialState=2},
-      {name = "weapon cross", type="option", parent="HUD", offset=1, initialState=1},
-      {name = "damage indicators", type="option", parent="HUD", offset=2, initialState=1},
-      {name = "awareness indicators", type="option", parent="HUD", offset=3, initialState=1},
-      {name = "hit markers", type="option", parent="HUD", offset=4, initialState=1},
-      {name = "arc throw path", type="option", parent="HUD", offset=5, initialState=1},
-      {name = "health and weapon", type="option", parent="HUD", offset=6, initialState=1},
-      {name = "health bar", type="option", parent="HUD", guard="health and weapon", offset=7, initialState=1},
-      {name = "weapon and ammo display", type="option", parent="HUD", guard="health and weapon", offset=8, initialState=1},
-      {name = "status effects", type="option", parent="HUD", guard="health and weapon", offset=9, initialState=1},
-      #{name = "tutorial messages", type="option", parent="HUD", offset=-8, initialState=0},
-      #{name = "hints", type="option", parent="HUD", offset=-7, initialState=0},
-      {name = "pickup notifications", type="option", parent="HUD", offset=-6, initialState=0},
-      #{name = "dodge prompts", type="option", parent="HUD", offset=-5, initialState=0},
-      #{name = "grab/strike prompts", type="option", parent="HUD", offset=-4, initialState=0},
-      #{name = "pickup prompts", type="option", parent="HUD", offset=-3, initialState=1},
-      #{name = "interact prompts", type="option", parent="HUD", offset=-2, initialState=1},
-      #{name = "collectibel tracking", type="option", parent="HUD", offset=-1, initialState=0},
+      {name = "reticle", type="option", parent="HUD", offset=0, initial=2},
+      {name = "weapon cross", type="option", parent="HUD", offset=1, initial=1},
+      {name = "damage indicators", type="option", parent="HUD", offset=2, initial=1},
+      {name = "awareness indicators", type="option", parent="HUD", offset=3, initial=1},
+      {name = "hit markers", type="option", parent="HUD", offset=4, initial=1},
+      {name = "arc throw path", type="option", parent="HUD", offset=5, initial=1},
+      {name = "health and weapon", type="option", parent="HUD", offset=6, initial=1},
+      {name = "health bar", type="option", parent="HUD", guard="health and weapon", offset=7, initial=1},
+      {name = "weapon and ammo display", type="option", parent="HUD", guard="health and weapon", offset=8, initial=1},
+      {name = "status effects", type="option", parent="HUD", guard="health and weapon", offset=9, initial=1},
+      #{name = "tutorial messages", type="option", parent="HUD", offset=-8, initial=0},
+      #{name = "hints", type="option", parent="HUD", offset=-7, initial=0},
+      {name = "pickup notifications", type="option", parent="HUD", offset=-6, initial=0},
+      #{name = "dodge prompts", type="option", parent="HUD", offset=-5, initial=0},
+      #{name = "grab/strike prompts", type="option", parent="HUD", offset=-4, initial=0},
+      #{name = "pickup prompts", type="option", parent="HUD", offset=-3, initial=1},
+      #{name = "interact prompts", type="option", parent="HUD", offset=-2, initial=1},
+      #{name = "collectibel tracking", type="option", parent="HUD", offset=-1, initial=0},
 
       # Options -> Subtitle Menu
       # subtitle states: 0 = off, 1 = story, 2 = story + combat
-      {name = "subtitle type", type="option", parent="subtitles", offset=0, initialState=2},
+      {name = "subtitle type", type="option", parent="subtitles", offset=0, initial=2},
       # subtitle size: 0 = small, 1 = medium, 2 = large
-      {name = "subtitle size", type="option", parent="subtitles", offset=1, initialState=1},
-      #{name = "subtitle background", type="option", parent="subtitles", offset=2, initialState=0},
-      #{name = "subtitle names", type="option", parent="subtitles", offset=3, initialState=1},
-      #{name = "subtitle name colors", type="option", parent="subtitles", offset=-3, initialState=0},
-      #{name = "subtitle direction", type="option", parent="subtitles", offset=-2, initialState=0},
-      #{name = "subtitle color", type="option", parent="subtitles", offset=-1, initialState=0},
+      {name = "subtitle size", type="option", parent="subtitles", offset=1, initial=1},
+      #{name = "subtitle background", type="option", parent="subtitles", offset=2, initial=0},
+      #{name = "subtitle names", type="option", parent="subtitles", offset=3, initial=1},
+      #{name = "subtitle name colors", type="option", parent="subtitles", offset=-3, initial=0},
+      #{name = "subtitle direction", type="option", parent="subtitles", offset=-2, initial=0},
+      #{name = "subtitle color", type="option", parent="subtitles", offset=-1, initial=0},
 
       # Options -> Display Menu
-      #{name = "brightness", type="menu", parent="display", offset=0, initialState=0},
-      #{name = "safezone scale", type="menu", parent="display", offset=1, initialState=0},
+      #{name = "brightness", type="menu", parent="display", offset=0, initial=0},
+      #{name = "safezone scale", type="menu", parent="display", offset=1, initial=0},
       # framerate: 0 = 30fps, 1 = 60fps
-      {name = "framerate", type="option", parent="display", offset=2, initialState=1},
-      #{name = "motion blur", type="option", parent="display", offset=3, initialState=10},
-      #{name = "camera shake", type="option", parent="display", offset=-2, initialState=10},
-      #{name = "film grain", type="option", parent="display", offset=-1, initialState=10},
+      {name = "framerate", type="option", parent="display", offset=2, initial=1},
+      #{name = "motion blur", type="option", parent="display", offset=3, initial=10},
+      #{name = "camera shake", type="option", parent="display", offset=-2, initial=10},
+      #{name = "film grain", type="option", parent="display", offset=-1, initial=10},
 
       # Options -> Audio Menu
-      {name = "effects", type="option", parent="audio", offset=0, initialState=20},
-      {name = "dialogue", type="option", parent="audio", offset=1, initialState=20},
-      {name = "music", type="option", parent="audio", offset=2, initialState=20},
-      #{name = "cinematics", type="option", parent="audio", offset=3, initialState=20},
-      #{name = "accessibility cue levels", type="option", parent="audio", offset=4, initialState=20},
-      #{name = "text-to-speech levels", type="option", parent="audio", offset=5, initialState=10},
-      #{name = "device", type="option", parent="audio", offset=6, initialState=0},
-      #{name = "channels", type="option", parent="audio", offset=-5, initialState=0},
-      #{name = "center channel", type="option", parent="audio", offset=-4, initialState=0},
-      #{name = "dynamic range", type="option", parent="audio", offset=-5, initialState=0},
-      {name = "mono", type="option", parent="audio", offset=-2, initialState=0},
-      #{name = "front", type="option", parent="audio", offset=-1, initialState=0},
+      {name = "effects", type="option", parent="audio", offset=0, initial=20},
+      {name = "dialogue", type="option", parent="audio", offset=1, initial=20},
+      {name = "music", type="option", parent="audio", offset=2, initial=20},
+      #{name = "cinematics", type="option", parent="audio", offset=3, initial=20},
+      #{name = "accessibility cue levels", type="option", parent="audio", offset=4, initial=20},
+      #{name = "text-to-speech levels", type="option", parent="audio", offset=5, initial=10},
+      #{name = "device", type="option", parent="audio", offset=6, initial=0},
+      #{name = "channels", type="option", parent="audio", offset=-5, initial=0},
+      #{name = "center channel", type="option", parent="audio", offset=-4, initial=0},
+      #{name = "dynamic range", type="option", parent="audio", offset=-5, initial=0},
+      {name = "mono", type="option", parent="audio", offset=-2, initial=0},
+      #{name = "front", type="option", parent="audio", offset=-1, initial=0},
 
       # Options -> Accessibility Menu
       {name = "alternate controls", type="menu", parent="accessibility", offset=0},
@@ -496,64 +469,64 @@ layout = [
 
       # Options -> Accessibility -> Alternate Controls
       # The first three commented out here are duplicates of entries in Options -> Controls
-      #{name = "camera assist", type="option", parent="alternate controls", offset=-7, initialState=0},
-      #{name = "lock-on aim", type="option", parent="alternate controls", offset=-6, initialState=0},
-      #{name = "lock-on strength", type="option", parent="alternate controls", guard="lock-on aim", offset=-5, initialState=10},
-      {name = "arc throw lock-on", type="option", parent="alternate controls", offset=-4, initialState=0},
-      {name = "auto weapon swap", type="option", parent="alternate controls", offset=-2, initialState=0},
-      {name = "auto pick-up", type="option", parent="alternate controls", offset=-1, initialState=0},
+      #{name = "camera assist", type="option", parent="alternate controls", offset=-7, initial=0},
+      #{name = "lock-on aim", type="option", parent="alternate controls", offset=-6, initial=0},
+      #{name = "lock-on strength", type="option", parent="alternate controls", guard="lock-on aim", offset=-5, initial=10},
+      {name = "arc throw lock-on", type="option", parent="alternate controls", offset=-4, initial=0},
+      {name = "auto weapon swap", type="option", parent="alternate controls", offset=-2, initial=0},
+      {name = "auto pick-up", type="option", parent="alternate controls", offset=-1, initial=0},
 
       # Options -> Accessibility -> Magnification Menu
-      {name = "HUD scale", type="option", parent="magnification", offset=0, initialState=0},
-      #{name = "HUD background", type="option", parent="magnification", offset=1, initialState=1},
-      #{name = "HUD color", type="option", parent="magnification", offset=2, initialState=0},
-      #{name = "HUD colorblind mode", type="option", parent="magnification", offset=3, initialState=0},
-      {name = "HUD flashing", type="option", parent="magnification", offset=4, initialState=1},
-      {name = "high contrast", type="option", parent="magnification", offset=-3, initialState=0},
-      #{name = "screen magnifier", type="option", parent="magnification", offset=-2, initialState=0},
-      #{name = "translation prompts", type="option", parent="magnification", offset=-1, initialState=0},
+      {name = "HUD scale", type="option", parent="magnification", offset=0, initial=0},
+      #{name = "HUD background", type="option", parent="magnification", offset=1, initial=1},
+      #{name = "HUD color", type="option", parent="magnification", offset=2, initial=0},
+      #{name = "HUD colorblind mode", type="option", parent="magnification", offset=3, initial=0},
+      {name = "HUD flashing", type="option", parent="magnification", offset=4, initial=1},
+      {name = "high contrast", type="option", parent="magnification", offset=-3, initial=0},
+      #{name = "screen magnifier", type="option", parent="magnification", offset=-2, initial=0},
+      #{name = "translation prompts", type="option", parent="magnification", offset=-1, initial=0},
 
       # Options -> Accessibility -> Motion Sickness
-      #{name = "camera shake", type="option", parent="motion sickness", offset=0, initialState=10},
-      #{name = "motion blur", type="option", parent="motion sickness", offset=1, initialState=10},      
+      #{name = "camera shake", type="option", parent="motion sickness", offset=0, initial=10},
+      #{name = "motion blur", type="option", parent="motion sickness", offset=1, initial=10},      
       # For camera distance and field of view, -5 = 0, 0 = 6
-      {name = "camera distance", type="option", parent="motion sickness", offset=2, initialState=6},
-      {name = "field of view", type="option", parent="motion sickness", offset=3, initialState=6},
-      #{name = "dolly zoom", type="option", parent="motion sickness", offset=-3, initialState=1},
-      #{name = "full screen effects", type="option", parent="motion sickness", offset=-2, initialState=1},
-      #{name = "persistent center dot", type="option", parent="motion sickness", offset=-1, initialState=0},
+      {name = "camera distance", type="option", parent="motion sickness", offset=2, initial=6},
+      {name = "field of view", type="option", parent="motion sickness", offset=3, initial=6},
+      #{name = "dolly zoom", type="option", parent="motion sickness", offset=-3, initial=1},
+      #{name = "full screen effects", type="option", parent="motion sickness", offset=-2, initial=1},
+      #{name = "persistent center dot", type="option", parent="motion sickness", offset=-1, initial=0},
 
       # Options -> Accessibility -> Navigation and Traversal
-      {name = "navigation assistance", type="option", parent="navigation", offset=0, initialState=0},
-      {name = "traversal assistance", type="option", parent="navigation", offset=1, initialState=0},
-      {name = "ledge guard", type="option", parent="navigation", offset=2, initialState=0},
-      {name = "enhanced listen", type="option", parent="navigation", offset=3, initialState=0},
-      {name = "scan range", type="option", parent="navigation", guard="enhanced listen", offset=4, initialState=10},
-      {name = "scan time", type="option", parent="navigation", guard="enhanced listen", offset=5, initialState=3},
-      {name = "infinite breath", type="option", parent="navigation", offset=-2, initialState=0},
-      #{name = "skip puzzle", type="option", parent="navigation", offset=-1, initialState=0},
+      {name = "navigation assistance", type="option", parent="navigation", offset=0, initial=0},
+      {name = "traversal assistance", type="option", parent="navigation", offset=1, initial=0},
+      {name = "ledge guard", type="option", parent="navigation", offset=2, initial=0},
+      {name = "enhanced listen", type="option", parent="navigation", offset=3, initial=0},
+      {name = "scan range", type="option", parent="navigation", guard="enhanced listen", offset=4, initial=10},
+      {name = "scan time", type="option", parent="navigation", guard="enhanced listen", offset=5, initial=3},
+      {name = "infinite breath", type="option", parent="navigation", offset=-2, initial=0},
+      #{name = "skip puzzle", type="option", parent="navigation", offset=-1, initial=0},
 
       # Options -> Accessibility -> Text-to-Speech and Audio Cues
-      {name = "text-to-speech", type="option", parent="TTS and audio", offset = 0, initialState=0, counter="audio cues"},
-      {name = "traversal cues", type="option", parent="TTS and audio", offset = 1, initialState=0, counter="audio cues"},
-      {name = "combat cues", type="option", parent="TTS and audio", offset = 2, initialState=0, counter="audio cues"},
-      #{name = "combat vibration", type="option", parent="TTS and audio", offset = 3, initialState=0},
-      #{name = "guitar vibration", type="option", parent="TTS and audio", offset = -3, initialState=0},
-      #{name = "audio volumes", type="menu", parent="TTS and audio", offset = -2, initialState=0},
-      #{name = "cue glossary", type="menu", parent="TTS and audio", offset = -1, initialState=0},
+      {name = "text-to-speech", type="option", parent="TTS and audio", offset = 0, initial=0, counter="audio cues"},
+      {name = "traversal cues", type="option", parent="TTS and audio", offset = 1, initial=0, counter="audio cues"},
+      {name = "combat cues", type="option", parent="TTS and audio", offset = 2, initial=0, counter="audio cues"},
+      #{name = "combat vibration", type="option", parent="TTS and audio", offset = 3, initial=0},
+      #{name = "guitar vibration", type="option", parent="TTS and audio", offset = -3, initial=0},
+      #{name = "audio volumes", type="menu", parent="TTS and audio", offset = -2, initial=0},
+      #{name = "cue glossary", type="menu", parent="TTS and audio", offset = -1, initial=0},
 
       # Options -> Accessibility -> Combat Accessibility
-      {name = "enable combat accessibility", type="option", parent="combat accessibility", offset = 0, initialState=0},
-      {name = "hostages don't escape", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 1, initialState=0},
-      {name = "allies don't get grabbed", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 2, initialState=0},
-      {name = "enemies don't flank", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 3, initialState=0},
-      {name = "reduced enemy perception", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 4, initialState=0},
-      {name = "reduced enemy accuracy", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 5, initialState=0},
-      {name = "enhanced dodge", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -4, initialState=0},
-      {name = "invisible while prone", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -3, initialState=0},
-      {name = "weapon sway", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -2, initialState=1},
+      {name = "enable combat accessibility", type="option", parent="combat accessibility", offset = 0, initial=0},
+      {name = "hostages don't escape", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 1, initial=0},
+      {name = "allies don't get grabbed", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 2, initial=0},
+      {name = "enemies don't flank", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 3, initial=0},
+      {name = "reduced enemy perception", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 4, initial=0},
+      {name = "reduced enemy accuracy", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 5, initial=0},
+      {name = "enhanced dodge", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -4, initial=0},
+      {name = "invisible while prone", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -3, initial=0},
+      {name = "weapon sway", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -2, initial=1},
       # slow motion duplicate of extras option
-      #{name = "slow motion", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -1, initialState=0},
+      #{name = "slow motion", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -1, initial=0},
 
       # Extras -> Render Modes Menu
       {name = "no render", type = "select", parent="render", offset = 0, counter="render"},
@@ -588,20 +561,20 @@ layout = [
       {name = "moonlight", type = "select", parent="render", offset = -1, counter="render"},
 
       # Extras -> Gameplay Menu
-      {name = "mirror", type="option", parent="gameplay", offset = 0, initialState = 0},
-      {name = "mirror on death", type="option", parent="gameplay", offset = 1, initialState = 0},
-      {name = "slow motion", type="option", parent="gameplay", offset = 2, initialState = 0},
-      {name = "bullet speed", type="option", parent="gameplay", offset = 3, initialState = 0},
-      {name = "infinite ammo", type="option", parent="gameplay", offset = 4, initialState = 0},
-      {name = "infinite crafting", type="option", parent="gameplay", offset = 5, initialState = 0},
-      {name = "infinite melee durability", type="option", parent="gameplay", offset = 6, initialState = 0},
-      {name = "infinite listen range", type="option", parent="gameplay", offset = 7, initialState = 0},
-      {name = "one shot", type="option", parent="gameplay", offset = -6, initialState = 0},
-      {name = "touch of death", type="option", parent="gameplay", offset = -5, initialState = 0},
-      {name = "8-bit audio", type="option", parent="gameplay", offset = -4, initialState = 0}, 
-      {name = "4-bit audio", type="option", parent="gameplay", offset = -3, initialState = 0},
-      {name = "helium audio", type="option", parent="gameplay", offset = -2, initialState = 0},
-      {name = "xenon audio", type="option", parent="gameplay", offset = -1, initialState = 0},
+      {name = "mirror", type="option", parent="gameplay", offset = 0, initial = 0},
+      {name = "mirror on death", type="option", parent="gameplay", offset = 1, initial = 0},
+      {name = "slow motion", type="option", parent="gameplay", offset = 2, initial = 0},
+      {name = "bullet speed", type="option", parent="gameplay", offset = 3, initial = 0},
+      {name = "infinite ammo", type="option", parent="gameplay", offset = 4, initial = 0},
+      {name = "infinite crafting", type="option", parent="gameplay", offset = 5, initial = 0},
+      {name = "infinite melee durability", type="option", parent="gameplay", offset = 6, initial = 0},
+      {name = "infinite listen range", type="option", parent="gameplay", offset = 7, initial = 0},
+      {name = "one shot", type="option", parent="gameplay", offset = -6, initial = 0},
+      {name = "touch of death", type="option", parent="gameplay", offset = -5, initial = 0},
+      {name = "8-bit audio", type="option", parent="gameplay", offset = -4, initial = 0}, 
+      {name = "4-bit audio", type="option", parent="gameplay", offset = -3, initial = 0},
+      {name = "helium audio", type="option", parent="gameplay", offset = -2, initial = 0},
+      {name = "xenon audio", type="option", parent="gameplay", offset = -1, initial = 0},
 ]
 
 #--------------------------------------------------------------------------------------------------
@@ -1114,8 +1087,7 @@ remap = [
 name = "Swap D-pad/Left Joystick"
 description = "Retro-style motion and an odd analog inventory selector"
 type = "remap"
-signals = [ "LX", "LY" ]
-disable_signals = true
+disable_signals = [ "LX", "LY" ]
 remap = [
       {from = "DX", to = "LX"},
       {from = "DY", to = "LY"},
@@ -1126,8 +1098,7 @@ remap = [
 name = "Swap Shapes/Right Joystick"
 description = "Analog actions and digital camera movement"
 type = "remap"
-signals = [ "RX", "RY" ]
-disable_signals = true
+disable_signals = [ "RX", "RY" ]
 remap = [
       {from = "RX", to = "CIRCLE", to_neg = "SQUARE", threshold=0.5},
       {from = "RY", to = "TRIANGLE", to_neg = "X", threshold=0.5},
@@ -1140,7 +1111,7 @@ remap = [
 name = "Motion Control Movement"
 description = "No more movement with the joystick. Tilt the controller to move instead."
 type = "remap"
-signals = [ "LX", "LY" ]
+disable_signals = [ "LX", "LY" ]
 remap = [
       {from = "ACCX", to = "LX", sensitivity=20},
       {from = "ACCZ", to = "LY", sensitivity=20},
@@ -1148,11 +1119,13 @@ remap = [
       {from = "LY", to = "NOTHING"}
       ]
 
+# In TLOU, this could just as well be accomplished with a menu option. It's done this way
+# for parallelism with Motion Control Movement, and to test the sensitivity settings.
 [[modifier]]
 name = "Motion Control Aiming"
 description = "No more aiming with the joystick. Tilt the controller to aim/look instead."
 type = "remap"
-signals = [ "RX", "RY" ]
+disable_signals = [ "RX", "RY" ]
 remap = [
       {from = "ACCX", to = "RX", sensitivity=24},
       {from = "ACCZ", to = "RY", sensitivity=24},
@@ -1162,13 +1135,13 @@ remap = [
 
 # Note for touchpad remapping, TOUCHPAD_ACTIVE must be included in the remap list so that
 # starting and stopping touchpad use can be initialized properly. Also, the axes that are
-# being remapped should all be in the signals list as well as the remap table. Otherwise,
-# they won't be properly set to 0 on conclusion.
+# being remapped should all be in the disable_signals list as well as the remap table.
+# Otherwise, they won't be properly set to 0 when the user stops aiming.
 [[modifier]]
 name = "Touchpad Aiming"
 description = "No more aiming with the joystick. Finally making use of the touchpad!"
 type = "remap"
-signals = [ "RX", "RY" ]
+disable_signals = [ "RX", "RY" ]
 remap = [
       {from = "TOUCHPAD_ACTIVE", to="NOTHING"},
       {from = "TOUCHPAD_X", to="RX"},
@@ -1298,7 +1271,6 @@ begin_sequence = [ { event = "release", command = "dodge/sprint" },
                   { event = "release", command = "crouch/prone" }]
 finish_sequence = [{ event = "release", command = "dodge/sprint" },
                   { event = "release", command = "crouch/prone" }]
-
 
 [[modifier]]
 name = "Double Tap"
@@ -1539,7 +1511,7 @@ menu_items = [{entry = "void" }]
 
 [[modifier]]
 name = "Pop Poster"
-description = "Stream Destroyer.  This kills the bitrate"
+description = "Stream Destroyer. This kills the bitrate"
 type = "menu"
 groups = [ "render mode" ]
 menu_items = [{entry = "pop poster" }]

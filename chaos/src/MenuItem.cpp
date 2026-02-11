@@ -26,14 +26,15 @@
 using namespace Chaos;
 
 MenuItem::MenuItem(MenuInterface& menu, std::string mname, short off, short tab,
-                   short initial, bool hide, bool opt, bool sel, bool conf,
+                   short initial, bool hide, bool opt, bool sel, bool conf, 
                    std::shared_ptr<MenuItem> par,
                    std::shared_ptr<MenuItem> grd,
-                   std::shared_ptr<MenuItem> cnt) : menu_items{menu},
+                   std::shared_ptr<MenuItem> cnt,
+                   CounterAction act) : menu_items{menu},
                    name{mname}, 
                    offset{off}, tab_group{tab}, default_state{initial}, 
                    hidden{hide}, is_option{opt}, is_selectable{sel}, confirm{conf},
-                   parent{par}, guard{grd}, sibling_counter{cnt} {
+                   parent{par}, guard{grd}, sibling_counter{cnt}, counter_action{act} {
   current_state = default_state;
 }
 
@@ -55,6 +56,19 @@ void MenuItem::decrementCounter() {
         hidden = true;
         menu_items.correctOffset(getptr());
       }
+    }
+  }
+}
+
+void MenuItem::setCounter(int val) {
+  PLOG_DEBUG << "set counter for " << name;
+  if (counter_action == CounterAction::REVEAL) {
+    if (counter == 0 && val != 0) {
+      hidden = false;
+      menu_items.correctOffset(getptr());
+    } else if (counter != 0 && val == 0 ) {
+      hidden = true;
+      menu_items.correctOffset(getptr());
     }
   }
 }

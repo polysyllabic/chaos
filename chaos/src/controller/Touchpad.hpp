@@ -31,6 +31,20 @@ namespace Chaos {
    * The touchpad can be used to generate axis events based either on the distance travelled from the
    * first touch point or the change in the touchpad axis values over time. This class encapsulates
    * those calculations.
+   * 
+   * There are two possible formula that can be used to calculate the axis equivalent from the touchpad:
+   * velocity and relative distance.
+   * 
+   * The velocity formula measures the average speed that the finger has travelled over the touchpad
+   * over the touchpad for the previous 5 polling intervals in both the x and y axes. 
+   *
+   * The distance formula returns the difference in position between where the finger first touched
+   * down on the touchpad and wher it is now.
+   * 
+   * In both cases, that resulting value is multiplied by a scale factor (configurable separately for
+   * both the x and y axes) and a skew is added. The skew is meant to amplify the signal linearly in
+   * whatever direction the basic signal is. That is, if the returned value is negative, the skew is
+   * subracted; if it is positive, the skew is added.
    */
   class Touchpad {
   private:
@@ -99,16 +113,6 @@ namespace Chaos {
     static double scale_y;
 
     /**
-     * \brief The default scaling applied to convert touchpad input to axis events.
-     * 
-     * The touchpad parameters control the formula to convert from touchpad to axis events based on
-     * the change in axis value over time (derivative). The formula is scale * derivative + skew.
-     * This result is then clipped to the limits of the joystick value. This is the default scaling
-     * factor applied if there is no touchpad condition or that condition is false.
-     */
-    static double velocity_scale;
-
-    /**
      * \brief Offset to apply to the axis value when the axis calculation is non-zero.
      * 
      * This value reflects the minimum value that will be applied when there is any non-zero value from the
@@ -153,12 +157,8 @@ namespace Chaos {
     short getAxisValue(ControllerSignal tp_axis, short value);
 
     double getScaleX() { return scale_x; }
-    double getScaleY() { return scale_y; }
-    double getVelocityScale() { return velocity_scale; }
-
-    static void setVelocityScale(double new_scale) { velocity_scale = new_scale; }
-    
-    static void setScaleXY(double new_x, double new_y) {
+    double getScaleY() { return scale_y; }    
+    static void setScale(double new_x, double new_y) {
       scale_x = new_x;
       scale_y = new_y;
     }

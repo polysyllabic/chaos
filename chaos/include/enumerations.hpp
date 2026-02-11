@@ -26,20 +26,15 @@ namespace Chaos {
    *
    * The specific test for the condition is determined by this type, which must be one of the 
    * following values:
-   *    - GREATER: A signal greater than the threshold triggers the signal. This type looks at the
-   * signal as a signed value.
-   *    - GREATER_EQUAL: A signal greater than or equal to the threshold triggers the signal. This
-   * type looks at the signal as a signed value.
-   *    - LESS: A signal less than the threshold triggers the signal. This type looks at the
-   * signal as a signed value.
-   *    - LESS_EQUAL: A signal less than or equal to the threshold triggers the signal. This
-   * type looks at the signal as a signed value.
-   *    - MAGNITUDE: A signal that is greater than the absolute value of the signal. (Default)
-   *    - DISTANCE: Calculates the Pythagorean distance of the first two signals in the condition
+   *  - ABOVE: A signal whose magnitude is greater than the threshold (DEFAULT)
+   *  - BELOW: A signal whose magnitude is less than the threshold
+   *  - GREATER: A signal whose signed value is greater than or equal to the threshold
+   *  = LESS: A signal whose signed value is less than the threshold
+   *  - DISTANCE: Calculates the Pythagorean distance of the first two signals in the condition
    * list (this assumes that they are axes). The condition is true if this distance exceeds the
    * threshold.
    */
-  enum class ThresholdType { GREATER, GREATER_EQUAL, LESS, LESS_EQUAL, MAGNITUDE, DISTANCE };
+  enum class ThresholdType { ABOVE, BELOW, GREATER, LESS, DISTANCE };
 
   /**
    * \brief The type of comparison to perform with the vector of game conditions.

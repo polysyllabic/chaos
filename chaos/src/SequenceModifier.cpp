@@ -50,7 +50,6 @@ SequenceModifier::SequenceModifier(toml::table& config, EngineInterface* e) {
 
   engine->addGameCommands(config, "trigger", trigger);
 
-
   start_delay = config["start_delay"].value_or(0.0);
   repeat_delay = config["cycle_delay"].value_or(0.0);
 
@@ -108,6 +107,8 @@ case SequenceState::IN_SEQUENCE:
 bool SequenceModifier::tweak(DeviceEvent& event) {
 
   if (sequence_state == SequenceState::UNTRIGGERED && !trigger.empty()) {
+    // If any of the commands in the trigger come in, check for the condition, and if true,
+    // start the sequence.
     for (auto& sig : trigger) {
       if (sig->getIndex() == event.index() && inCondition()) {
         sequence_state = SequenceState::STARTING;

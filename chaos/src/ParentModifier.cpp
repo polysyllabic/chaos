@@ -36,11 +36,14 @@ ParentModifier::ParentModifier(toml::table& config, EngineInterface* e) {
       "children", "random", "value", "unlisted"});
   initialize(config, e);
  
-  random_selection = config["random"].value_or(false);
-  setRecursion(!random_selection);
+  bool random_selection = config["random"].value_or(false);
+  setAllowAsChild(!random_selection);
 
-  num_randos = config["value"].value_or(0);
-
+  num_randos = config["value"].value_or(1);
+  if (num_randos < 0) {
+    throw std::runtime_error("'value' must be non-negative");
+  }
+  
   if (config.contains("children")) {
     const toml::array* cmd_list = config.get("children")->as_array();
     if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
@@ -76,7 +79,7 @@ void ParentModifier::buildRandomList() {
       count++;
       if (count >= selection) {
         // Don't pick if it's a parent mod with random selection. (This automatically excludes self.)
-        if (mod->getModType() == mod_type && ! mod->allowRecursion()) {
+        if (mod->getModType() == mod_type && ! mod->allowAsChild()) {
           continue;
         }
         bool copycat = false;

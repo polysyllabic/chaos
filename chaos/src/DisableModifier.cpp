@@ -39,7 +39,7 @@ DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
   assert(config.contains("type"));
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "applies_to", "begin_sequence", "finish_sequence",
-      "filter", "threshold", "while", "unless", "unlisted"});
+      "filter", "while", "unless", "unlisted"});
 
   initialize(config, e);
 
@@ -52,27 +52,25 @@ DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
   std::optional<std::string_view> f = config["filter"].value<std::string_view>();
   if (f) {
     if (*f == "above") {
-      filter = DisableFilter::ABOVE_THRESHOLD;
+      filter = DisableFilter::ABOVE;
     } else if (*f == "below") {
-      filter = DisableFilter::BELOW_THRESHOLD;
+      filter = DisableFilter::BELOW;
     } else if (*f != "all") {
       PLOG_WARNING << "Unrecognized filter type: '" << *f << "' in definition for '" << config["name"]
 		   << "' modifier. Using ALL instead.";
     }
   }
-  filterThreshold = config["filterThreshold"].value_or(0);
   
   switch (filter) {
   case DisableFilter::ALL:
     PLOG_VERBOSE << "Filter: ALL";
     break;
-  case DisableFilter::ABOVE_THRESHOLD:
+  case DisableFilter::ABOVE:
     PLOG_VERBOSE << "Filter: ABOVE";
     break;
-  case DisableFilter::BELOW_THRESHOLD:
+  case DisableFilter::BELOW:
     PLOG_VERBOSE << "Filter: BELOW";
   }
-  PLOG_VERBOSE << "FilterThreshold: " << filterThreshold;
 }
 
 bool DisableModifier::tweak (DeviceEvent& event) {
@@ -92,13 +90,13 @@ bool DisableModifier::tweak (DeviceEvent& event) {
         PLOG_VERBOSE << "Blocking " << cmd->getName() << "(" << (int) event.type << "." << (int) event.id << ") min_val=" << min_val;
 	      event.value = min_val;
         break;
-      case DisableFilter::ABOVE_THRESHOLD:
+      case DisableFilter::ABOVE:
         PLOG_VERBOSE << "+ Filter of " << cmd->getName() << "(" << (int)  event.type << "." << (int)  event.id << ") min_val=" << min_val;
-      	event.value = (event.value > filterThreshold) ? min_val : event.value;
+      	event.value = (event.value > 0) ? min_val : event.value;
       	break;
-      case DisableFilter::BELOW_THRESHOLD:
+      case DisableFilter::BELOW:
         PLOG_VERBOSE << "- Filter of " << cmd->getName() << "(" << (int)  event.type << "." << (int)  event.id << ") min_val=" << min_val;
-      	event.value = (event.value < filterThreshold) ? min_val : event.value;
+      	event.value = (event.value < 0) ? min_val : event.value;
       }
       // No need to keep searching after a match
       break;

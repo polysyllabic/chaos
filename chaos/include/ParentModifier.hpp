@@ -27,28 +27,35 @@
 namespace Chaos {
   class Game;
   /**
-   * \brief A modifier that enables child modifiers, either from a specific list or randomly selected.
+   * \brief A modifier that contains child modifiers
    * 
-   * The following keys are defined for this class of modifier:
-   *
-   * - name: A unique string identifying this mod. (_Required_)
-   * - description: An explanatation of the mod for use by the chat bot. (_Required_)
-   * - type = "parent" (_Required_)
-   * - groups: A list of functional groups to classify the mod for voting. (_Optional_)
-   * - children: A list of specific child modifiers
-   * - random: A boolean. If true, selects value number of child mods at random
+   * A parent modifier is a modifier that executes one or more other modifiers (child modifiers).
+   * The children can be drawn from a specific list or selected at random. Working from a specified
+   * list lets you create modifiers by chaining together multiple modifiers of different types to
+   * achieve effects that would not be possible within a single modifier class.
    * 
-   * Notes:
-   * During the lifetime of the mod, child modifiers listed in _children_ will be processed in the order
-   * that they are specified in the TOML file. If both specific child mods and random mods are specified,
-   * the random mods will be processed after the explicit child mods.
+   * The TOML syntax defining menu items is described in chaosConfigFiles.md
+   * 
+   * Child modifiers in #fixed_children will be processed in the same order that they are specified
+   * in the TOML file. If both named child mods and random mods are specified, the random mods
+   * will be processed after all the mods specified in #fixed_children.
    */
   class ParentModifier : public Modifier::Registrar<ParentModifier> {
   protected:
+    /**
+     * Vector of mods that were explicitly identified in the configuration file
+     */
     std::vector<std::shared_ptr<Modifier>> fixed_children;
+
+    /**
+     * Vector of mods chosen at random
+     */
     std::vector<std::shared_ptr<Modifier>> random_children;
-    
-    bool random_selection;
+
+    /**
+     * \brief Number of random modifiers chosen
+     * 
+     */
     short num_randos;
 
     void buildRandomList();
@@ -58,8 +65,6 @@ namespace Chaos {
     static const std::string mod_type;
     const std::string& getModType() { return mod_type; }
 
-    bool randomSelection() { return random_selection; }
-    
     void begin();
     void update();
     void finish();

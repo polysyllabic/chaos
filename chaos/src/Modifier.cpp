@@ -34,7 +34,7 @@
 #include "GameCondition.hpp"
 #include "Sequence.hpp"
 
-using namespace Chaos;
+namespace Chaos {
 
 void Modifier::initialize(toml::table& config, EngineInterface* e) {
   engine = e;
@@ -42,7 +42,7 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
   total_lifespan = 0;
   pause_time_accumulator = 0;
   lock_while_busy = true;
-  allow_recursion = true;
+  allow_as_child = true;
   name = config["name"].value_or("NAME NOT FOUND");
 
   description = config["description"].value_or("Description not available");
@@ -193,3 +193,4 @@ Json::Value Modifier::getGroups() {
   return group_array;
 }
 
+}
