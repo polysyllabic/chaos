@@ -38,7 +38,7 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
   
   time_on = config["time_on"].value_or(0.0);
   time_off = config["time_off"].value_or(0.0);
-  repeat_count = config["repeat"].value_or(1);
+  num_cycles = config["repeat"].value_or(1);
   cycle_delay = config["cycle_delay"].value_or(0.0);
 
   if (config.contains("force_on")) {
@@ -65,10 +65,10 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
     }
   }
 
-    // Allow "ALL" as a shortcut to avoid enumerating all signals
+  // Allow "ALL" as a shortcut to avoid enumerating all signals
   std::optional<std::string> for_all = config["block_while_busy"].value<std::string>();
   lock_all = (for_all && *for_all == "ALL");
-  if (for_all && !lock_all) {
+  if (!lock_all) {
     engine->addGameCommands(config, "block_while_busy", block_while);
   }
 
@@ -141,6 +141,10 @@ bool RepeatModifier::tweak(DeviceEvent& event) {
         }
         i++;
       }
+    }
+    // Drop all events unconditionally if we've set lock_all
+    if (lock_all) {
+      return false;
     }
     // Drop any events in the blockWhile list
     if (! block_while.empty()) {

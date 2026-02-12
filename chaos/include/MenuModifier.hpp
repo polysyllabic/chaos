@@ -64,7 +64,7 @@ namespace Chaos {
     
     void begin();
     void finish();
-    bool tweak(DeviceEvent* event);
+    bool tweak(DeviceEvent& event);
 
     
   };

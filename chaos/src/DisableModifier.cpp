@@ -39,7 +39,7 @@ DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
   assert(config.contains("type"));
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "applies_to", "begin_sequence", "finish_sequence",
-      "filter", "while", "unless", "unlisted"});
+      "filter", "while", "while_operator", "unlisted"});
 
   initialize(config, e);
 
@@ -75,14 +75,13 @@ DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
 
 bool DisableModifier::tweak (DeviceEvent& event) {
 
-  // If the condition test returns false, or the unless test returns true, do not block
-  if (inCondition() == false || inUnless() == true) {
+  // If the condition test returns false do not block
+  if (inCondition() == false) {
     return true;
   }
-  
   // Traverse the list of affected commands
   for (auto& cmd : commands) {
-    if (engine->eventMatches(event, cmd)) {
+    if (applies_to_all || engine->eventMatches(event, cmd)) {
       short min_val = (event.type == TYPE_AXIS && cmd->getInput()->getType() == ControllerSignalType::HYBRID)
         ? JOYSTICK_MIN : 0;
       switch (filter) {

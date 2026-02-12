@@ -39,11 +39,13 @@ ParentModifier::ParentModifier(toml::table& config, EngineInterface* e) {
   bool random_selection = config["random"].value_or(false);
   setAllowAsChild(!random_selection);
 
-  num_randos = config["value"].value_or(1);
-  if (num_randos < 0) {
-    throw std::runtime_error("'value' must be non-negative");
+  if (random_selection) {
+    num_randos = config["value"].value_or(0);
+    if (num_randos < 1) {
+      throw std::runtime_error("For random modifiers 'value' must be greater than 0");
+    }
   }
-  
+
   if (config.contains("children")) {
     const toml::array* cmd_list = config.get("children")->as_array();
     if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {

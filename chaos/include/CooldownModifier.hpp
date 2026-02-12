@@ -41,6 +41,13 @@ namespace Chaos {
    * \brief Modifier that allows an action for a set period of time and then blocks it until a
    * cooldown period has expired.
    *
+   * The trigger option is provided in order to ensure that the first event encountered in the
+   * trigger list will trip the timer (assuming that the conditions are also true). Although
+   * you can probably achieve similar functionality in most cases using just a while condition,
+   * the while conditions are polled continually on a timed loop, whereas each incoming event
+   * is checked against the trigger list. This ensures that there's no chance of missing
+   * a quickly changing state if the engine for some reason gets bogged down.
+   * 
    * \todo Allow cooldown to do things other than block a signal
    */
   class CooldownModifier : public Modifier::Registrar<CooldownModifier> {
@@ -60,7 +67,7 @@ namespace Chaos {
 
     /**
      * If true, the allow-period only accumulates when the while-condition is true.
-     * If false, the cycle occurs whether or not a condition applies.
+     * If false, the cycle continues whether or not the while-condition continues to apply.
      */
     bool cumulative;
 
@@ -75,7 +82,8 @@ namespace Chaos {
     double time_off;
 
     /**
-     * Vector of signals that will start the trigger
+     * Inputs to monitor to that will trigger the timer to start in conjunction with the while
+     * conditions.
      */
     std::vector<std::shared_ptr<ControllerInput>> trigger;
 

@@ -53,8 +53,16 @@ namespace Chaos {
 
     double time_off;
 
+    /**
+     * Running count of how many times we've repeated the cycle
+     */
     int repeat_count;
+
+    /**
+     * Total number of times to repeat the cycle
+     */
     int num_cycles = 1;
+    
     /**
      * Time in seconds to wait after one cycle ends before repeating the sequence.
      */

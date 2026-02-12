@@ -75,7 +75,18 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
   }
  
   engine->addGameConditions(config, "while", conditions);
-  engine->addGameConditions(config, "unless", unless_conditions);
+
+  condition_operation = ConditionCheck::ALL;
+  std::optional<std::string> while_op = config["while_operation"].value<std::string>();
+  if (while_op) {
+    if (*while_op == "any") {
+      condition_operation = ConditionCheck::ANY;
+    } else if (*while_op == "none") {
+      condition_operation = ConditionCheck::NONE;
+    } else if (*while_op != "all") {
+      PLOG_ERROR << "Unrecognized while_operation type. Using 'all'";
+    }
+  }
 
   on_begin  = engine->createSequence(config, "begin_sequence", false);
   on_finish = engine->createSequence(config, "finish_sequence", false);
@@ -118,16 +129,8 @@ bool Modifier::remap(DeviceEvent& event) {
   return true;
 }
 
+
 bool Modifier::_tweak(DeviceEvent& event) {
-  // Update any conditions that track persistent states
-  for (auto& cond : conditions) {
-    assert(cond);
-    cond->updateState(event);
-  }
-  for (auto& cond : unless_conditions) {
-    assert(cond);
-    cond->updateState(event);
-  }
   return tweak(event);
 }
 
@@ -153,27 +156,17 @@ void Modifier::sendFinishSequence() {
   }
 }
 
-bool Modifier::testConditions(std::vector<std::shared_ptr<GameCondition>>& condition_list) {
-  assert(!condition_list.empty());
-
-  return std::all_of(condition_list.begin(), condition_list.end(), [](std::shared_ptr<GameCondition> c) {
-	  return c->inCondition(); });
-}
-
 bool Modifier::inCondition() {
-  // Having no conditions defined is equivalent to an always-true condition.
   if (conditions.empty()) {
     return true;
   }
-  return testConditions(conditions);
-}
-
-bool Modifier::inUnless() {
-  // Having no unless conditions defined is equivalent to an always-false condition.
-  if (unless_conditions.empty()) {
-    return false;
+  if (condition_operation == ConditionCheck::ALL) {
+    return std::all_of(conditions.begin(), conditions.end(), [](std::shared_ptr<GameCondition> c) { return c->inCondition(); });
+  } else if (condition_operation == ConditionCheck::ANY) {
+    return std::any_of(conditions.begin(), conditions.end(), [](std::shared_ptr<GameCondition> c) { return c->inCondition(); });
+  } else {
+    return std::none_of(conditions.begin(), conditions.end(), [](std::shared_ptr<GameCondition> c) { return c->inCondition(); });
   }
-  return testConditions(unless_conditions);
 }
 
 Json::Value Modifier::toJsonObject() {

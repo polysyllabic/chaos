@@ -34,14 +34,12 @@ const std::string CooldownModifier::mod_type = "cooldown";
 CooldownModifier::CooldownModifier(toml::table& config, EngineInterface* e) {
   
   TOMLUtils::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
-							  "begin_sequence", "finish_sequence", "applies_to", "trigger", "while", "unless",
-                "cumulative", "time_on", "time_off", "unlisted"});
+							  "begin_sequence", "finish_sequence", "applies_to", "while", "while_operation",
+                "cumulative", "time_on", "time_off", "trigger", "unlisted"});
   initialize(config, e);
   if (commands.empty()) {
     throw std::runtime_error("No command associated with cooldown modifier.");
   }
-
-  engine->addGameCommands(config, "trigger", trigger);
 
   time_on = config["time_on"].value_or(0.0);
   if (time_on <= 0.0) {
@@ -52,6 +50,8 @@ CooldownModifier::CooldownModifier(toml::table& config, EngineInterface* e) {
   if (time_off <= 0.0) {
     throw std::runtime_error("Cooldown time_off must be a positive number");
   }
+
+  engine->addGameCommands(config, "trigger", trigger);
 
   cumulative = config["cumulative"].value_or(false);
 
@@ -75,7 +75,14 @@ void CooldownModifier::update() {
   // Get the difference since the last time update.
   double deltaT = timer.dTime();
 
-  if (state == CooldownState::BLOCK) {
+  if (state == CooldownState::UNTRIGGERED) {
+    // Scan for the triggering condition
+    if (trigger.empty() && inCondition()) {
+      // If there's no trigger, start the timer as soon as the condition is true
+      state = CooldownState::ALLOW;
+      PLOG_DEBUG << "Cooldown timer " << getName() << " triggered";
+    }
+  } else if (state == CooldownState::BLOCK) {
     // count down until cooldown ends
     cooldown_timer -= deltaT;
     if (cooldown_timer <= 0) {
@@ -105,23 +112,25 @@ void CooldownModifier::update() {
 }
 
 bool CooldownModifier::tweak(DeviceEvent& event) {
-  if (state == CooldownState::UNTRIGGERED) {
-    // Check any incomming event to start the trigger
+  if (state == CooldownState::UNTRIGGERED && !trigger.empty()) {
+    // If this event matches any of the commands in the trigger, check the condition and start the
+    // timer if true
     for (auto& sig : trigger) {
-      if (sig->matches(event) && inCondition()) {
-        PLOG_DEBUG << "Trigger matched on event " << (int) event.type << "." << (int) event.id;
+      if (sig->getIndex() == event.index() && inCondition()) {
         state = CooldownState::ALLOW;
-        return true;
+        break;
       }
     }
   }
   // Block events in the command list while in cooldown
-  for (auto& cmd : commands) {
-    assert(cmd && cmd->getInput());
-    std::shared_ptr<ControllerInput> sig = cmd->getInput();
-    PLOG_VERBOSE << "Checking " << cmd->getName() << ", maps to " << ((sig) ? sig->getName() : "NULL");
-    if (sig && sig->matches(event)) {
-      return state != CooldownState::BLOCK;
+  if (state == CooldownState::BLOCK) {
+    for (auto& cmd : commands) {
+      assert(cmd && cmd->getInput());
+      std::shared_ptr<ControllerInput> sig = cmd->getInput();
+      PLOG_VERBOSE << "Checking " << cmd->getName() << ", maps to " << ((sig) ? sig->getName() : "NULL");
+      if (sig && sig->matches(event)) {
+        return false;
+      }
     }
   }
   return true;

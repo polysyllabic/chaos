@@ -164,6 +164,11 @@ name = "aiming"
 while = [ "aiming" ]
 
 [[condition]]
+name = "not aiming"
+while = [ "aiming"]
+threshold_type = "below"
+
+[[condition]]
 name = "sprint"
 while = [ "dodge/sprint" ]
 
@@ -193,14 +198,14 @@ threshold_type = "distance"
 # currently held.
 [[condition]]
 name = "gun selected"
-set_on = "select weapon"
+while = "select weapon"
 clear_on = "select consumable"
 
 # The vertical d-pad by default picks a weapon, which also puts away any consumable
 # currently held.
 [[condition]]
 name = "consumable selected"
-set_on = "select consumable"
+while = "select consumable"
 clear_on = "select weapon"
 
 #--------------------------------------------------------------------------------------------------
@@ -628,8 +633,7 @@ description = "You can still shoot, but you can't reload."
 type = "disable"
 groups = [ "combat" ]
 applies_to = [ "reload/toss" ]
-while = [ "gun selected" ]
-unless = [ "aiming" ]
+while = [ "gun selected", "not aiming" ]
 
 [[modifier]]
 name = "Disable Camera"
@@ -672,7 +676,7 @@ description = "Movement is disabled if not aiming"
 type = "disable"
 groups = [ "movement" ]
 applies_to = [ "vertical movement", "horizontal movement" ]
-unless = [ "aiming" ]
+while = [ "not aiming" ]
 
 [[modifier]]
 name = "No Aim Movement"
@@ -819,7 +823,6 @@ type = "cooldown"
 groups = [ "movement" ]
 applies_to = [ "dodge/sprint" ]
 while = [ "movement", "sprint" ]
-trigger = [ "dodge/sprint", "vertical movement", "horizontal movement" ]
 cumulative = true
 time_on = 2.0
 time_off = 4.0
@@ -831,7 +834,6 @@ type = "cooldown"
 groups = [ "combat" ]
 applies_to = [ "aiming" ]
 while = [ "aiming" ]
-trigger = [ "aiming" ]
 time_on = 1.0
 time_off = 3.0
 
@@ -841,20 +843,19 @@ description = "Take your time between shots. No shooting or reloading for 5-seco
 type = "cooldown"
 groups = [ "combat" ]
 applies_to = [ "shoot" ]
-while = [ "aiming" ]
-trigger = [ "shoot" ]
+while = [ "aiming", "shoot" ]
 time_on = 0.1
 time_off = 5.0
 
 [[modifier]]
 name = "You Good?"
-description = "Other than being really old? Melee takes a lot out of you. 3-second delay between melee attacks."
+description = "Other than being really old? Melee takes a lot out of you. 5-second delay between melee attacks."
 type = "cooldown"
 groups = [ "combat" ]
 applies_to = [ "melee" ]
-trigger = [ "melee" ]
+while = [ "melee" ]
 time_on = 0.1
-time_off = 3.0
+time_off = 5.0
 
 [[modifier]]
 name = "Red Light/Green Light"
@@ -863,7 +864,6 @@ type = "cooldown"
 groups = [ "movement" ]
 applies_to = [ "vertical movement", "horizontal movement" ]
 while = [ "movement" ]
-trigger = [ "vertical movement", "horizontal movement" ]
 cumulative = true
 time_on = 5.0
 time_off = 5.0

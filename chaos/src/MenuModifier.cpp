@@ -77,7 +77,7 @@ void MenuModifier::finish() {
   }
 }
 
-bool MenuModifier::tweak(DeviceEvent* event) {
+bool MenuModifier::tweak(DeviceEvent& event) {
   // block all signals if we're busy sending a sequence
   return !in_sequence;
 }

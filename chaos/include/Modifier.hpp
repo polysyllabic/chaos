@@ -194,12 +194,9 @@ namespace Chaos {
     std::vector<std::shared_ptr<GameCondition>> conditions;
 
     /**
-     * \brief List of game conditions to test
-     *
-     * The list of conditions is tested according to the rule in unless_test, and mods are expected
-     * to take action if the result of the test is true.
+     * \brief What type of operation to perform when multiple conditions are in the list
      */
-    std::vector<std::shared_ptr<GameCondition>> unless_conditions;
+    ConditionCheck condition_operation;
 
     /**
      * \brief Amount of time the engine has been paused.
@@ -233,21 +230,13 @@ namespace Chaos {
      * - description
      * - groups
      * - applies_to
-     * - condition
-     * - unless
+     * - while
+     * - while_operation
      * - begin_sequence
      * - finish_sequence
      * - unlisted
      */
     void initialize(toml::table& config, EngineInterface* e);
-
-    /**
-     * \brief Test if the current controller state matches the defined conditions
-     * 
-     * \param conditions A vector of the conditions to check
-     * \return true If all conditions in the vector return true
-     */
-    bool testConditions(std::vector<std::shared_ptr<GameCondition>>& conditions);
 
   public:
     /**
@@ -417,35 +406,16 @@ namespace Chaos {
     /**
      * \brief Checks the list of game conditions 
      * 
-     * \return true if we're in the defined state, or if the list is empty
+     * \return true if we're in the defined state, or if there are no conditions to test
      * \return false if we're not in the defined state
      *
-     * Traverses the list of GameCondition objects stored in #conditions. The state of 
-     * inCondition() determines the logic for how to chain together multiple conditions.
+     * We traverse the conditions list and test if they are all true (default), if any are
+     * true, or if none are true depending on the value of  the while operation.
      *
-     * If the #conditions list is empty, always returns true. In other words, defining no
-     * conditions is equivalent to "always do this action."
+     * If the #conditions list is empty, returns true. In other words, defining no conditions
+     * is equivalent to "always do this action."
      */
     bool inCondition();
-    
-    /**
-     * \brief Checks the list of negative game conditions 
-     * 
-     * \return true if all conditions in the list return true
-     * \return false any condition in the list returns false, or if the list is empty
-     *
-     * Traverses the list of GameCondition objects stored in #unless_conditions. The state of 
-     * inUnless() determines the logic for how to chain together multiple conditions.
-     *
-     * Note that the test on a non-empty list is conducted the same way as the one for
-     * inCondition(). In other words, if all conditions are true, this function returns true.
-     * You should think of the return value as answering the question "Are we in the state
-     * defined in this list?" and not "should we take action?" The answer to the second question
-     * is one to be determined by the child mod that makes use of this function.
-     * 
-     * If the #unless_conditions list is empty, always returns false.
-     */
-    bool inUnless();
     
     /**
      * \brief Is this mod allowed as a child modifier

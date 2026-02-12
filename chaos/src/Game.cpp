@@ -355,62 +355,68 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
   PLOG_VERBOSE << "Initializing game condition " << *condition_name;
   
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "while", "set_on", "clear_on", "threshold", "threshold_type"});
+      "name", "while", "clear_on", "threshold", "threshold_type", "clear_threshold",
+      "clear_threshold_type"});
 
   std::shared_ptr<GameCondition> ret = std::make_shared<GameCondition>(*condition_name);
 
-  if (config.contains("while")) {
-    if (config.contains("set_on") || config.contains("clear_on")) {
+  if (!config.contains("while")) {
+    ++parse_errors;
+    PLOG_ERROR << "A condition must contain a 'while' key";
+    return nullptr;
+  }
+  const toml::array* cmd_list = config.get("while")->as_array();
+  if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
+    ++parse_errors;
+    PLOG_ERROR << "'while' must be an array of strings";
+    return nullptr;
+  }
+
+  for (auto& elem : *cmd_list) {
+    std::optional<std::string> cmd = elem.value<std::string>();
+    assert(cmd);
+    // check that the string matches the name of a previously defined object
+    std::shared_ptr<GameCommand> item = getCommand(*cmd);
+    if (item) {
+      ret->addWhile(item);
+      PLOG_VERBOSE << "Added '" + *cmd + "' to the while vector.";
+    } else {
       ++parse_errors;
-      PLOG_ERROR << "A condition must contain either a while or a set_on/clear_on pair";
+      PLOG_ERROR << "Unrecognized command '" << *cmd << "' in while list";
       return nullptr;
     }
-    const toml::array* cmd_list = config.get("while")->as_array();
+  }
+  // If no valid commands were in the while list, reject the whole condition
+  if (ret->getNumWhile() == 0) {
+    ++parse_errors;
+    PLOG_ERROR << "No commands in while list";
+    return nullptr;
+  }
+  
+  if (config.contains("clear_on")) {
+    const toml::array* cmd_list = config.get("clear_on")->as_array();
     if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
       ++parse_errors;
-      PLOG_ERROR << "'while' must be an array of strings";
-      return nullptr;
+      PLOG_ERROR << "'clear_on' must be an array of strings";
+      return nullptr;    
     }
-
     for (auto& elem : *cmd_list) {
       std::optional<std::string> cmd = elem.value<std::string>();
       assert(cmd);
       // check that the string matches the name of a previously defined object
       std::shared_ptr<GameCommand> item = getCommand(*cmd);
       if (item) {
-        ret->addCondition(item);
-        PLOG_VERBOSE << "Added '" + *cmd + "' to the while vector.";
+        ret->addClearOn(item);
+        PLOG_VERBOSE << "Added '" + *cmd + "' to the clear_on vector.";
       } else {
         ++parse_errors;
         PLOG_ERROR << "Unrecognized command '" << *cmd << "' in while list";
         return nullptr;
       }
     }
-    // case of empty while list
-    if (!ret->isTransient()) {
-      ++parse_errors;
-      PLOG_ERROR << "No commands in while list";
-      return nullptr;
+    if (ret->isTransient()) {
+      PLOG_WARNING << "You created an empty 'clear_on' list. Treating as a transient condition.";
     }
-  } else {
-    // If we get here, we're constructing a persistent condition
-  if (!config.contains("set_on") || !config.contains("clear_on")) {
-    ++parse_errors;
-    PLOG_ERROR << "A persistent condition must contain both set_on and clear_on parameters";
-    return nullptr;
-  }
-
-  std::shared_ptr<GameCommand> cmd = getCommand(config, "set_on", true);
-  if (! cmd) {
-    return nullptr;
-  }
-  ret->setSetOn(cmd);
-
-  cmd = getCommand(config, "clear_on", true);
-  if (! cmd) {
-    return nullptr;
-  }
-  ret->setClearOn(cmd);
   }
 
   // Default type is above
@@ -425,6 +431,8 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
       threshold_type = ThresholdType::LESS;
     } else if (*thtype == "distance") {
       threshold_type = ThresholdType::DISTANCE;
+    } else if (*thtype == "distance_below") {
+      threshold_type = ThresholdType::DISTANCE_BELOW;
     } else if (*thtype != "above") {
       PLOG_WARNING << "Invalid threshold_type '" << *thtype << "'. Using 'above'.";
     }
@@ -444,7 +452,39 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
   }
   ret->setThreshold(proportion);
 
-  PLOG_VERBOSE << "Condition: " << *condition_name <<  "; " << ((thtype) ? *thtype : "magnitude") <<
+  ThresholdType clear_threshold_type = threshold_type;
+  thtype = config["clear_threshold_type"].value<std::string_view>();
+  if (thtype) {
+    if (*thtype == "greater") {
+      threshold_type = ThresholdType::GREATER;
+    } else if (*thtype == "below") {
+      threshold_type = ThresholdType::BELOW;
+    } else if (*thtype == "less") {
+      threshold_type = ThresholdType::LESS;
+    } else if (*thtype == "distance") {
+      threshold_type = ThresholdType::DISTANCE;
+    } else if (*thtype == "distance_below") {
+      threshold_type = ThresholdType::DISTANCE_BELOW;
+    } else if (*thtype != "above") {
+      PLOG_WARNING << "Invalid clear_threshold_type '" << *thtype << "'. Using 'above'.";
+    }
+  }
+
+ double clear_proportion = config["clear_threshold"].value_or(proportion);
+  if (clear_proportion < -1 || clear_proportion > 1) {
+    ++parse_warnings;
+    PLOG_WARNING << "clear_threshold must be between -1 and 1. Using 1";
+    clear_proportion = 1.0;
+  } else if (clear_proportion < 0) {
+    // Negative proportions only sensible for GREATER/LESS (signed) comnparisons
+    if (clear_threshold_type != ThresholdType::GREATER && clear_threshold_type != ThresholdType::LESS) {
+      clear_proportion = std::abs(proportion);
+      PLOG_WARNING << "Proportion should be positive. Using absolute value.";
+    }
+  }
+  ret->setClearThreshold(clear_proportion);
+
+  PLOG_VERBOSE << "Condition: " << *condition_name <<  "; " << ((thtype) ? *thtype : "greater") <<
       " threshold proportion = " << proportion << " -> " << ret->getThreshold();
 
   return ret;

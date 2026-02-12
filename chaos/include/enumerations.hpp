@@ -31,10 +31,11 @@ namespace Chaos {
    *  - GREATER: A signal whose signed value is greater than or equal to the threshold
    *  = LESS: A signal whose signed value is less than the threshold
    *  - DISTANCE: Calculates the Pythagorean distance of the first two signals in the condition
-   * list (this assumes that they are axes). The condition is true if this distance exceeds the
-   * threshold.
+   * list (this assumes that they are axes). The condition is true if this distance is greater than
+   * or equal to the threshold.
+   *  - DISTANCE_BELOW: Like DISTANCE but true if the distance is less than the threshold
    */
-  enum class ThresholdType { ABOVE, BELOW, GREATER, LESS, DISTANCE };
+  enum class ThresholdType { ABOVE, BELOW, GREATER, LESS, DISTANCE, DISTANCE_BELOW };
 
   /**
    * \brief The type of comparison to perform with the vector of game conditions.

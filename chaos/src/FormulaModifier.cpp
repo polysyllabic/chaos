@@ -31,7 +31,7 @@ const std::string FormulaModifier::mod_type = "formula";
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "applies_to", "begin_sequence", "finish_sequence",
-      "while", "unless", "formula_type", "amplitude", "period_length", "unlisted"});
+      "while", "while_operation", "formula_type", "amplitude", "period_length", "unlisted"});
   initialize(config, e);
 
   if (commands.empty()) {
