@@ -34,7 +34,7 @@ SequenceModifier::SequenceModifier(toml::table& config, EngineInterface* e) {
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "begin_sequence", "finish_sequence",
-      "block_while_busy", "repeat_sequence", "trigger", "while", "unless",
+      "block_while_busy", "repeat_sequence", "trigger", "while", "while_operation",
       "start_delay", "cycle_delay", "unlisted"});
 
   initialize(config, e);
@@ -71,8 +71,8 @@ void SequenceModifier::update() {
   
   switch (sequence_state) {
   case SequenceState::UNTRIGGERED:
-    if (trigger.empty()) {
-      // If there is no trigger, start sequence immediately
+    if (trigger.empty() && inCondition()) {
+      // If there is no trigger, start sequence immediately upon the condition being true
       sequence_state = SequenceState::STARTING;
     }   
     return;
@@ -112,6 +112,7 @@ bool SequenceModifier::tweak(DeviceEvent& event) {
     for (auto& sig : trigger) {
       if (sig->getIndex() == event.index() && inCondition()) {
         sequence_state = SequenceState::STARTING;
+        break;
       }
     }
   }

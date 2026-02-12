@@ -15,123 +15,55 @@ gameplay for a fixed period of time. Modifiers come in different types, which de
 the category of action they perform. For example, some modifiers select options from the
 game's menu. Others modify the signal or execute a predefined sequence of actions.
 
-To support those modifiers, we also define a command map, sequences, and the game's menu
-layout. The command map associates a user-friendly name with a specific controller signal
-(e.g., the 'X' button or one axis of a joystick).
+To support those modifiers, we also define a command map, conditions, sequences, and the
+game's menu layout.
 
-The configuration files are set up with the default binding of signals to named commands,
-but if you prefer to play the game with custom settings, you can simply change this map
-and all the modifiers will continue to behave as you would expect them to. For example,
-a no-running modifier will actually block whatever signal you have bound to the run
+The command map associates a user-friendly name with a specific controller signal (e.g., the 'X'
+button or one axis of a joystick). The configuration files are set up with the default binding of
+signals to named commands, but if you prefer to play the game with custom settings, you can simply
+change this map and all the modifiers will continue to behave as you would expect them to. For
+example, a no-running modifier will actually block whatever signal you have bound to the run
 command ('dodge/sprint' in TLOU2).
 
-The menu-layout describes how to navigate the game's menu system to alter any necessary
+Conditions define a logical test that can be used to determine when the controller has
+entered a particular state.
+
+The menu layout describes how to navigate the game's menu system to alter any necessary
 game-setting options.
-
-### Example Configuration File Entries
-
-The following give some examples of how the configuration file works:
-
-Associate a game command with a controller button:
-
-```toml
-[[command]]
-name = "melee"
-binding = "SQUARE"
-```
-
-Define a condition that can be monitored and acted on. The following defines a trigger that is reads
-as true whenever the joystick controlling movement is deflected more than 20% of its maximum:
-
-```toml
-[[condition]]
-name = "movement"
-trueOn = [ "move forward/back", "move sideways" ]  
-threshold = 0.2
-thresholdType = "distance"
-```
-
-Define gameplay modifiers:
-
-```toml
-[[modifier]]
-name = "No Melee"
-description = "Disable melee attacks and stealth kills"
-type = "disable"
-groups = [ "combat" ]
-appliesTo = [ "melee" ]
-
-[[modifier]]
-name = "Bad Stamina"
-description = "Running is disabled after 2 seconds and takes 4 seconds to recharge."
-type = "cooldown"
-groups = [ "movement" ]
-appliesTo = [ "dodge/sprint" ]
-timeOn = 2.0
-timeOff = 4.0
-
-[[modifier]]
-name = "Swap Joysticks"
-description = "You may want to cross your thumbs to work with your muscle memory"
-type = "remap"
-remap = [
-      {from = "RX", to = "LX"},
-      {from = "RY", to = "LY"},
-      {from = "LX", to = "RX"},
-      {from = "LY", to = "RY"} ]
-
-[[modifier]]
-name = "Use Items"
-description = "Shoots or throws 6 of whatever item is currently equipped. No effect for medkits."
-type = "sequence"
-groups = [ "combat", "inventory" ]
-blockWhileBusy = [ "aiming", "reload/toss" ]
-beginSequence = [
-  { event="hold", command = "aiming", delay = 1.0 },
-  { event="press", command = "shoot", repeat = 6, delay = 0.25 },
-  { event="release", command = "aiming" } ]
-
-[[modifier]]
-name = "No Reticle"
-description = "Headshots just got trickier."
-type = "menu"
-groups = [ "UI" ]
-menu_items = [{entry = "reticle", value = 0 }]
-```
 
 ## General Settings
 The following settings apply to the operation of the engine for the whole game.
 
-- chaos_toml: A version string for the TOML file format. Currently used only to verify that we're
+- `chaos_toml`: A version string for the TOML file format. Currently used only to verify that we're
   reading the right file. Currently, this should always be "1.0".
 
-- game: User-friendly name of the game this configuration file defines.
+- `game`: User-friendly name of the game this configuration file defines.
 
-- active_modifiers: The number of modifiers that can be in effect simultaneously
+- `active_modifiers`: The number of modifiers that can be in effect simultaneously
 
-- time_per_modifier: Lifetime of an individual modifier, in seconds. The time that the engine is
+- `time_per_modifier`: Lifetime of an individual modifier, in seconds. The time that the engine is
   paused is deducted from the mod's total runtime, so this lifetime is the _active_ lifespan.
 
-- button_press_time: Default time, in seconds, to hold down a button when issuing a command in a
+- `button_press_time`: Default time, in seconds, to hold down a button when issuing a command in a
   sequence.
 
-- button_release_time: Default time, in seconds, to wait after releasing a button before going on
+- `button_release_time`: Default time, in seconds, to wait after releasing a button before going on
   to the next command in the sequence.
 
-- touchpad_inactive_delay: Time (in seconds) since last received touchpad axis event before the
+- `touchpad_inactive_delay`: Time (in seconds) since last received touchpad axis event before the
   touchpad will be reset to inactive.
 
-- touchpad_velocity: Selects the algorithm used to translate touchpad events into joystick
+- `touchpad_velocity`: Selects the algorithm used to translate touchpad events into joystick
   equivalents. If true, the joystick deflection is proportional to the change in axis value over
   time (i.e., your finger's velocity over the touchpad). An average value of the velocity over the
   previous 5 polling intervals is used. If false, we calculate the distance between the first point
   the finger touched and its curent position.
 
-- touchpad_scale:  After the touchpad value is calculated by one of the two algorithms above, the
+- `touchpad_scale`:  After the touchpad value is calculated by one of the two algorithms above, the
   resulting value is multiplied by this scaling factor. Scaling can be set separately for each
   axis. The first value in the list is for the x-axis; the second for the y-axis.
 
-- touchpad_skew: Defines an offset to apply to the axis value when the derivative is non-zero. The
+- `touchpad_skew`: Defines an offset to apply to the axis value when the derivative is non-zero. The
   sign of the skew is the same as the sign of the derivative. In other words, if the derivative is
   positive, the skew is added to the result, and the derivative is negative, the skew is
   subtractecd.
@@ -151,10 +83,12 @@ comes in. For example, "shoot" in TLOU2 is equivalent to "reload/toss" with the 
 
 A command is defined by specifying a name and controllor signal to bind to it. It has two parameters,
 both required:
- - name: The label used to refer to the action in the elsewhere in the configuration file.
+
+ - `name`: The label used to refer to the action in the elsewhere in the configuration file.
    Command names must be unique, but you can define multiple names to point to the same signal.
    This allows for aliases, so you can use different command names in different contexts.
- - binding: The controller signal (button, axis, etc.) attached to this command. These labels
+
+ - `binding`: The controller signal (button, axis, etc.) attached to this command. These labels
    ("L1", "X", etc.) are hard-coded values and cannot be altered in the configuration file.
 
 _Examples:_
@@ -178,49 +112,57 @@ the left joystick will turn the dial, but TCC has know way of knowing when you'r
 Game conditions are used to test the state of events coming from the controller. There are two
 types of conditions: transient and persistent. A transient condition polls the current state of the
 controller. In other words, it will be true or false depending on what the user is doing at that
-moment. A persistent condition is set to true when a particular condition arrives and remains
-true until a different condition arrives that clears the condition.
+moment, and as soon as the conditions stop, the condition will read false. A persistent condition
+is set to true when a particular condition arrives and remains true until a different condition
+arrives that clears the condition.
 
-Transient conditions are defined in the `while` key and the condition will be true as long as the
+Transient conditions are defined with the `while` key and the condition will be true as long as the
 current state of the controller exceeds the defined threshold value and false otherwise. More than
 one command can appear in the while parameter, but how multiple commands are processed depends on
 the threshold type.
 
-Persistent events define one command in set_on that sets the state and a different command in
-set_off that clears it. Multiple commands within set_on and set_off are not currently supported.
-  
-Transient and persistent are mutually exclusive states, so a condition must define either the
-`while` parameter or the `set_on`/`clear_on` parameters, but not both.
+Persistent events also use the `while` key to define the state that turns the condition true, but
+once the condition is true, it remains so until the commands listed in `clear_on` are true.
+
+Both transient and persistent must define the `while` key. The `clear_on` key is only valid for
+persistent conditions. If it is missing, the condition will be treated as transient.
 
 The following parameters are used to define conditions:
- - name: The name by which the condition is identified in the TOML file (_Required_)
 
- - while: A list of commands that must be true according to the real-time state of the controller
+- `name`: The name by which the condition is identified in the TOML file (_Required_)
 
- - set_on: A command that will set a persistent trigger to true when its incomming state exceeds
-   the threshold
+- `while`: Commands that will be tested according to the real-time state of the controller
+  (_Required_)
 
- - clear_on: A command that will set a persistent trigger to false when its incomming state
-   exceeds the threshold
-
- - threshold: The threshold that a signal's magnitude must reach to trigger the condition,
+ - `threshold`: The threshold that a signal's magnitude must reach to trigger the condition,
    expressed as a proportion of the maximum value. (Optional. Default = 1)
    The threshold must be a number between -1 and 1 and indicates a proportion of the maximum
    value. The threshold is ignored for buttons and will always be 1.
 
- - thresholdType: The test applied to the threshold. Must be one of the following:
-    - `above`: (Default) The cndition is true if the magnitude of the signal is greater than or
+ - `threshold_type`: The test applied to the threshold. Must be one of the following:
+    - `above`: (Default) The condition is true if the magnitude of the signal is greater than or
       equal to the threshold.
     - `below`: The condition is true if the magnitude of signal is less than the threshold.
     - `greater` True if the signed value of the signal is greater than or equal to the threshold.
     - `less`: True if the signed value of the signal is less than the threshold.
-    - `distance`: Checks the Pythagorean distance of both axes from center. Requires 2 axes in
-      the condition
+    - `distance`: True if the Pythagorean distance of two axes is greater than or equal to the
+      threshold. Requires 2 axes in the list
+    - `distance_below`: True if the Pythagorean distance of two axes is less than the threshold.
+      Requires 2 axes in the list.
+
+ - `clear_on`: Commands that will set a persistent trigger to false when its incomming state
+   exceeds the threshold (_Required for persistent triggers_)
+
+  -`clear_threshold`: Threshold for `clear_on`. If not set, uses same value as `threshold`
+    (_Optional_)
+
+  -`clear_threshold_type`: Threshold type for `clear_on`. If not set, uses the same value as
+    `threshold_type`. (_Optional_)
 
 _Example_
 ```toml
 threshold = 0.5
-thresholdType = below
+threshold_type = distance
 ```
 
 In the case above, the condition will be true whenever the axis value is less than 50% of the
@@ -235,7 +177,7 @@ those directions or anything at all in the right/down directions.
 
  ```toml
  threshold = -0.2
- thresholdType = less
+ threshold_type = less
  ```
 
 When chosing threshold values for axes, note that joysticks almost always produce some noise,
@@ -246,7 +188,7 @@ is not touching the controller.
 For all threhold types except `distance`, if more than one command is defined in `while`, the
 same threshold applies to all. This means the test will only work if each command has the same
 maximum value. If you have different categories of signal or different thresholds, you should
-create separate conditions and chain them together in a condition trigger.
+create separate conditions and chain them together.
 
 ## Sequences
 A sequence holds a series of predefined events that are sent as a batch.  Sequences can be
@@ -466,24 +408,30 @@ Other keys specific to individual types of modifiers are described in the sectio
 
 ### Cooldown Modifiers
 
-Cooldown modifiers provide for a periodic block of a signal. They allow an action for a set
-period of time and then block it until a cooldown period has expired.
+Cooldown modifiers allow you to block of a signal periodically when certain conditions are
+met. The modifier contains a timer that, when triggered, allows an action for a set period of time
+and then block it until a cooldown period has expired. After the cooldown period expires, the
+timer resets and looks for the next triggering condition.
 
-The `applies_to` key inticates which commands experience the cooldown, and the `while` key lists
-the conditions that must be true for the cooldown to start.
+In addition to the general keys described above, the following keys are defined for this class of modifier:
 
-In addition to the general keys described above, the following keys  are defined for this class of modifier:
+- `applies_to`: List of commands that are blocked while in cooldown
 
-- `time_on`: Length of time, in seconds, to allow the command before entering cooldown. (_Required_)
+- `while`: List of conditions that must be true for the cooldown to start. These conditions interact with
+  an optional trigger (see below) to determine when the timer begins.
+
+- `time_on`: Length of time, in seconds, to allow the command(s) before entering cooldown. (_Required_)
 
 - `time_off`: The cooldown period. Length of time, in seconds, to block the command. (_Required_)
 
-- `trigger`: An array of signals that can trigger the cooldown. When any of these signals is non-zero,
-  we check the while condition, and if that is true, the time_on period begins. (_Required_)
+- `trigger`: A list of signals that will trigger the cooldown timer to start _in addition_ to the basic
+  while/unless conditions. If signals are listed in the trigger list, then each time a signal in the list
+  is received, the condition is checked, and if it is true, the timer begins. Using a trigger can allow
+  you to start the cooldown on receiving a signal that is distinct
 
 - `cumulative`: If true, the counter for time_on accumulates only when the while condition is true. If false,
-  the allow time begins at the first trigger signal, regardless of the while condition.
-  (_Optional; Default = false_)
+  time begins when the cooldown is first triggered by the while condition and continues regardless of what
+  later occurs with the while condition. (_Optional; Default = false_)
 
 _Example:_
 
@@ -495,7 +443,6 @@ type = "cooldown"
 groups = [ "movement" ]
 applies_to = [ "dodge/sprint" ]
 while = [ "movement", "sprint" ]
-trigger = [ "dodge/sprint", "vertical movement", "horizontal movement" ]
 cumulative = true
 time_on = 2.0
 time_off = 4.0
@@ -802,8 +749,9 @@ modifier type:
 
 ### Scaling Modifiers
 Scaling modifiers tranform the incoming signal through a linear formula. If the value of the
-incoming signal is `x`, the result will be mx + b, wheree m is an amplitude and b is an
-offset. The output is also clipped to the min/max values of the signal.
+incoming signal is `x`, the result will be mx +/- b, wheree m is an amplitude and b is a skew
+whose sign is the same as the sign of mx. The output is also clipped to the min/max values of
+the signal.
 
 In addition to the keys defined for all modules, the following keys are available for this
 modifier type:
