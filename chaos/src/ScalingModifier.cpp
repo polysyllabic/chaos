@@ -42,14 +42,15 @@ ScalingModifier::ScalingModifier(toml::table& config, EngineInterface* e) {
 
   amplitude = config["amplitude"].value_or(1.0);
   offset = config["offset"].value_or(0.0);
-  sign_tweak = (amplitude < 0.0) ? 1 : 0;
+  // sign_tweak = (amplitude < 0.0) ? 1 : 0;
 }
 
 bool ScalingModifier::tweak(DeviceEvent& event) {
   // Traverse the list of affected commands
   for (auto& cmd : commands) {
     if (engine->eventMatches(event, cmd)) {     
-      event.value = fmin(fmax((int)(amplitude * (event.value+sign_tweak) + offset), JOYSTICK_MIN), JOYSTICK_MAX);
+      event.value = fmin(fmax((int)(amplitude * event.value + offset), JOYSTICK_MIN), JOYSTICK_MAX);
+      // event.value = fmin(fmax((int)(amplitude * (event.value+sign_tweak) + offset), JOYSTICK_MIN), JOYSTICK_MAX);
       break;
     }
   }

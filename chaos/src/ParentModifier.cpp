@@ -40,7 +40,7 @@ ParentModifier::ParentModifier(toml::table& config, EngineInterface* e) {
   setAllowAsChild(!random_selection);
 
   if (random_selection) {
-    num_randos = config["value"].value_or(0);
+    num_randos = config["value"].value_or(1);
     if (num_randos < 1) {
       throw std::runtime_error("For random modifiers 'value' must be greater than 0");
     }
@@ -65,7 +65,9 @@ ParentModifier::ParentModifier(toml::table& config, EngineInterface* e) {
      	}
     }
   }
-
+  if (!random_selection && fixed_children.empty()) {
+    throw std::runtime_error("Parent modifier must specify children unless random selection is enabled.")
+  }
 }
 
 void ParentModifier::buildRandomList() {

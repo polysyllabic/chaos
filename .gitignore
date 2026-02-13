@@ -50,6 +50,7 @@ chaos/.vscode/settings.json
 
 # DOxygen files
 chaos/doc/html/*
+chaos/doc/Doxyfile
 
 # virtual environments
 chaosface/venv/*

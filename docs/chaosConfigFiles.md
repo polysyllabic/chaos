@@ -371,8 +371,9 @@ The following keys are defined for all modifiers:
 
     - `sequence`: Issue an arbitrary sequence of actions.
 
-- `group`: A group (separate from the type) to classify the mod for voting by the chatbot. If
-  omitted, the mod will be assigned to the default "general" group. (_Optional_)
+- `groups`: A list of groups (separate from the type) to classify the mod for voting by the chatbot.
+  The mod is always assigned to the group of its type, in addition to any other groups specified
+  here. (_Optional_)
 
 - `unlisted`: If true, the modifier's name will not be sent to the chat bot and it therefore
   cannot be voted on by chat. However it can still be inserted directly or exist as a child
@@ -387,8 +388,14 @@ specific use, whether they are required, optional, or unused depends on the type
 - `while`: A list of conditions whose total evaluation returns true or false. The modifier
   will perform its action when the while evaluation returns true.
 
-- `unless`: A list of conditions whose total evaluation returns true or false. The modifier
-  will perform its action only when the unless evaluation returns false.
+- `while_operation`: The type of logical operator applied to evaluate multiple conditions
+  in the while conditions. Possible values are the following:
+
+    - `all`: All conditions must be true simultaneously (_Default_)
+
+    - `any`: Any one condition must be true at one time
+
+    - `none`: None of the defined conditions must be true
 
 - `begin_sequence`:  A sequence of commands to issue when the mod is activated, before the
   mod begins any ongoing tasks.
@@ -396,13 +403,6 @@ specific use, whether they are required, optional, or unused depends on the type
 - `finish_sequence`: A sequence of commands to issue when the mod is deactivated to clean
   up any chaos we may have caused and restore the game to the state it had before the mod
   was applied.
-
-TODO: Currently, `while` and `unless` require all conditions in the list to be true (for
-while) or false (for unless) simultaneously. Add `while_comparison` and `unless_comparison`
-that specify the type of comparison made. (Default to remain `all`)
-- `all`: All conditions must be true (for while) or false (for unless) simultaneously
-- `any`: Any one condition must be true (for while) or false (for unless) at one time
-- `none`: None of the defined conditions must be true (for while) or false (for unless)
 
 Other keys specific to individual types of modifiers are described in the sections below.
 
@@ -425,7 +425,7 @@ In addition to the general keys described above, the following keys are defined 
 - `time_off`: The cooldown period. Length of time, in seconds, to block the command. (_Required_)
 
 - `trigger`: A list of signals that will trigger the cooldown timer to start _in addition_ to the basic
-  while/unless conditions. If signals are listed in the trigger list, then each time a signal in the list
+  while conditions. If signals are listed in the trigger list, then each time a signal in the list
   is received, the condition is checked, and if it is true, the timer begins. Using a trigger can allow
   you to start the cooldown on receiving a signal that is distinct
 
@@ -479,7 +479,7 @@ would never trigger and they would only have .5 seconds the next time.
 
 This type of modifier introduces a delay between when an event comes into the Chaos engine and when it
 is passed to the controller. This modifier type applies the delay unconditionally to the defined
-signals. It does not accept the `while` or `unless` condition lists.
+signals. It does not accept the `while` condition lists.
 
 The `applies_to` key inticates which commands experience the delay.
 
@@ -501,8 +501,8 @@ This type of modifier disables a specified list of commands from being passed to
 
 The `applies_to` key inticates which commands are blocked. (_Required_)
 
-This class of modifier accepts the `while` and `unless` keys as options, and if one of these is set,
-the signal will only be blocked if the `while` condition is true or the `unless` condition is false.
+This class of modifier accepts the `while` key as an options, and if this is set, the signal will
+only be blocked if the `while` condition is true.
 
 In addition to the general keys defined above, this class of modifier accepts the following additional
 key:
@@ -539,8 +539,8 @@ only makes sense for axis signals. While you _can_ apply a formula to a single a
 the pattern implied by the names circle or eight_curve, applies_to should contain pairs of
 axis signals.
 
-This class of modifier accepts the `while` and `unless` keys as options, and if one of these is set,
-the signal will only be modified if the `while` condition is true or the `unless` condition is false.
+This class of modifier accepts the `while` key as an option, and if it is set, the signal will
+only be modified if the `while` condition is true.
 
 The following additional keys are recognized by this modifier type:
 
@@ -574,8 +574,7 @@ amplitude = 0.5
 
 ### Menu Modifiers
 Menu modifiers execute specified commands in the game's menu system. They can be used, for example,
-to enable or disable particular game settings. Menu modifiers do not accept the `while` or `unless`
-condition lists.
+to enable or disable particular game settings. Menu modifiers do not accept the `while` condition list.
 
 Menu modifiers execute once at the beginning of the mod's lifespan to set the menu settings and again
 at the end of the mod's lifespan to restore the settings to their original state.
@@ -635,7 +634,7 @@ In addition to the standard keys for all modifiers, the following keys are
   `value`: If `random` is true, the number of child mods to select at random.
   (_Optional, default = 1_)
 
-Parent modifiers do not accept the `while` or `unless` condition lists.
+Parent modifiers do not accept the `while` condition list.
 
 The random-selection process will exclude picking any parent modifiers that use random
 selection, so recursively selecting the oneself is prevented.
@@ -725,8 +724,7 @@ touchpad in place of a joystick), it's important to include lines to block the o
 
 ### Repeat Modifiers
 Repeat modifiers cycle a sequence of commands on and off repeatedly throughout the lifetime of
-the modifier. These sequences can be set to repeat unconditionally or to begin only when triggered by a
-particular input condition.
+the modifier.
 
 In addition to the keys defined for all modules, the following keys are available for this
 modifier type:
@@ -749,9 +747,8 @@ modifier type:
 
 ### Scaling Modifiers
 Scaling modifiers tranform the incoming signal through a linear formula. If the value of the
-incoming signal is `x`, the result will be mx +/- b, wheree m is an amplitude and b is a skew
-whose sign is the same as the sign of mx. The output is also clipped to the min/max values of
-the signal.
+incoming signal is `x`, the result will be mx + b, wheree m is an amplitude and b is an offset.
+The output is also clipped to the min/max values of the signal.
 
 In addition to the keys defined for all modules, the following keys are available for this
 modifier type:
@@ -804,9 +801,9 @@ type of modifier:
 - `finish_sequence`: A sequence of commands to execute once when the mod is removed. This is an
   array of inline arrays. (_Optional_)
 
-- `trigger`: An array of commands that, in conjunction with the while/unless conditions, will
+- `trigger`: An array of commands that, in conjunction with the while conditions, will
   trigger the `repeat_sequence`. When the mod receives any of the commands listed in trigger,
-  it checks if the while/unless conditions return true, and if they do, the sequence begins.
+  it checks if the while conditions return true, and if they do, the sequence begins.
   If the trigger is empty, the `repeat_sequence` actions will loop for the lifetime of the
   mod. (_Optional_)
 
@@ -817,8 +814,8 @@ type of modifier:
   we reset the sequence and begin the next iteration (or begin waiting for the next trigger).
   (_Optional, default = 0_)
 
-This class of modifier accepts the `while` and `unless` keys as options, and if one of these is set,
-the signal will only be modified if the `while` condition is true or the `unless` condition is false.
+This class of modifier accepts the `while` key as an option, and if it is set, the signal will only
+be modified if the `while` condition is true.
 
 _Examples:_
 

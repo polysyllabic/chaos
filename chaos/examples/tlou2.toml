@@ -812,7 +812,7 @@ description = "You've now got controller drift"
 type = "scaling"
 groups = ["movement"]
 applies_to = [ "horizontal movement" ]
-offset = -24
+offset = -30
 
 # == Cooldown Modifiers ==
 #

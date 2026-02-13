@@ -43,6 +43,8 @@ namespace Chaos {
      */
     DisableFilter filter;
 
+    short getFilteredVal(DeviceEvent& event);
+
   public:
     
     /**

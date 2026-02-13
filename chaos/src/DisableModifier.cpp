@@ -39,7 +39,7 @@ DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
   assert(config.contains("type"));
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "applies_to", "begin_sequence", "finish_sequence",
-      "filter", "while", "while_operator", "unlisted"});
+      "filter", "while", "while_operation", "unlisted"});
 
   initialize(config, e);
 
@@ -73,33 +73,39 @@ DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
   }
 }
 
-bool DisableModifier::tweak (DeviceEvent& event) {
+short DisableModifier::getFilteredVal(DeviceEvent& event) {
+  short rval = (event.type == TYPE_AXIS && cmd->getInput()->getType() == ControllerSignalType::HYBRID)
+        ? JOYSTICK_MIN : 0;
+  if (filter == DisableFilter::ABOVE) {
+   	rval = (revent.value > 0) ? rval : event.value;
+  } else if (filter == DisableFilter::BELOW) {
+   	rval = (event.value < 0) ? rval : event.value;
+  }
+  return rval;
+}
 
+bool DisableModifier::tweak (DeviceEvent& event) {
+  short new_val;
   // If the condition test returns false do not block
-  if (inCondition() == false) {
+  if (!inCondition()) {
     return true;
   }
   // Traverse the list of affected commands
-  for (auto& cmd : commands) {
-    if (applies_to_all || engine->eventMatches(event, cmd)) {
-      short min_val = (event.type == TYPE_AXIS && cmd->getInput()->getType() == ControllerSignalType::HYBRID)
-        ? JOYSTICK_MIN : 0;
-      switch (filter) {
-      case DisableFilter::ALL:
-        PLOG_VERBOSE << "Blocking " << cmd->getName() << "(" << (int) event.type << "." << (int) event.id << ") min_val=" << min_val;
-	      event.value = min_val;
-        break;
-      case DisableFilter::ABOVE:
-        PLOG_VERBOSE << "+ Filter of " << cmd->getName() << "(" << (int)  event.type << "." << (int)  event.id << ") min_val=" << min_val;
-      	event.value = (event.value > 0) ? min_val : event.value;
-      	break;
-      case DisableFilter::BELOW:
-        PLOG_VERBOSE << "- Filter of " << cmd->getName() << "(" << (int)  event.type << "." << (int)  event.id << ") min_val=" << min_val;
-      	event.value = (event.value < 0) ? min_val : event.value;
+  if (applies_to_all) {
+    new_val = getFilteredVal(event);
+  } else {
+    for (auto& cmd : commands) {
+      if (engine->eventMatches(event, cmd)) {
+        new_val = getFilteredVal(event);
       }
-      // No need to keep searching after a match
+      // Already matched, no need to keep looping
       break;
     }
   }
+  if (new_val != event.value) {
+    PLOG_VERBOSE << "Blocking " << cmd->getName() << "(" << (int) event.type << "." << (int) event.id << ") value= " <<
+      event.value << " set to " << new_val;
+  }
+  event.value = new_val;
   return true;
 }
