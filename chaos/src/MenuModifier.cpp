@@ -43,6 +43,9 @@ MenuModifier::MenuModifier(toml::table& config, EngineInterface* e) {
   }
   for (auto& elem : *menu_list) {
     const toml::table* m = elem.as_table();
+    if (!m) {
+      throw std::runtime_error("menu_items must be an array of inline tables");
+    }
     TOMLUtils::checkValid(*m, std::vector<std::string>{"entry", "value"},"menu entry");
     if (! m->contains("entry")) {
       throw std::runtime_error("Each table within a menu_item array must contain an 'entry' key");
@@ -81,4 +84,3 @@ bool MenuModifier::tweak(DeviceEvent& event) {
   // block all signals if we're busy sending a sequence
   return !in_sequence;
 }
-

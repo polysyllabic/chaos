@@ -26,24 +26,39 @@
 using namespace Chaos;
 
 MenuItem::MenuItem(MenuInterface& menu, std::string mname, short off, short tab,
-                   short initial, bool hide, bool opt, bool sel, bool conf, 
+                   short initial, bool hide, bool opt, bool sel, bool submenu, bool conf, 
                    std::shared_ptr<MenuItem> par,
                    std::shared_ptr<MenuItem> grd,
                    std::shared_ptr<MenuItem> cnt,
                    CounterAction act) : menu_items{menu},
                    name{mname}, 
                    offset{off}, tab_group{tab}, default_state{initial}, 
-                   hidden{hide}, is_option{opt}, is_selectable{sel}, confirm{conf},
+                   hidden{hide}, is_option{opt}, is_selectable{sel}, is_menu{submenu}, confirm{conf},
                    parent{par}, guard{grd}, sibling_counter{cnt}, counter_action{act} {
   current_state = default_state;
+}
+
+void MenuItem::setHidden(bool hide) {
+  bool was_hidden = isHidden();
+  hidden = hide;
+  if (isHidden() != was_hidden) {
+    menu_items.correctOffset(getptr());
+  }
+}
+
+void MenuItem::setGuardHidden(bool hide) {
+  bool was_hidden = isHidden();
+  guard_hidden = hide;
+  if (isHidden() != was_hidden) {
+    menu_items.correctOffset(getptr());
+  }
 }
 
 void MenuItem::incrementCounter() {
   PLOG_DEBUG << "increment counter for " << name;
   ++counter;
   if (counter_action == CounterAction::REVEAL && counter == 1) {
-    hidden = false;
-    menu_items.correctOffset(getptr());
+    setHidden(false);
   }
 }
 
@@ -53,8 +68,9 @@ void MenuItem::decrementCounter() {
     --counter;
     if (counter == 0) {
       if (counter_action == CounterAction::REVEAL) {
-        hidden = true;
-        menu_items.correctOffset(getptr());
+        setHidden(true);
+      } else if (counter_action == CounterAction::ZERO_RESET) {
+        current_state = default_state;
       }
     }
   }
@@ -62,21 +78,23 @@ void MenuItem::decrementCounter() {
 
 void MenuItem::setCounter(int val) {
   PLOG_DEBUG << "set counter for " << name;
+  int old_counter = counter;
+  counter = val;
   if (counter_action == CounterAction::REVEAL) {
-    if (counter == 0 && val != 0) {
-      hidden = false;
-      menu_items.correctOffset(getptr());
-    } else if (counter != 0 && val == 0 ) {
-      hidden = true;
-      menu_items.correctOffset(getptr());
+    if (old_counter == 0 && val != 0) {
+      setHidden(false);
+    } else if (old_counter != 0 && val == 0 ) {
+      setHidden(true);
     }
+  } else if (counter_action == CounterAction::ZERO_RESET && val == 0) {
+    current_state = default_state;
   }
 }
 
 void MenuItem::selectItem(Sequence& seq) {
     // navigate left or right through tab groups
-    int delta = offset;
-    PLOG_DEBUG << name << " menu offset = " << offset;
+    int delta = getOffset();
+    PLOG_DEBUG << name << " menu offset = " << getOffset();
     for (int i = 0; i < tab_group; i++) {
       menu_items.addToSequence(seq, "tab right");
     }
@@ -114,11 +132,12 @@ void MenuItem::selectItem(Sequence& seq) {
 void MenuItem::navigateBack(Sequence& seq) {
   // starting from the selected option, we reverse to navigate to top of the menu and
   // back out
-  PLOG_DEBUG << "Navigate back offset " << offset;
-  for (int i = 0; i < offset; i++) {
+  short off = getOffset();
+  PLOG_DEBUG << "Navigate back offset " << off;
+  for (int i = 0; i < off; i++) {
     menu_items.addToSequence(seq, "menu up");
   }
-  for (int i = 0; i > offset; i--) {
+  for (int i = 0; i > off; i--) {
     menu_items.addToSequence(seq, "menu down");
   }
   for (int i = 0; i < tab_group; i++) {

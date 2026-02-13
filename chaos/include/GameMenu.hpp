@@ -50,12 +50,12 @@ namespace Chaos {
     /**
      * Does this game leave each menu in the position that it was when the user left it.
      */
-    bool remember_last;
+    bool remember_last = false;
 
     /**
      * Are guarded items skipped over or hidden from the user while the guard is true?
      */
-    bool hide_guarded;
+    bool hide_guarded = false;
 
   public:
     /**
@@ -134,6 +134,13 @@ namespace Chaos {
      * offset correction for all other items that share the same parent and tab group.
      */
     void correctOffset(std::shared_ptr<MenuItem> changed);
+
+    /**
+     * \brief Synchronize visibility of guarded items with current guard states.
+     *
+     * If hide_guarded is true, guarded items are hidden whenever their guard is off.
+     */
+    void syncGuardedVisibility();
 
     /**
      * \brief Appends a defined sequence of the given name to an existing sequence

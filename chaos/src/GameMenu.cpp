@@ -56,6 +56,9 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, bo
   PLOG_DEBUG << "Creating set menu sequence";
   Sequence seq{controller};
 
+  // Keep visibility/offset corrections in sync with the latest guard states.
+  syncGuardedVisibility();
+
   defined_sequences->addToSequence(seq, "disable all");
   defined_sequences->addToSequence(seq, "open menu");
 
@@ -79,11 +82,22 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, bo
   // navigation through the final leaf
   item->selectItem(seq);  
   item->setState(seq, new_val, restore);
+
+  // A guard item may have changed state during this operation.
+  syncGuardedVisibility();
+
   PLOG_DEBUG << "Constructing reverse navigation";
-  item->navigateBack(seq);
-  // Back out, leaving all the parent menus in their default state
-  for (s = item->getParent(); s != nullptr; s = s->getParent()) {
-    s->navigateBack(seq);
+  if (remember_last) {
+    item->navigateBack(seq);
+    // Back out, leaving all the parent menus in their default state
+    for (s = item->getParent(); s != nullptr; s = s->getParent()) {
+      s->navigateBack(seq);
+    }
+  } else {
+    // If the game does not remember cursor location, plain exits are sufficient.
+    for (s = item; s != nullptr; s = s->getParent()) {
+      addToSequence(seq, "menu exit");
+    }
   }
   seq.send();
 }
@@ -112,6 +126,18 @@ void GameMenu::correctOffset(std::shared_ptr<MenuItem> changed) {
 
 void GameMenu::addToSequence(Sequence& sequence, const std::string& name) {
   defined_sequences->addToSequence(sequence, name);
+}
+
+void GameMenu::syncGuardedVisibility() {
+  if (!hide_guarded) {
+    return;
+  }
+  for (auto& [name, item] : menu) {
+    std::shared_ptr<MenuItem> guard = item->getGuard();
+    if (guard) {
+      item->setGuardHidden(guard->getState() == 0);
+    }
+  }
 }
 
 bool GameMenu::insertMenuItem(std::string& name, std::shared_ptr<MenuItem> new_item) {

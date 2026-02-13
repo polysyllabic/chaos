@@ -97,7 +97,20 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
   // Initialize defined sequences and static parameters for sequences
   buildSequenceList(configuration);
 
-  use_menu = configuration["use_menu"].value_or(true);
+  use_menu = true;
+  toml::table* menu_config = configuration["menu"].as_table();
+  if (menu_config) {
+    use_menu = (*menu_config)["use_menu"].value_or(true);
+  } else if (configuration.contains("menu")) {
+    ++parse_errors;
+    PLOG_ERROR << "The 'menu' key must contain a TOML table";
+  }
+  std::optional<bool> top_level_use_menu = configuration["use_menu"].value<bool>();
+  if (top_level_use_menu) {
+    ++parse_warnings;
+    PLOG_WARNING << "Top-level 'use_menu' is deprecated. Prefer 'menu.use_menu'.";
+    use_menu = *top_level_use_menu;
+  }
 
   if (use_menu) {
     // Initialize the menu system's general settings
@@ -105,7 +118,7 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
   }
 
   // Create the modifiers
-  parse_errors += modifiers.buildModList(configuration, engine, use_menu, getTimePerModifier());
+  parse_errors += modifiers.buildModList(configuration, engine, getTimePerModifier(), use_menu);
   PLOG_INFO << "Loaded configuration file for " << name << " with " << parse_errors << " errors.";
   return true;
 }
@@ -117,9 +130,14 @@ void Game::makeMenu(toml::table& config) {
   menu.setDefinedSequences(sequences);
 
   // General menuing options
-  toml::table* menu_list = config["menu"].as_table();
   if (! config.contains("menu")) {
     PLOG_ERROR << "No 'menu' table found in configuration file";
+    ++parse_errors;
+    return;
+  }
+  toml::table* menu_list = config["menu"].as_table();
+  if (!menu_list) {
+    PLOG_ERROR << "The 'menu' key must contain a TOML table";
     ++parse_errors;
     return;
   }
@@ -128,8 +146,15 @@ void Game::makeMenu(toml::table& config) {
   PLOG_VERBOSE << "menu remember_last = " << remember_last;
   menu.setRememberLast(remember_last);
 
-  bool hide_guarded = (*menu_list)["hide_guarded"].value_or(false);
-  PLOG_VERBOSE << "menu hide_guarded = " << hide_guarded;
+  bool hide_guarded = false;
+  if (menu_list->contains("hide_guarded_items")) {
+    hide_guarded = (*menu_list)["hide_guarded_items"].value_or(false);
+  } else if (menu_list->contains("hide_guarded")) {
+    ++parse_warnings;
+    PLOG_WARNING << "'menu.hide_guarded' is deprecated. Use 'menu.hide_guarded_items'.";
+    hide_guarded = (*menu_list)["hide_guarded"].value_or(false);
+  }
+  PLOG_VERBOSE << "menu hide_guarded_items = " << hide_guarded;
   menu.setHideGuarded(hide_guarded);
 
   if (! menu_list->contains("layout")) {
@@ -143,6 +168,7 @@ void Game::makeMenu(toml::table& config) {
   if (! arr) {
     ++parse_errors;
     PLOG_ERROR << "Menu layout must be in an array.";
+    return;
   }
   for (toml::node& elem : *arr) {
     toml::table* m = elem.as_table();
@@ -153,6 +179,7 @@ void Game::makeMenu(toml::table& config) {
       PLOG_ERROR << "Each menu-item definition must be a table.";
     }
   }
+  menu.syncGuardedVisibility();
 }
 
 void Game::addMenuItem(toml::table& config) {
@@ -174,21 +201,25 @@ void Game::addMenuItem(toml::table& config) {
     return;
   }
 
-  if (*menu_type != "option" && *menu_type != "select" && *menu_type != "menu") {
+  if (*menu_type != "option" && *menu_type != "select" && *menu_type != "menu" &&
+      *menu_type != "command" && *menu_type != "guard") {
     ++parse_errors;
     PLOG_ERROR << "Menu type '" << *menu_type << "' not recognized.";
     return;
   }
 
-  bool opt = (*menu_type == "option" || *menu_type == "select");
-  bool sel = (*menu_type == "select" || *menu_type == "menu");
+  bool opt = (*menu_type == "option" || *menu_type == "guard");
+  bool sel = (*menu_type == "select" || *menu_type == "command" || *menu_type == "menu");
+  bool submenu = (*menu_type == "menu");
 
   PLOG_VERBOSE << "Adding menu item '" << *entry_name << "' of type " << *menu_type;
 
   if (! config.contains("offset")) {
-    PLOG_WARNING << "Menu item '" << config["name"] << "' missing offset. Set to 0.";
+    ++parse_errors;
+    PLOG_ERROR << "Menu item '" << config["name"] << "' missing required 'offset'";
+    return;
   }
-  short off = config["offset"].value_or(0);
+  short off = config["offset"].value_or((short)0);
   short tab = config["tab"].value_or(0);
   short initial = config["initial"].value_or(0);
   bool hide = config["hidden"].value_or(false);
@@ -205,6 +236,12 @@ void Game::addMenuItem(toml::table& config) {
   } catch (const std::runtime_error& e) {
     ++parse_errors;
     PLOG_ERROR << e.what();
+    return;
+  }
+  if (parent && !parent->isMenu()) {
+    ++parse_errors;
+    PLOG_ERROR << "Parent of menu item '" << *entry_name << "' must be a menu item";
+    return;
   }
 
   std::shared_ptr<MenuItem> guard;
@@ -214,6 +251,7 @@ void Game::addMenuItem(toml::table& config) {
   } catch (const std::runtime_error& e) {
     ++parse_errors;
     PLOG_ERROR << e.what();
+    return;
   }
 
   std::shared_ptr<MenuItem> counter;
@@ -223,6 +261,7 @@ void Game::addMenuItem(toml::table& config) {
   } catch (const std::runtime_error& e) {
     ++parse_errors;
     PLOG_ERROR << e.what();
+    return;
   }
 
   CounterAction action = CounterAction::NONE;
@@ -240,7 +279,7 @@ void Game::addMenuItem(toml::table& config) {
 
   PLOG_VERBOSE << "constructing menu item";
   std::shared_ptr<MenuItem> m = std::make_shared<MenuItem>(menu, *entry_name,
-      off, tab, initial, hide, opt, sel, confirm, parent, guard, counter, action);
+      off, tab, initial, hide, opt, sel, submenu, confirm, parent, guard, counter, action);
   
   if (! menu.insertMenuItem(*entry_name, m)) {
     ++parse_errors;

@@ -9,13 +9,15 @@ target_sources(test_menu PRIVATE test_menu_sequences.cpp
   ../src/GameMenu.cpp
   ../src/MenuItem.cpp
   ../src/Sequence.cpp
-  KeyboardController.cpp
-  KeyboardController.hpp
+  ../src/SequenceTable.cpp
 )
   
 target_include_directories(test_menu PRIVATE ../include
+  ../src/controller
   ${tomlplusplus_SOURCE_DIR}/include
   ${plog_SOURCE_DIR}/include)
+
+target_link_libraries(test_menu PRIVATE chaos_controller)
 
   add_executable(test_remapping)
   target_sources(test_remapping PRIVATE test_remapping.cpp)

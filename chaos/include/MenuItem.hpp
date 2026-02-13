@@ -72,7 +72,7 @@ namespace Chaos {
      *
      * This value is updated actively when menu items are hidden or revealed.
      */
-    short offset_correction;
+    short offset_correction = 0;
 
     /**
      * \brief The default state of the menu item before any changes
@@ -85,6 +85,11 @@ namespace Chaos {
      * Is the menu item currently hidden?
      */
     bool hidden;
+
+    /**
+     * Is this item hidden specifically because its guard is off?
+     */
+    bool guard_hidden = false;
 
     /**
      * \brief The parent to this menu item
@@ -124,7 +129,7 @@ namespace Chaos {
      * 
      * Mods can increment or decrement the item to track particular states.
      */
-    short counter;
+    short counter = 0;
 
     /**
      * \brief Confirm yes after selection
@@ -142,6 +147,11 @@ namespace Chaos {
      * Will selecting the item currently have any effect?
      */
     bool is_selectable;
+
+    /**
+     * Is this menu item itself a submenu entry?
+     */
+    bool is_menu;
 
 
     void setMenuOption(Sequence& seq, unsigned int new_val);
@@ -165,7 +175,7 @@ namespace Chaos {
      * \param act Action on counter change
      */
     MenuItem(MenuInterface& menu, std::string name, short off, short tab,
-             short initial, bool hide, bool opt, bool sel, bool conf,
+             short initial, bool hide, bool opt, bool sel, bool submenu, bool conf,
              std::shared_ptr<MenuItem> par,
              std::shared_ptr<MenuItem> grd,
              std::shared_ptr<MenuItem> cnt,
@@ -264,8 +274,11 @@ namespace Chaos {
 
     bool isSelectable() { return is_selectable; }
 
-    void setHidden(bool hide) { hidden = hide; }
-    bool isHidden() { return hidden; }
+    bool isMenu() { return is_menu; }
+
+    void setHidden(bool hide);
+    void setGuardHidden(bool hide);
+    bool isHidden() { return (hidden || guard_hidden); }
 
     /**
      * \brief Increase the value of the counter by one
