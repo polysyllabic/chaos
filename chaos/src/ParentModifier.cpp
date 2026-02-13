@@ -66,7 +66,7 @@ ParentModifier::ParentModifier(toml::table& config, EngineInterface* e) {
     }
   }
   if (!random_selection && fixed_children.empty()) {
-    throw std::runtime_error("Parent modifier must specify children unless random selection is enabled.")
+    throw std::runtime_error("Parent modifier must specify children unless random selection is enabled.");
   }
 }
 

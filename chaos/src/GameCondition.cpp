@@ -64,7 +64,7 @@ bool GameCondition::thresholdComparison(short value, short thresh, ThresholdType
 }
 
 bool GameCondition::distanceComparison(short x, short y, short thresh, ThresholdType type) {
-  assert(type == ThresholdType::DISTANCE || type != ThresholdType::DISTANCE_BELOW);
+  assert(type == ThresholdType::DISTANCE || type == ThresholdType::DISTANCE_BELOW);
 
   int d = x*x + y*y;
   PLOG_DEBUG << "x = " << x << "; y = " << y << "x^2+y^2 = " << d << "; dist^2 = "
@@ -72,7 +72,7 @@ bool GameCondition::distanceComparison(short x, short y, short thresh, Threshold
   if (type == ThresholdType::DISTANCE) {
     return (d >= thresh * thresh);
   }
-  return (d < thresh);
+  return (d < thresh * thresh);
 }
 
 short GameCondition::calculateThreshold(double proportion, std::vector<std::shared_ptr<ControllerInput>> conditions) {

@@ -207,11 +207,12 @@ There are two mandatory and two optional arguments in a sequnce definition:
 - `value`: A specific value to set the command signal to. If not supplied, the command is set
   to its maximum value: 1 for buttons, or the axis maximum for axes.  (_Optional_)
 
-- `repeat`: Number of times to issue this command. If the command is repeated, the delay
-  applies to each iteration of the command. (_Optional, default = 1_)
+- `repeat`: Number of times to issue a `press` command. If the command is repeated, the delay
+  applies to each iteration of the command. This value is ignired for `hold` and `release`
+  commands. (_Optional, default = 1_)
 
 - `delay`: Time in seconds to delay after this command before executing the next one.
-  (_Optional, default = 0)
+  (_Optional, default = 0_)
 
 ## Menuing
 

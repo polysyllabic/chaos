@@ -170,7 +170,7 @@ namespace Chaos {
      * \return true This condition tests the live state of the controller (transient)
      * \return false This condition maintains a persistent state
      */
-    bool isTransient() { return !clear_on.empty(); }
+    bool isTransient() { return clear_on.empty(); }
 
     int getNumWhile() { return while_conditions.size(); }
 

@@ -437,6 +437,7 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
       PLOG_WARNING << "Invalid threshold_type '" << *thtype << "'. Using 'above'.";
     }
   }
+  ret->setThresholdType(threshold_type);
 
   double proportion = config["threshold"].value_or(1.0);
   if (proportion < -1 || proportion > 1) {
@@ -456,19 +457,20 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
   thtype = config["clear_threshold_type"].value<std::string_view>();
   if (thtype) {
     if (*thtype == "greater") {
-      threshold_type = ThresholdType::GREATER;
+      clear_threshold_type = ThresholdType::GREATER;
     } else if (*thtype == "below") {
-      threshold_type = ThresholdType::BELOW;
+      clear_threshold_type = ThresholdType::BELOW;
     } else if (*thtype == "less") {
-      threshold_type = ThresholdType::LESS;
+      clear_threshold_type = ThresholdType::LESS;
     } else if (*thtype == "distance") {
-      threshold_type = ThresholdType::DISTANCE;
+      clear_threshold_type = ThresholdType::DISTANCE;
     } else if (*thtype == "distance_below") {
-      threshold_type = ThresholdType::DISTANCE_BELOW;
+      clear_threshold_type = ThresholdType::DISTANCE_BELOW;
     } else if (*thtype != "above") {
       PLOG_WARNING << "Invalid clear_threshold_type '" << *thtype << "'. Using 'above'.";
     }
   }
+  ret->setClearThresholdType(clear_threshold_type);
 
  double clear_proportion = config["clear_threshold"].value_or(proportion);
   if (clear_proportion < -1 || clear_proportion > 1) {
@@ -557,18 +559,24 @@ std::shared_ptr<Sequence> Game::makeSequence(toml::table& config,
   }
 
   for (toml::node& elem : *event_list) {
-    toml::table definition = *elem.as_table();
-    TOMLUtils::checkValid(definition, std::vector<std::string>{"event", "command", "delay",
+    toml::table *definition = elem.as_table();
+    if (!definition) {
+      ++parse_errors;
+      PLOG_ERROR << "Sequence definition must be a table";
+      continue;
+    }
+
+    TOMLUtils::checkValid(*definition, std::vector<std::string>{"event", "command", "delay",
                           "repeat", "value"}, "makeSequence");
       
-    std::optional<std::string> event = definition["event"].value<std::string>();
+    std::optional<std::string> event = (*definition)["event"].value<std::string>();
     if (! event) {
       ++parse_errors;
 	    PLOG_ERROR << "Sequence missing required 'event' parameter";
       continue;
     }
 
-    double delay = definition["delay"].value_or(0.0);
+    double delay = (*definition)["delay"].value_or(0.0);
     if (delay < 0) {
       ++parse_errors;
 	    PLOG_ERROR << "Delay must be a non-negative number of seconds.";
@@ -576,7 +584,7 @@ std::shared_ptr<Sequence> Game::makeSequence(toml::table& config,
     }
     unsigned int delay_usecs = (unsigned int) (delay * SEC_TO_MICROSEC);
 
-    int repeat = definition["repeat"].value_or(1);
+    int repeat = (*definition)["repeat"].value_or(1);
     if (repeat < 1) {
 	    PLOG_WARNING << "The value of 'repeat' should be an integer greater than 1. Will ignore.";
       ++parse_warnings;
@@ -593,19 +601,21 @@ std::shared_ptr<Sequence> Game::makeSequence(toml::table& config,
       continue;
     }
 
-    std::optional<std::string> cmd = definition["command"].value<std::string>();
-
+    std::optional<std::string> cmd = (*definition)["command"].value<std::string>();
+    if (!cmd) {
+      ++parse_errors;
+      PLOG_ERROR << "Required 'command' argument is missing";
+      continue;
+    }
     // Append a predefined sequence
     if (*event == "sequence") {
-      if (cmd) {
-        std::shared_ptr<Sequence> new_seq = sequences->getSequence(*cmd);
-        if (!new_seq) {
-          ++parse_errors;
-	        PLOG_ERROR << "Undefined sequence: " << *cmd;
-          continue;
-        }
-        seq->addSequence(new_seq);
+      std::shared_ptr<Sequence> new_seq = sequences->getSequence(*cmd);
+      if (!new_seq) {
+        ++parse_errors;
+        PLOG_ERROR << "Undefined sequence: " << *cmd;
+        continue;
       }
+      seq->addSequence(new_seq);
     } else {
       // The remaining events all require a defined command.
       std::shared_ptr<GameCommand> command = (cmd) ? getCommand(*cmd) : nullptr;
@@ -619,7 +629,7 @@ std::shared_ptr<Sequence> Game::makeSequence(toml::table& config,
 
 	    // If this signal is a hybrid control, this gets the button max (axes still return axis max value)
 	    int max_val = (signal) ? signal->getMax(TYPE_BUTTON) : 0;
-      int value = definition["value"].value_or(max_val);
+      int value = (*definition)["value"].value_or(max_val);
 
       if (*event == "hold") {
 	      if (repeat > 1) {

@@ -74,10 +74,10 @@ DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
 }
 
 short DisableModifier::getFilteredVal(DeviceEvent& event) {
-  short rval = (event.type == TYPE_AXIS && cmd->getInput()->getType() == ControllerSignalType::HYBRID)
+  short rval = (event.type == TYPE_AXIS && ControllerInput::getType(event) == ControllerSignalType::HYBRID)
         ? JOYSTICK_MIN : 0;
   if (filter == DisableFilter::ABOVE) {
-   	rval = (revent.value > 0) ? rval : event.value;
+   	rval = (event.value > 0) ? rval : event.value;
   } else if (filter == DisableFilter::BELOW) {
    	rval = (event.value < 0) ? rval : event.value;
   }
@@ -86,6 +86,7 @@ short DisableModifier::getFilteredVal(DeviceEvent& event) {
 
 bool DisableModifier::tweak (DeviceEvent& event) {
   short new_val;
+  std::string cmd_name;
   // If the condition test returns false do not block
   if (!inCondition()) {
     return true;
@@ -97,13 +98,14 @@ bool DisableModifier::tweak (DeviceEvent& event) {
     for (auto& cmd : commands) {
       if (engine->eventMatches(event, cmd)) {
         new_val = getFilteredVal(event);
+        cmd_name = cmd->getName();
+        break;
       }
       // Already matched, no need to keep looping
-      break;
     }
   }
   if (new_val != event.value) {
-    PLOG_VERBOSE << "Blocking " << cmd->getName() << "(" << (int) event.type << "." << (int) event.id << ") value= " <<
+    PLOG_VERBOSE << "Blocking " << cmd_name << "(" << (int) event.type << "." << (int) event.id << ") value= " <<
       event.value << " set to " << new_val;
   }
   event.value = new_val;

@@ -90,7 +90,7 @@ namespace Chaos {
     std::shared_ptr<GameCommand> getptr() { return shared_from_this(); }
 
     /**
-     * \brief Accessor for the CongrollerInput object bound to this command.
+     * \brief Accessor for the ControllerInput object bound to this command.
      * \return std::shared_ptr to the ControllerInput object.
      */
     std::shared_ptr<ControllerInput> getInput() { return binding; }
