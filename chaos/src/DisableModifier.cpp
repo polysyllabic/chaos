@@ -85,7 +85,7 @@ short DisableModifier::getFilteredVal(DeviceEvent& event) {
 }
 
 bool DisableModifier::tweak (DeviceEvent& event) {
-  short new_val;
+  short new_val = event.value;
   std::string cmd_name;
   // If the condition test returns false do not block
   if (!inCondition()) {

@@ -173,7 +173,8 @@ namespace Chaos {
     bool isTransient() { return clear_on.empty(); }
 
     int getNumWhile() { return while_conditions.size(); }
-
+    int getNumClearOn() { return clear_on.size(); }
+    
     /**
      * \brief Get the name of the condition as used in the TOML file
      * 

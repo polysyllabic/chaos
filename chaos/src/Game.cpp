@@ -438,6 +438,12 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
     }
   }
   ret->setThresholdType(threshold_type);
+  if ((threshold_type == ThresholdType::DISTANCE ||
+       threshold_type == ThresholdType::DISTANCE_BELOW) && ret->getNumWhile() != 2) {
+    ++parse_errors;
+    PLOG_ERROR << "Length of 'while' list must be exactly 2 for DISTANCE/DISTANCE_BELOW thresholds";
+    return nullptr;
+    }
 
   double proportion = config["threshold"].value_or(1.0);
   if (proportion < -1 || proportion > 1) {
@@ -453,38 +459,55 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
   }
   ret->setThreshold(proportion);
 
-  ThresholdType clear_threshold_type = threshold_type;
-  thtype = config["clear_threshold_type"].value<std::string_view>();
-  if (thtype) {
-    if (*thtype == "greater") {
-      clear_threshold_type = ThresholdType::GREATER;
-    } else if (*thtype == "below") {
-      clear_threshold_type = ThresholdType::BELOW;
-    } else if (*thtype == "less") {
-      clear_threshold_type = ThresholdType::LESS;
-    } else if (*thtype == "distance") {
-      clear_threshold_type = ThresholdType::DISTANCE;
-    } else if (*thtype == "distance_below") {
-      clear_threshold_type = ThresholdType::DISTANCE_BELOW;
-    } else if (*thtype != "above") {
-      PLOG_WARNING << "Invalid clear_threshold_type '" << *thtype << "'. Using 'above'.";
+  if (ret->isTransient()) {
+    if (config.contains("clear_threshold_type")) {
+      ++parse_warnings;
+      PLOG_WARNING << "'clear_threshold_type' is ignored when 'clear_on' is empty";
     }
-  }
-  ret->setClearThresholdType(clear_threshold_type);
+    if (config.contains("clear_threshold")) {
+      ++parse_warnings;
+      PLOG_WARNING << "'clear_threshold' is ignored when 'clear_on' is empty";
+    }
+  } else {
+    ThresholdType clear_threshold_type = threshold_type;
+    thtype = config["clear_threshold_type"].value<std::string_view>();
+    if (thtype) {
+      if (*thtype == "greater") {
+        clear_threshold_type = ThresholdType::GREATER;
+      } else if (*thtype == "below") {
+        clear_threshold_type = ThresholdType::BELOW;
+      } else if (*thtype == "less") {
+        clear_threshold_type = ThresholdType::LESS;
+      } else if (*thtype == "distance") {
+        clear_threshold_type = ThresholdType::DISTANCE;
+      } else if (*thtype == "distance_below") {
+        clear_threshold_type = ThresholdType::DISTANCE_BELOW;
+      } else if (*thtype != "above") {
+        PLOG_WARNING << "Invalid clear_threshold_type '" << *thtype << "'. Using 'above'.";
+      }
+    }
+    ret->setClearThresholdType(clear_threshold_type);
+    if ((clear_threshold_type == ThresholdType::DISTANCE ||
+         clear_threshold_type == ThresholdType::DISTANCE_BELOW) && ret->getNumClearOn() != 2) {
+      ++parse_errors;
+      PLOG_ERROR << "Length of 'clear_on' list must be exactly 2 for DISTANCE/DISTANCE_BELOW thresholds";
+      return nullptr;
+    }
 
- double clear_proportion = config["clear_threshold"].value_or(proportion);
-  if (clear_proportion < -1 || clear_proportion > 1) {
-    ++parse_warnings;
-    PLOG_WARNING << "clear_threshold must be between -1 and 1. Using 1";
-    clear_proportion = 1.0;
-  } else if (clear_proportion < 0) {
-    // Negative proportions only sensible for GREATER/LESS (signed) comnparisons
-    if (clear_threshold_type != ThresholdType::GREATER && clear_threshold_type != ThresholdType::LESS) {
-      clear_proportion = std::abs(proportion);
-      PLOG_WARNING << "Proportion should be positive. Using absolute value.";
+    double clear_proportion = config["clear_threshold"].value_or(proportion);
+    if (clear_proportion < -1 || clear_proportion > 1) {
+      ++parse_warnings;
+      PLOG_WARNING << "clear_threshold must be between -1 and 1. Using 1";
+      clear_proportion = 1.0;
+    } else if (clear_proportion < 0) {
+      // Negative proportions only sensible for GREATER/LESS (signed) comnparisons
+      if (clear_threshold_type != ThresholdType::GREATER && clear_threshold_type != ThresholdType::LESS) {
+        clear_proportion = std::abs(clear_proportion);
+        PLOG_WARNING << "Proportion should be positive. Using absolute value.";
+      }
     }
+    ret->setClearThreshold(clear_proportion);
   }
-  ret->setClearThreshold(clear_proportion);
 
   PLOG_VERBOSE << "Condition: " << *condition_name <<  "; " << ((thtype) ? *thtype : "greater") <<
       " threshold proportion = " << proportion << " -> " << ret->getThreshold();
@@ -518,7 +541,7 @@ void Game::buildSequenceList(toml::table& config) {
         continue;
       }
 
-      toml::array* event_list = config["sequence"].as_array();
+      toml::array* event_list = (*seq)["sequence"].as_array();
       if (! event_list) {
         ++parse_errors;
         PLOG_ERROR << "Sequence definition missing required 'sequence' field";

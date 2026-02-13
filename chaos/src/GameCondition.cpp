@@ -82,7 +82,7 @@ short GameCondition::calculateThreshold(double proportion, std::vector<std::shar
 
   // Translate the threshold to an integer based on the signal of the first command in the commands list
   if (conditions.empty()) {
-    PLOG_ERROR << "Internal error: while_conditions empty and set_on is null";  
+    PLOG_ERROR << "Internal error: while_conditions empty";  
     return 1;
   }
   signal = conditions.front();
@@ -117,9 +117,7 @@ void GameCondition::setClearThreshold(double proportion) {
 
 bool GameCondition::testCondition(std::vector<std::shared_ptr<ControllerInput>> conditions, short thresh, ThresholdType type) {
   if (type == ThresholdType::DISTANCE || type == ThresholdType::DISTANCE_BELOW) {
-    if (conditions.size() != 2) {
-      return false;
-    }
+    assert(conditions.size() == 2);
     short x = conditions[0]->getState(true);
     short y = conditions[1]->getState(true);
     return (distanceComparison(x, y, thresh, type));
