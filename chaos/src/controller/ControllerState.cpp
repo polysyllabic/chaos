@@ -23,10 +23,6 @@
 #include <Dualshock.hpp>
 #include <signals.hpp>
 
-#ifdef USE_DUALSENSE
-#include "Dualsense.hpp"
-#endif
-
 using namespace Chaos;
 
 double ControllerState::touchpad_inactive_delay = 0.04;
@@ -87,14 +83,10 @@ ControllerState* ControllerState::factory(int vendor, int product) {
   
   if (vendor == 0x054c && product == 0x09cc) {
     return new Dualshock;
-  } else if (vendor == 0x054c && product == 0x0ce6) {
-#ifdef USE_DUALSENSE
-    return new Dualsense;
-#else
-    PLOG_ERROR << "The DualSense controller is not currently supported.";
-#endif    
   } else if (vendor==0x2f24  && product==0x00f8) {	// Magic-S Pro
     return new Dualshock;
+  } else if (vendor == 0x054c && product == 0x0ce6) {
+    PLOG_ERROR << "DualSense is no longer supported.";
   }	
   return nullptr;
 }

@@ -42,8 +42,8 @@ namespace Chaos {
   class Controller {
   protected:
 
- 	  // based on DS4 and Dualsense sizes
-	  std::deque<std::array<unsigned char,64>> deviceEventQueue;
+ 	  // Based on current 64-byte controller report size.
+		  std::deque<std::array<unsigned char,64>> deviceEventQueue;
 
     // no longer necessary without the GPIO interface
     //virtual bool applyHardware(const DeviceEvent& event) = 0;
@@ -137,4 +137,3 @@ namespace Chaos {
   };
 
 };
-
