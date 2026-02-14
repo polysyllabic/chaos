@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <iomanip>
+#include <cstring>
 #include <plog/Log.h>
 
 #include "ControllerRaw.hpp"
@@ -86,9 +87,15 @@ void ControllerRaw::doAction() {
 }
 
 void ControllerRaw::notification(unsigned char* buffer, int length) {
-	
+  if (length < 64) {
+    PLOG_WARNING << "Dropping short controller report: expected 64 bytes, got " << length;
+    return;
+  }
+		
+  std::array<unsigned char, 64> report{};
+  std::memcpy(report.data(), buffer, report.size());
   lock();
-  deviceEventQueue.push_back( *(std::array<unsigned char, 64>*) buffer);
+  deviceEventQueue.push_back(report);
   unlock();
 	
   resume();	// kick off the thread if paused
@@ -97,4 +104,3 @@ void ControllerRaw::notification(unsigned char* buffer, int length) {
   // Take the mControllerState and replace the provided buffer:
   mControllerState->applyHackedState(buffer, controllerState);
 }
-
