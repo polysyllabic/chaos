@@ -39,26 +39,24 @@ void Thread::exitAction() {
 void* Thread::InternalThreadEntryFunc(void* This) {
 	Thread* thread = (Thread*) This;
 	thread->entryAction();
-	while (thread->shouldTerminate == false) {
+	while (!thread->shouldTerminate.load()) {
 		thread->doAction();
 		thread->checkSuspend();
 	}
 	thread->exitAction();
-	thread->isRunning = false;
+	thread->isRunning.store(false);
 	return NULL;
 }
 
 Thread::Thread() :
-		pauseFlag(false), isRunning(false), shouldTerminate(false) {
+			pauseFlag(false), isRunning(false), shouldTerminate(false) {
 	pthread_mutex_init(&_mutex, NULL);
 	pthread_mutex_init(&_condMutex, NULL);
 	pthread_cond_init(&_cond, NULL);
 }
 
 Thread::~Thread() {
-	stop();
-	while (isRunning)
-		;
+	WaitForInternalThreadToExit();
 	pthread_mutex_destroy(&_mutex);
 	pthread_mutex_destroy(&_condMutex);
 	pthread_cond_destroy(&_cond);
@@ -67,21 +65,21 @@ Thread::~Thread() {
 /** Returns true if the thread was successfully started, false if there was an
  * error starting the thread */
 bool Thread::start() {
-	shouldTerminate = false;
-	isRunning = true;
-	isRunning = pthread_create(&_thread, NULL, InternalThreadEntryFunc, this)
-			== 0;
-	return isRunning;
+	shouldTerminate.store(false);
+	isRunning.store(true);
+	isRunning.store(pthread_create(&_thread, NULL, InternalThreadEntryFunc, this)
+			== 0);
+	return isRunning.load();
 }
 
 void Thread::stop() {
-	shouldTerminate = true;
+	shouldTerminate.store(true);
 	resume();
 }
 
 /** Will not return until the internal thread has exited. */
 void Thread::WaitForInternalThreadToExit() {
-	if (isRunning) {
+	if (isRunning.load()) {
 		stop();
 		pthread_join(_thread, NULL);
 	}

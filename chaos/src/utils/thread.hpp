@@ -24,6 +24,7 @@
  */
 #pragma once
 #include <pthread.h>
+#include <atomic>
 
 namespace Chaos {
 
@@ -87,7 +88,7 @@ public:
    * \return true if running
 	 */
 	bool running() {
-		return isRunning;
+			return isRunning.load();
 	}
 
 protected:
@@ -126,8 +127,8 @@ private:
 	pthread_cond_t _cond;
 
 	bool pauseFlag;
-	bool isRunning;
-	bool shouldTerminate;
+	std::atomic<bool> isRunning;
+	std::atomic<bool> shouldTerminate;
 };
 
 };
