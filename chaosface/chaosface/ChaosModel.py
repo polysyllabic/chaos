@@ -94,14 +94,48 @@ class ChaosModel(EngineObserver):
       # start the bot again
       self.configure_bot()    
 
+  def send_engine_command(self, payload: dict) -> bool:
+    message = json.dumps(payload)
+    sent = self.chaos_communicator.send_message(message)
+    if sent is False:
+      logging.warning('Engine is not responding to command: %s', payload)
+      return False
+    return True
+
   # Ask the engine to tell us about the game we're playing
   # TODO: Send a config file from the computer running this bot
   def request_game_info(self):
     logging.debug("Asking engine about the game")
     to_send = {'game': True}
-    resp = self.chaos_communicator.send_message(json.dumps(to_send))
-    if resp == False:
-      logging.warning(f"Engine is not responding. No game data available")
+    self.send_engine_command(to_send)
+
+  def request_available_games(self):
+    logging.debug("Asking engine for available games")
+    self.send_engine_command({'available_games': True})
+
+  def request_game_selection(self, game_name: str):
+    selected = str(game_name).strip()
+    if not selected:
+      return
+    logging.info("Requesting game selection: %s", selected)
+    self.send_engine_command({'select_game': selected})
+
+  def _parse_available_games(self, payload) -> list[str]:
+    games = []
+    seen = set()
+    if not isinstance(payload, list):
+      return games
+    for item in payload:
+      game_name = ''
+      if isinstance(item, dict):
+        game_name = str(item.get('game', '')).strip()
+      else:
+        game_name = str(item).strip()
+      if game_name and game_name not in seen:
+        seen.add(game_name)
+        games.append(game_name)
+    games.sort(key=lambda name: name.lower())
+    return games
 
   def update_command(self, message) -> None:
     received = json.loads(message)
@@ -110,6 +144,13 @@ class ChaosModel(EngineObserver):
       paused = bool(received["pause"])
       logging.info("Got a pause command of: {paused}")
       ui_dispatch.call_soon(config.relay.set_paused, paused)
+
+    elif "available_games" in received:
+      games = self._parse_available_games(received.get('available_games'))
+      ui_dispatch.call_soon(config.relay.set_available_games, games)
+      preferred = config.relay.get_preferred_game(games)
+      if preferred and (not config.relay.valid_data or config.relay.game_name != preferred):
+        self.request_game_selection(preferred)
 
     elif "game" in received:
       logging.debug("Received game info!")
@@ -121,8 +162,7 @@ class ChaosModel(EngineObserver):
     logging.debug("Winning mod: " + mod_name)
     to_send = {"winner": mod_name,
               "time": config.relay.get_attribute('modifier_time')}
-    config.relay.engine_commands.put(to_send)
-    # message = self.chaos_communicator.send_message(json.dumps(toSend))
+    self.send_engine_command(to_send)
 
   def replace_mod(self, mod_key, refresh_voting_pool: bool = True):
     # If this is the first time, the candidate pool will be empty. Skip in this case.
@@ -143,12 +183,12 @@ class ChaosModel(EngineObserver):
   def remove_mod(self, mod_name):
     logging.debug("Removing mod: " + mod_name)
     to_send = {"remove": mod_name}
-    config.relay.engine_commands.put(to_send)
+    self.send_engine_command(to_send)
 
   def reset_mods(self):
     logging.debug("Resetting all mods")
     to_send = {"reset": True }
-    config.relay.engine_commands.put(to_send)
+    self.send_engine_command(to_send)
 
   def _voting_disabled(self) -> bool:
     return (
@@ -273,8 +313,8 @@ class ChaosModel(EngineObserver):
     last_engine_request = 0.0
     self.paused_flashing_timer = 0.0
     self.disconnected_flashing_timer = 0.0
-    # Ask engine for information about game modifiers
-    self.request_game_info()
+    # Ask engine for available games. We'll request game details after a game is selected.
+    self.request_available_games()
 
     while config.relay.keep_going:
       time.sleep(config.relay.sleep_time())
@@ -289,12 +329,16 @@ class ChaosModel(EngineObserver):
         logging.info('Restarting chatbot after credential/config update')
         self.restart_bot()
       
-      # If we haven't yet received the game info, retry periodically
+      # If we haven't yet received game data, keep requesting available games.
       if config.relay.valid_data == False:
         last_engine_request += delta_time
         if last_engine_request > 30.0:
-          self.request_game_info()
+          self.request_available_games()
           last_engine_request = 0.0
+
+      game_selection = config.relay.consume_game_selection_request()
+      if game_selection:
+        self.request_game_selection(game_selection)
 
       if config.relay.paused:
         if vote_open:

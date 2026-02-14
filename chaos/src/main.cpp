@@ -42,9 +42,9 @@ int main(int argc, char** argv) {
     // This will start up the logger and configure other basic settings
     Configuration chaos_config("chaosconfig.toml");
 
-    // Now process the game-configuration file. If a file is specified on the command line, we use
-    // that. Otherwise we use the default.
-    std::string configfile = (argc > 1) ? argv[1] : chaos_config.getGameFile();
+    // If a game config path is specified on the command line, use that immediately.
+    // Otherwise, wait for chaosface to pick one from the discovered list.
+    std::string configfile = (argc > 1) ? argv[1] : "";
 
     // Configure controller and engine. Build the engine before starting the controller thread so
     // input injection is wired before any controller events are processed.
@@ -52,9 +52,14 @@ int main(int argc, char** argv) {
     engine = std::make_unique<ChaosEngine>(*controller, chaos_config.getListenerAddress(),
                                            chaos_config.getInterfaceAddress());
 
-    // Keep engine running/listening even if the game file is invalid, but remain paused until a
-    // valid game config is loaded.
-    engine->setGame(configfile);
+    engine->setAvailableGames(chaos_config.getAvailableGames());
+    if (!configfile.empty()) {
+      // Keep engine running/listening even if the game file is invalid, but remain paused until a
+      // valid game config is loaded.
+      engine->setGame(configfile);
+    } else {
+      engine->announceAvailableGames();
+    }
 
     controller->start();
     engine->start();

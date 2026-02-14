@@ -17,6 +17,47 @@ def build_game_settings_tab() -> None:
 
     status_label = ui.label('').classes('text-sm')
 
+    ui.label('Game Selection').classes('text-subtitle1')
+
+    with ui.row().classes('w-full items-end gap-3'):
+      game_selector = ui.select([], label='Available games').classes('w-96')
+      game_status = ui.label('').classes('text-xs')
+
+      def confirm_game_selection():
+        selected = str(game_selector.value or '').strip()
+        if not selected:
+          status_label.text = 'Select a game before confirming'
+          return
+        config.relay.request_game_selection(selected)
+        status_label.text = f'Requested game load: {selected}'
+
+      ui.button('Confirm Game', on_click=confirm_game_selection)
+
+    def refresh_game_selector():
+      options = list(config.relay.available_games)
+      if game_selector.options != options:
+        game_selector.options = options
+        game_selector.update()
+
+      selected = str(config.relay.selected_game or '').strip()
+      if selected.upper() == 'NONE':
+        selected = ''
+      if selected not in options:
+        selected = options[0] if options else None
+      if game_selector.value != selected:
+        game_selector.value = selected
+
+      game_status.text = (
+        f'Current: {config.relay.game_name or "NONE"} | '
+        f'Most recent: {config.relay.selected_game or "NONE"} | '
+        f'Selections stored: {len(config.relay.selected_game_history)}'
+      )
+
+    refresh_game_selector()
+    ui.timer(0.5, refresh_game_selector)
+
+    ui.separator()
+
     with ui.row().classes('w-full gap-8'):
       with ui.column().classes('w-96'):
         num_active_mods = ui.number('Active modifiers', value=int(config.relay.num_active_mods), min=1, max=10, step=1)

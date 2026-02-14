@@ -23,6 +23,10 @@
 #include <memory>
 #include <list>
 #include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+#include <chrono>
 #include <json/json.h>
 #include <timer.hpp>
 
@@ -72,9 +76,14 @@ namespace Chaos {
     std::atomic<bool> keep_going{true};
     std::atomic<bool> pause{true};
     std::atomic<bool> game_ready{false};
+    std::atomic<bool> awaiting_game_selection{false};
     bool pausePrimer = false;
     bool pausedPrior = false;
     int primary_mods = 0;
+    bool interface_enabled{true};
+    std::unordered_map<std::string, std::string> available_game_configs;
+    Json::Value available_games_payload{Json::arrayValue};
+    std::chrono::steady_clock::time_point next_game_announcement{};
     
     // overridden from ControllerInjector
     bool sniffify(const DeviceEvent& input, DeviceEvent& output);
@@ -87,6 +96,8 @@ namespace Chaos {
     Json::StreamWriterBuilder jsonWriterBuilder;	
 
     void reportGameStatus();
+    void reportAvailableGames();
+    std::string resolveGameConfig(const std::string& selection);
 
     void removeMod(std::shared_ptr<Modifier> mod);
 
@@ -95,6 +106,10 @@ namespace Chaos {
                 const std::string& talker_endpoint, bool enable_interface = true);
     
     void sendInterfaceMessage(const std::string& msg);
+
+    void setAvailableGames(const std::vector<std::pair<std::string, std::string>>& games);
+
+    void announceAvailableGames();
 
     /**
      * \brief Initialize the game data from the supplied configuration file

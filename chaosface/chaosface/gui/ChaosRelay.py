@@ -47,6 +47,9 @@ _chaos_how_to_redeem = (
 # been created yet.
 chaos_defaults = {
   'current_game': 'NONE',
+  'selected_game': 'NONE',
+  'selected_game_history': [],
+  'available_games': [],
   'active_modifiers': 3,
   'modifier_time': 180.0,
   'softmax_factor': 33,
@@ -150,6 +153,7 @@ class ChaosRelay:
     self.candidate_keys: List[str] = []
     self.force_mod: str = ''
     self.remove_mod_request: str = ''
+    self.game_selection_request: str = ''
     self.reset_mods = False
     self.engine_commands = queue.Queue()
     self.insert_cooldown = 0.0
@@ -164,6 +168,9 @@ class ChaosRelay:
 
     # UI/model state
     self.game_name = ''
+    self.selected_game = ''
+    self.selected_game_history: List[str] = []
+    self.available_games: List[str] = []
     self.game_errors = 0
     self.vote_time = 0.0
     self.mod_times: List[float] = []
@@ -420,6 +427,10 @@ class ChaosRelay:
 
   def reset_all(self):
     self.set_game_name(self.get_attribute('current_game'))
+    selected_game = self.get_attribute('selected_game') or self.get_attribute('current_game')
+    self.set_selected_game(selected_game)
+    self.set_selected_game_history(self.get_attribute('selected_game_history'))
+    self.set_available_games(self.get_attribute('available_games'))
     self.set_num_active_mods(self.get_attribute('active_modifiers'))
     self.set_time_per_modifier(self.get_attribute('modifier_time'))
     self.set_softmax_factor(self.get_attribute('softmax_factor'))
@@ -465,6 +476,7 @@ class ChaosRelay:
     self.start_vote_duration = 0.0
     self.end_vote_requested = False
     self.remove_mod_request = ''
+    self.game_selection_request = ''
 
   def time_per_vote(self) -> float:
     active_modifiers = self._attr_float('active_modifiers', 1.0)
@@ -475,6 +487,7 @@ class ChaosRelay:
   def initialize_game(self, gamedata: dict):
     logging.info("Setting game data for %s", gamedata['game'])
     self.set_game_name(gamedata['game'])
+    self.record_selected_game(gamedata['game'])
     self.set_game_errors(int(gamedata['errors']))
     self.set_num_active_mods(int(gamedata['nmods']))
     self.set_time_per_modifier(float(gamedata['modtime']))
@@ -509,6 +522,57 @@ class ChaosRelay:
   # Explicit setters used by UI/model/chatbot
   def set_game_name(self, value):
     self._set_value('game_name', str(value), 'current_game')
+
+  def set_selected_game(self, value):
+    game_name = str(value).strip() if value is not None else ''
+    if not game_name:
+      game_name = 'NONE'
+    self._set_value('selected_game', game_name, 'selected_game')
+
+  def set_selected_game_history(self, value):
+    games: List[str] = []
+    if isinstance(value, list):
+      for game in value:
+        game_name = str(game).strip()
+        if game_name:
+          games.append(game_name)
+    self._set_value('selected_game_history', games, 'selected_game_history')
+
+  # Backward-compatible alias for legacy call sites.
+  def set_selected_games(self, value):
+    self.set_selected_game_history(value)
+
+  def set_available_games(self, value):
+    unique_games = set()
+    games: List[str] = []
+    if isinstance(value, list):
+      for game in value:
+        game_name = str(game).strip()
+        if game_name and game_name not in unique_games:
+          unique_games.add(game_name)
+          games.append(game_name)
+    games.sort(key=lambda name: name.lower())
+    self._set_value('available_games', games, 'available_games')
+
+  def record_selected_game(self, game_name: str):
+    name = str(game_name).strip()
+    if not name:
+      return
+    self.set_selected_game(name)
+    history = list(self.selected_game_history)
+    if not history or history[-1] != name:
+      history.append(name)
+      self.set_selected_game_history(history)
+    self.save_config_info()
+
+  def get_preferred_game(self, available_games: Optional[List[str]] = None) -> str:
+    games = list(available_games) if available_games is not None else list(self.available_games)
+    preferred = str(self.selected_game).strip()
+    if preferred.upper() == 'NONE':
+      preferred = ''
+    if preferred and preferred in games:
+      return preferred
+    return ''
 
   def set_game_errors(self, value):
     self._set_value('game_errors', int(value))
@@ -766,6 +830,20 @@ class ChaosRelay:
       requested = bool(self.end_vote_requested)
       self.end_vote_requested = False
     return requested
+
+  def request_game_selection(self, game_name: str):
+    selected = str(game_name).strip()
+    if not selected:
+      return
+    with self._lock:
+      self.game_selection_request = selected
+    self.record_selected_game(selected)
+
+  def consume_game_selection_request(self) -> str:
+    with self._lock:
+      request = self.game_selection_request
+      self.game_selection_request = ''
+    return request
 
   def request_remove_mod(self, mod_key: str):
     with self._lock:

@@ -22,6 +22,7 @@
 #include <optional>
 #include <string_view>
 #include <vector>
+#include <utility>
 #include <stdexcept>
 #include <unordered_map>
 
@@ -52,6 +53,9 @@ namespace Chaos {
     std::string interface_addr;
     unsigned int interface_port;
     unsigned int listener_port;
+    std::vector<std::pair<std::string, std::string>> available_games;
+
+    void discoverAvailableGames();
 
   public:
     /**
@@ -72,6 +76,15 @@ namespace Chaos {
      * This is the file we try to load if none is specified on the command line
      */
     std::string getGameFile() { return game_config.string(); }
+
+    /**
+     * \brief Get the discovered playable game configurations.
+     *
+     * Each pair is {game_name, config_file_path}.
+     */
+    const std::vector<std::pair<std::string, std::string>>& getAvailableGames() const {
+      return available_games;
+    }
 
     /**
      * \brief Get the TCP address of the machine running the python interface

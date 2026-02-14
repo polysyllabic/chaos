@@ -43,6 +43,7 @@ using namespace Chaos;
 namespace {
   constexpr std::string_view CONFIG_FILE_VERSION_KEY{"config_file_ver"};
   constexpr std::string_view CONFIG_FILE_ROLE_KEY{"chaos_toml"};
+  constexpr std::string_view GAME_NAME_KEY{"game"};
   constexpr std::string_view INPUT_FILE_KEY{"input_file"};
 
   enum class ConfigFileRole { MAIN, TEMPLATE, INVALID };
@@ -99,6 +100,16 @@ namespace {
                  << "'.";
       ++parse_errors;
       return false;
+    }
+
+    if (expected_role == ConfigFileRole::MAIN) {
+      std::optional<std::string_view> game_name = config[GAME_NAME_KEY].value<std::string_view>();
+      if (!game_name || game_name->empty()) {
+        PLOG_ERROR << "Main configuration files must define a non-empty '"
+                   << GAME_NAME_KEY << "' string: " << path;
+        ++parse_errors;
+        return false;
+      }
     }
 
     if (config.contains(INPUT_FILE_KEY)) {

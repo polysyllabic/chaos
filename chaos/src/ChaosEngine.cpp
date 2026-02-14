@@ -39,10 +39,47 @@ ChaosEngine::ChaosEngine(Controller& c, const std::string& listener_endpoint,
   time.initialize();
   jsonReader = jsonReaderBuilder.newCharReader();
   controller.addInjector(this);
+  interface_enabled = enable_interface;
+  next_game_announcement = std::chrono::steady_clock::now();
   if (enable_interface) {
     chaosInterface.setObserver(this);
     chaosInterface.setupInterface(listener_endpoint, talker_endpoint);
   }
+}
+
+void ChaosEngine::setAvailableGames(const std::vector<std::pair<std::string, std::string>>& games) {
+  Json::Value payload(Json::arrayValue);
+  std::unordered_map<std::string, std::string> discovered_configs;
+
+  for (const auto& entry : games) {
+    if (entry.first.empty() || entry.second.empty()) {
+      continue;
+    }
+    discovered_configs[entry.first] = entry.second;
+    Json::Value game_info;
+    game_info["game"] = entry.first;
+    game_info["file"] = entry.second;
+    payload.append(game_info);
+  }
+
+  lock();
+  available_game_configs = std::move(discovered_configs);
+  available_games_payload = std::move(payload);
+  awaiting_game_selection.store(!available_game_configs.empty() && !game_ready.load());
+  next_game_announcement = std::chrono::steady_clock::now();
+  unlock();
+}
+
+void ChaosEngine::announceAvailableGames() {
+  reportAvailableGames();
+}
+
+std::string ChaosEngine::resolveGameConfig(const std::string& selection) {
+  lock();
+  auto iter = available_game_configs.find(selection);
+  std::string resolved = (iter != available_game_configs.end()) ? iter->second : selection;
+  unlock();
+  return resolved;
 }
 
 bool ChaosEngine::setGame(const std::string& name) {
@@ -53,6 +90,11 @@ bool ChaosEngine::setGame(const std::string& name) {
   bool loaded = game.loadConfigFile(name, this);
   bool playable = loaded && (game.getErrors() == 0);
   game_ready.store(playable);
+  bool has_selectable_games = !available_game_configs.empty();
+  awaiting_game_selection.store(!playable && has_selectable_games);
+  if (!playable && has_selectable_games) {
+    next_game_announcement = std::chrono::steady_clock::now();
+  }
   unlock();
 
   if (!playable) {
@@ -71,6 +113,7 @@ void ChaosEngine::newCommand(const std::string& command) {
 	
   if (!parsingSuccessful) {
     PLOG_ERROR << "Json parsing failed: " << errs << "; command = " << command;
+    return;
   }
 	
   if (root.isMember("winner")) {
@@ -139,10 +182,23 @@ void ChaosEngine::newCommand(const std::string& command) {
 
   if (root.isMember("game")) {
     reportGameStatus();
+    if (awaiting_game_selection.load()) {
+      reportAvailableGames();
+    }
+  }
+
+  if (root.isMember("available_games")) {
+    reportAvailableGames();
+  }
+
+  if (root.isMember("select_game")) {
+    std::string requested_game = root["select_game"].asString();
+    setGame(resolveGameConfig(requested_game));
+    reportGameStatus();
   }
 
   if (root.isMember("newgame")) {
-    setGame(root["newgame"].asString());
+    setGame(resolveGameConfig(root["newgame"].asString()));
     reportGameStatus();
   }
 
@@ -166,6 +222,9 @@ void ChaosEngine::newCommand(const std::string& command) {
 
 // Tell the interface about the game we're playing
 void ChaosEngine::reportGameStatus() {
+  if (!interface_enabled) {
+    return;
+  }
   PLOG_DEBUG << "Sending game information to the interface.";
   Json::Value msg;
   lock();
@@ -180,8 +239,32 @@ void ChaosEngine::reportGameStatus() {
   chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
 }
 
+void ChaosEngine::reportAvailableGames() {
+  if (!interface_enabled) {
+    return;
+  }
+
+  Json::Value msg;
+  lock();
+  msg["available_games"] = available_games_payload;
+  unlock();
+  chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
+}
+
 void ChaosEngine::doAction() {
   usleep(500);	// sleep .5 milliseconds
+
+  bool should_announce_games = false;
+  auto now = std::chrono::steady_clock::now();
+  lock();
+  if (awaiting_game_selection.load() && now >= next_game_announcement) {
+    should_announce_games = true;
+    next_game_announcement = now + std::chrono::seconds(5);
+  }
+  unlock();
+  if (should_announce_games) {
+    reportAvailableGames();
+  }
 		
   // Update timers/states of modifiers
   if (pause.load()) {

@@ -18,8 +18,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <filesystem>
+#include <algorithm>
+#include <cctype>
 #include <stdexcept>
 #include <iostream>
+#include <unordered_set>
+#include <vector>
 #include <plog/Log.h>
 #include <plog/Initializers/RollingFileInitializer.h>
 
@@ -31,6 +35,18 @@
 #include "GameMenu.hpp"
 
 using namespace Chaos;
+
+namespace {
+  std::string toLower(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return value;
+  }
+
+  bool hasTomlExtension(const std::filesystem::path& path) {
+    return toLower(path.extension().string()) == ".toml";
+  }
+}
 
 // Parse the TOML file into memory and do initial setup.
 Configuration::Configuration(const std::string& fname) {
@@ -109,6 +125,7 @@ Configuration::Configuration(const std::string& fname) {
     PLOG_ERROR << "Game directory '" << game_directory.string() << "' is not a directory!";
     game_directory = ".";
   }
+  discoverAvailableGames();
 
   // If the game configuration file doesn't specify a path, use the default games directory
   game_config = configuration["default_game"].value_or("");
@@ -118,5 +135,72 @@ Configuration::Configuration(const std::string& fname) {
 
 }
 
+void Configuration::discoverAvailableGames() {
+  available_games.clear();
+
+  std::error_code dir_err;
+  std::filesystem::directory_iterator dir_iter(game_directory, dir_err);
+  if (dir_err) {
+    PLOG_ERROR << "Unable to scan game directory '" << game_directory.string()
+               << "': " << dir_err.message();
+    return;
+  }
+
+  std::vector<std::pair<std::string, std::string>> discovered;
+  std::unordered_set<std::string> seen_game_names;
+
+  for (const std::filesystem::directory_entry& entry : dir_iter) {
+    if (!entry.is_regular_file()) {
+      continue;
+    }
+    if (!hasTomlExtension(entry.path())) {
+      continue;
+    }
+
+    toml::table config;
+    try {
+      config = toml::parse_file(entry.path().string());
+    } catch (const toml::parse_error& err) {
+      PLOG_WARNING << "Skipping invalid TOML file '" << entry.path().string()
+                   << "': " << err;
+      continue;
+    }
+
+    std::optional<std::string_view> role = config["chaos_toml"].value<std::string_view>();
+    if (!role || *role != "main") {
+      continue;
+    }
+
+    std::optional<std::string> game_name = config["game"].value<std::string>();
+    if (!game_name || game_name->empty()) {
+      PLOG_ERROR << "Skipping '" << entry.path().string()
+                 << "': main game configs must define a non-empty 'game' string.";
+      continue;
+    }
+
+    if (seen_game_names.find(*game_name) != seen_game_names.end()) {
+      PLOG_ERROR << "Duplicate game name '" << *game_name << "' found in '"
+                 << entry.path().string() << "'. Ignoring duplicate.";
+      continue;
+    }
+    seen_game_names.insert(*game_name);
+
+    discovered.emplace_back(*game_name, entry.path().lexically_normal().string());
+  }
+
+  std::sort(discovered.begin(), discovered.end(),
+            [](const std::pair<std::string, std::string>& a,
+               const std::pair<std::string, std::string>& b) {
+              std::string game_a = toLower(a.first);
+              std::string game_b = toLower(b.first);
+              if (game_a == game_b) {
+                return a.second < b.second;
+              }
+              return game_a < game_b;
+            });
+
+  available_games = std::move(discovered);
+  PLOG_INFO << "Discovered " << available_games.size() << " playable game configuration files.";
+}
 
 
