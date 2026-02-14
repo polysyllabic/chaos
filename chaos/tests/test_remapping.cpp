@@ -310,6 +310,37 @@ touchpad_skew = 0
   return ok;
 }
 
+static bool testControllerInputTypeAndHybridAxisState() {
+  Controller controller;
+  ControllerInputTable table(controller);
+  bool ok = true;
+
+  DeviceEvent l2_axis_event = {0, 0, TYPE_AXIS, AXIS_L2};
+  ok &= check(ControllerInput::getType(l2_axis_event) == ControllerSignalType::HYBRID,
+              "AXIS_L2 should be classified as HYBRID");
+
+  DeviceEvent dy_axis_event = {0, 0, TYPE_AXIS, AXIS_DY};
+  ok &= check(ControllerInput::getType(dy_axis_event) == ControllerSignalType::THREE_STATE,
+              "AXIS_DY should be classified as THREE_STATE");
+
+  DeviceEvent touchpad_axis_2_event = {0, 0, TYPE_AXIS, AXIS_TOUCHPAD_X_2};
+  ok &= check(ControllerInput::getType(touchpad_axis_2_event) == ControllerSignalType::TOUCHPAD,
+              "AXIS_TOUCHPAD_X_2 should be classified as TOUCHPAD");
+
+  auto l2 = table.getInput("L2");
+  ok &= check(l2 != nullptr, "L2 input should exist");
+  if (!l2) {
+    return false;
+  }
+
+  controller.applyEvent({0, 1, TYPE_BUTTON, BUTTON_L2});
+  controller.applyEvent({0, 77, TYPE_AXIS, AXIS_L2});
+
+  ok &= check(l2->getState(false) == 1, "L2 button state should be readable");
+  ok &= check(l2->getState(true) == 77, "L2 hybrid axis state should read AXIS_L2 value");
+  return ok;
+}
+
 int main() {
   bool ok = true;
   ok &= testAxisZeroClearsNegativeButton();
@@ -317,6 +348,7 @@ int main() {
   ok &= testTouchpadStopClearsConfiguredAxes();
   ok &= testTouchpadInactiveDelayInjection();
   ok &= testTouchpadInactiveDelayParsing();
+  ok &= testControllerInputTypeAndHybridAxisState();
 
   if (!ok) {
     return 1;
