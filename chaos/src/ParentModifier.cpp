@@ -18,9 +18,12 @@
  */
 #include "ParentModifier.hpp"
 #include "TOMLUtils.hpp"
+#include <algorithm>
 #include <random.hpp>
-#include <unordered_map>
+#include <cmath>
 #include <list>
+#include <unordered_set>
+#include <vector>
 
 using namespace Chaos;
 
@@ -72,36 +75,58 @@ ParentModifier::ParentModifier(toml::table& config, EngineInterface* e) {
 
 void ParentModifier::buildRandomList() {
   Random rng;
-  auto all_mods = engine->getModifierMap();
-  // Make a copy of the active modifiers
-  auto used_mods = std::list<std::shared_ptr<Modifier>>(engine->getActiveMods());
-  while (random_children.size() < num_randos) {
-    int selection = rng.uniform(0, all_mods.size());
-    PLOG_DEBUG << "Selection = " << selection << " out of " << all_mods.size();
-    int count = 0;
-    for (auto& [m_name, mod] : all_mods) {
-      count++;
-      if (count >= selection) {
-        // Don't pick if it's a parent mod with random selection. (This automatically excludes self.)
-        if (mod->getModType() == mod_type && ! mod->allowAsChild()) {
-          continue;
-        }
-        bool copycat = false;
-        for (auto& m : used_mods) {
-          if (m->getName() == m_name) {
-            copycat = true;
-            break;
-          }
-        }
-        if (copycat) {
-          continue;
-        }
-        PLOG_INFO << "Selected " << m_name << " as child mod";
-        used_mods.push_back(mod);
-        random_children.push_back(mod);
-        break;
-      }
+  const auto& all_mods = engine->getModifierMap();
+  std::unordered_set<std::string> used_names;
+
+  for (const auto& mod : engine->getActiveMods()) {
+    if (mod) {
+      used_names.insert(mod->getName());
     }
+  }
+  for (const auto& mod : fixed_children) {
+    if (mod) {
+      used_names.insert(mod->getName());
+    }
+  }
+  for (const auto& mod : random_children) {
+    if (mod) {
+      used_names.insert(mod->getName());
+    }
+  }
+
+  std::vector<std::pair<std::string, std::shared_ptr<Modifier>>> eligible;
+  eligible.reserve(all_mods.size());
+  for (const auto& [m_name, mod] : all_mods) {
+    if (!mod) {
+      continue;
+    }
+    // Exclude parent mods that do random child selection. (This excludes self.)
+    if (mod->getModType() == mod_type && !mod->allowAsChild()) {
+      continue;
+    }
+    if (used_names.find(m_name) != used_names.end()) {
+      continue;
+    }
+    eligible.emplace_back(m_name, mod);
+  }
+
+  if (eligible.empty()) {
+    PLOG_WARNING << "No eligible modifiers available for random children in " << getName();
+    return;
+  }
+
+  const size_t target = std::min(static_cast<size_t>(num_randos), eligible.size());
+  if (target < static_cast<size_t>(num_randos)) {
+    PLOG_WARNING << "Requested " << num_randos << " random child modifiers for " << getName()
+                 << " but only " << eligible.size() << " are eligible";
+  }
+
+  while (random_children.size() < target) {
+    size_t selection = static_cast<size_t>(std::floor(rng.uniform(0, eligible.size() - 0.01)));
+    auto [name, mod] = eligible[selection];
+    PLOG_INFO << "Selected " << name << " as child mod";
+    random_children.push_back(mod);
+    eligible.erase(eligible.begin() + selection);
   }
 }
 
