@@ -33,31 +33,36 @@ using namespace Chaos;
 
 int main(int argc, char** argv) {
 
-  // Process the configuration file for non-gameplay-related information
-  // This will start up the logger and configure other basic settings
-  Configuration chaos_config("chaosconfig.toml");
+  try {
+    // Process the configuration file for non-gameplay-related information
+    // This will start up the logger and configure other basic settings
+    Configuration chaos_config("chaosconfig.toml");
 
-  // Now process the game-configuration file. If a file is specified on the command line, we use
-  // that. Otherwise we use the default. If no default is set, or the specified file does not exist,
-  // we abort.
-  std::string configfile = (argc > 1) ? argv[1] : chaos_config.getGameFile();
+    // Now process the game-configuration file. If a file is specified on the command line, we use
+    // that. Otherwise we use the default.
+    std::string configfile = (argc > 1) ? argv[1] : chaos_config.getGameFile();
 
-  // Configure the controller
-  ControllerRaw controller;
-  controller.start();
+    // Configure controller and engine. Build the engine before starting the controller thread so
+    // input injection is wired before any controller events are processed.
+    ControllerRaw controller;
+    ChaosEngine engine = ChaosEngine(controller, chaos_config.getListenerAddress(),
+                                     chaos_config.getInterfaceAddress());
 
-  // Start the engine
-  // Note: we haven't made this a shared ptr because the sniffify library uses raw pointers and we
-  // need to register with that using "this" -- look into modifiying sniffify-usb
-  ChaosEngine engine = ChaosEngine(controller, chaos_config.getListenerAddress(),
-                                   chaos_config.getInterfaceAddress());
-  engine.setGame(configfile);
-  engine.start();
+    // Keep engine running/listening even if the game file is invalid, but remain paused until a
+    // valid game config is loaded.
+    engine.setGame(configfile);
 
-  while(engine.keepGoing()) {
-    // loop until we get an exit signal
-    usleep(1000000);
+    controller.start();
+    engine.start();
+
+    while(engine.keepGoing()) {
+      // loop until we get an exit signal
+      usleep(1000000);
+    }
+  } catch (const std::exception& e) {
+    std::cerr << "Fatal startup error: " << e.what() << std::endl;
+    return EXIT_FAILURE;
   }
-  
+
   return 0;
 }

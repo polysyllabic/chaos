@@ -41,6 +41,7 @@ void CommandListener::setEndpoint(const std::string& ep) {
 zmq::socket_t* CommandListener::createSocket() {
   PLOG_DEBUG << "Creating reply socket and binding to " << endpoint;
   zmq::socket_t* s = new zmq::socket_t(context, zmq::socket_type::rep);
+  s->set(zmq::sockopt::rcvtimeo, 250);
   s->bind(endpoint);
   // No waiting at close time
   //int linger = 0;
@@ -57,6 +58,9 @@ void CommandListener::doAction() {
   zmq::message_t r(reply);
   // Wait for a message to arive. This call is blocking
   auto res = socket->recv(message, zmq::recv_flags::none);	
+  if (!res) {
+    return;
+  }
   std::string text = message.to_string();
   PLOG_VERBOSE << "CommandListener received this message: " << text;
   // Send ACK response
@@ -68,4 +72,3 @@ void CommandListener::doAction() {
   }
 
 }
-

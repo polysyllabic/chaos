@@ -41,6 +41,23 @@ ChaosEngine::ChaosEngine(Controller& c, const std::string& listener_endpoint, co
   chaosInterface.setupInterface(listener_endpoint, talker_endpoint);
 }
 
+bool ChaosEngine::setGame(const std::string& name) {
+  pause.store(true);
+  pausePrimer = false;
+
+  lock();
+  bool loaded = game.loadConfigFile(name, this);
+  bool playable = loaded && (game.getErrors() == 0);
+  game_ready.store(playable);
+  unlock();
+
+  if (!playable) {
+    PLOG_WARNING << "Game configuration '" << name
+                 << "' has errors or failed to load. Staying paused until a valid game is loaded.";
+  }
+  return playable;
+}
+
 void ChaosEngine::newCommand(const std::string& command) {
   PLOG_DEBUG << "Received command: " << command;
 	
@@ -53,6 +70,7 @@ void ChaosEngine::newCommand(const std::string& command) {
   }
 	
   if (root.isMember("winner")) {
+    lock();
     std::shared_ptr<Modifier> mod = game.getModifier(root["winner"].asString());
     double time_active = game.getTimePerModifier();
     if (mod != nullptr) {
@@ -60,18 +78,19 @@ void ChaosEngine::newCommand(const std::string& command) {
         time_active = root["time"].asDouble();
       }
       PLOG_INFO << "Adding Modifier: " << mod->getName() << " lifespan = " << time_active;
-      lock();
       mod->setLifespan(time_active);
       modifiersThatNeedToStart.push(mod);
-      unlock();
     } else {
       PLOG_ERROR << "ERROR: Modifier not found: " << command;
     }
+    unlock();
   }
   
   // Manually remove a mod
   if (root.isMember("remove")) {
+    lock();
     std::shared_ptr<Modifier> mod = game.getModifier(root["remove"].asString());
+    unlock();
     if (mod != nullptr) {
       PLOG_INFO << "Manually removing modifier '" << mod->getName();
       removeMod(mod);
@@ -82,7 +101,13 @@ void ChaosEngine::newCommand(const std::string& command) {
 
   // Remove all mods
   if (root.isMember("reset")) {
-    while (! modifiers.empty()) {
+    while (true) {
+      lock();
+      bool no_mods = modifiers.empty();
+      unlock();
+      if (no_mods) {
+        break;
+      }
       removeOldestMod();
     }
   }
@@ -92,11 +117,7 @@ void ChaosEngine::newCommand(const std::string& command) {
   }
 
   if (root.isMember("newgame")) {
-    lock();
-    pause = true;
-    // Load a new game file
-    game.loadConfigFile(root["newgame"].asString(), this);
-    unlock();
+    setGame(root["newgame"].asString());
     reportGameStatus();
   }
 
@@ -105,43 +126,54 @@ void ChaosEngine::newCommand(const std::string& command) {
     if (nmods < 1) {
       PLOG_ERROR << "Number of active modifiers must be at least one";
     } else {
+      lock();
       game.setNumActiveMods(nmods);
+      unlock();
       // If we've reduced the number of mods to less than the current number of active mods, the
       // excess will be removed in the main loop
     }    
   }
 
   if (root.isMember("exit")) {
-    keep_going = false;
+    keep_going.store(false);
   }
 }
 
 // Tell the interface about the game we're playing
 void ChaosEngine::reportGameStatus() {
-  PLOG_DEBUG << "Sending game information for " << game.getName() << " to the interface.";
+  PLOG_DEBUG << "Sending game information to the interface.";
   Json::Value msg;
+  lock();
   msg["game"] = game.getName();
   msg["errors"] = game.getErrors();
   msg["nmods"] = game.getNumActiveMods();
+  msg["can_unpause"] = game_ready.load();
   double t = std::chrono::duration<double>(game.getTimePerModifier()).count();
   msg["modtime"] = t;
   msg["mods"] = game.getModList();
+  unlock();
   chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
 }
 
 void ChaosEngine::doAction() {
   usleep(500);	// sleep .5 milliseconds
-	
+		
   // Update timers/states of modifiers
-  if (pause) {
+  if (pause.load()) {
     pausedPrior = true;
     return;    
   }
   if (pausedPrior) {
     PLOG_DEBUG << "Resuming after pause";
   }
-  // Initialize the mods that are waiting to start
-  lock();  
+  // Initialize and update active mods
+  std::shared_ptr<Modifier> mod_to_remove;
+  lock();
+  if (pause.load()) {
+    unlock();
+    pausedPrior = true;
+    return;
+  }
   while(!modifiersThatNeedToStart.empty()) {
     std::shared_ptr<Modifier> mod = modifiersThatNeedToStart.front();
     assert(mod);
@@ -150,27 +182,34 @@ void ChaosEngine::doAction() {
     modifiersThatNeedToStart.pop();
     mod->_begin();
   }
-  unlock();
-	
-  lock();
   for (auto& mod : modifiers) {
     assert (mod);
     mod->_update(pausedPrior);
   }
   pausedPrior = false;
-  unlock();
-	
+  
   // If we have too many mods, remove the oldest one
   if (modifiers.size() > game.getNumActiveMods()) {
-    removeOldestMod();
-  }
-  // Check remaining mods for expiration. 
-  for  (auto& mod : modifiers) {        
-    if (mod->lifetime() > mod->lifespan()) {
-      removeMod(mod);
-      // Mods are added one at a time, so we can stop searching on the first expired mod
-      break;
+    mod_to_remove = modifiers.front();
+    for (auto& mod : modifiers) {
+      if (mod_to_remove->lifetime() < mod->lifetime()) {
+        mod_to_remove = mod;
+      }
     }
+  } else {
+    // Check remaining mods for expiration.
+    for (auto& mod : modifiers) {
+      if (mod->lifetime() > mod->lifespan()) {
+        mod_to_remove = mod;
+        // Mods are added one at a time, so we can stop searching on the first expired mod
+        break;
+      }
+    }
+  }
+  unlock();
+
+  if (mod_to_remove) {
+    removeMod(mod_to_remove);
   }
 }
 
@@ -178,25 +217,36 @@ void ChaosEngine::doAction() {
 // going beyond the specified modifier count.
 void ChaosEngine::removeOldestMod() {
   PLOG_DEBUG << "Looking for oldest mod";
+  std::shared_ptr<Modifier> oldest;
+  lock();
   if (modifiers.size() > 0) {
-    std::shared_ptr<Modifier> oldest = modifiers.front();
+    oldest = modifiers.front();
     for (auto& mod : modifiers) {
       if (oldest->lifetime() < mod->lifetime()) {
         oldest = mod;
       }
     }
+  }
+  unlock();
+  if (oldest) {
     removeMod(oldest);
   }
 }
 
 void ChaosEngine::removeMod(std::shared_ptr<Modifier> to_remove) {
   assert(to_remove);
+
+  lock();
+  auto it = std::find(modifiers.begin(), modifiers.end(), to_remove);
+  if (it == modifiers.end()) {
+    unlock();
+    return;
+  }
   PLOG_INFO << "Removing '" << to_remove->getName() << "' from active mod list";
   PLOG_DEBUG << "Lifetime = " << to_remove->lifetime() << " of lifespan = " << to_remove->lifespan();
-  lock();
   // Do cleanup for this mod, if necessary
   to_remove->_finish();
-  modifiers.remove(to_remove);
+  modifiers.erase(it);
   unlock();
 }
 
@@ -208,8 +258,8 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
   lock();
   // The options button pauses the chaos engine
   if (game.matchesID(input, ControllerSignal::OPTIONS) || game.matchesID(input, ControllerSignal::PS)) {
-    if(input.value == 1 && pause == false) { // on rising edge
-      pause = true;
+    if(input.value == 1 && pause.load() == false) { // on rising edge
+      pause.store(true);
       chaosInterface.sendMessage("{\"pause\":1}");
       pausePrimer = false;
       PLOG_INFO << "Game Paused";
@@ -218,10 +268,15 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
 
   // The share button resumes the chaos engine
   if (game.matchesID(input, ControllerSignal::SHARE)) {
-    if(input.value == 1 && pause == true) { // on rising edge
-      pausePrimer = true;
+    if(input.value == 1 && pause.load() == true) { // on rising edge
+      if (game_ready.load()) {
+        pausePrimer = true;
+      } else {
+        pausePrimer = false;
+        PLOG_WARNING << "Ignoring unpause command: no valid game configuration loaded.";
+      }
     } else if(input.value == 0 && pausePrimer == true) { // falling edge
-      pause = false;
+      pause.store(false);
       chaosInterface.sendMessage("{\"pause\":0}");
       PLOG_INFO << "Game Resumed";
     }
@@ -229,7 +284,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
   }
   unlock();
 	
-  if (!pause) {
+  if (!pause.load()) {
     lock();
     // First call all remaps to translate the incomming signal 
     for (auto& mod : modifiers) {
@@ -257,19 +312,27 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
 // and feed the fake event through the rest of the modifiers, in order.
 void ChaosEngine::fakePipelinedEvent(DeviceEvent& event, std::shared_ptr<Modifier> sourceMod) {
   bool valid = true;
-	
-  if (!pause) {
+		
+  if (!pause.load()) {
+    lock();
+    if (pause.load()) {
+      unlock();
+      return;
+    }
     // Find the modifier that sent the fake event in the modifier list
     auto mod = std::find_if(modifiers.begin(), modifiers.end(),
                             [&sourceMod](const auto& p) { return p == sourceMod; } );
     
     // iterate from the next element till the end and apply any tweaks
-    for ( mod++; mod != modifiers.end(); mod++) {
-      valid = (*mod)->_tweak(event);
-      if (!valid) {
-	      break;
+    if (mod != modifiers.end()) {
+      for (mod++; mod != modifiers.end(); mod++) {
+        valid = (*mod)->_tweak(event);
+        if (!valid) {
+		      break;
+        }
       }
     }
+    unlock();
   }
   // unless canceled, send the event out
   if (valid) {

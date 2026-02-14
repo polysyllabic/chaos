@@ -19,6 +19,7 @@
  */
 #pragma once
 #include <thread.hpp>
+#include <atomic>
 #include <memory>
 #include <list>
 #include <string>
@@ -62,8 +63,9 @@ namespace Chaos {
      */
     std::queue<std::shared_ptr<Modifier>> modifiersThatNeedToStart;
 	
-    bool keep_going = true;
-    bool pause = true;
+    std::atomic<bool> keep_going{true};
+    std::atomic<bool> pause{true};
+    std::atomic<bool> game_ready{false};
     bool pausePrimer = false;
     bool pausedPrior = false;
     int primary_mods = 0;
@@ -93,9 +95,7 @@ namespace Chaos {
      * 
      * \param name File name of the TOML configuration file holding the definitions for the game to be played.
      */
-    void setGame(const std::string& name) {
-      game.loadConfigFile(name, this);
-    } 
+    bool setGame(const std::string& name);
 
     /**
      * \brief Get the list of mods that are currently active
@@ -222,7 +222,7 @@ namespace Chaos {
      * 
      * While paused, all signals are passed through unaltered and modifiers' timers do not tick down.
      */
-    bool isPaused() { return pause; }
+    bool isPaused() { return pause.load(); }
 
     /**
      * \brief Should the processing loop keep going
@@ -231,7 +231,7 @@ namespace Chaos {
      *
      * When this returns false, the engine will shut down and exit.
      */
-    bool keepGoing() { return keep_going; }
+    bool keepGoing() { return keep_going.load(); }
   };
 
 };
