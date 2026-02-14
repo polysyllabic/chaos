@@ -57,6 +57,14 @@ class ChaosBotContext(Protocol):
     ...
 
   @property
+  def voting_cycle(self) -> str:
+    ...
+
+  @property
+  def vote_open(self) -> bool:
+    ...
+
+  @property
   def redemption_cooldown(self) -> float:
     ...
 
@@ -146,6 +154,33 @@ class ChaosBotContext(Protocol):
   def set_mod_enabled(self, mod: str, enabled: bool) -> str:
     ...
 
+  def request_start_vote(self, duration: Optional[float] = None) -> None:
+    ...
+
+  def request_end_vote(self) -> None:
+    ...
+
+  def request_remove_mod(self, mod_key: str) -> None:
+    ...
+
+  def has_permission(self, user: str, permission: str) -> bool:
+    ...
+
+  def add_permission_group(self, group: str) -> str:
+    ...
+
+  def add_group_member(self, group: str, user: str) -> str:
+    ...
+
+  def add_group_permission(self, group: str, permission: str) -> str:
+    ...
+
+  def remove_group_member(self, group: str, user: str) -> str:
+    ...
+
+  def remove_group_permission(self, group: str, permission: str) -> str:
+    ...
+
 
 class ChaosBot:
   """
@@ -201,6 +236,18 @@ class ChaosBot:
       return float(value)
     except (TypeError, ValueError):
       return fallback
+
+  def _attr_bool(self, key: str, fallback: bool = False) -> bool:
+    value = self._ctx.get_attribute(key)
+    if value is None:
+      return fallback
+    return bool(value)
+
+  async def _require_permission(self, user: str, permission: str) -> bool:
+    if self._ctx.has_permission(user, permission):
+      return True
+    await self.send_message(f"You need '{permission}' permission to use this command.")
+    return False
 
   def run_threaded(self):
     if self._thread and self._thread.is_alive():
@@ -319,7 +366,12 @@ class ChaosBot:
       await self._handle_command(user_name, message)
       return
 
-    if not self._ctx.connected or self._ctx.voting_type == 'DISABLED':
+    if (
+      not self._ctx.connected
+      or self._ctx.voting_type in ('DISABLED', 'Authoritarian')
+      or self._ctx.voting_cycle == 'DISABLED'
+      or not self._ctx.vote_open
+    ):
       return
     if message.isdigit():
       vote_num = int(message) - 1
@@ -364,10 +416,10 @@ class ChaosBot:
       await self.send_message(self._ctx.get_balance_message(target))
       return
     if cmd == 'addcredits':
-      await self._cmd_add_credits(args, is_streamer)
+      await self._cmd_add_credits(author, args)
       return
     if cmd == 'setcredits':
-      await self._cmd_set_credits(args, is_streamer)
+      await self._cmd_set_credits(author, args)
       return
     if cmd in ('givecredits', 'givecredit'):
       await self._cmd_give_credits(author, args)
@@ -376,26 +428,46 @@ class ChaosBot:
       await self._cmd_apply(author, args, is_streamer)
       return
     if cmd == 'enable':
-      await self._cmd_enable_disable(args, True, is_streamer)
+      await self._cmd_enable_disable(author, args, True)
       return
     if cmd == 'disable':
-      await self._cmd_enable_disable(args, False, is_streamer)
+      await self._cmd_enable_disable(author, args, False)
       return
     if cmd == 'resetmods':
-      if is_streamer:
+      if await self._require_permission(author, 'manage_modifiers'):
         self._ctx.reset_mods = True
       return
-    if cmd == 'raffle':
-      await self._cmd_raffle(args, is_streamer)
+    if cmd in ('raffle', 'chaosraffle'):
+      await self._cmd_raffle(author, args)
       return
-    if cmd == 'join':
+    if cmd in ('join', 'joinchaos'):
       if self._ctx.raffle_open:
         self._raffle_entries.add(author)
       return
-    if cmd == 'startvote':
-      link = self._attr_str('mod_list_link')
-      if link:
-        await self.send_message(self._attr_str('msg_mod_list').format(link))
+    if cmd in ('startvote', 'newvote'):
+      await self._cmd_start_vote(author, args)
+      return
+    if cmd == 'endvote':
+      await self._cmd_end_vote(author)
+      return
+    if cmd == 'remove':
+      await self._cmd_remove(author, args)
+      return
+    if cmd == 'addgroup':
+      await self._cmd_add_group(author, args)
+      return
+    if cmd == 'addmember':
+      await self._cmd_add_member(author, args)
+      return
+    if cmd == 'addperm':
+      await self._cmd_add_perm(author, args)
+      return
+    if cmd == 'delmember':
+      await self._cmd_del_member(author, args)
+      return
+    if cmd == 'delperm':
+      await self._cmd_del_perm(author, args)
+      return
 
   async def _cmd_chaos(self, args):
     if not args:
@@ -421,8 +493,8 @@ class ChaosBot:
     elif sub == 'voting':
       await self.send_message(self._ctx.list_candidate_mods())
 
-  async def _cmd_add_credits(self, args, is_streamer: bool):
-    if not is_streamer:
+  async def _cmd_add_credits(self, author: str, args):
+    if not await self._require_permission(author, 'manage_credits'):
       return
     if not args:
       await self.send_message('Must specify a user to receive credits')
@@ -441,8 +513,42 @@ class ChaosBot:
     self._ctx.step_balance(target, amount)
     await self.send_message(self._ctx.get_balance_message(target))
 
-  async def _cmd_set_credits(self, args, is_streamer: bool):
-    if not is_streamer:
+  async def _cmd_start_vote(self, author: str, args):
+    if not await self._require_permission(author, 'manage_voting'):
+      return
+    if self._ctx.voting_type == 'DISABLED' or self._ctx.voting_cycle == 'DISABLED':
+      await self.send_message(self._attr_str('msg_no_voting'))
+      return
+    duration = None
+    if args:
+      try:
+        duration = int(args[0])
+      except ValueError:
+        await self.send_message('Usage: !startvote (time)')
+        return
+      if duration < 1:
+        await self.send_message('Vote time must be a positive integer')
+        return
+    self._ctx.request_start_vote(duration)
+    if duration is None:
+      await self.send_message('Starting a new vote.')
+    else:
+      await self.send_message(f'Starting a new vote for {duration} seconds.')
+
+  async def _cmd_end_vote(self, author: str):
+    if not await self._require_permission(author, 'manage_voting'):
+      return
+    if self._ctx.voting_type == 'DISABLED' or self._ctx.voting_cycle == 'DISABLED':
+      await self.send_message(self._attr_str('msg_no_voting'))
+      return
+    if not self._ctx.vote_open:
+      await self.send_message('No vote is currently open.')
+      return
+    self._ctx.request_end_vote()
+    await self.send_message('Ending the current vote.')
+
+  async def _cmd_set_credits(self, author: str, args):
+    if not await self._require_permission(author, 'manage_credits'):
       return
     if len(args) < 2:
       await self.send_message('Usage: !setcredits <user> <amount>')
@@ -481,7 +587,7 @@ class ChaosBot:
     self._ctx.step_balance(target, amount)
     if author != self._channel_name:
       self._ctx.step_balance(author, -amount)
-    plural = 's' if amount == 1 else ''
+    plural = '' if amount == 1 else 's'
     await self.send_message(f'@{author} has given @{target} {amount} mod credit{plural}')
 
   async def _cmd_apply(self, author: str, args, is_streamer: bool):
@@ -512,8 +618,8 @@ class ChaosBot:
       self._ctx.step_balance(author, -1)
     await self.send_message(self._attr_str('msg_mod_applied'))
 
-  async def _cmd_enable_disable(self, args, enabled: bool, is_streamer: bool):
-    if not is_streamer:
+  async def _cmd_enable_disable(self, author: str, args, enabled: bool):
+    if not await self._require_permission(author, 'manage_modifiers'):
       return
     if not args:
       await self.send_message('Usage: !enable <mod name>' if enabled else 'Usage: !disable <mod name>')
@@ -521,8 +627,24 @@ class ChaosBot:
     request = ' '.join(args)
     await self.send_message(self._ctx.set_mod_enabled(request, enabled))
 
-  async def _cmd_raffle(self, args, is_streamer: bool):
-    if not is_streamer:
+  async def _cmd_remove(self, author: str, args):
+    if not await self._require_permission(author, 'manage_modifiers'):
+      return
+    if not args:
+      await self.send_message('Usage: !remove <mod name>')
+      return
+    request = ' '.join(args)
+    if self._ctx.mod_enabled(request) is None:
+      await self.send_message(self._attr_str('msg_mod_not_found').format(request))
+      return
+    self._ctx.request_remove_mod(request.lower())
+    await self.send_message('Modifier removed')
+
+  async def _cmd_raffle(self, author: str, args):
+    if not await self._require_permission(author, 'manage_raffles'):
+      return
+    if not self._attr_bool('raffles'):
+      await self.send_message('Raffles are currently disabled.')
       return
     if self._ctx.raffle_open:
       await self.send_message('A raffle is already open')
@@ -538,6 +660,46 @@ class ChaosBot:
       await self.send_message('Raffle time must be at least 30 seconds')
       return
     self._raffle_task = asyncio.create_task(self._raffle_timer_loop(raffle_length))
+
+  async def _cmd_add_group(self, author: str, args):
+    if not await self._require_permission(author, 'manage_permissions'):
+      return
+    if len(args) < 1:
+      await self.send_message('Usage: !addgroup <group>')
+      return
+    await self.send_message(self._ctx.add_permission_group(args[0]))
+
+  async def _cmd_add_member(self, author: str, args):
+    if not await self._require_permission(author, 'manage_permissions'):
+      return
+    if len(args) < 2:
+      await self.send_message('Usage: !addmember <group> <user>')
+      return
+    await self.send_message(self._ctx.add_group_member(args[0], args[1]))
+
+  async def _cmd_add_perm(self, author: str, args):
+    if not await self._require_permission(author, 'manage_permissions'):
+      return
+    if len(args) < 2:
+      await self.send_message('Usage: !addperm <group> <permission>')
+      return
+    await self.send_message(self._ctx.add_group_permission(args[0], args[1]))
+
+  async def _cmd_del_member(self, author: str, args):
+    if not await self._require_permission(author, 'manage_permissions'):
+      return
+    if len(args) < 2:
+      await self.send_message('Usage: !delmember <group> <user>')
+      return
+    await self.send_message(self._ctx.remove_group_member(args[0], args[1]))
+
+  async def _cmd_del_perm(self, author: str, args):
+    if not await self._require_permission(author, 'manage_permissions'):
+      return
+    if len(args) < 2:
+      await self.send_message('Usage: !delperm <group> <permission>')
+      return
+    await self.send_message(self._ctx.remove_group_permission(args[0], args[1]))
 
   async def _raffle_timer_loop(self, raffle_length: int):
     self._raffle_entries = set()

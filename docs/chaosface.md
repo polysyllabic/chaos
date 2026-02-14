@@ -5,12 +5,12 @@ Chaos Interface
 Overview
 ========
 
-The Chaos interface, *chaosface*, is one of two main parts of the Twitch Controls Chaos (TCC)
-system for allowing Twitch chat to alter various aspects of gameplay in a PlayStation game.
-Chaosface is a Python application that provides the connection between viewers in Twitch chat
-and the chaos engine that directly controls gameplay modifications (mods). This file provides
-reference documentation for the chaos interface. For a general overview and quick guide,
-see the general README file for Twitch Controls Chaos.
+The Chaos interface, *Chaosface*, is one of two main parts of the Twitch Controls Chaos (TCC)
+system for allowing Twitch chat to alter various aspects of gameplay. Chaosface is a Python
+application that provides the connection between viewers in Twitch chat and the chaos engine
+that directly controls gameplay modifications (mods). This file provides reference documentation
+for the chaos interface. For a general overview and quick guide, see the general README file for
+Twitch Controls Chaos.
 
 Chaosface consists of three major parts:
 
@@ -24,66 +24,65 @@ another computer.
 Installation and Setup
 ======================
 
-The default installation of chaosface is performed will run it from the Raspberry Pi, along with
-the engine. See the main TCC documentation for those steps. This section explains the steps
-you need to take if you plan to run chaosface on a separate computer.
-
+The default installation of Chaosface runs on the Raspberry Pi, along with the engine. See the
+main TCC documentation for those steps. This section explains the steps you need to take if you
+plan to run Chaosface on a separate computer.
 
 Installing Chaosface on Another Computer
 ----------------------------------------
 
-Stop the interface from running on the Pi:
+If you have already installed TCC with Chaosface on the Pi, you must first stop the interface
+from running on the Pi:
 
 1. From a terminal window, log in to the Pi.
-2. Stop the Pi from starting chaosface automatically with the following commands:
-        `sudo systemctl stop chaosface`
-        `sudo systemctl disable chaosface`
-3. Next, we must edit a configuration file to tell the engine where to find chaosface. Open the
+2. Stop the Pi from starting Chaosface automatically with the following commands:
+        `sudo systemctl stop Chaosface`
+        `sudo systemctl disable Chaosface`
+3. Next, we must edit a configuration file to tell the engine where to find Chaosface. Open the
     file in an editor, for example, with the command `nano chaosconfig.toml` and edit the key
-    `interface_addr` to contain the IP address of the computer running chaosface. **UPDATE WHEN WE 
+    `interface_addr` to contain the IP address of the computer running Chaosface. **UPDATE WHEN WE 
     HAVE THE FINAL DIRECTORY FOR THE CONFIG FILE**
 4. Make a note of the Pi's IP address. You can get it with the command `hostname -I`.
 
-Setup the Computer for Chaosface:
+Set Up the Computer for Chaosface:
 
-1. Next, make sure Python 3 is installed on the computer you will use for chaosface.
+1. Next, make sure Python 3 is installed on the computer you will use for Chaosface.
 
-2. Install the Chatbot somewhere useful and run it. **ADD INSTRUCTIONS**
+2. Install the chatbot somewhere useful and run it. TODO: ADD INSTRUCTIONS
 
-3. Open a tab in your browser and navigate to the main page. If you're running chaosface from the
-   same computer as the web browser, this will be `http://localhost/Chaos`
+3. Open a tab in your browser and navigate to the main page. If you're running Chaosface from the
+   same computer as the web browser, this will be `http://localhost/`
 
-4. In the `Connection Setup` tab of chaosface, set the address for the Pi to the value you found
+4. In the `Connection Setup` tab of Chaosface, set the address for the Pi to the value you found
    above. Do not change the talk/listen ports unless you know what you are doing.
 
 5. Make sure any firewall on your computer isn't blocking local network access to the talk and
    listen ports (5555 and 5556). If you are running the interface on a Windows machine and it is
    set to be on a private network, you should not have any issues. If your computer is set to
    be on a public network, you will have to manually open the listen port (5556 by default) to
-   incomming connections. Note that you do *not* need to open these ports on your router unless you
+   incoming connections. Note that you do *not* need to open these ports on your router unless you
    are trying to run the interface and the engine from different local networks.
 
 Running for the First Time
 --------------------------
 
-The first time you run chaosface, you need to authorize it in your channel. You can run the bot
+The first time you run Chaosface, you need to authorize it in your channel. You can run the bot
 through a dedicated bot account that you control or through your main streamer account. Note that
 whichever you choose, the bot will write messages in chat from that account.
 
-1.  If you are going to run
-   chaosface from your streamer account, just do everything instructed to for the bot account
-   while you are logged in to your main account.
+1. If you are going to run Chaosface from your streamer account, just follow the instructions
+   below while you are logged in to your main account rather than a bot account.
 
-2. Start chaosface. If you are using the default setup, this involves simply applying power to
+2. Start Chaosface. If you are using the default setup, this involves simply applying power to
    the Raspberry Pi and waiting for it to boot up.
 
 3. Open a browser and navigate to the Chaos page:
-   - If you're running chaosface on the Pi: http://raspberrypi.local/Chaos.
-   - If you're running chaosface on the same computer as the browser, go to http://localhost/Chaos.
+   - If you're running Chaosface on the Pi: http://raspberrypi.local/.
+   - If you're running Chaosface on the same computer as the browser, go to http://localhost/.
 
 4. Go to the "Connection Setup" tab and enter your bot name and channel name.
 
-5. Next you need an OAuth token for chaosface. The bot Oauth token lets chaosface connect to your
+5. Next you need an OAuth token for Chaosface. The bot OAuth token lets Chaosface connect to your
    channel and send and receive chat messages. Without it, the interface will not work. Note that
    this token does not grant that account any special permissions. For example, if you want your
    bot to be a mod, you must grant it that permission on Twitch.
@@ -95,24 +94,23 @@ whichever you choose, the bot will write messages in chat from that account.
     C. Copy the token that Twitch gives you, including the initial 'oauth:' prefix, and paste it
        in the 'Bot OAuth Token' field.  
 
-6. A PubSub OAuth token is only required if you want to allow chat members to redeem channel points
-   or bits to acquire modifier credits. If you don't plan to use either feature, you can leave the
-   PubSub OAuth Token field blank. To get this token, you need to be logged in to your main account
-   and *not* your bot account. This is because you, as the streamer, must grant the bot permissions
-   to see messages about channel-point redepmtions and bit donations.
+6. An EventSub OAuth token is only required if you want to allow chat members to redeem channel
+   points or bits to acquire modifier credits. If you don't plan to use either feature, you can
+   leave the EventSub OAuth Token field blank. To get this token, you need to be logged in to your
+   main account and *not* your bot account. This is because you, as the streamer, must grant the
+   bot permissions to read EventSub events about channel-point redemptions and bit donations.
 
-    A. Log in to twitch with your main account.
-    B. From the "Connection Setup" tab, clink to get a PubSub token.
+    A. Log in to Twitch with your main account.
+    B. From the "Connection Setup" tab, click to get an EventSub token.
     C. An authorization dialog from Twitch will appear asking if you want to give permissions to
        "TCC Chaos Interfaceface." Grant the permissions.
     D. After you grant permission, you will be redirected to a page that shows you an OAuth token.
-       Copy the complete token (including the 'oauth:' prefix) and paste it into the "PubSub OAuth
-       Token" field.  
+       Copy the complete token (including the 'oauth:' prefix) and paste it into the "EventSub
+       OAuth Token" field.  
 
-7. Save the settings. If this is your first time entering credentials, the bot wait to connect
-   until after you have entered your credentials. After a complete set of credentials have been
-   entered for the first time, you will need to restart chaosface after saving new credentials in
-   order to re-initialize the bot.
+7. Save the settings. If this is your first time entering credentials, the bot waits to connect
+   until after you have entered your credentials. After that, saving updated credentials will
+   automatically restart the chatbot to re-initialize the Twitch connection.
 
 If the OAuth tokens expire or are manually reset, you will need to repeat these steps.
 
@@ -122,7 +120,7 @@ The Chaos interface generates three browser sources that you can add as overlays
 current status of Chaos to your viewers:
 
 * Active Mods: Shows the mods currently in effect with progress bars indicating how much time remains for each mod.
-* Votes: Shows the mods currently available to be voted on, along with the number of votes each mod has currently received
+* Votes: Shows the mods currently available to be voted on, along with the number of votes each mod has currently received.
 * Vote Timer: A progress bar showing the time left for the current voting cycle.
 
 To add these overlays to OBS or SLOBS, perform the following steps:
@@ -131,11 +129,11 @@ To add these overlays to OBS or SLOBS, perform the following steps:
 
 * To this new scene, add each of the following as a browser source. The default URLs are as follows.
 
-  - Active Mods: http://raspberrypi.local/ActiveMods/
-  - Votes: http://raspberrypi.local/Votes/
-  - Vote Timer: http://raspberrypi.local/VoteTimer/
+  - Active Mods: http://raspberrypi.local/ActiveMods
+  - Votes: http://raspberrypi.local/CurrentVotes
+  - Vote Timer: http://raspberrypi.local/VoteTimer
 
-If you are running chaosface from a different computer, adapt the URL accordingly. 
+If you are running Chaosface from a different computer, adapt the URL accordingly. 
 
 It's recommended to set these browser sources to refresh when not displayed so that they can easily
 be refreshed.
@@ -143,35 +141,34 @@ be refreshed.
 
 Font and Color Adjustments
 --------------------------
-<to write>
+TODO: Let this be configurable through the UI
 
 Operation
 =========
 
-When the chaos interface begins, it will log into your stream's chat and attempt to communicate
-with the chaos engine to get the game information. Until both connections are made, you cannot
-start playing chaos.
+When Chaosface begins, it logs into your stream's chat and attempts to communicate with the Chaos
+engine to get the game information. Until both connections are made, you cannot start playing chaos.
 
-If the interface does not receive a response from the engine, it will re-try every 30 seconds
+If the interface does not receive a response from the engine, it retries every 30 seconds
 until a response is received.
 
-You can monitor the basic operation of chaos from your browser.
-  - If you're running chaosface on the Pi: http://raspberrypi.local/Chaos.
-  - If you're running chaosface on the same computer as the browser, go to http://localhost/Chaos
+You can monitor the basic operation of Chaos from your browser.
+  - If you're running Chaosface on the Pi: http://raspberrypi.local/.
+  - If you're running Chaosface on the same computer as the browser, go to http://localhost/
 
-This default tab on this page ("Streamer Interface") shows you what mods are currently active,
+The default tab on this page ("Streamer Interface") shows you what mods are currently active,
 whether chaos is running or paused, and a few other diagnostic features. It *does not* show what
 mods are currently being voted on. This allows chat to surprise you with their choice of modifiers,
 assuming you're not peeking at the sources in OBS.
 
-The following sections explain the basic concepts of the chaos system and how it can be
+The following sections explain the basic concepts of the Chaos system and how it can be
 customized. To change settings from their default values, go to the "Game Settings" tab of
 the Chaos browser page.
 
 Voting Cycle
 ------------
 
-The voting cycle is the normal loop in which gameplay modifiers chosen and applied. It runs
+The voting cycle is the normal loop in which gameplay modifiers are chosen and applied. It runs
 continuously as long as Chaos is not paused. In each cycle, a set of modifiers is selected, chat
 (normally) has the opportunity to vote on them, and a winner is chosen. You can modify many
 parameters of the voting cycle to customize how and when voting occurs.
@@ -180,7 +177,7 @@ With the default settings, a new vote occurs once each minute, and the winning m
 for 3 minutes. This has the effect of keeping 3 modifiers always applied to your gameplay after the
 initial votes have populated the modifier list.
 
-Modifer Selections
+Modifier Selections
 ------------------
 
 When voting begins, a set of modifiers is chosen randomly among the available mods and presented
@@ -189,10 +186,10 @@ in a list. The number of options per voting cycle is set with the "Vote options"
 By default, the chaos bot uses a softmax algorithm to weight the probability that a mod should
 be selected based on the frequency with which it has been used. In other words, the more often a
 mod has been chosen in the past, the less likely it is to appear again. This feature helps reduce
-the liklihood of the same mods being applied over and over.
+the likelihood of the same mods being applied over and over.
 
 You can adjust the selection weighting by altering the "Chance of repeat modifier" setting. The
-lower the setting, less likely a previously used modifier is to be chosen. Setting this value to
+lower the setting, the less likely a previously used modifier is to be chosen. Setting this value to
 100 has the effect of disabling softmax weighting, in which case mods will be selected with equal
 probability regardless of past use.
 
@@ -224,14 +221,16 @@ In other words, the winner of each vote will immediately replace the oldest mod,
 always have a fixed number of mods active.
 
 Random voting is a form of interval voting where the gap between votes is randomly chosen to be
-between 0 seconds and the length of time specified in by the "Time between votes." In other words,
+between 0 seconds and the length of time specified by the "Time between votes." In other words,
 the gap time functions as the maximum time between votes.
 
-With triggered voting, a new vote must be started manually with the `!newvote` command.
-It remains open for the time specified in the "Time to vote" parameter.
+With triggered voting, a new vote must be started manually with the `!startvote` command
+(`!newvote` is an alias). It remains open for the time specified in the "Time to vote"
+parameter, unless it is ended early with `!endvote`.
 
-Disabling voting prevents all votes from being held, including those started with the `!newvote`
-command. If voting is disabled, modifiers can only be applied manually with the `!apply` command.
+Disabling voting prevents all votes from being held, including those started with the `!startvote`
+or `!newvote` commands. If voting is disabled, modifiers can only be applied manually with the
+`!apply` command.
 This mode is largely intended for testing new modifiers, but it might be useful if you wanted to
 apply chaos to a game where you need to manually apply modifiers only at times the interface cannot
 predict, e.g., at the beginning of a new PVP match.
@@ -245,7 +244,7 @@ There are three different methods available for selecting a winning modifier:
 * Majority
 * Authoritarian
 
-By default, chaosface uses a proportional voting method to select the winner. When proportional
+By default, Chaosface uses a proportional voting method to select the winner. When proportional
 voting is enabled, the chances that a particular modifier will win the vote are proportional to
 the percentage of votes that it receives. For example, if Mod A receives 66% of the votes, Mod B
 receives 33% and Mod C receives 0%, Mod A has a 2/3 chance of winning, Mod B has a 1/3 chance, and
@@ -265,7 +264,7 @@ Applying Modifiers
 
 You can apply a specific modifier without waiting for it to win a vote with the command
 `!apply <mod name>`. To execute this command, everyone except the streamer needs a modifier credit.
-Credits can be issued in various ways, which the streamer can choose to enable or diable
+Credits can be issued in various ways, which the streamer can choose to enable or disable
 individually:
 
 * Channel-point redemption
@@ -275,7 +274,7 @@ individually:
 Channel-Point Redemptions
 -------------------------
 
-To configure channel-points redemptions and bit donations, you must have stored a valid PubSub
+To configure channel-points redemptions and bit donations, you must have stored a valid EventSub
 token for your channel. (See the setup instructions above.)
 
 You will need to create a channel-points redemption in your Twitch channel. Set your desired
@@ -286,7 +285,7 @@ From the "Game Settings" tab in the interface, enable channel-points redemptions
 exact name of the redemption you created in the "Points Reward Title" field. (The default name is
 'Chaos Credit').
 
-If your PubSub token is entered, any channel-points redemptions done while the chatbot is
+If your EventSub token is entered, any channel-points redemptions done while the chatbot is
 active will be recorded automatically. Note, however, that if you choose to leave this
 redemption active when you are not running the chatbot and someone redeems that reward, you will
 need either to give credits for those redemptions manually (with `!addcredits`) or to refund
@@ -299,23 +298,23 @@ is in effect regardless of how you earn the credit.
 Bit Donations
 -------------
 
-Bit donations work similarly to channel-points redemptions. You must have stored a valid PubSub
+Bit donations work similarly to channel-points redemptions. You must have stored a valid EventSub
 token for your channel. (See the setup instructions above.)
 
-When enabled, this feature monitors incomming cheers, and bit donations above a certain threshold
+When enabled, this feature monitors incoming cheers, and bit donations above a certain threshold
 will give the user modifier credits. You can set the number of bits required to earn a credit in
 the "Bits per mod credit" field.
 
-If you select "Allow multiple credits per cheer," The user can earn multiple credits by donating
+If you select "Allow multiple credits per cheer," the user can earn multiple credits by donating
 multiples of the base amount. For example, if the default for a credit is 100 bits, and the user
 donates 200 bits, they will earn 2 mod credits. If this option is disabled, the user will only
 get 1 credit per donation over the minimum threshold, regardless of the size of the donation.
 
 There is no record kept of odd numbers of bits in between donations. For example, if the
-bits-per-credit setting is 100 is a user donates 69 bits in one donation and 31 in a second,
+bits-per-credit setting is 100 and a user donates 69 bits in one donation and 31 in a second,
 they will not earn a credit.
 
-As with channel-point redemptions, credits are only applied automatically while chaosface is
+As with channel-point redemptions, credits are only applied automatically while Chaosface is
 running and connected to Twitch. If you want to give credits for donations that come in at
 other times, you need to add the credits manually.
 
@@ -352,11 +351,12 @@ Modifier Commands:
 * !mods voting -- List modifiers currently up for a vote
 
 Voting Commands (require manage_voting permission):
-* !startvote (time) -- Manually open a new vote. If time omitted, default vote time used
+* !startvote (time) -- Manually open a new vote. If time omitted, default vote time is used
+* !newvote (time) -- Alias for !startvote
 * !endvote -- End an open vote immediately and choose a winner
 
 Modifier Credit Commands:
-* !credits (user) -- Reports number of modifier credits that the user (message author if user name ommitted) currently has
+* !credits (user) -- Reports the number of modifier credits that the user (message author if user name omitted) currently has
 * !addcredits <user> (amount) -- Add credits to user's balance. If amount omitted, add 1. Requires 'manage_credits' permission.
 * !setcredits <user> <amount> -- Sets user's balance to the specified amount. Requires 'manage_credits' permission.
 * !givecredits <user> (amount) -- Give some of your modifier credits to the specified user. If amount omitted, transfers 1 credit.
@@ -366,12 +366,6 @@ Raffle Commands:
 * !joinchaos -- An alias for !join
 * !raffle (time) -- Start a raffle for a modifier credit (if time is omitted, default raffle time is used) Requires 'manage_raffles' permission
 * !chaosraffle -- An alias for !raffle
-
-*Note:* The chat bot is built upon the PythonTwitchBotFramework package. This framework means you
-can implement other features common to many bots by means of chat commands. See the
-`Twitch bot framework documentation <https://github.com/sharkbound/PythonTwitchBotFramework>`_ 
-if you're interested in those additional features, or if you want to reconfigure chatbot settings
-for which there is no UI.
 
 Permissions
 -----------
@@ -383,7 +377,8 @@ The defined permissions are the following:
 * admin: Can execute all chat commands. (Streamer is in this group by default)
 * manage_raffles: Start raffles
 * manage_credits: Set users' modifier-credit balances to arbitrary values
-* manage_modifiers: update modifiers directly
+* manage_modifiers: Update modifiers directly
+* manage_voting: Start/end votes manually
 * manage_permissions: Create permission groups and add/remove users and permissions from them
 
 

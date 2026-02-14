@@ -101,7 +101,7 @@ class ChaosModel(EngineObserver):
     to_send = {'game': True}
     resp = self.chaos_communicator.send_message(json.dumps(to_send))
     if resp == False:
-      logging.warn(f"Engine is not responding. No game data available")
+      logging.warning(f"Engine is not responding. No game data available")
 
   def update_command(self, message) -> None:
     received = json.loads(message)
@@ -115,7 +115,7 @@ class ChaosModel(EngineObserver):
       logging.debug("Received game info!")
       ui_dispatch.call_soon(config.relay.initialize_game, received)
     else:
-      logging.warn(f"Unprocessed message from engine: {received}")
+      logging.warning(f"Unprocessed message from engine: {received}")
 
   def apply_new_mod(self, mod_name):
     logging.debug("Winning mod: " + mod_name)
@@ -124,7 +124,7 @@ class ChaosModel(EngineObserver):
     config.relay.engine_commands.put(to_send)
     # message = self.chaos_communicator.send_message(json.dumps(toSend))
 
-  def replace_mod(self, mod_key):
+  def replace_mod(self, mod_key, refresh_voting_pool: bool = True):
     # If this is the first time, the candidate pool will be empty. Skip in this case.
     if mod_key and mod_key in config.relay.modifier_data:
       mod_name = config.relay.modifier_data[mod_key]['name']
@@ -135,7 +135,7 @@ class ChaosModel(EngineObserver):
     else:
       logging.debug(f'Mod key "{mod_key}" not in list (not sent)')
     # Pick new candidates, if we're voting
-    if config.relay.voting_type == 'DISABLED' or config.relay.voting_type == 'DISABLED':
+    if self._voting_disabled() or not refresh_voting_pool:
       return
     ui_dispatch.call_soon(config.relay.get_new_voting_pool)
 
@@ -149,6 +149,53 @@ class ChaosModel(EngineObserver):
     logging.debug("Resetting all mods")
     to_send = {"reset": True }
     config.relay.engine_commands.put(to_send)
+
+  def _voting_disabled(self) -> bool:
+    return (
+      config.relay.voting_type == 'DISABLED'
+      or config.relay.voting_cycle == 'DISABLED'
+    )
+
+  def _configured_vote_length(self) -> float:
+    value = config.relay.get_attribute('vote_time')
+    if isinstance(value, bool):
+      vote_time = float(value)
+    elif isinstance(value, (int, float, str)):
+      try:
+        vote_time = float(value)
+      except ValueError:
+        vote_time = config.relay.time_per_vote()
+    else:
+      vote_time = config.relay.time_per_vote()
+    return max(1.0, vote_time)
+
+  def _configured_vote_delay(self) -> float:
+    value = config.relay.get_attribute('vote_delay')
+    if isinstance(value, bool):
+      vote_delay = float(value)
+    elif isinstance(value, (int, float, str)):
+      try:
+        vote_delay = float(value)
+      except ValueError:
+        vote_delay = 0.0
+    else:
+      vote_delay = 0.0
+    return max(0.0, vote_delay)
+
+  def _default_vote_length(self, cycle: str) -> float:
+    if cycle == 'Continuous':
+      return max(1.0, float(config.relay.time_per_vote()))
+    return self._configured_vote_length()
+
+  def _next_vote_start_for_cycle(self, cycle: str, now: float) -> float:
+    if cycle == 'Continuous':
+      return now
+    if cycle == 'Interval':
+      return now + self._configured_vote_delay()
+    if cycle == 'Random':
+      delay_max = self._configured_vote_delay()
+      return now + random.uniform(0.0, delay_max)
+    return float('inf')
 
   def send_chat_message(self, msg: str):
     if config.relay.chatbot and self.bot:
@@ -172,6 +219,8 @@ class ChaosModel(EngineObserver):
   
   def select_winning_modifier(self):
     tally = list(config.relay.votes)
+    if not config.relay.candidate_keys:
+      return ''
     index = 0
     if config.relay.voting_type == 'Authoritarian':
       return config.relay.get_random_mod()
@@ -205,6 +254,8 @@ class ChaosModel(EngineObserver):
           indices.append(ind)
       index = random.choice(indices)
 
+    if index >= len(config.relay.candidate_keys):
+      return ''
     new_mod_key = config.relay.candidate_keys[index]
     logging.info(f'Winning Mod: #{index+1} {new_mod_key}')
     return new_mod_key
@@ -212,7 +263,11 @@ class ChaosModel(EngineObserver):
 
   def _loop(self):
     now = time.time()
-    start_voting = now
+    vote_started_at = now
+    next_vote_start_at = now
+    vote_open = False
+    vote_target = 1.0
+    was_voting_disabled = self._voting_disabled()
     delta_time = config.relay.sleep_time()
     prior_time = now - delta_time
     last_engine_request = 0.0
@@ -228,6 +283,11 @@ class ChaosModel(EngineObserver):
       delta_time = now - prior_time
       self.paused_flashing_timer += delta_time
       self.disconnected_flashing_timer += delta_time
+
+      if config.relay.bot_reboot:
+        config.relay.bot_reboot = False
+        logging.info('Restarting chatbot after credential/config update')
+        self.restart_bot()
       
       # If we haven't yet received the game info, retry periodically
       if config.relay.valid_data == False:
@@ -237,7 +297,10 @@ class ChaosModel(EngineObserver):
           last_engine_request = 0.0
 
       if config.relay.paused:
-        start_voting += delta_time
+        if vote_open:
+          vote_started_at += delta_time
+        if next_vote_start_at != float('inf'):
+          next_vote_start_at += delta_time
         delta_time = 0
         self.flash_pause()
           
@@ -247,44 +310,91 @@ class ChaosModel(EngineObserver):
       # Update remaining time for modifiers if not paused      
       if delta_time > 0:
         ui_dispatch.call_soon(config.relay.decrement_mod_times, delta_time)
-        
-      self.vote_time =  now - start_voting
-
-      if self.first_time and config.relay.valid_data:
-        # As soon as the data is ready, start the vote
-        self.vote_time = config.relay.time_per_vote() + 1
-        self.first_time = False
-
-      # Check for queued commands to send
 
       # Check for an immediate mod insertion/removal
       if config.relay.force_mod:
-        self.replace_mod(config.relay.force_mod)
+        self.replace_mod(config.relay.force_mod, refresh_voting_pool=vote_open)
         config.relay.force_mod = ''
-        start_voting = now
+        if vote_open:
+          vote_started_at = now
+
+      remove_request = config.relay.consume_remove_mod_request()
+      if remove_request:
+        mod_name = remove_request
+        if remove_request in config.relay.modifier_data:
+          mod_name = config.relay.modifier_data[remove_request]['name']
+        self.remove_mod(mod_name)
+        ui_dispatch.call_soon(config.relay.remove_active_mod, mod_name)
 
       if config.relay.reset_mods:
         self.reset_mods()
         ui_dispatch.call_soon(config.relay.reset_current_mods)
         config.relay.reset_mods = False
 
+      cycle = config.relay.voting_cycle
+      voting_disabled = self._voting_disabled()
+      start_request = config.relay.consume_start_vote_request()
+      end_requested = config.relay.consume_end_vote_request()
 
-      if self.vote_time >= config.relay.time_per_vote():
-        # Reset voting time
-        start_voting = now
-        # Skip voting if no data yet or voting is disabled
-        if not config.relay.valid_data or config.relay.voting_type == 'DISABLE':
-          continue
-        
-        # Pick the winner        
-        mod_key = self.select_winning_modifier()
-        self.replace_mod(mod_key)
+      if voting_disabled and not was_voting_disabled:
+        ui_dispatch.call_soon(config.relay.reset_voting)
 
-        if config.relay.announce_winner and mod_key:
-          self.send_chat_message(config.relay.list_winning_mod(mod_key))
+      if voting_disabled:
+        vote_open = False
+        self.vote_time = 0.0
+        next_vote_start_at = float('inf')
+      else:
+        def open_vote(length: float):
+          nonlocal vote_open, vote_started_at, vote_target, next_vote_start_at
+          if not config.relay.valid_data:
+            return
+          vote_open = True
+          vote_started_at = now
+          vote_target = max(1.0, float(length))
+          self.vote_time = 0.0
+          next_vote_start_at = now
+          ui_dispatch.call_soon(config.relay.get_new_voting_pool)
 
-      # Update elapsed voting time
-      ui_dispatch.call_soon(config.relay.set_vote_time, self.vote_time/config.relay.time_per_vote())
+        def close_vote(choose_winner: bool):
+          nonlocal vote_open, next_vote_start_at
+          mod_key = ''
+          if choose_winner and config.relay.valid_data:
+            mod_key = self.select_winning_modifier()
+            self.replace_mod(mod_key, refresh_voting_pool=False)
+            if config.relay.announce_winner and mod_key:
+              self.send_chat_message(config.relay.list_winning_mod(mod_key))
+          vote_open = False
+          self.vote_time = 0.0
+          if cycle == 'Continuous':
+            open_vote(self._default_vote_length(cycle))
+          else:
+            ui_dispatch.call_soon(config.relay.reset_voting)
+            next_vote_start_at = self._next_vote_start_for_cycle(cycle, now)
+
+        if start_request is not None and config.relay.valid_data:
+          if start_request > 0:
+            start_length = float(start_request)
+          else:
+            start_length = self._default_vote_length(cycle)
+          open_vote(start_length)
+
+        if end_requested and vote_open:
+          close_vote(choose_winner=True)
+
+        if (not vote_open and cycle != 'Triggered' and config.relay.valid_data and now >= next_vote_start_at):
+          open_vote(self._default_vote_length(cycle))
+
+        if vote_open:
+          self.vote_time = now - vote_started_at
+          if self.vote_time >= vote_target:
+            close_vote(choose_winner=True)
+        else:
+          self.vote_time = 0.0
+
+      ui_dispatch.call_soon(config.relay.set_vote_open, vote_open)
+      vote_ratio = (self.vote_time / vote_target) if vote_open and vote_target > 0 else 0.0
+      ui_dispatch.call_soon(config.relay.set_vote_time, vote_ratio)
+      was_voting_disabled = voting_disabled
 
     # Exitiing loop: clean up
     self.chaos_communicator.stop()

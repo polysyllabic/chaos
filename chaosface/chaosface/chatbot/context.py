@@ -43,6 +43,14 @@ class RelayBotContext(ChaosBotContext):
     return self._relay.voting_type
 
   @property
+  def voting_cycle(self) -> str:
+    return self._relay.voting_cycle
+
+  @property
+  def vote_open(self) -> bool:
+    return self._relay.vote_open
+
+  @property
   def redemption_cooldown(self) -> float:
     return self._relay.redemption_cooldown
 
@@ -131,3 +139,30 @@ class RelayBotContext(ChaosBotContext):
 
   def set_mod_enabled(self, mod: str, enabled: bool) -> str:
     return self._relay.set_mod_enabled(mod, enabled)
+
+  def request_start_vote(self, duration=None) -> None:
+    self._relay.request_start_vote(duration)
+
+  def request_end_vote(self) -> None:
+    self._relay.request_end_vote()
+
+  def request_remove_mod(self, mod_key: str) -> None:
+    self._relay.request_remove_mod(mod_key)
+
+  def has_permission(self, user: str, permission: str) -> bool:
+    return self._relay.has_permission(user, permission)
+
+  def add_permission_group(self, group: str) -> str:
+    return self._relay.add_permission_group(group)
+
+  def add_group_member(self, group: str, user: str) -> str:
+    return self._relay.add_group_member(group, user)
+
+  def add_group_permission(self, group: str, permission: str) -> str:
+    return self._relay.add_group_permission(group, permission)
+
+  def remove_group_member(self, group: str, user: str) -> str:
+    return self._relay.remove_group_member(group, user)
+
+  def remove_group_permission(self, group: str, permission: str) -> str:
+    return self._relay.remove_group_permission(group, permission)

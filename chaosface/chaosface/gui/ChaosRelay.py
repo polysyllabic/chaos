@@ -18,7 +18,7 @@ import queue
 import threading
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Set
 
 import numpy as np
 
@@ -87,6 +87,7 @@ chaos_defaults = {
   'msg_how_to_vote': _chaos_how_to_vote,
   'msg_proportional_voting': 'The chances of a mod winning are proportional to the number of votes it receives.',
   'msg_majority_voting': 'The mod with the most votes wins, and ties are broken by random selection.',
+  'msg_authoritarian_voting': "Authoritarian voting mode is enabled. Chat votes are ignored and chaos picks a random modifier each cycle.",
   'msg_no_voting': 'Voting is currently disabled.',
   'msg_how_to_redeem': _chaos_how_to_redeem,
   'msg_credit_methods': 'Get modifier credits in these ways: ',
@@ -114,10 +115,20 @@ chaos_defaults = {
   'msg_raffle_open': 'A raffle for a modifier credit {status}. Type !join to enter.',
 }
 
+KNOWN_PERMISSIONS = {
+  'admin',
+  'manage_raffles',
+  'manage_credits',
+  'manage_modifiers',
+  'manage_permissions',
+  'manage_voting',
+}
+
 CONFIG_PATH = Path.cwd() / 'configs'
 CHAOS_CONFIG_FILE = CONFIG_PATH / 'chaos_config.json'
 CHAOS_MOD_FILE = CONFIG_PATH / 'chaos_mods.json'
 CHAOS_CREDIT_FILE = CONFIG_PATH / 'chaos_credits.json'
+CHAOS_PERMISSION_FILE = CONFIG_PATH / 'chaos_permissions.json'
 
 
 class ChaosRelay:
@@ -138,12 +149,18 @@ class ChaosRelay:
     self.active_keys: List[str] = []
     self.candidate_keys: List[str] = []
     self.force_mod: str = ''
+    self.remove_mod_request: str = ''
     self.reset_mods = False
     self.engine_commands = queue.Queue()
     self.insert_cooldown = 0.0
+    self.vote_open = False
+    self.start_vote_requested = False
+    self.start_vote_duration = 0.0
+    self.end_vote_requested = False
     self.raffle_open = False
     self.raffle_start_time = None
     self.user_credits: Dict[str, int] = {}
+    self.permission_groups: Dict[str, Dict[str, List[str]]] = {}
 
     # UI/model state
     self.game_name = ''
@@ -213,6 +230,9 @@ class ChaosRelay:
 
     self.modifier_data = self.load_settings(CHAOS_MOD_FILE)
     self.user_credits = self.load_settings(CHAOS_CREDIT_FILE)
+    self.permission_groups = self.load_settings(CHAOS_PERMISSION_FILE)
+    if self._sanitize_permission_groups():
+      self.save_permission_info()
     self.old_mod_data = deepcopy(self.modifier_data)
     self.reset_all()
 
@@ -324,6 +344,80 @@ class ChaosRelay:
     with CHAOS_CREDIT_FILE.open('w') as creditfile:
       json.dump(self.user_credits, creditfile, indent=2, sort_keys=True)
 
+  def save_permission_info(self):
+    with CHAOS_PERMISSION_FILE.open('w') as permfile:
+      json.dump(self.permission_groups, permfile, indent=2, sort_keys=True)
+
+  @staticmethod
+  def _normalize_user(user: str) -> str:
+    return str(user).strip().lstrip('@').lower()
+
+  @staticmethod
+  def _normalize_group(group: str) -> str:
+    return str(group).strip().lower()
+
+  @staticmethod
+  def _normalize_permission(permission: str) -> str:
+    return str(permission).strip().lower()
+
+  def _sanitize_permission_groups(self) -> bool:
+    clean_groups: Dict[str, Dict[str, List[str]]] = {}
+    source_groups = self.permission_groups if isinstance(self.permission_groups, dict) else {}
+    for raw_group, raw_data in source_groups.items():
+      group = self._normalize_group(raw_group)
+      if not group:
+        continue
+      members_raw = []
+      permissions_raw = []
+      if isinstance(raw_data, dict):
+        members_raw = raw_data.get('members', [])
+        permissions_raw = raw_data.get('permissions', [])
+      if not isinstance(members_raw, list):
+        members_raw = []
+      if not isinstance(permissions_raw, list):
+        permissions_raw = []
+
+      members = []
+      for member in members_raw:
+        user = self._normalize_user(member)
+        if user:
+          members.append(user)
+
+      permissions = []
+      for permission in permissions_raw:
+        perm = self._normalize_permission(permission)
+        if perm:
+          permissions.append(perm)
+
+      clean_groups[group] = {
+        'members': sorted(set(members)),
+        'permissions': sorted(set(permissions)),
+      }
+
+    changed = clean_groups != source_groups or not isinstance(self.permission_groups, dict)
+    self.permission_groups = clean_groups
+    return changed
+
+  def _ensure_streamer_admin(self):
+    streamer = self._normalize_user(self.channel_name)
+    admin_group = self.permission_groups.setdefault('admin', {'members': [], 'permissions': []})
+    members = admin_group.setdefault('members', [])
+    permissions = admin_group.setdefault('permissions', [])
+    changed = False
+
+    if 'admin' not in permissions:
+      permissions.append('admin')
+      changed = True
+
+    if streamer and streamer not in members:
+      members.append(streamer)
+      changed = True
+
+    if changed:
+      admin_group['members'] = sorted(set(members))
+      admin_group['permissions'] = sorted(set(permissions))
+      self.save_permission_info()
+
   def reset_all(self):
     self.set_game_name(self.get_attribute('current_game'))
     self.set_num_active_mods(self.get_attribute('active_modifiers'))
@@ -355,6 +449,7 @@ class ChaosRelay:
 
     self.set_game_errors(0)
     self.set_vote_time(0.5)
+    self.set_vote_open(False)
     self.set_paused(True)
     self.set_paused_bright(True)
     self.set_connected(False)
@@ -366,6 +461,10 @@ class ChaosRelay:
 
     self.active_keys = [''] * self.num_active_mods
     self.candidate_keys = [''] * self.vote_options
+    self.start_vote_requested = False
+    self.start_vote_duration = 0.0
+    self.end_vote_requested = False
+    self.remove_mod_request = ''
 
   def time_per_vote(self) -> float:
     active_modifiers = self._attr_float('active_modifiers', 1.0)
@@ -416,6 +515,9 @@ class ChaosRelay:
 
   def set_vote_time(self, value):
     self._set_value('vote_time', float(value))
+
+  def set_vote_open(self, value):
+    self._set_value('vote_open', bool(value))
 
   def set_mod_times(self, value):
     self._set_value('mod_times', [float(v) for v in value])
@@ -497,6 +599,7 @@ class ChaosRelay:
 
   def set_channel_name(self, value):
     self._set_value('channel_name', str(value), 'channel')
+    self._ensure_streamer_admin()
 
   def set_bot_name(self, value):
     self._set_value('bot_name', str(value), 'nick')
@@ -588,6 +691,10 @@ class ChaosRelay:
       ack: str = self._attr_str('msg_mod_not_found').format(mod)
     else:
       self.modifier_data[key]['active'] = bool(enabled)
+      self.enabled_mods = [
+        mod_key for mod_key, mod_data in self.modifier_data.items() if bool(mod_data.get('active', True))
+      ]
+      self.save_mod_info()
       status = 'active' if enabled else 'inactive'
       ack = self._attr_str('msg_mod_status').format(mod, status)
     return ack
@@ -602,12 +709,155 @@ class ChaosRelay:
 
   def get_balance_message(self, user: str):
     balance = self.get_balance(user)
-    plural = 's' if balance == 1 else ''
+    plural = '' if balance == 1 else 's'
     msg: str = self._attr_str('msg_user_balance')
     return msg.format(user=user, balance=balance, plural=plural)
 
   def get_balance(self, user: str):
     return int(self.user_credits.get(user, 0))
+
+  def get_user_permissions(self, user: str) -> Set[str]:
+    user_name = self._normalize_user(user)
+    if not user_name:
+      return set()
+
+    perms: Set[str] = set()
+    for group_data in self.permission_groups.values():
+      members = group_data.get('members', [])
+      permissions = group_data.get('permissions', [])
+      if user_name in members:
+        for permission in permissions:
+          perm = self._normalize_permission(permission)
+          if perm:
+            perms.add(perm)
+
+    if user_name == self._normalize_user(self.channel_name):
+      perms.add('admin')
+
+    return perms
+
+  def has_permission(self, user: str, permission: str) -> bool:
+    required = self._normalize_permission(permission)
+    if not required:
+      return True
+    perms = self.get_user_permissions(user)
+    return 'admin' in perms or required in perms
+
+  def request_start_vote(self, duration: Optional[float] = None):
+    with self._lock:
+      self.start_vote_duration = 0.0 if duration is None else max(1.0, float(duration))
+      self.start_vote_requested = True
+
+  def consume_start_vote_request(self) -> Optional[float]:
+    with self._lock:
+      if not self.start_vote_requested:
+        return None
+      duration = float(self.start_vote_duration)
+      self.start_vote_requested = False
+      self.start_vote_duration = 0.0
+    return duration
+
+  def request_end_vote(self):
+    with self._lock:
+      self.end_vote_requested = True
+
+  def consume_end_vote_request(self) -> bool:
+    with self._lock:
+      requested = bool(self.end_vote_requested)
+      self.end_vote_requested = False
+    return requested
+
+  def request_remove_mod(self, mod_key: str):
+    with self._lock:
+      self.remove_mod_request = str(mod_key).strip().lower()
+
+  def consume_remove_mod_request(self) -> str:
+    with self._lock:
+      request = self.remove_mod_request
+      self.remove_mod_request = ''
+    return request
+
+  def add_permission_group(self, group: str) -> str:
+    group_name = self._normalize_group(group)
+    if not group_name:
+      return 'Usage: !addgroup <group>'
+    if group_name in self.permission_groups:
+      return f"The group '{group_name}' already exists."
+
+    self.permission_groups[group_name] = {'members': [], 'permissions': []}
+    self.save_permission_info()
+    return f"Added permission group '{group_name}'."
+
+  def add_group_member(self, group: str, user: str) -> str:
+    group_name = self._normalize_group(group)
+    user_name = self._normalize_user(user)
+    if not group_name or not user_name:
+      return 'Usage: !addmember <group> <user>'
+    if group_name not in self.permission_groups:
+      return f"The group '{group_name}' does not exist."
+
+    members = self.permission_groups[group_name].setdefault('members', [])
+    if user_name in members:
+      return f"@{user_name} is already in group '{group_name}'."
+
+    members.append(user_name)
+    self.permission_groups[group_name]['members'] = sorted(set(members))
+    self.save_permission_info()
+    return f"Added @{user_name} to group '{group_name}'."
+
+  def add_group_permission(self, group: str, permission: str) -> str:
+    group_name = self._normalize_group(group)
+    permission_name = self._normalize_permission(permission)
+    if not group_name or not permission_name:
+      return 'Usage: !addperm <group> <permission>'
+    if group_name not in self.permission_groups:
+      return f"The group '{group_name}' does not exist."
+    if permission_name not in KNOWN_PERMISSIONS:
+      valid_perms = ', '.join(sorted(KNOWN_PERMISSIONS))
+      return f"Unknown permission '{permission_name}'. Valid permissions: {valid_perms}"
+
+    permissions = self.permission_groups[group_name].setdefault('permissions', [])
+    if permission_name in permissions:
+      return f"The group '{group_name}' already has '{permission_name}'."
+
+    permissions.append(permission_name)
+    self.permission_groups[group_name]['permissions'] = sorted(set(permissions))
+    self.save_permission_info()
+    return f"Added permission '{permission_name}' to group '{group_name}'."
+
+  def remove_group_member(self, group: str, user: str) -> str:
+    group_name = self._normalize_group(group)
+    user_name = self._normalize_user(user)
+    if not group_name or not user_name:
+      return 'Usage: !delmember <group> <user>'
+    if group_name not in self.permission_groups:
+      return f"The group '{group_name}' does not exist."
+
+    members = self.permission_groups[group_name].setdefault('members', [])
+    if user_name not in members:
+      return f"@{user_name} is not in group '{group_name}'."
+
+    members.remove(user_name)
+    self.permission_groups[group_name]['members'] = sorted(set(members))
+    self.save_permission_info()
+    return f"Removed @{user_name} from group '{group_name}'."
+
+  def remove_group_permission(self, group: str, permission: str) -> str:
+    group_name = self._normalize_group(group)
+    permission_name = self._normalize_permission(permission)
+    if not group_name or not permission_name:
+      return 'Usage: !delperm <group> <permission>'
+    if group_name not in self.permission_groups:
+      return f"The group '{group_name}' does not exist."
+
+    permissions = self.permission_groups[group_name].setdefault('permissions', [])
+    if permission_name not in permissions:
+      return f"The group '{group_name}' does not have '{permission_name}'."
+
+    permissions.remove(permission_name)
+    self.permission_groups[group_name]['permissions'] = sorted(set(permissions))
+    self.save_permission_info()
+    return f"Removed permission '{permission_name}' from group '{group_name}'."
 
   def set_balance(self, user: str, balance: int):
     if balance < 0:
@@ -754,13 +1004,20 @@ class ChaosRelay:
     return self._attr_str('msg_chaos_description')
 
   def explain_voting(self):
-    if self._attr_str('voting_type') == 'DISABLED':
+    if self._attr_str('voting_type') == 'DISABLED' or self._attr_str('voting_cycle') == 'DISABLED':
       return self._attr_str('msg_no_voting')
-    if self._attr_str('voting_type') == 'Proportional':
+    voting_type = self._attr_str('voting_type')
+    if voting_type == 'Proportional':
       msg = self._attr_str('msg_proportional_voting')
+      return self._attr_str('msg_how_to_vote') + msg
+    if voting_type == 'Majority':
+      msg = self._attr_str('msg_majority_voting')
+      return self._attr_str('msg_how_to_vote') + msg
+    if voting_type == 'Authoritarian':
+      return self._attr_str('msg_authoritarian_voting')
     else:
       msg = self._attr_str('msg_majority_voting')
-    return self._attr_str('msg_how_to_vote') + msg
+      return self._attr_str('msg_how_to_vote') + msg
 
   def explain_redemption(self):
     msg = self._attr_str('msg_how_to_redeem')
@@ -807,6 +1064,9 @@ class ChaosRelay:
   def enable_mod(self, mod_key, value):
     if mod_key in self.modifier_data:
       self.modifier_data[mod_key]['active'] = bool(value)
+      self.enabled_mods = [
+        key for key, data in self.modifier_data.items() if bool(data.get('active', True))
+      ]
 
   def replace_mod(self, mod_key):
     if not mod_key or mod_key not in self.modifier_data:
@@ -832,6 +1092,25 @@ class ChaosRelay:
       msg = self.list_active_mods()
       if msg:
         self.send_chat_message(msg)
+
+  def remove_active_mod(self, mod_name: str):
+    target = str(mod_name).strip().lower()
+    if not target:
+      return
+    mods = list(self.active_mods)
+    times = list(self.mod_times)
+    removed = False
+    for idx, name in enumerate(mods):
+      if str(name).strip().lower() == target:
+        mods[idx] = ''
+        if idx < len(times):
+          times[idx] = 0.0
+        removed = True
+        break
+    if removed:
+      self.set_active_mods(mods)
+      if times:
+        self.set_mod_times(times)
 
   def reset_current_mods(self):
     self.set_mod_times([0.0] * self.num_active_mods)
