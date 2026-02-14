@@ -23,7 +23,6 @@
 #include <memory>
 #include <list>
 #include <string>
-#include <queue>
 #include <json/json.h>
 #include <timer.hpp>
 
@@ -61,7 +60,14 @@ namespace Chaos {
     /**
      * List of modifiers that have been selected but not yet initialized.
      */
-    std::queue<std::shared_ptr<Modifier>> modifiersThatNeedToStart;
+    std::list<std::shared_ptr<Modifier>> modifiersThatNeedToStart;
+
+    /**
+     * List of active modifiers that have been requested for removal.
+     *
+     * Removal requests are drained on the engine thread to avoid update/finish overlap.
+     */
+    std::list<std::shared_ptr<Modifier>> modifiersThatNeedToStop;
 	
     std::atomic<bool> keep_going{true};
     std::atomic<bool> pause{true};
@@ -86,7 +92,7 @@ namespace Chaos {
 
   public:
     ChaosEngine(Controller& c, const std::string& listener_endpoint,
-                const std::string& talker_endpoint);
+                const std::string& talker_endpoint, bool enable_interface = true);
     
     void sendInterfaceMessage(const std::string& msg);
 

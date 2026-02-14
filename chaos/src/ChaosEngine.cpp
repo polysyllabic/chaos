@@ -32,14 +32,17 @@
 
 using namespace Chaos;
 
-ChaosEngine::ChaosEngine(Controller& c, const std::string& listener_endpoint, const std::string& talker_endpoint) : 
+ChaosEngine::ChaosEngine(Controller& c, const std::string& listener_endpoint,
+                         const std::string& talker_endpoint, bool enable_interface) : 
   controller{c}, game{c}, pause{true}
 {
   time.initialize();
   jsonReader = jsonReaderBuilder.newCharReader();
   controller.addInjector(this);
-  chaosInterface.setObserver(this);
-  chaosInterface.setupInterface(listener_endpoint, talker_endpoint);
+  if (enable_interface) {
+    chaosInterface.setObserver(this);
+    chaosInterface.setupInterface(listener_endpoint, talker_endpoint);
+  }
 }
 
 bool ChaosEngine::setGame(const std::string& name) {
@@ -78,9 +81,21 @@ void ChaosEngine::newCommand(const std::string& command) {
       if (root.isMember("time")) {
         time_active = root["time"].asDouble();
       }
-      PLOG_INFO << "Adding Modifier: " << mod->getName() << " lifespan = " << time_active;
-      mod->setLifespan(time_active);
-      modifiersThatNeedToStart.push(mod);
+      // Remove stale queue entries first.
+      modifiersThatNeedToStart.remove(mod);
+      modifiersThatNeedToStop.remove(mod);
+
+      bool already_active = (std::find(modifiers.begin(), modifiers.end(), mod) != modifiers.end());
+      if (already_active) {
+        double extended_lifespan = mod->lifetime() + time_active;
+        mod->setLifespan(extended_lifespan);
+        PLOG_INFO << "Refreshing active Modifier: " << mod->getName()
+                  << " lifespan now = " << extended_lifespan;
+      } else {
+        PLOG_INFO << "Adding Modifier: " << mod->getName() << " lifespan = " << time_active;
+        mod->setLifespan(time_active);
+        modifiersThatNeedToStart.push_back(mod);
+      }
     } else {
       PLOG_ERROR << "ERROR: Modifier not found: " << command;
     }
@@ -91,26 +106,35 @@ void ChaosEngine::newCommand(const std::string& command) {
   if (root.isMember("remove")) {
     lock();
     std::shared_ptr<Modifier> mod = game.getModifier(root["remove"].asString());
-    unlock();
     if (mod != nullptr) {
       PLOG_INFO << "Manually removing modifier '" << mod->getName();
-      removeMod(mod);
+      // If queued to start, cancel that pending start.
+      modifiersThatNeedToStart.remove(mod);
+      // Queue active mod removal for processing on the engine thread.
+      bool active = (std::find(modifiers.begin(), modifiers.end(), mod) != modifiers.end());
+      bool already_queued = (std::find(modifiersThatNeedToStop.begin(), modifiersThatNeedToStop.end(), mod)
+                             != modifiersThatNeedToStop.end());
+      if (active && !already_queued) {
+        modifiersThatNeedToStop.push_back(mod);
+      }
     } else {
       PLOG_ERROR << "ERROR: Modifier not found: " << command;
     }
+    unlock();
   }
 
   // Remove all mods
   if (root.isMember("reset")) {
-    while (true) {
-      lock();
-      bool no_mods = modifiers.empty();
-      unlock();
-      if (no_mods) {
-        break;
+    lock();
+    modifiersThatNeedToStart.clear();
+    for (auto& mod : modifiers) {
+      bool already_queued = (std::find(modifiersThatNeedToStop.begin(), modifiersThatNeedToStop.end(), mod)
+                             != modifiersThatNeedToStop.end());
+      if (!already_queued) {
+        modifiersThatNeedToStop.push_back(mod);
       }
-      removeOldestMod();
     }
+    unlock();
   }
 
   if (root.isMember("game")) {
@@ -169,6 +193,7 @@ void ChaosEngine::doAction() {
   }
   // Initialize and update active mods. Run callbacks outside the engine lock so
   // callbacks can legally inject pipelined events.
+  std::vector<std::shared_ptr<Modifier>> mods_to_finish;
   std::vector<std::shared_ptr<Modifier>> mods_to_begin;
   std::vector<std::shared_ptr<Modifier>> mods_to_update;
   std::shared_ptr<Modifier> mod_to_remove;
@@ -178,17 +203,38 @@ void ChaosEngine::doAction() {
     pausedPrior = true;
     return;
   }
+  while (!modifiersThatNeedToStop.empty()) {
+    std::shared_ptr<Modifier> mod = modifiersThatNeedToStop.front();
+    modifiersThatNeedToStop.pop_front();
+    assert(mod);
+    modifiersThatNeedToStart.remove(mod);
+    auto it = std::find(modifiers.begin(), modifiers.end(), mod);
+    if (it != modifiers.end()) {
+      PLOG_INFO << "Removing '" << mod->getName() << "' from active mod list";
+      PLOG_DEBUG << "Lifetime = " << mod->lifetime() << " of lifespan = " << mod->lifespan();
+      modifiers.erase(it);
+      mods_to_finish.push_back(mod);
+    }
+  }
+
   while(!modifiersThatNeedToStart.empty()) {
     std::shared_ptr<Modifier> mod = modifiersThatNeedToStart.front();
     assert(mod);
+    modifiersThatNeedToStart.pop_front();
+    if (std::find(modifiers.begin(), modifiers.end(), mod) != modifiers.end()) {
+      continue;
+    }
     PLOG_DEBUG << "Initializing modifier " << mod->getName() << " lifespan = " << mod->lifespan();
     modifiers.push_back(mod);
-    modifiersThatNeedToStart.pop();
     mods_to_begin.push_back(mod);
   }
   mods_to_update.assign(modifiers.begin(), modifiers.end());
   unlock();
 
+  for (auto& mod : mods_to_finish) {
+    assert(mod);
+    mod->_finish();
+  }
   for (auto& mod : mods_to_begin) {
     assert(mod);
     mod->_begin();
@@ -239,10 +285,15 @@ void ChaosEngine::removeOldestMod() {
       }
     }
   }
-  unlock();
   if (oldest) {
-    removeMod(oldest);
+    modifiersThatNeedToStart.remove(oldest);
+    bool already_queued = (std::find(modifiersThatNeedToStop.begin(), modifiersThatNeedToStop.end(), oldest)
+                           != modifiersThatNeedToStop.end());
+    if (!already_queued) {
+      modifiersThatNeedToStop.push_back(oldest);
+    }
   }
+  unlock();
 }
 
 void ChaosEngine::removeMod(std::shared_ptr<Modifier> to_remove) {
