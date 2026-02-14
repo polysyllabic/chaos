@@ -18,6 +18,11 @@ set(USE_DUALSENSE FALSE)
 set(CHAOS_INSTALL_ROOT "/usr/local/chaos"
     CACHE PATH "Absolute install directory for Chaos (used by chaos.service)")
 
+# Optional local test bundle (outside systemd install path)
+option(install_test "Stage a test copy of chaos under ~/test for local runs" OFF)
+set(CHAOS_TEST_ROOT "$ENV{HOME}/test"
+    CACHE PATH "Destination root for install_test staging")
+
 # Parse version variables
 file(READ "VERSION" ver)
 
@@ -178,6 +183,33 @@ target_link_libraries(chaos	PUBLIC chaos_communicator
 install(TARGETS chaos RUNTIME DESTINATION "${CHAOS_INSTALL_ROOT}")
 install(FILES chaosconfig.toml DESTINATION "${CHAOS_INSTALL_ROOT}")
 install(DIRECTORY examples/ DESTINATION "${CHAOS_INSTALL_ROOT}/games")
+
+if(install_test)
+  set(_install_test_in_all FALSE)
+  if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug$")
+    set(_install_test_in_all TRUE)
+  endif()
+
+  if(_install_test_in_all)
+    set(_install_test_all_keyword ALL)
+  else()
+    set(_install_test_all_keyword)
+  endif()
+
+  add_custom_target(install_test ${_install_test_all_keyword}
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CHAOS_TEST_ROOT}/games"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:chaos>" "${CHAOS_TEST_ROOT}/chaos"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/chaosconfig.toml"
+            "${CHAOS_TEST_ROOT}/chaosconfig.toml"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/examples"
+            "${CHAOS_TEST_ROOT}/games"
+    DEPENDS chaos
+    COMMENT "Staging local test runtime at ${CHAOS_TEST_ROOT}"
+    VERBATIM
+  )
+endif()
 
 find_package(Doxygen)
 if (DOXYGEN_FOUND)
