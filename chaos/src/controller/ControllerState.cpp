@@ -21,6 +21,7 @@
 
 #include <ControllerState.hpp>
 #include <Dualshock.hpp>
+#include <signals.hpp>
 
 #ifdef USE_DUALSENSE
 #include "Dualsense.hpp"
@@ -28,11 +29,58 @@
 
 using namespace Chaos;
 
+double ControllerState::touchpad_inactive_delay = 0.04;
+
+ControllerState::ControllerState() :
+  stateLength(0),
+  touchpad_active(false),
+  touchpad_timeout_emitted(false),
+  touchpad_axis_seen(false) {}
+
 ControllerState::~ControllerState() {}
 
 void* ControllerState::getHackedState() {
-  shouldClearTouchpadCount = true;
   return hackedState;
+}
+
+void ControllerState::setTouchpadInactiveDelay(double delay) {
+  if (delay < 0.0) {
+    PLOG_WARNING << "touchpad_inactive_delay cannot be negative. Using 0.04";
+    delay = 0.04;
+  }
+  touchpad_inactive_delay = delay;
+}
+
+void ControllerState::noteTouchpadActiveEvent(short value) {
+  // TOUCHPAD_ACTIVE is a button-style signal where non-zero means active.
+  touchpad_active = (value != 0);
+  touchpad_timeout_emitted = false;
+}
+
+void ControllerState::noteTouchpadAxisEvent() {
+  touchpad_axis_seen = true;
+  touchpad_timeout_emitted = false;
+  last_touchpad_axis_event = std::chrono::steady_clock::now();
+}
+
+void ControllerState::addTouchpadInactivityEvents(std::vector<DeviceEvent>& events) {
+  if (touchpad_inactive_delay <= 0.0 || !touchpad_active || !touchpad_axis_seen || touchpad_timeout_emitted) {
+    return;
+  }
+
+  auto elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - last_touchpad_axis_event);
+  if (elapsed.count() < touchpad_inactive_delay) {
+    return;
+  }
+
+  PLOG_DEBUG << "Touchpad inactive for " << elapsed.count()
+             << " sec; injecting release and axis reset events.";
+  events.push_back({0, 0, TYPE_BUTTON, BUTTON_TOUCHPAD_ACTIVE});
+  events.push_back({0, 0, TYPE_AXIS, AXIS_TOUCHPAD_X});
+  events.push_back({0, 0, TYPE_AXIS, AXIS_TOUCHPAD_Y});
+  touchpad_active = false;
+  touchpad_timeout_emitted = true;
+  touchpad_axis_seen = false;
 }
 
 ControllerState* ControllerState::factory(int vendor, int product) {
@@ -91,4 +139,3 @@ uint8_t ControllerState::packDpad( const short int& dx, const short int& dy ) {
   }
   return 0x08;
 }
-

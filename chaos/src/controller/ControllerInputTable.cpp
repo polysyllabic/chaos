@@ -22,6 +22,7 @@
 
 #include "ControllerInputTable.hpp"
 #include "ControllerInput.hpp"
+#include "ControllerState.hpp"
 
 using namespace Chaos;
 
@@ -130,6 +131,22 @@ std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const toml::tabl
 int ControllerInputTable::initializeInputs(const toml::table& config) {
   int errors = 0;
 
+  std::optional<double> inactive_delay_opt = config["controller"]["touchpad_inactive_delay"].value<double>();
+  if (!inactive_delay_opt) {
+    // Backward compatibility for legacy files that put this in mod_defaults.
+    inactive_delay_opt = config["mod_defaults"]["touchpad_inactive_delay"].value<double>();
+    if (inactive_delay_opt) {
+      PLOG_WARNING << "'mod_defaults.touchpad_inactive_delay' is deprecated. Use 'controller.touchpad_inactive_delay'.";
+    }
+  }
+  double inactive_delay = inactive_delay_opt.value_or(0.04);
+  if (inactive_delay < 0.0) {
+    PLOG_ERROR << "touchpad_inactive_delay cannot be negative. Setting to 0.04";
+    ++errors;
+    inactive_delay = 0.04;
+  }
+  ControllerState::setTouchpadInactiveDelay(inactive_delay);
+
   bool use_velocity = config["controller"]["touchpad_velocity"].value_or(false);
   Touchpad::setVelocity(use_velocity);
 
@@ -151,7 +168,8 @@ int ControllerInputTable::initializeInputs(const toml::table& config) {
   short skew = config["controller"]["touchpad_skew"].value_or(0);
   Touchpad::setSkew(skew);
 
-  PLOG_VERBOSE << "Touchpad scale = (" << scale_x << ", " << scale_y <<"); skew = " << skew;
+  PLOG_VERBOSE << "Touchpad inactive delay = " << inactive_delay << " sec; "
+               << "scale = (" << scale_x << ", " << scale_y <<"); skew = " << skew;
 
   return errors;
 }

@@ -33,8 +33,8 @@ button_press_time = 0.0625
 button_release_time = 0.0625
 
 # Time (in seconds) since last received touchpad axis event before the touchpad will be reset
-# to inactive. (The default here is 5 ticks assuming 250MHz polling.)
-touchpad_inactive_delay = 0.02
+# to inactive. (The default here is 10 ticks assuming 250MHz polling.)
+touchpad_inactive_delay = 0.04
 
 # The touchpad can be used to generate axis events based either on the distance travelled from the
 # first touch point or the change in the touchpad axis values over time. Set touchpad_velocity to

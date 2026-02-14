@@ -28,14 +28,6 @@ button_press_time = 0.0625
 # in the sequence.
 button_release_time = 0.0625
 
-#--------------------------------------------------------------------------------------------------
-# Modifier defaults
-[mod_defaults]
-# Number of modifiers simultaneously in effect
-active_modifiers = 3
-# Lifetime (exclusive of pauses) of an individual modifier, in seconds.
-time_per_modifier = 180.0
-
 # Time (in seconds) before the touchpad will be reset to inactive.
 touchpad_inactive_delay = 0.02
 
@@ -48,6 +40,14 @@ touchpad_scale_y = 0.12
 
 # Skew to add to touchpad result
 touchpad_skew = 30
+
+#--------------------------------------------------------------------------------------------------
+# Modifier defaults
+[mod_defaults]
+# Number of modifiers simultaneously in effect
+active_modifiers = 3
+# Lifetime (exclusive of pauses) of an individual modifier, in seconds.
+time_per_modifier = 180.0
 
 #--------------------------------------------------------------------------------------------------
 # Command Mapping
@@ -616,8 +616,7 @@ remap = [
 name = "Swap D-Pad/Left Joystick"
 description = "Retro-style motion and an odd analog inventory selector"
 type = "remap"
-signals = [ "LX", "LY" ]
-disable_signals = true
+disable_signals = [ "LX", "LY" ]
 remap = [
       {from = "DX", to = "LX"},
       {from = "DY", to = "LY"},
@@ -628,8 +627,7 @@ remap = [
 name = "Swap Shapes/Right Joystick"
 description = "Analog actions and digital camera movement"
 type = "remap"
-signals = [ "RX", "RY" ]
-disable_signals = true
+disable_signals = [ "RX", "RY" ]
 remap = [
       {from = "RX", to = "SQUARE", to_neg = "CIRCLE", threshold=0.5},
       {from = "RY", to = "X", to_neg = "TRIANGLE", threshold=0.5},
@@ -913,4 +911,3 @@ description = "Random joystick motion. Also don't push things too far, or you ma
 type = "parent"
 groups = [ "movement", "view" ]
 children = ["Random Movement", "Stumblebum"]
-

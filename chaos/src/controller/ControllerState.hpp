@@ -18,12 +18,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <chrono>
 #include <vector>
 #include <cstdint>
 #include <map>
 
 #include "DeviceEvent.hpp"
-#include "Touchpad.hpp"
 
 namespace Chaos {
   
@@ -33,13 +33,17 @@ namespace Chaos {
   class ControllerState {
   protected:
     int stateLength;
+    bool touchpad_active;
+    bool touchpad_timeout_emitted;
+    bool touchpad_axis_seen;
+    std::chrono::steady_clock::time_point last_touchpad_axis_event;
 
-    unsigned short lastTouchpadCountFromController;
-    unsigned short currentTouchpadCount;
-    bool shouldClearTouchpadCount;
+    static double touchpad_inactive_delay;
     
     void* trueState;
     void* hackedState;
+
+    ControllerState();
 
     // Helper functions for interpreting raw controller data
     inline short int unpackJoystick(uint8_t& input) { return ((short int) input) - 128;}
@@ -47,6 +51,10 @@ namespace Chaos {
     short int positionDY(const uint8_t& input);
     short int positionDX(const uint8_t& input);
     uint8_t packDpad(const short int& dx, const short int& dy);
+
+    void noteTouchpadActiveEvent(short value);
+    void noteTouchpadAxisEvent();
+    void addTouchpadInactivityEvents(std::vector<DeviceEvent>& events);
     
   public:
     /**
@@ -66,8 +74,11 @@ namespace Chaos {
     virtual void applyHackedState(unsigned char* buffer, short* chaosState) = 0;
 	
     virtual ~ControllerState() = 0;
-	
+		
     void* getHackedState();
+
+    static void setTouchpadInactiveDelay(double delay);
+    static double getTouchpadInactiveDelay() { return touchpad_inactive_delay; }
 
   };
   

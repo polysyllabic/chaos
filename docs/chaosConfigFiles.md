@@ -702,8 +702,8 @@ modifier:
     - `to` (_required_): The signal we pass to the console. For axis-to-button mapping, this is the
       button that receives positive signals.
 
-    - `to_neg` (_optional_): For axis-to-button mapping, this is the button that receives negative
-      signals.
+    - `to_neg`: For axis-to-button mapping, this is the button that receives negative signals.
+      This value is required for axis-to-button mapping.
       
     - `invert` (_optiopnal_): If true, flip the sign of the signal. Up becomes down, left becomes
       right, etc.
@@ -721,9 +721,10 @@ modifier:
 A remap modifier may specify *either* a fixed list of remaps with the "remap" key *or* a list
 of controls that will be randomly scrambled with the "random_remap" key, but not both.
 
-When using random_remap, note that you can only scramble signals within the same basic class:
+When using random_remap, note that you should only scramble signals within the same basic class:
 buttons or axes. Trying to scramble across input types will almost certainly break things,
-since an axis must map to two buttons and vice versa.
+since an axis must map to two buttons and vice versa. This is not checked in the code, so it's on
+you if you try to break this rule.
 
 When planning remapping, you must consider the type of signal. Mapping within a single class (e.g.,
 button to button or axis to axis) requires only the `from` and `to` keys. To map between buttons and

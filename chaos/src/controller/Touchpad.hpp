@@ -53,11 +53,6 @@ namespace Chaos {
      */
     bool active;
 
-    /**
-     * Signal that the ordinary axes require disabling.
-     */
-    bool disableAxes;
-
     typedef struct _DerivData {
       short prior[5];
       double timestampPrior[5];

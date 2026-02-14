@@ -19,6 +19,7 @@
  */
 #include "Dualshock.hpp"
 #include "signals.hpp"
+#include <algorithm>
 
 using namespace Chaos;
 
@@ -27,10 +28,15 @@ Dualshock::Dualshock() {
   trueState = (void*) new inputReport;
   hackedState = (void*) new inputReport;
 
-  touchCounter = 0;
+  touchCounterCurrent = 0;
+  touchCounterSaved[0] = 0;
+  touchCounterSaved[1] = 0;
   touchTimeStamp = 0;
+  touchTimeStampToReport = 0;
   priorFingerActive[0] = 0;
   priorFingerActive[1] = 0;
+  lastX[0] = lastX[1] = 0;
+  lastY[0] = lastY[1] = 0;
 }
 
 Dualshock::~Dualshock() {
@@ -72,10 +78,6 @@ void Dualshock::applyHackedState(unsigned char* buffer, short* chaosState) {
   report->GD_GamePadHatSwitch = packDpad(chaosState[((int)TYPE_AXIS<<8) + (int)AXIS_DX],
 					 chaosState[((int)TYPE_AXIS<<8) + (int)AXIS_DY]);
 
-  if (shouldClearTouchpadCount) {
-    shouldClearTouchpadCount = false;
-  }
-
   // Touchpad handing. Yup, it's a lot and shouldn't be handled here.
   touchTimeStamp += 7;  // sometimes this also increments by 8
 
@@ -105,9 +107,8 @@ void Dualshock::applyHackedState(unsigned char* buffer, short* chaosState) {
     
     if (priorFingerActive[0] == 0) {
       priorFingerActive[0] = 1;
-      currentTouchpadCount++;
-      currentTouchpadCount &= 0x7F;
-      touchCounterSaved[0] = currentTouchpadCount;
+      touchCounterCurrent = (touchCounterCurrent + 1) & 0x7F;
+      touchCounterSaved[0] = touchCounterCurrent;
     }
 
     report->TOUCH_EVENTS[0].finger[0].counter = touchCounterSaved[0];
@@ -185,21 +186,38 @@ void Dualshock::getDeviceEvents(unsigned char* buffer, int length, std::vector<D
   }
 	
   // Touchpad events:
-  for (int e = 0; e < ((inputReport*)trueState)->TOUCH_COUNT; e++) {
+  inputReport* priorState = (inputReport*)trueState;
+  int touch_count = std::min(3, std::max((int) currentState.TOUCH_COUNT, (int) priorState->TOUCH_COUNT));
+  for (int e = 0; e < touch_count; e++) {
     for (int f = 0; f < 2; f++) {
-      if (currentState.TOUCH_EVENTS[e].finger[f].active != ((inputReport*) trueState)->TOUCH_EVENTS[e].finger[f].active) {
-	events.push_back({0, !currentState.TOUCH_EVENTS[e].finger[f].active, TYPE_BUTTON, BUTTON_TOUCHPAD_ACTIVE});
-      }
-      
-      if (currentState.TOUCH_EVENTS[e].finger[f].x != ((inputReport*) trueState)->TOUCH_EVENTS[e].finger[f].x) {
-	events.push_back({0, currentState.TOUCH_EVENTS[e].finger[f].x, TYPE_AXIS, AXIS_TOUCHPAD_X});      
+      bool current_valid = (e < currentState.TOUCH_COUNT);
+      bool prior_valid = (e < priorState->TOUCH_COUNT);
+      uint8_t current_active = current_valid ? currentState.TOUCH_EVENTS[e].finger[f].active : 0;
+      uint8_t prior_active = prior_valid ? priorState->TOUCH_EVENTS[e].finger[f].active : 0;
+      short current_x = current_valid ? currentState.TOUCH_EVENTS[e].finger[f].x : 0;
+      short prior_x = prior_valid ? priorState->TOUCH_EVENTS[e].finger[f].x : 0;
+      short current_y = current_valid ? currentState.TOUCH_EVENTS[e].finger[f].y : 0;
+      short prior_y = prior_valid ? priorState->TOUCH_EVENTS[e].finger[f].y : 0;
+
+      if (current_active != prior_active) {
+        short active_event = !current_active;
+        events.push_back({0, active_event, TYPE_BUTTON, BUTTON_TOUCHPAD_ACTIVE});
+        noteTouchpadActiveEvent(active_event);
       }
 
-      if (currentState.TOUCH_EVENTS[e].finger[f].y != ((inputReport*) trueState)->TOUCH_EVENTS[e].finger[f].y) {
-	events.push_back({0, currentState.TOUCH_EVENTS[e].finger[f].y, TYPE_AXIS, AXIS_TOUCHPAD_Y});      
+      if (current_x != prior_x) {
+        events.push_back({0, current_x, TYPE_AXIS, AXIS_TOUCHPAD_X});
+        noteTouchpadAxisEvent();
+      }
+
+      if (current_y != prior_y) {
+        events.push_back({0, current_y, TYPE_AXIS, AXIS_TOUCHPAD_Y});
+        noteTouchpadAxisEvent();
       }
     }
   }
+
+  addTouchpadInactivityEvents(events);
  
   // Need to compare for next time:
   *(inputReport*)trueState = currentState;

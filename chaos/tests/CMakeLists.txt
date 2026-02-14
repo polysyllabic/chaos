@@ -19,11 +19,19 @@ target_include_directories(test_menu PRIVATE ../include
 
 target_link_libraries(test_menu PRIVATE chaos_controller)
 
-  add_executable(test_remapping)
-  target_sources(test_remapping PRIVATE test_remapping.cpp)
-  target_include_directories(test_remapping PRIVATE
-    chaos_controller
-    chaos_utils
-    ${tomlplusplus_SOURCE_DIR}/include
-  )
-  target_link_libraries(test_remapping chaos_controller chaos_utils)
+add_executable(test_remapping)
+target_sources(test_remapping PRIVATE
+  test_remapping.cpp
+  ../src/Modifier.cpp
+  ../src/RemapModifier.cpp
+  ../src/Sequence.cpp
+  ../src/GameCondition.cpp
+)
+target_include_directories(test_remapping PRIVATE
+  ../include
+  ../src/controller
+  ../src/utils
+  ${tomlplusplus_SOURCE_DIR}/include
+  ${plog_SOURCE_DIR}/include
+)
+target_link_libraries(test_remapping PRIVATE chaos_controller chaos_utils)

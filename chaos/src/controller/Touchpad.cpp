@@ -26,13 +26,14 @@
 
 using namespace Chaos;
 
-bool Touchpad::use_velocity;
-double Touchpad::scale_x;
-double Touchpad::scale_y;
-short Touchpad::skew;
+bool Touchpad::use_velocity = false;
+double Touchpad::scale_x = 1.0;
+double Touchpad::scale_y = 1.0;
+short Touchpad::skew = 0;
 
-Touchpad::Touchpad() {
+Touchpad::Touchpad() : active(false) {
   timer.initialize();
+  firstTouch();
 }
 
 void Touchpad::firstTouch() {

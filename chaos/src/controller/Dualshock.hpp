@@ -40,7 +40,7 @@ namespace Chaos {
     void getDeviceEvents(unsigned char* buffer, int length, std::vector<DeviceEvent>& events);
 
     bool priorFingerActive[2];
-    unsigned char touchCounter;
+    unsigned char touchCounterCurrent;
     unsigned char touchCounterSaved[2];
     unsigned char touchTimeStamp;
     unsigned char touchTimeStampToReport;

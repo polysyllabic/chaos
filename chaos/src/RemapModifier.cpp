@@ -198,19 +198,21 @@ bool RemapModifier::remap(DeviceEvent& event) {
 
     // Touchpad active requires special setup and tear-down
     if (from->getSignal() == ControllerSignal::TOUCHPAD_ACTIVE) {
-      if (! touchpad.isActive() && event.value == 0) {
+      if (! touchpad.isActive() && event.value) {
         PLOG_DEBUG << "Begin touchpad use";
         touchpad.firstTouch();
         touchpad.setActive(true);
-      } else if (touchpad.isActive() && event.value) {
+      } else if (touchpad.isActive() && event.value == 0) {
         PLOG_DEBUG << "End touchpad use";
         touchpad.setActive(false);
         // We're stopping touchpad use. Zero out all axes in use.
         // NB: If we ever do support other controllers, we'll need to get the indirect signal type, not
         // this low-level value
         for (auto s : signals) {
-          new_event = {0, 0, s->getID(), TYPE_AXIS};
-          engine->fakePipelinedEvent(new_event, getptr());
+          uint8_t axis_id = (s->getType() == ControllerSignalType::HYBRID) ? s->getHybridAxis() : s->getID();
+          new_event = {0, 0, TYPE_AXIS, axis_id};
+          // Inject directly to avoid lock recursion inside the remap pass.
+          engine->applyEvent(new_event);
         }
       }
       return true;
@@ -322,16 +324,25 @@ bool RemapModifier::remap(DeviceEvent& event) {
       break;
     case ControllerSignalType::TOUCHPAD:
       if (to_console->getType() == ControllerSignalType::AXIS) {
-	      modified.value = touchpad.getAxisValue(from->getSignal(), event.value);
+        modified.value = touchpad.isActive() ? touchpad.getAxisValue(from->getSignal(), event.value) : 0;
       }
       break;
     case ControllerSignalType::DUMMY:
       PLOG_WARNING << "Remapping from NONE or NOTHING";
       break;
     } // end switch
-    if (remap.invert) {
-      modified.value = ControllerInput::joystickLimit(-event.value);
-    }
+      if (remap.invert) {
+        modified.value = ControllerInput::joystickLimit(-modified.value);
+      }
+    } else if (from->getType() == ControllerSignalType::AXIS &&
+               (to_console->getType() == ControllerSignalType::BUTTON ||
+                to_console->getType() == ControllerSignalType::HYBRID) &&
+               remap.to_negative) {
+      // Crossing back to zero should release both mapped buttons.
+      new_event.id = remap.to_negative->getID();
+      new_event.type = remap.to_negative->getButtonType();
+      new_event.value = 0;
+      engine->applyEvent(new_event);
     }
     if (modified.value != 0) {
      PLOG_VERBOSE << getName() << ": " << from->getName() << ":" << event.value << " to " << to_console->getName() << "(" 
