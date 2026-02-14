@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <cmath>
 #include <algorithm>
+#include <vector>
 #include <plog/Log.h>
 #include <toml++/toml.h>
 
@@ -166,7 +167,10 @@ void ChaosEngine::doAction() {
   if (pausedPrior) {
     PLOG_DEBUG << "Resuming after pause";
   }
-  // Initialize and update active mods
+  // Initialize and update active mods. Run callbacks outside the engine lock so
+  // callbacks can legally inject pipelined events.
+  std::vector<std::shared_ptr<Modifier>> mods_to_begin;
+  std::vector<std::shared_ptr<Modifier>> mods_to_update;
   std::shared_ptr<Modifier> mod_to_remove;
   lock();
   if (pause.load()) {
@@ -180,14 +184,22 @@ void ChaosEngine::doAction() {
     PLOG_DEBUG << "Initializing modifier " << mod->getName() << " lifespan = " << mod->lifespan();
     modifiers.push_back(mod);
     modifiersThatNeedToStart.pop();
+    mods_to_begin.push_back(mod);
+  }
+  mods_to_update.assign(modifiers.begin(), modifiers.end());
+  unlock();
+
+  for (auto& mod : mods_to_begin) {
+    assert(mod);
     mod->_begin();
   }
-  for (auto& mod : modifiers) {
-    assert (mod);
+  for (auto& mod : mods_to_update) {
+    assert(mod);
     mod->_update(pausedPrior);
   }
   pausedPrior = false;
-  
+
+  lock();
   // If we have too many mods, remove the oldest one
   if (modifiers.size() > game.getNumActiveMods()) {
     mod_to_remove = modifiers.front();
@@ -244,10 +256,12 @@ void ChaosEngine::removeMod(std::shared_ptr<Modifier> to_remove) {
   }
   PLOG_INFO << "Removing '" << to_remove->getName() << "' from active mod list";
   PLOG_DEBUG << "Lifetime = " << to_remove->lifetime() << " of lifespan = " << to_remove->lifespan();
-  // Do cleanup for this mod, if necessary
-  to_remove->_finish();
   modifiers.erase(it);
   unlock();
+
+  // Do cleanup for this mod, if necessary.
+  // This callback may inject events, so it must run outside the lock.
+  to_remove->_finish();
 }
 
 // Tweak the event based on modifiers
@@ -323,12 +337,20 @@ void ChaosEngine::fakePipelinedEvent(DeviceEvent& event, std::shared_ptr<Modifie
     auto mod = std::find_if(modifiers.begin(), modifiers.end(),
                             [&sourceMod](const auto& p) { return p == sourceMod; } );
     
-    // iterate from the next element till the end and apply any tweaks
+    // Iterate from the next element till the end and apply any tweaks. If the
+    // source mod is not active (e.g., called from finish()), run through all mods.
     if (mod != modifiers.end()) {
       for (mod++; mod != modifiers.end(); mod++) {
         valid = (*mod)->_tweak(event);
         if (!valid) {
 		      break;
+        }
+      }
+    } else {
+      for (auto& m : modifiers) {
+        valid = m->_tweak(event);
+        if (!valid) {
+          break;
         }
       }
     }

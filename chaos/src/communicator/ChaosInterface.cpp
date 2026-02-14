@@ -36,8 +36,12 @@ void ChaosInterface::setupInterface(const std::string& listener_endpoint, const 
 }
 
 void ChaosInterface::doAction() {
-  while (!outgoingQueue.empty()) {
+  while (true) {
     lock();
+    if (outgoingQueue.empty()) {
+      unlock();
+      break;
+    }
     std::string message = outgoingQueue.front();
     outgoingQueue.pop();
     unlock();

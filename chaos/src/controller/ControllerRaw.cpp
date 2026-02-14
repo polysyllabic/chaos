@@ -63,12 +63,16 @@ bool ControllerRaw::applyHardware(const DeviceEvent& event) {
 */
 
 void ControllerRaw::doAction() {
-  while (!deviceEventQueue.empty()) {
+  while (true) {
     lock();
+    if (deviceEventQueue.empty()) {
+      unlock();
+      break;
+    }
     std::array<unsigned char, 64> bufferFront = deviceEventQueue.front();
     deviceEventQueue.pop_front();
     unlock();
-		
+			
     // Convert the incoming buffer into a series of device events.
     std::vector<DeviceEvent> deviceEvents;
     mControllerState->getDeviceEvents(bufferFront.data(), 64, deviceEvents);
@@ -77,8 +81,8 @@ void ControllerRaw::doAction() {
       DeviceEvent& event = *it;
       handleNewDeviceEvent(event);
     }
-    pause();
   }
+  pause();
 }
 
 void ControllerRaw::notification(unsigned char* buffer, int length) {
@@ -93,5 +97,4 @@ void ControllerRaw::notification(unsigned char* buffer, int length) {
   // Take the mControllerState and replace the provided buffer:
   mControllerState->applyHackedState(buffer, controllerState);
 }
-
 

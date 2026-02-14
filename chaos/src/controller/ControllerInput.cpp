@@ -49,7 +49,7 @@ ControllerSignalType ControllerInput::getType(const DeviceEvent& event) {
   if (event.type == TYPE_BUTTON) {
     rval = (event.id == BUTTON_L2 || event.id == BUTTON_R2) ? ControllerSignalType::HYBRID : ControllerSignalType::BUTTON;
   } else {
-    switch (event.type) {
+    switch (event.id) {
     case AXIS_L2:
     case AXIS_R2:
       rval = ControllerSignalType::HYBRID;
@@ -70,6 +70,8 @@ ControllerSignalType ControllerInput::getType(const DeviceEvent& event) {
       break;
     case AXIS_TOUCHPAD_X:
     case AXIS_TOUCHPAD_Y:
+    case AXIS_TOUCHPAD_X_2:
+    case AXIS_TOUCHPAD_Y_2:
       rval = ControllerSignalType::TOUCHPAD;
       break;
     default:
@@ -118,11 +120,10 @@ short ControllerInput::getMax(std::shared_ptr<ControllerInput> signal) {
 }
 
 short ControllerInput::getState(bool hybrid_axis) {
-  short rval;
   if (getType() == ControllerSignalType::DUMMY) {
     return 0;
   } else if (getType() == ControllerSignalType::HYBRID && hybrid_axis) {
-    return controller.getState(hybrid_axis, TYPE_AXIS);
+    return controller.getState(this->hybrid_axis, TYPE_AXIS);
   }
   return controller.getState(button_id, getButtonType());
 }
