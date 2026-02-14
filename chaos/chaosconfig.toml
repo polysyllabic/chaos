@@ -5,10 +5,11 @@
 # initialization. Settings for individual games are maintained in separate configuration files and
 # loaded on a game-by-game basis.
 #---------------------------------------------------------------------------------------------------
-# Version string for the TOML file format. Currently used only to verify that we're reading the
-# right file. If we later introduce backwards incompatibilities, this can be used to ensure that
-# the game configuration files use a matching version.
-chaos_toml = "1.0"
+# Version string for the configuration-file format.
+config_file_ver = "1.0"
+
+# Role of this config file (main or template). chaosconfig.toml must always be main.
+chaos_toml = "main"
 
 # Default directory where we look for games. This is used if no specific game file is specified on
 # the command line and the default game contains no path. Game configuration files put here can

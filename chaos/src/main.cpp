@@ -18,6 +18,7 @@
  */
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <string>
 
 #include <toml++/toml.h>
@@ -33,6 +34,9 @@ using namespace Chaos;
 
 int main(int argc, char** argv) {
 
+  std::unique_ptr<ControllerRaw> controller;
+  std::unique_ptr<ChaosEngine> engine;
+
   try {
     // Process the configuration file for non-gameplay-related information
     // This will start up the logger and configure other basic settings
@@ -44,23 +48,28 @@ int main(int argc, char** argv) {
 
     // Configure controller and engine. Build the engine before starting the controller thread so
     // input injection is wired before any controller events are processed.
-    ControllerRaw controller;
-    ChaosEngine engine = ChaosEngine(controller, chaos_config.getListenerAddress(),
-                                     chaos_config.getInterfaceAddress());
+    controller = std::make_unique<ControllerRaw>();
+    engine = std::make_unique<ChaosEngine>(*controller, chaos_config.getListenerAddress(),
+                                           chaos_config.getInterfaceAddress());
 
     // Keep engine running/listening even if the game file is invalid, but remain paused until a
     // valid game config is loaded.
-    engine.setGame(configfile);
+    engine->setGame(configfile);
 
-    controller.start();
-    engine.start();
+    controller->start();
+    engine->start();
+  } catch (const std::exception& e) {
+    std::cerr << "Fatal startup error: " << e.what() << std::endl;
+    return EXIT_FAILURE;
+  }
 
-    while(engine.keepGoing()) {
+  try {
+    while(engine->keepGoing()) {
       // loop until we get an exit signal
       usleep(1000000);
     }
   } catch (const std::exception& e) {
-    std::cerr << "Fatal startup error: " << e.what() << std::endl;
+    std::cerr << "Fatal runtime error: " << e.what() << std::endl;
     return EXIT_FAILURE;
   }
 

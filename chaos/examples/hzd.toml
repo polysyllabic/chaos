@@ -1,16 +1,20 @@
 #---------------------------------------------------------------------------------------------------
-# Twitch Controls Chaos (TCC)
-# Configuration file to support a TCC  game.
+# Twitch Controls Chaos (TCC) game configuration file
+# Game: Horizon Zero Dawn (PS4)
 #
 # The settings defined here are those that are required to run a specific game through the Chaos
 # engine. The basic settings for the engine itself are controlled in the chaosconfig.toml file.
+# The syntax for this file is documented in chaosConfigFiles.md
 #
 # Note that if you edit this file while the chaos engine is running, you must reload the game
 # so the chaos engine can re-read the updated file.
 #
-# chaos_toml: A version string for the TOML file format. Currently used only to verify that we're
-# reading the right file.
-chaos_toml = "1.0"
+# config_file_ver: Version string for the TCC game configuration format.
+#---------------------------------------------------------------------------------------------------
+config_file_ver = "1.0"
+
+# chaos_toml: Role of this file in the include chain.
+chaos_toml = "main"
 
 # game: User-friendly name of the game this configuration file defines.
 game = "Horizon Zero Dawn (PS4)"
@@ -909,5 +913,4 @@ description = "Random joystick motion. Also don't push things too far, or you ma
 type = "parent"
 groups = [ "movement", "view" ]
 children = ["Random Movement", "Stumblebum"]
-
 

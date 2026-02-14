@@ -19,6 +19,9 @@
  */
 #include <memory>
 #include <optional>
+#include <filesystem>
+#include <cstddef>
+#include <limits>
 #include <string_view>
 
 #include <json/json.h>
@@ -37,6 +40,163 @@
 
 using namespace Chaos;
 
+namespace {
+  constexpr std::string_view CONFIG_FILE_VERSION_KEY{"config_file_ver"};
+  constexpr std::string_view CONFIG_FILE_ROLE_KEY{"chaos_toml"};
+  constexpr std::string_view INPUT_FILE_KEY{"input_file"};
+
+  enum class ConfigFileRole { MAIN, TEMPLATE, INVALID };
+
+  bool parseConfigFile(const std::filesystem::path& path, toml::table& config, int& parse_errors) {
+    try {
+      config = toml::parse_file(path.string());
+      return true;
+    }
+    catch (const toml::parse_error& err) {
+      PLOG_ERROR << "Parsing the configuration file failed: " << err << std::endl;
+      ++parse_errors;
+      return false;
+    }
+  }
+
+  ConfigFileRole getConfigRole(const toml::table& config, const std::filesystem::path& path, int& parse_errors) {
+    std::optional<std::string_view> role = config[CONFIG_FILE_ROLE_KEY].value<std::string_view>();
+    if (!role) {
+      PLOG_ERROR << "Missing required key '" << CONFIG_FILE_ROLE_KEY << "' in " << path;
+      ++parse_errors;
+      return ConfigFileRole::INVALID;
+    }
+    if (*role == "main") {
+      return ConfigFileRole::MAIN;
+    }
+    if (*role == "template") {
+      return ConfigFileRole::TEMPLATE;
+    }
+    PLOG_ERROR << "Invalid value for '" << CONFIG_FILE_ROLE_KEY << "' in " << path
+               << ". Expected 'main' or 'template'.";
+    ++parse_errors;
+    return ConfigFileRole::INVALID;
+  }
+
+  bool validateConfigMetadata(const toml::table& config, const std::filesystem::path& path,
+                              ConfigFileRole expected_role, int& parse_errors) {
+    std::optional<std::string_view> version = config[CONFIG_FILE_VERSION_KEY].value<std::string_view>();
+    if (!version || version->empty()) {
+      PLOG_ERROR << "Missing required key '" << CONFIG_FILE_VERSION_KEY << "' in " << path;
+      ++parse_errors;
+      return false;
+    }
+
+    ConfigFileRole role = getConfigRole(config, path, parse_errors);
+    if (role == ConfigFileRole::INVALID) {
+      return false;
+    }
+    if (role != expected_role) {
+      PLOG_ERROR << "Configuration file '" << path << "' has role '"
+                 << config[CONFIG_FILE_ROLE_KEY].value_or<std::string>("")
+                 << "' but expected '"
+                 << ((expected_role == ConfigFileRole::MAIN) ? "main" : "template")
+                 << "'.";
+      ++parse_errors;
+      return false;
+    }
+
+    if (config.contains(INPUT_FILE_KEY)) {
+      if (expected_role == ConfigFileRole::TEMPLATE) {
+        PLOG_ERROR << "Template configuration files must not define '" << INPUT_FILE_KEY << "': " << path;
+        ++parse_errors;
+        return false;
+      }
+      if (!config[INPUT_FILE_KEY].is_string()) {
+        PLOG_ERROR << "Key '" << INPUT_FILE_KEY << "' must be a string in " << path;
+        ++parse_errors;
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool isNamedTableArray(const toml::array& arr) {
+    if (arr.empty()) {
+      return false;
+    }
+    for (const toml::node& node : arr) {
+      const toml::table* tbl = node.as_table();
+      if (!tbl) {
+        return false;
+      }
+      std::optional<std::string_view> name = (*tbl)["name"].value<std::string_view>();
+      if (!name || name->empty()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  size_t findNamedTableIndex(const toml::array& arr, std::string_view name) {
+    size_t idx = 0;
+    for (const toml::node& node : arr) {
+      const toml::table* tbl = node.as_table();
+      if (tbl) {
+        std::optional<std::string_view> candidate = (*tbl)["name"].value<std::string_view>();
+        if (candidate && *candidate == name) {
+          return idx;
+        }
+      }
+      ++idx;
+    }
+    return std::numeric_limits<size_t>::max();
+  }
+
+  void mergeConfigTables(toml::table& base, const toml::table& overlay);
+
+  void mergeConfigArrays(toml::array& base, const toml::array& overlay) {
+    if (isNamedTableArray(base) && isNamedTableArray(overlay)) {
+      for (const toml::node& node : overlay) {
+        const toml::table* overlay_tbl = node.as_table();
+        if (!overlay_tbl) {
+          continue;
+        }
+        std::optional<std::string_view> name = (*overlay_tbl)["name"].value<std::string_view>();
+        if (!name) {
+          continue;
+        }
+        size_t idx = findNamedTableIndex(base, *name);
+        if (idx == std::numeric_limits<size_t>::max()) {
+          base.push_back(node);
+        } else {
+          toml::table* base_tbl = base[idx].as_table();
+          if (base_tbl) {
+            mergeConfigTables(*base_tbl, *overlay_tbl);
+          } else {
+            base.replace(base.cbegin() + static_cast<std::ptrdiff_t>(idx), node);
+          }
+        }
+      }
+    } else {
+      base = overlay;
+    }
+  }
+
+  void mergeConfigTables(toml::table& base, const toml::table& overlay) {
+    for (const auto& [key, overlay_node] : overlay) {
+      if (key == INPUT_FILE_KEY) {
+        continue;
+      }
+      toml::node* base_node = base.get(key);
+      if (!base_node) {
+        base.insert_or_assign(key, overlay_node);
+      } else if (base_node->is_table() && overlay_node.is_table()) {
+        mergeConfigTables(*base_node->as_table(), *overlay_node.as_table());
+      } else if (base_node->is_array() && overlay_node.is_array()) {
+        mergeConfigArrays(*base_node->as_array(), *overlay_node.as_array());
+      } else {
+        base.insert_or_assign(key, overlay_node);
+      }
+    }
+  }
+}
+
 Game::Game(Controller& c) : controller{c}, signal_table{c} {
   sequences = std::make_shared<SequenceTable>();
 }
@@ -44,23 +204,33 @@ Game::Game(Controller& c) : controller{c}, signal_table{c} {
 bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine) {
   parse_errors = 0;
   parse_warnings = 0;
+  std::filesystem::path main_path(configfile);
   toml::table configuration;
-  try {
-    configuration = toml::parse_file(configfile);
-  }
-  catch (const toml::parse_error& err) {
-    PLOG_ERROR << "Parsing the configuration file failed:" << err << std::endl;
-    ++parse_errors;
+  if (!parseConfigFile(main_path, configuration, parse_errors)) {
     return false;
   }
-  
-  // Check version tag to make sure we're looking at a chaos TOML file
-  std::optional<std::string_view> version = configuration["chaos_toml"].value<std::string_view>();
-  if (!version) {
-    PLOG_FATAL << "Could not find the version id (chaos_toml). Are you sure this is the right TOML file?";
-    ++parse_errors;
+  if (!validateConfigMetadata(configuration, main_path, ConfigFileRole::MAIN, parse_errors)) {
     return false;
   }
+
+  std::optional<std::string> input_file = configuration[INPUT_FILE_KEY].value<std::string>();
+  if (input_file) {
+    std::filesystem::path template_path(*input_file);
+    if (!template_path.is_absolute()) {
+      template_path = main_path.parent_path() / template_path;
+    }
+
+    toml::table template_config;
+    if (!parseConfigFile(template_path, template_config, parse_errors)) {
+      return false;
+    }
+    if (!validateConfigMetadata(template_config, template_path, ConfigFileRole::TEMPLATE, parse_errors)) {
+      return false;
+    }
+    mergeConfigTables(template_config, configuration);
+    configuration = std::move(template_config);
+  }
+  configuration.erase(INPUT_FILE_KEY);
   
   // Get the basic game information. We send these to the interface. 
   name = configuration["game"].value_or<std::string>("Unknown Game");

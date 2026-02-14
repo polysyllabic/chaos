@@ -44,9 +44,17 @@ Configuration::Configuration(const std::string& fname) {
     throw err;
   }
 
-  toml_version = configuration["chaos_toml"].value_or("");
+  toml_version = configuration["config_file_ver"].value_or("");
   if (toml_version.empty()) {
-    throw std::runtime_error("Missing chaos version identifier in TOML configuration file");
+    throw std::runtime_error("Missing config_file_ver identifier in TOML configuration file");
+  }
+
+  std::string config_role = configuration["chaos_toml"].value_or("");
+  if (config_role.empty()) {
+    throw std::runtime_error("Missing chaos_toml role in TOML configuration file");
+  }
+  if (config_role != "main") {
+    throw std::runtime_error("chaosconfig.toml must have chaos_toml = \"main\"");
   }
 
   log_path = configuration["log_directory"].value_or(".");
@@ -109,7 +117,6 @@ Configuration::Configuration(const std::string& fname) {
   }
 
 }
-
 
 
 

@@ -5,7 +5,8 @@ The basic settings for the engine itself are controlled in the `chaosconfig.toml
 
 Configuration files use TOML format, which means they are plain-text files that can be modified
 by any editor. For a full example of a configuration file in action, I recommend you study the
-tlou2.toml configuration file.
+`tlou2-common.toml` configuration file and the platform-specific wrappers (`tlou2.toml`,
+`tlou2-remaster.toml`, `tlou2-remaster-pc.toml`).
 
 ## Basic Concepts
 
@@ -34,8 +35,18 @@ game-setting options.
 ## General Settings
 The following settings apply to the operation of the engine for the whole game.
 
-- `chaos_toml`: A version string for the TOML file format. Currently used only to verify that we're
-  reading the right file. Currently, this should always be "1.0".
+- `config_file_ver`: A version string for the TCC configuration-file format. Currently this should
+  always be `"1.0"`.
+
+- `chaos_toml`: The role of this file. Must be either `"main"` or `"template"`.
+
+- `input_file`: Optional path to a shared template file. This key is valid only for
+  `chaos_toml = "main"`. Template files (`chaos_toml = "template"`) must not define `input_file`.
+
+When `input_file` is set, the template file is loaded first and then the main file is overlaid on
+top of it. Values defined in the main file take precedence over the template. For named arrays
+(`command`, `condition`, `sequence`, `modifier`, and `menu.layout`), entries with the same `name`
+are merged; entries only present in the template are inherited.
 
 - `game`: User-friendly name of the game this configuration file defines.
 
@@ -59,9 +70,8 @@ The following settings apply to the operation of the engine for the whole game.
   previous 5 polling intervals is used. If false, we calculate the distance between the first point
   the finger touched and its curent position.
 
-- `touchpad_scale`:  After the touchpad value is calculated by one of the two algorithms above, the
-  resulting value is multiplied by this scaling factor. Scaling can be set separately for each
-  axis. The first value in the list is for the x-axis; the second for the y-axis.
+- `touchpad_scale_x` and `touchpad_scale_y`: After the touchpad value is calculated by one of the
+  two algorithms above, the resulting value is multiplied by these scaling factors.
 
 - `touchpad_skew`: Defines an offset to apply to the axis value when the derivative is non-zero. The
   sign of the skew is the same as the sign of the derivative. In other words, if the derivative is
