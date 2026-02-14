@@ -60,7 +60,7 @@ int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
 	      continue;
       }
       // regularize the name by removing any duplicate spaces
-      std::regex_replace(*mod_name, std::regex("[' ']{2,}"), " ");
+      *mod_name = std::regex_replace(*mod_name, std::regex(" {2,}"), " ");
       std::optional<std::string> mod_type = (*modifier)["type"].value<std::string>();
       if (!mod_type) {
         ++parse_errors;
@@ -88,7 +88,7 @@ int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
           PLOG_ERROR << "Duplicate modifier name: " << *mod_name;
         }
       }
-      catch (std::runtime_error e) {
+      catch (const std::runtime_error& e) {
         ++parse_errors;
 	      PLOG_ERROR << "Modifier '" << *mod_name << "' not created: " << e.what();
       }

@@ -993,7 +993,7 @@ std::shared_ptr<GameCommand> Game::getCommand(const toml::table& config, const s
   if (!cmd_name) {
     if (required) {
       ++parse_errors;
-      PLOG_ERROR << "Missing  required '" << *cmd_name << "' parameter";
+      PLOG_ERROR << "Missing required '" << key << "' parameter";
     }
     return nullptr;
   }
