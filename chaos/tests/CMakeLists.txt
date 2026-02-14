@@ -35,3 +35,32 @@ target_include_directories(test_remapping PRIVATE
   ${plog_SOURCE_DIR}/include
 )
 target_link_libraries(test_remapping PRIVATE chaos_controller chaos_utils)
+
+add_executable(test_engine_lifecycle)
+target_sources(test_engine_lifecycle PRIVATE
+  test_engine_lifecycle.cpp
+  ../src/ChaosEngine.cpp
+  ../src/Game.cpp
+  ../src/GameCommand.cpp
+  ../src/GameCondition.cpp
+  ../src/GameMenu.cpp
+  ../src/MenuItem.cpp
+  ../src/Modifier.cpp
+  ../src/ModifierTable.cpp
+  ../src/Sequence.cpp
+  ../src/SequenceTable.cpp
+)
+target_include_directories(test_engine_lifecycle PRIVATE
+  ../include
+  ../src/controller
+  ../src/communicator
+  ../src/utils
+  ${tomlplusplus_SOURCE_DIR}/include
+  ${plog_SOURCE_DIR}/include
+  ${cppzmq_SOURCE_DIR}
+)
+target_link_libraries(test_engine_lifecycle PRIVATE
+  chaos_controller
+  chaos_communicator
+  chaos_utils
+)

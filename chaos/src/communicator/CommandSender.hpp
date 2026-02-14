@@ -28,7 +28,7 @@ namespace Chaos {
   class CommandSender {
   private:
     zmq::context_t context;	
-    zmq::socket_t *socket;
+    zmq::socket_t *socket = nullptr;
     std::string endpoint;
 
     std::chrono::milliseconds request_timeout{10000};

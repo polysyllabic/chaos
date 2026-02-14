@@ -31,7 +31,7 @@ namespace Chaos {
   class CommandListener : public Thread {
   private:
     zmq::context_t context;
-    zmq::socket_t *socket;
+    zmq::socket_t *socket = nullptr;
     std::string endpoint;
     std::string reply{"ACK"};
 
