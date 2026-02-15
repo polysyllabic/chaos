@@ -1,0 +1,295 @@
+#---------------------------------------------------------------------------------------------------
+# Twitch Controls Chaos (TCC) game configuration file
+# Game: The Last of Us Part II Remastered (PS5)
+#
+# The settings defined here are those that are required to run a specific game through the Chaos
+# engine. The basic settings for the engine itself are controlled in the chaosconfig.toml file.
+# The syntax for this file is documented in chaosConfigFiles.md
+#
+# This file it the entry point for the PS5 version of TLOU2, remastered version. It only defines
+# the platform-specific configuraiton data for the game. Playing TCC with mouse and keyboard
+# is currently not supported. You must use a controller.
+#
+# Note that if you edit this file while the chaos engine is running, you must reload the game
+# so the chaos engine can re-read the updated file.
+#
+#---------------------------------------------------------------------------------------------------
+# config_file_ver: Version string for the TCC game configuration format.
+config_file_ver = "1.0"
+
+# chaos_toml: Role of this file in the include chain.
+chaos_toml = "main"
+
+# game: User-friendly name of the game this configuration file defines.
+game = "The Last of Us Part II Remastered (PS5 Pro)"
+
+# Common settings shared across TLOU2 variants.
+input_file = "tlou2-common.toml"
+
+#--------------------------------------------------------------------------------------------------
+# Menus
+[menu]
+
+# === Menu Layout ===
+layout = [
+      # Main Menu Items
+      {name = "options", type="menu", offset = 0},
+      #{name = "photo mode", type="menu", offset = 1},
+      {name = "audio cues", type="menu", offset = 2, hidden = true, counter_action="reveal"},
+      {name = "extras", type="menu", offset = 2},
+      #{name = "tutorials", type="menu", offset = 3},
+      #{name = "save", type="menu", offset = 4},
+      #{name = "load", type="menu", offset = 5},
+      # When an encounter is in progress, 'restart 2' = restart checkpoint and 'restart' =
+      # restart encounter. Outside of an encounter, 'restart 2' is hidden and 'restart' =
+      # restart checkpoint.
+      #{name = "restart 2", type="menu", offset = -3, hidden = true},
+      {name = "restart", type="select", offset = -2, confirm = true },
+      #{name = "quit", type="menu", offset = -1}
+
+      # Options Menu
+      #{name = "difficulty", type="menu", parent="options", offset = 0},
+      {name = "controls", type="menu", parent="options", offset = 1},
+      #{name = "dualsense", type="menu", parent="options", offset =2}
+      {name = "HUD", type="menu", parent="options", offset = 3},
+      {name = "subtitles", type="menu", parent="options", offset = 4},
+      {name = "display", type="menu", parent="options", offset = -4},
+      {name = "audio", type="menu", parent="options", offset = -3},
+      #{name = "language", type="menu", parent="options", offset= -2},
+      {name = "accessibility", type="menu", parent="options", offset= -1},
+
+      # Extras Menu
+      #{name = "skins", type="menu", parent="extras", offset= 0},
+      # The initial setting for a submenu refers to which submenu item is selected by default.
+      # That is the state to which the game will return when all mods changing the render mode are
+      # removed.      
+      {name = "filters", type="menu", parent="extras", offset= 1, initial=0},
+      {name = "gameplay", type="menu", parent="extras", offset= 2},
+      #{name = "commentary", type="menu", parent="extras", offset= 3},
+
+      # Options -> Controls 
+      #{name = "view controls", type="menu", parent="controls", offset= 0},
+      #{name = "customize controls", type="menu", parent="controls", offset= 1},
+      {name = "shoulder swap", type="option", parent="controls", offset= 2, initial=0},
+      #{name = "photo mode shortcut", type="option", parent="controls", offset= 3, initial=0},
+      {name = "listen mode", type="option", parent="controls", offset= 4, initial=1},
+      #{name = "look sensitivity X", type="option", parent="controls", offset= 5, initial=5},
+      #{name = "look sensitivity Y", type="option", parent="controls", offset= 6, initial=5},
+      #{name = "aim sensitivity X", type="option", parent="controls", offset= 7, initial=5},
+      #{name = "aim sensitivity Y", type="option", parent="controls", offset= 8, initial=5},
+      #{name = "aim acceleration", type="option", parent="controls", offset= 9, initial=10},
+      #{name = "aim ramp power", type="option", parent="controls", offset= 10, initial=10},
+      #{name = "motion aim", type="option", parent="controls", offset= -9, initial=0},
+      #{name = "motion sensitivity X", type="option", parent="motion aim", offset= -8, initial=5},
+      #{name = "motion sensitivity Y", type="option", parent="motion aim", offset= -7, initial=5},
+      #{name = "motion aim invert Y", type="option", parent="controls", offset= -6, initial=0},
+      #{name = "motion aim mirror X", type="option", parent="controls", offset= -5, initial=0},
+      {name = "camera assist", type="option", parent="controls", offset= -4, initial=0},
+      {name = "aim assist", type="option", parent="controls", offset= -3, initial=10},
+      {name = "lock-on aim", type="option", parent="controls", offset= -2, initial=0},
+      {name = "lock-on strength", type="option", parent="controls", guard="lock-on aim", offset= -1, initial=10},
+
+      # Options -> Dualsense Menu Items
+      # Adaptive trigger states: 0 = off, 1 = aiming only, 2 firing only, 3 = on
+      #{name = "adaptive triggers", type="option", parent="dualsense", offset=0, initial=3},
+      #{name = "bow resistance", type="option", parent="dualsense", offset=1, initial=1},
+      #{name = "menu vibrations", type="option", parent="dualsense", offset=2, initial=10},
+      #{name = "gameplay vibrations", type="option", parent="dualsense", offset=3, initial=10},
+      #{name = "actions vibrations", type="option", parent="dualsense", offset=4, initial=10},
+      #{name = "melee vibrations", type="option", parent="dualsense", offset=5, initial=10},
+      #{name = "shooting vibrations", type="option", parent="dualsense", offset=6, initial=10},
+      #{name = "attacks vibrations", type="option", parent="dualsense", offset=7, initial=10},
+      #{name = "weather vibrations", type="option", parent="dualsense", offset=-6, initial=10},
+      #{name = "environment vibrations", type="option", parent="dualsense", offset=-5, initial=10},
+      #{name = "cinematics vibrations", type="option", parent="dualsense", offset=-4, initial=1},
+      #{name = "accessibility vibrations", type="option", parent="dualsense", offset=-3, initial=10},
+      #{name = "speech to vibrations", type="option", parent="dualsense", offset=-2, initial=1},
+      #{name = "speech vibrations intensity", type="option", parent="dualsense", offset=-1, initial=0},
+
+      # Options -> HUD Menu Items
+      # reticle states: 0 = off, 1 = simple, 2 = default
+      {name = "reticle", type="option", parent="HUD", offset=0, initial=2},
+      {name = "weapon cross", type="option", parent="HUD", offset=1, initial=1},
+      {name = "damage indicators", type="option", parent="HUD", offset=2, initial=1},
+      {name = "awareness indicators", type="option", parent="HUD", offset=3, initial=1},
+      {name = "hit markers", type="option", parent="HUD", offset=4, initial=1},
+      {name = "arc throw path", type="option", parent="HUD", offset=5, initial=1},
+      {name = "health and weapon", type="option", parent="HUD", offset=6, initial=1},
+      {name = "health bar", type="option", parent="HUD", guard="health and weapon", offset=7, initial=1},
+      {name = "weapon and ammo display", type="option", parent="HUD", guard="health and weapon", offset=8, initial=1},
+      {name = "status effects", type="option", parent="HUD", guard="health and weapon", offset=9, initial=1},
+      #{name = "tutorial messages", type="option", parent="HUD", offset=-9, initial=0},
+      #{name = "hints", type="option", parent="HUD", offset=-8, initial=0},
+      # speedrun timer states: 0 = off, 1 = minimal, 2 = default
+      #{name = "speedrun timer", type="option", parent="HUD", offset=-7, initial=3}
+      {name = "pickup notifications", type="option", parent="HUD", offset=-6, initial=0},
+      #{name = "dodge prompts", type="option", parent="HUD", offset=-5, initial=0},
+      #{name = "grab/strike prompts", type="option", parent="HUD", offset=-4, initial=0},
+      #{name = "pickup prompts", type="option", parent="HUD", offset=-3, initial=1},
+      #{name = "interact prompts", type="option", parent="HUD", offset=-2, initial=1},
+      #{name = "collectibel tracking", type="option", parent="HUD", offset=-1, initial=0},
+
+      # Options -> Subtitle Menu
+      # subtitle states: 0 = off, 1 = story, 2 = story + combat
+      {name = "subtitle type", type="option", parent="subtitles", offset=0, initial=2},
+      # subtitle size: 0 = small, 1 = medium, 2 = large
+      {name = "subtitle size", type="option", parent="subtitles", offset=1, initial=1},
+      #{name = "subtitle background", type="option", parent="subtitles", offset=2, initial=0},
+      #{name = "subtitle names", type="option", parent="subtitles", offset=3, initial=1},
+      #{name = "subtitle name colors", type="option", parent="subtitles", offset=-3, initial=0},
+      #{name = "subtitle direction", type="option", parent="subtitles", offset=-2, initial=0},
+      #{name = "subtitle color", type="option", parent="subtitles", offset=-1, initial=0},
+
+      # Options -> Display Menu
+      # rendering mode: 0 = fidelity (30fps), 1 = performance (60fps+), 2 = pro (PS5Pro only)
+      #{name = "rendering mode", type="option", parent="display", offset=0, initial=1}
+      # NB: unlocked framerate may be disabled if the user's monitor doesn't support it
+      #{name = "unlocked framerate", type="option", parent="display", offset=1, initial=0}
+      #{name = "brightness", type="menu", parent="display", offset=2, initial=0},
+      #{name = "safezone scale", type="menu", parent="display", offset=3, initial=0},
+      #{name = "motion blur", type="option", parent="display", offset=4, initial=10},
+      #{name = "camera shake", type="option", parent="display", offset=5, initial=10},
+      #{name = "field of view", type="option", parent="display", offset=-3, initial=0},
+      #{name = "film grain", type="option", parent="display", offset=-2, initial=10},
+      #{name = "gore", type="option", parent="display", offset=-1, initial=0},
+
+      # Options -> Audio Menu
+      # NB: Scales here are shown 0-100 but steps are in increments of 5
+      {name = "effects", type="option", parent="audio", offset=0, initial=20},
+      {name = "dialogue", type="option", parent="audio", offset=1, initial=20},
+      {name = "music", type="option", parent="audio", offset=2, initial=20},
+      #{name = "cinematics", type="option", parent="audio", offset=3, initial=20},
+      #{name = "accessibility cue levels", type="option", parent="audio", offset=4, initial=20},
+      #{name = "screen reader levels", type="option", parent="audio", offset=-4, initial=10},
+      #{name = "cinematic description levels", type="option", parent="audio", offset=-3, initial=10},
+      #{name = "dynamic range", type="option", parent="audio", offset=-2, initial=0},
+      {name = "mono", type="option", parent="audio", offset=-1, initial=0},
+
+      # Options -> Accessibility Menu
+      {name = "alternate controls", type="menu", parent="accessibility", offset=0},
+      {name = "magnification", type="menu", parent="accessibility", offset = 1},
+      {name = "motion sickness", type="menu", parent="accessibility", offset = 2},
+      {name = "navigation", type="menu", parent="accessibility", offset = 3},
+      {name = "screen reader and audio", type="menu", parent="accessibility", offset = -2},
+      {name = "combat accessibility", type="menu", parent="accessibility", offset = -1},
+
+      # Options -> Accessibility -> Alternate Controls
+      #{name = "customize controls", type="menu", parent="alternate controls", offset=0, initial=0},
+      #{name = "boat controls", type="option", parent="alternate controls", offset=1, initial=0},
+      #{name = "rope/ladder movement", type="option", parent="alternate controls", offset=2, initial=0},
+      #{name = "guitar strumming input", type="option", parent="alternate controls", offset=3, initial=0},
+      #{name = "melee while aiming", type="option", parent="alternate controls", offset=4, initial=0},
+      # The first three commented out here are duplicates of entries in Options -> Controls
+      #{name = "camera assist", type="option", parent="alternate controls", offset=-7, initial=0},
+      #{name = "lock-on aim", type="option", parent="alternate controls", offset=-6, initial=0},
+      #{name = "lock-on strength", type="option", parent="alternate controls", guard="lock-on aim", offset=-5, initial=10},
+      {name = "arc throw lock-on", type="option", parent="alternate controls", offset=-4, initial=0},
+      #{name = "arc throw lock-on strength", type="option", parent="alternate controls", guard="arc throw lock-on", offset=-3, initial=10},
+      {name = "auto weapon swap", type="option", parent="alternate controls", offset=-2, initial=0},
+      {name = "auto pick-up", type="option", parent="alternate controls", offset=-1, initial=0},
+
+      # Options -> Accessibility -> Magnification Menu
+      {name = "HUD scale", type="option", parent="magnification", offset=0, initial=0},
+      #{name = "HUD background", type="option", parent="magnification", offset=1, initial=1},
+      #{name = "HUD color", type="option", parent="magnification", offset=2, initial=0},
+      #{name = "HUD colorblind mode", type="option", parent="magnification", offset=3, initial=0},
+      {name = "HUD flashing", type="option", parent="magnification", offset=4, initial=1},
+      {name = "high contrast", type="option", parent="magnification", offset=-4, initial=0},
+      #{name = "high contrast style", type="option", parent="magnification", offset=-3, initial=0},
+      #{name = "screen magnifier", type="option", parent="magnification", offset=-2, initial=0},
+      #{name = "translation prompts", type="option", parent="magnification", offset=-1, initial=0},
+
+      # Options -> Accessibility -> Motion Sickness
+      #{name = "camera shake", type="option", parent="motion sickness", offset=0, initial=10},
+      #{name = "motion blur", type="option", parent="motion sickness", offset=1, initial=10},      
+      # For camera distance and field of view, -5 = 0, 0 = 5
+      {name = "camera distance", type="option", parent="motion sickness", offset=2, initial=5},
+      {name = "field of view", type="option", parent="motion sickness", offset=3, initial=5},
+      #{name = "dolly zoom", type="option", parent="motion sickness", offset=-3, initial=1},
+      #{name = "full screen effects", type="option", parent="motion sickness", offset=-2, initial=1},
+      #{name = "persistent center dot", type="option", parent="motion sickness", offset=-1, initial=0},
+
+      # Options -> Accessibility -> Navigation and Traversal
+      {name = "navigation assistance", type="option", parent="navigation", offset=0, initial=0},
+      {name = "traversal assistance", type="option", parent="navigation", offset=1, initial=0},
+      {name = "ledge guard", type="option", parent="navigation", offset=2, initial=0},
+      {name = "enhanced listen", type="option", parent="navigation", offset=3, initial=0},
+      {name = "scan range", type="option", parent="navigation", guard="enhanced listen", offset=4, initial=10},
+      {name = "scan time", type="option", parent="navigation", guard="enhanced listen", offset=5, initial=3},
+      {name = "infinite breath", type="option", parent="navigation", offset=-2, initial=0},
+      #{name = "skip puzzle", type="option", parent="navigation", offset=-1, initial=0},
+
+      # Options -> Accessibility -> Text-to-Speech and Audio Cues
+      {name = "screen reader", type="option", parent="screen reader and audio", offset = 0, initial=0},
+      {name = "cinematic descriptions", type="option", parent="screen reader and audio", offset = 1, initial=0},
+      {name = "traversal cues", type="option", parent="TTS and audio", offset = 2, initial=0, counter="audio cues"},
+      {name = "combat cues", type="option", parent="TTS and audio", offset = 3, initial=0, counter="audio cues"},
+      #{name = "combat vibration", type="option", parent="TTS and audio", offset = 4, initial=0},
+      #{name = "guitar vibration", type="option", parent="TTS and audio", offset = -3, initial=0},
+      #{name = "audio volumes", type="menu", parent="TTS and audio", offset = -2, initial=0},
+      #{name = "cue glossary", type="menu", parent="TTS and audio", offset = -1, initial=0},
+
+      # Options -> Accessibility -> Combat Accessibility
+      {name = "enable combat accessibility", type="option", parent="combat accessibility", offset = 0, initial=0},
+      {name = "hostages don't escape", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 1, initial=0},
+      {name = "allies don't get grabbed", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 2, initial=0},
+      {name = "enemies don't flank", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 3, initial=0},
+      {name = "reduced enemy perception", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 4, initial=0},
+      {name = "reduced enemy accuracy", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = 5, initial=0},
+      {name = "enhanced dodge", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -5, initial=0},
+      # invisible while prone: 0 = off, 1 = limited, 2 = unlimited
+      {name = "invisible while prone", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -4, initial=0},
+      {name = "weapon sway", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -3, initial=1},
+      # slow motion duplicate of extras option
+      #{name = "slow motion", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -2, initial=0},
+      #{name = "tinnitus", type="option", parent="combat accessibility", guard="enable combat accessibility", offset = -1, initial=0},
+
+      # Extras -> Filters Menu
+      {name = "none", type = "select", parent="filters", offset = 0, counter="filters"},
+      {name = "graphic", type = "select", parent="filters", offset = 1, counter="filters"},
+      {name = "headache", type = "select", parent="filters", offset = 2, counter="filters"},
+      {name = "afterlife", type = "select", parent="filters", offset = 3, counter="filters"},
+      {name = "eightbit", type = "select", parent="filters", offset = 4, counter="filters"},
+      {name = "watercolor", type = "select", parent="filters", offset = 5, counter="filters"},
+      {name = "dungeon", type = "select", parent="filters", offset = 6, counter="filters"},
+      {name = "void", type = "select", parent="filters", offset = 7, counter="filters"},
+      {name = "pop poster", type = "select", parent="filters", offset = 8, counter="filters"},
+      {name = "1960", type = "select", parent="filters", offset = 9, counter="filters"},
+      {name = "dither punk", type = "select", parent="filters", offset = 10, counter="filters"},
+      {name = "cool", type = "select", parent="filters", offset = 11, counter="filters"},
+      {name = "warm", type = "select", parent="filters", offset = 12, counter="filters"},
+      {name = "vibrant", type = "select", parent="filters", offset = 13, counter="filters"},
+      {name = "noir", type = "select", parent="filters", offset = 14, counter="filters"},
+      {name = "blorange", type = "select", parent="filters", offset = 15, counter="filters"},
+      {name = "sepia", type = "select", parent="filters", offset = -15, counter="filters"},
+      {name = "vintage", type = "select", parent="filters", offset = -14, counter="filters"},
+      {name = "beasts", type = "select", parent="filters", offset = -13, counter="filters"},
+      {name = "terminated", type = "select", parent="filters", offset = -12, counter="filters"},
+      {name = "gridlocked", type = "select", parent="filters", offset = -11, counter="filters"},
+      {name = "blacklight", type = "select", parent="filters", offset = -10, counter="filters"},
+      {name = "desert fog", type = "select", parent="filters", offset = -9, counter="filters"},
+      {name = "blood", type = "select", parent="filters", offset = -8, counter="filters"},
+      {name = "inferno", type = "select", parent="filters", offset = -7, counter="filters"},
+      {name = "fire", type = "select", parent="filters", offset = -6, counter="filters"},
+      {name = "trinity", type = "select", parent="filters", offset = -5, counter="filters"},
+      {name = "pusher", type = "select", parent="filters", offset = -4, counter="filters"},
+      {name = "demons", type = "select", parent="filters", offset = -3, counter="filters"},
+      {name = "drugzone", type = "select", parent="filters", offset = -2, counter="filters"},
+      {name = "moonlight", type = "select", parent="filters", offset = -1, counter="filters"},
+
+      # Extras -> Gameplay Menu
+      {name = "mirror", type="option", parent="gameplay", offset = 0, initial = 0},
+      {name = "mirror on death", type="option", parent="gameplay", offset = 1, initial = 0},
+      {name = "slow motion", type="option", parent="gameplay", offset = 2, initial = 0},
+      {name = "bullet speed", type="option", parent="gameplay", offset = 3, initial = 0},
+      {name = "infinite ammo", type="option", parent="gameplay", offset = 4, initial = 0},
+      {name = "infinite crafting", type="option", parent="gameplay", offset = 5, initial = 0},
+      {name = "infinite melee durability", type="option", parent="gameplay", offset = 6, initial = 0},
+      {name = "infinite listen range", type="option", parent="gameplay", offset = 7, initial = 0},
+      {name = "one shot", type="option", parent="gameplay", offset = -6, initial = 0},
+      {name = "touch of death", type="option", parent="gameplay", offset = -5, initial = 0},
+      {name = "8-bit audio", type="option", parent="gameplay", offset = -4, initial = 0}, 
+      {name = "4-bit audio", type="option", parent="gameplay", offset = -3, initial = 0},
+      {name = "helium audio", type="option", parent="gameplay", offset = -2, initial = 0},
+      {name = "xenon audio", type="option", parent="gameplay", offset = -1, initial = 0},
+]

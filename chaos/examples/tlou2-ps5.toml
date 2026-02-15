@@ -20,6 +20,14 @@ config_file_ver = "1.0"
 chaos_toml = "main"
 
 # game: User-friendly name of the game this configuration file defines.
-game = "The Last of Us Part II (PS4)"
+game = "The Last of Us Part II (PS5)"
 
 input_file = "tlou2-common.toml"
+
+# This modifier only works if we're playing the OG game on a PS5.
+[[modifier]]
+name = "30 fps"
+description = "Converting a PS5 to play like PS4"
+type = "menu"
+groups = [ "display" ]
+menu_items = [{entry = "framerate", value = 0 }]
