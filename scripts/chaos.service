@@ -5,6 +5,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/usr/local/chaos
+LogsDirectory=chaos
 Restart=always
 RestartSec=1
 ExecStart=/usr/local/chaos/startchaos.sh
