@@ -115,6 +115,11 @@ this period, some categories of mods, including all those that require setting m
 put the game in an inconsistent state. Old mods may not be removed correctly, and new ones may not
 be applied. In this case, you may need to pause the game and manually set the necessary options.
 
+*Important Security Note:* TCC is not designed to run on untrusted networks. You should only run
+this if your local network is completely under your control (i.e., you manage the router that
+connects you to the internet yourself and you trust all the devices within your home network).
+
+
 ## What's New In Chaos Unbound
 
 This version of Chaos is called "Chaos Unbound" because the system is no longer hard-coded to a

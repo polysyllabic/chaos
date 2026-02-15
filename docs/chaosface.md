@@ -24,39 +24,61 @@ another computer.
 Installation and Setup
 ======================
 
-The default installation of Chaosface runs on the Raspberry Pi, along with the engine. See the
-main TCC documentation for those steps. This section explains the steps you need to take if you
-plan to run Chaosface on a separate computer.
+The default installation of Chaosface runs on the Raspberry Pi along with the engine. This is
+the simplest setup and is recommended if you're uncomfortable with setting up networking
+See the main TCC documentation for those steps. This section explains the steps you need to take
+if you plan to run Chaosface on a separate computer.
 
 Installing Chaosface on Another Computer
 ----------------------------------------
 
-If you have already installed TCC with Chaosface on the Pi, you must first stop the interface
-from running on the Pi:
+To install Chaosface on a separate computer from the Chaos engine, you will need to know the
+IP address assigned to the Pi and to the computer that you're running Chaosface on. Note that
+there's a good chance that your router assigns these IP addresses dynamically, which over time
+can mean that the IP address will change. To avoid having to reset IP addresses periodically,
+it's recommended that you have your router assign static IP addresses to both the Pi and the
+computer that will host Chaosface.
 
-1. From a terminal window, log in to the Pi.
-2. Stop the Pi from starting Chaosface automatically with the following commands:
-        `sudo systemctl stop Chaosface`
-        `sudo systemctl disable Chaosface`
-3. Next, we must edit a configuration file to tell the engine where to find Chaosface. Open the
-    file in an editor, for example, with the command `nano chaosconfig.toml` and edit the key
-    `interface_addr` to contain the IP address of the computer running Chaosface. **UPDATE WHEN WE 
-    HAVE THE FINAL DIRECTORY FOR THE CONFIG FILE**
-4. Make a note of the Pi's IP address. You can get it with the command `hostname -I`.
+If you have already installed TCC with Chaosface on the Pi, you must re-run the `install.sh`
+script and choose the options for remote installation. This will stop the chatbot from running
+from the Pi and allow you to configure the correct interface address.
 
-Set Up the Computer for Chaosface:
+Setting up the computer for Chaosface:
 
-1. Next, make sure Python 3 is installed on the computer you will use for Chaosface.
+1. Install Python 3.10 or newer on the computer that will run Chaosface.
 
-2. Install the chatbot somewhere useful and run it. TODO: ADD INSTRUCTIONS
+2. Download or clone this repository onto that computer.
 
-3. Open a tab in your browser and navigate to the main page. If you're running Chaosface from the
+3. Run the dedicated Chaosface remote installer. This is separate from the Raspberry-Pi `install.sh`
+   and can be run by itself.
+
+   Linux / macOS:
+   - Open a terminal in the repository root.
+   - Run: `./chaosface/install/install_chaosface.sh`
+
+   Windows (Command Prompt or PowerShell):
+   - Open a terminal in the repository root.
+   - Run: `chaosface\install\install_chaosface.bat`
+
+   Notes:
+   - By default this installs to `~/chaosface-runtime` (or `%USERPROFILE%\chaosface-runtime` on Windows).
+   - To choose a different install directory, pass `--install-dir <path>` to either installer.
+
+4. Start Chaosface from the installed runtime directory:
+
+   Linux / macOS:
+   - `<install-dir>/run_chaosface.sh`
+
+   Windows:
+   - `<install-dir>\run_chaosface.bat`
+
+5. Open a browser and navigate to the main page. If you're running Chaosface from the
    same computer as the web browser, this will be `http://localhost/`
 
-4. In the `Connection Setup` tab of Chaosface, set the address for the Pi to the value you found
+6. In the `Connection Setup` tab of Chaosface, set the address for the Pi to the value you found
    above. Do not change the talk/listen ports unless you know what you are doing.
 
-5. Make sure any firewall on your computer isn't blocking local network access to the talk and
+7. Make sure any firewall on your computer isn't blocking local network access to the talk and
    listen ports (5555 and 5556). If you are running the interface on a Windows machine and it is
    set to be on a private network, you should not have any issues. If your computer is set to
    be on a public network, you will have to manually open the listen port (5556 by default) to
@@ -152,7 +174,7 @@ engine to get the game information. Until both connections are made, you cannot 
 If the interface does not receive a response from the engine, it retries every 30 seconds
 until a response is received.
 
-You can monitor the basic operation of Chaos from your browser.
+You can monitor the operation of Chaos from your browser.
   - If you're running Chaosface on the Pi: http://raspberrypi.local/.
   - If you're running Chaosface on the same computer as the browser, go to http://localhost/
 
@@ -230,10 +252,9 @@ parameter, unless it is ended early with `!endvote`.
 
 Disabling voting prevents all votes from being held, including those started with the `!startvote`
 or `!newvote` commands. If voting is disabled, modifiers can only be applied manually with the
-`!apply` command.
-This mode is largely intended for testing new modifiers, but it might be useful if you wanted to
-apply chaos to a game where you need to manually apply modifiers only at times the interface cannot
-predict, e.g., at the beginning of a new PVP match.
+`!apply` command. This mode is largely intended for testing new modifiers, but it might be useful
+if you wanted to apply chaos to a game where you need to manually apply modifiers only at times
+the interface cannot predict.
 
 Voting Methods
 --------------
@@ -253,7 +274,7 @@ Mod C has no chance.
 With majority voting, the modifier with the greatest number of votes will always win. Ties are
 broken by random selection among those with the greatest votes.
 
-The 'Authoritarian' mode doesn't let chat vote at all. Instead, at the end of each voting cycle,
+The 'authoritarian' mode doesn't let chat vote at all. Instead, at the end of each voting cycle,
 chaos chooses a modifier for you at random. This feature is mostly intended for testing. If you
 use it for active play, note that you are removing the 'twitch controls' from the chaos by doing
 this.
@@ -344,13 +365,13 @@ General Information Commands:
 
 Modifier Commands:
 * !apply <mod name> -- Apply a modifier (requires modifier credit and subject to cooldown)
-* !remove <mod name> -- Manually remove a modifier immediately
+* !remove <mod name> -- Manually remove a modifier immediately (requires admin permission)
 * !mod <mod name> -- Describe the function of a specific modifier. Not case sensitive.
 * !mods -- Link to list of all available modifiers
 * !mods active -- List currently active modifiers
 * !mods voting -- List modifiers currently up for a vote
 
-Voting Commands (require manage_voting permission):
+Voting Commands (these commands all require manage_voting permission):
 * !startvote (time) -- Manually open a new vote. If time omitted, default vote time is used
 * !newvote (time) -- Alias for !startvote
 * !endvote -- End an open vote immediately and choose a winner
@@ -381,7 +402,6 @@ The defined permissions are the following:
 * manage_voting: Start/end votes manually
 * manage_permissions: Create permission groups and add/remove users and permissions from them
 
-
 To give these extra permissions, you must first create a permission group, and then assign both
 permissions and individual users to that group. The following commands are available. All
 require the 'manage_permissions' permission to execute:
@@ -395,7 +415,6 @@ require the 'manage_permissions' permission to execute:
 
 TODO List
 =========
-* Installation script with configuration options
 * Set font and colors from interface
 * Edit and load config files from the interface
 * Write counter data to files for OBS to display
