@@ -14,6 +14,32 @@ CHAOSFACE_VENV_DIR="${CHAOS_INSTALL_ROOT}/venv"
 install_deps=1
 restart_service=0
 
+ensure_openblas_runtime() {
+  local -a openblas_candidates=(
+    libopenblas0-pthread
+    libopenblas0
+    libopenblas-base
+  )
+  local pkg
+
+  for pkg in "${openblas_candidates[@]}"; do
+    if dpkg-query -W -f='${Status}' "${pkg}" 2>/dev/null | grep -q "ok installed"; then
+      return
+    fi
+  done
+
+  for pkg in "${openblas_candidates[@]}"; do
+    if apt-cache show "${pkg}" >/dev/null 2>&1; then
+      echo "Installing runtime dependency: ${pkg}"
+      sudo apt-get update
+      sudo apt-get install -y "${pkg}"
+      return
+    fi
+  done
+
+  echo "WARNING: Could not locate an OpenBLAS runtime package. NumPy may fail to import."
+}
+
 for arg in "$@"; do
   case "${arg}" in
     --skip-deps)
@@ -65,6 +91,8 @@ if [ ! -x "${CHAOSFACE_VENV_DIR}/bin/python3" ]; then
   echo "Creating virtualenv at ${CHAOSFACE_VENV_DIR}"
   sudo python3 -m venv "${CHAOSFACE_VENV_DIR}"
 fi
+
+ensure_openblas_runtime
 
 echo "Upgrading build tooling in venv"
 sudo "${CHAOSFACE_VENV_DIR}/bin/python3" -m pip install --upgrade pip setuptools wheel

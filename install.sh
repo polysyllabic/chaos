@@ -113,6 +113,23 @@ build_dependencies() {
   )
   local -a to_install=()
   local dependency
+  local openblas_pkg=""
+  local -a openblas_candidates=(
+    libopenblas0-pthread
+    libopenblas0
+    libopenblas-base
+  )
+  local candidate
+
+  for candidate in "${openblas_candidates[@]}"; do
+    if apt-cache show "${candidate}" >/dev/null 2>&1; then
+      openblas_pkg="${candidate}"
+      break
+    fi
+  done
+  if [ -n "${openblas_pkg}" ]; then
+    dependencies+=("${openblas_pkg}")
+  fi
 
   if (( is_developer != 0 )); then
     dependencies+=(doxygen)
