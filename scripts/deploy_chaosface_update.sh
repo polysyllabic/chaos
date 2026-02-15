@@ -47,6 +47,7 @@ tar \
   pyproject.toml \
   setup.py \
   requirements.txt \
+  README.rst \
   LICENSE
 
 echo "Deploying chaosface source to ${CHAOSFACE_STAGE_DIR}"
