@@ -37,7 +37,7 @@ class ChaosBotContext(Protocol):
     ...
 
   @property
-  def pubsub_oauth(self) -> str:
+  def eventsub_oauth(self) -> str:
     ...
 
   @property
@@ -291,7 +291,7 @@ class ChaosBot:
     client_id = self._attr_str('client_id')
     self._channel_name = self._ctx.channel_name.strip().lstrip('#').lower()
     bot_token = _clean_oauth(self._ctx.bot_oauth)
-    event_token = _clean_oauth(self._ctx.pubsub_oauth)
+    event_token = _clean_oauth(self._ctx.eventsub_oauth)
 
     if not client_id:
       raise ValueError('No Twitch client_id is configured')

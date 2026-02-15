@@ -49,14 +49,14 @@ class ChaosModel(EngineObserver):
     that the credentials are valid, just that the user has entered something for all necessary
     fields.
     """
-    need_pubsub = config.relay.bits_redemptions or config.relay.points_redemptions
+    need_eventsub = config.relay.bits_redemptions or config.relay.points_redemptions
     bot_oauth = (config.relay.bot_oauth or '').removeprefix('oauth:').strip()
-    pubsub_oauth = (config.relay.pubsub_oauth or '').removeprefix('oauth:').strip()
+    eventsub_oauth = (config.relay.eventsub_oauth or '').removeprefix('oauth:').strip()
     return (
       config.relay.channel_name != 'your_channel'
       and config.relay.bot_name != 'your_bot'
       and bool(bot_oauth)
-      and (not need_pubsub or bool(pubsub_oauth))
+      and (not need_eventsub or bool(eventsub_oauth))
     )
 
   def configure_bot(self):

@@ -81,7 +81,7 @@ chaos_defaults = {
   'client_id': 'uic681f91dtxl3pdfyqxld2yvr82r1',
   'nick': 'your_bot',
   'oauth': 'oauth:',
-  'pubsub_oauth': 'oauth:',
+  'eventsub_oauth': 'oauth:',
   'owner': 'bot_owner',
   'channel': 'your_channel',
   'info_cmd_cooldown': 5.0,
@@ -205,7 +205,7 @@ class ChaosRelay:
     self.channel_name = ''
     self.bot_name = ''
     self.bot_oauth = ''
-    self.pubsub_oauth = ''
+    self.eventsub_oauth = ''
 
     self.pi_host = ''
     self.listen_port = 0
@@ -226,8 +226,9 @@ class ChaosRelay:
     self.new_game_data = False
 
     self.chaos_config = self.load_settings(CHAOS_CONFIG_FILE)
+    migrated_legacy_oauth = self._migrate_legacy_eventsub_oauth_key()
     # Check that all default keys are present
-    need_save = False
+    need_save = migrated_legacy_oauth
     for key, value in chaos_defaults.items():
       if key not in self.chaos_config:
         self.chaos_config[key] = value
@@ -338,6 +339,18 @@ class ChaosRelay:
       logging.warning('Error reading %s: %s', configfile.resolve(), str(exc))
     return data
 
+  def _migrate_legacy_eventsub_oauth_key(self) -> bool:
+    if not isinstance(self.chaos_config, dict):
+      return False
+    legacy_key = 'pub' + 'sub_oauth'
+    if 'eventsub_oauth' in self.chaos_config:
+      return self.chaos_config.pop(legacy_key, None) is not None
+    if legacy_key in self.chaos_config:
+      self.chaos_config['eventsub_oauth'] = str(self.chaos_config.get(legacy_key, 'oauth:'))
+      self.chaos_config.pop(legacy_key, None)
+      return True
+    return False
+
   def save_config_info(self):
     logging.debug('Saving config file')
     with CHAOS_CONFIG_FILE.open('w') as outfile:
@@ -445,7 +458,7 @@ class ChaosRelay:
     self.set_talk_port(self.get_attribute('talk_port'))
     self.set_bot_name(self.get_attribute('nick'))
     self.set_bot_oauth(self.get_attribute('oauth'))
-    self.set_pubsub_oauth(self.get_attribute('pubsub_oauth'))
+    self.set_eventsub_oauth(self.get_attribute('eventsub_oauth'))
     self.set_channel_name(self.get_attribute('channel'))
     self.set_bits_redemptions(self.get_attribute('bits_redemptions'))
     self.set_bits_per_credit(self.get_attribute('bits_per_credit'))
@@ -671,8 +684,8 @@ class ChaosRelay:
   def set_bot_oauth(self, value):
     self._set_value('bot_oauth', str(value), 'oauth')
 
-  def set_pubsub_oauth(self, value):
-    self._set_value('pubsub_oauth', str(value), 'pubsub_oauth')
+  def set_eventsub_oauth(self, value):
+    self._set_value('eventsub_oauth', str(value), 'eventsub_oauth')
 
   def set_pi_host(self, value):
     self._set_value('pi_host', str(value), 'pi_host')
@@ -722,8 +735,8 @@ class ChaosRelay:
   def on_bot_oauth(self, value):
     self.set_bot_oauth(value)
 
-  def on_pubsub_oauth(self, value):
-    self.set_pubsub_oauth(value)
+  def on_eventsub_oauth(self, value):
+    self.set_eventsub_oauth(value)
 
   def on_pi_host(self, value):
     self.set_pi_host(value)

@@ -14,10 +14,12 @@ import logging
 import threading
 from typing import Any, Dict, Optional
 
-from fastapi.responses import HTMLResponse
+from fastapi import HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from nicegui import app, ui
 
 import chaosface.config.globals as config
+import chaosface.config.token_utils as token_utils
 from chaosface.ChaosModel import ChaosModel
 from chaosface.chatbot.ChaosBot import ChaosBot
 from chaosface.chatbot.context import RelayBotContext
@@ -33,6 +35,63 @@ logging.basicConfig(level=logging.DEBUG)
 _runtime_started = False
 _runtime_lock = threading.Lock()
 _model: Optional[ChaosModel] = None
+
+
+def _oauth_callback_html() -> str:
+  return """<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Twitch OAuth Complete</title>
+    <style>
+      body { font-family: sans-serif; margin: 2rem; line-height: 1.5; }
+      code { background: #f3f3f3; padding: 0.1rem 0.3rem; border-radius: 0.2rem; }
+    </style>
+  </head>
+  <body>
+    <h2>Twitch OAuth</h2>
+    <p id="status">Finalizing token capture...</p>
+    <p><a href="/">Return to Chaosface connection setup</a></p>
+    <script>
+      (async () => {
+        const status = document.getElementById('status');
+        const hashParams = new URLSearchParams(window.location.hash.slice(1));
+        const queryParams = new URLSearchParams(window.location.search);
+        const token = hashParams.get('access_token');
+        const state = hashParams.get('state');
+        const error = hashParams.get('error') || queryParams.get('error');
+        const errorDescription = hashParams.get('error_description') || queryParams.get('error_description') || '';
+
+        if (error) {
+          status.textContent = `OAuth failed: ${error}${errorDescription ? ` (${errorDescription})` : ''}`;
+          return;
+        }
+        if (!token || !state) {
+          status.textContent = 'Missing OAuth token or state in callback URL.';
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/oauth/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ access_token: token, state }),
+          });
+          const payload = await response.json();
+          if (!response.ok) {
+            status.textContent = payload.detail || 'Failed to store OAuth token.';
+            return;
+          }
+          status.textContent = `Token saved for ${payload.target}. Return to Connection Setup and click "Load generated tokens".`;
+        } catch (err) {
+          status.textContent = `Failed to store token: ${String(err)}`;
+        }
+      })();
+    </script>
+  </body>
+</html>
+"""
 
 
 def _on_bot_connected(connected: bool):
@@ -84,6 +143,43 @@ async def chaos_interface() -> None:
 async def api_overlay_state() -> Dict[str, Any]:
   ensure_runtime_started()
   return overlay_state_payload()
+
+
+@app.get('/api/oauth/start')
+async def api_oauth_start(request: Request, target: str) -> RedirectResponse:
+  oauth_target = (target or '').strip().lower()
+  if oauth_target not in token_utils.SUPPORTED_OAUTH_TARGETS:
+    raise HTTPException(status_code=400, detail='Invalid OAuth target')
+
+  client_id = str(config.relay.get_attribute('client_id') or '').strip()
+  if not client_id:
+    raise HTTPException(status_code=400, detail='Set Twitch client_id before generating OAuth tokens')
+
+  state = token_utils.create_oauth_state(oauth_target)
+  redirect_uri = str(request.url_for('api_oauth_callback'))
+  scopes = token_utils.get_scopes_for_target(oauth_target)
+  auth_url = token_utils.build_authorize_url(client_id, redirect_uri, list(scopes), state)
+  return RedirectResponse(auth_url)
+
+
+@app.get('/api/oauth/callback', name='api_oauth_callback', response_class=HTMLResponse)
+async def api_oauth_callback() -> HTMLResponse:
+  return HTMLResponse(_oauth_callback_html())
+
+
+@app.post('/api/oauth/complete')
+async def api_oauth_complete(payload: Dict[str, str]) -> Dict[str, str]:
+  state = str(payload.get('state') or '').strip()
+  access_token = str(payload.get('access_token') or '').strip()
+  if not state or not access_token:
+    raise HTTPException(status_code=400, detail='Missing OAuth callback state or token')
+
+  target = token_utils.consume_oauth_state(state)
+  if target is None:
+    raise HTTPException(status_code=400, detail='OAuth state is invalid or expired. Try generating a new token.')
+
+  token_utils.store_generated_oauth(target, access_token)
+  return {'target': target}
 
 
 @app.get('/ActiveMods', response_class=HTMLResponse)

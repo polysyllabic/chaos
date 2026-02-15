@@ -23,8 +23,8 @@ class RelayBotContext(ChaosBotContext):
     return self._relay.bot_oauth
 
   @property
-  def pubsub_oauth(self) -> str:
-    return self._relay.pubsub_oauth
+  def eventsub_oauth(self) -> str:
+    return self._relay.eventsub_oauth
 
   @property
   def points_redemptions(self) -> bool:

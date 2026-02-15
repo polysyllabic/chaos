@@ -14,6 +14,7 @@ numpy = "*"
 requests = "*"
 fastapi = "*"
 nicegui = "*"
+cryptography = "*"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

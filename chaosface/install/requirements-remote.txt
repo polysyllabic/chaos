@@ -5,3 +5,4 @@ tomlkit>=0.12,<1
 pyzmq>=26,<28
 fastapi>=0.115,<1
 nicegui>=2.0,<4
+cryptography>=42,<46
