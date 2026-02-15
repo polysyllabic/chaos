@@ -15,7 +15,7 @@ requests = "*"
 fastapi = "*"
 nicegui = "*"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "*"
 
 [build-system]
