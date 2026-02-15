@@ -628,7 +628,7 @@ class ChaosBot:
     await self.send_message(self._ctx.set_mod_enabled(request, enabled))
 
   async def _cmd_remove(self, author: str, args):
-    if not await self._require_permission(author, 'manage_modifiers'):
+    if not await self._require_permission(author, 'admin'):
       return
     if not args:
       await self.send_message('Usage: !remove <mod name>')
