@@ -1,0 +1,7 @@
+numpy>=1.26,<3
+requests>=2.31,<3
+twitchAPI>=4.4,<5
+tomlkit>=0.12,<1
+pyzmq>=26,<28
+fastapi>=0.115,<1
+nicegui>=2.0,<4
