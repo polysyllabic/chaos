@@ -7,6 +7,7 @@ from __future__ import annotations
 from nicegui import ui
 
 import chaosface.config.globals as config
+import chaosface.config.security_utils as security_utils
 import chaosface.config.token_utils as util
 
 from .ui_helpers import safe_int
@@ -43,6 +44,35 @@ def build_connection_tab() -> None:
         pi_host = ui.input('Raspberry Pi address', value=config.relay.pi_host)
         listen_port = ui.number('Listen port', value=int(config.relay.listen_port), min=1, max=65535, step=1)
         talk_port = ui.number('Talk port', value=int(config.relay.talk_port), min=1, max=65535, step=1)
+
+      with ui.column().classes('w-96'):
+        ui.label('UI Security').classes('text-subtitle1')
+        auth_mode_default = 'password' if config.relay.ui_auth_mode == 'password' else 'none'
+        auth_mode = ui.select(
+          {
+            'password': 'Require password',
+            'none': 'No password',
+          },
+          value=auth_mode_default,
+          label='UI access mode',
+        )
+        ui_password = ui.input('UI password (set/change)', password=True, password_toggle_button=True)
+        tls_mode = ui.select(
+          {
+            'off': 'HTTP only',
+            'self-signed': 'HTTPS with self-signed certificate',
+            'custom': 'HTTPS with custom certificate',
+          },
+          value=config.relay.ui_tls_mode,
+          label='TLS mode',
+        )
+        tls_hostname = ui.input(
+          'Self-signed certificate hostname',
+          value=config.relay.ui_tls_selfsigned_hostname,
+        )
+        tls_cert_file = ui.input('Custom TLS cert path', value=config.relay.ui_tls_cert_file)
+        tls_key_file = ui.input('Custom TLS key path', value=config.relay.ui_tls_key_file)
+        ui.label('Security/TLS changes require restarting chaosface service.').classes('text-caption')
 
     def load_generated_tokens():
       loaded = []
@@ -93,6 +123,54 @@ def build_connection_tab() -> None:
         need_save = True
       if talk != config.relay.talk_port:
         config.relay.set_talk_port(talk)
+        need_save = True
+
+      selected_auth_mode = str(auth_mode.value or 'none').strip().lower()
+      entered_ui_password = str(ui_password.value or '')
+      if selected_auth_mode == 'password':
+        encrypted_password = config.relay.ui_password_encrypted
+        if entered_ui_password:
+          encrypted_password = security_utils.encrypt_password(entered_ui_password)
+          if not encrypted_password:
+            status_message.text = 'Failed to store UI password'
+            return
+        if not encrypted_password:
+          status_message.text = 'Password mode requires a password'
+          return
+        if config.relay.ui_auth_mode != 'password':
+          config.relay.set_ui_auth_mode('password')
+          need_save = True
+        if encrypted_password != config.relay.ui_password_encrypted:
+          config.relay.set_ui_password_encrypted(encrypted_password)
+          need_save = True
+      else:
+        if config.relay.ui_auth_mode != 'none':
+          config.relay.set_ui_auth_mode('none')
+          need_save = True
+        if config.relay.ui_password_encrypted:
+          config.relay.set_ui_password_encrypted('')
+          need_save = True
+
+      tls_mode_value = str(tls_mode.value or 'off').strip().lower()
+      if tls_mode_value not in ('off', 'self-signed', 'custom'):
+        tls_mode_value = 'off'
+      tls_cert_value = str(tls_cert_file.value or '').strip()
+      tls_key_value = str(tls_key_file.value or '').strip()
+      tls_hostname_value = str(tls_hostname.value or '').strip() or 'localhost'
+      if tls_mode_value == 'custom' and (not tls_cert_value or not tls_key_value):
+        status_message.text = 'Custom TLS mode requires both cert and key paths'
+        return
+      if tls_mode_value != config.relay.ui_tls_mode:
+        config.relay.set_ui_tls_mode(tls_mode_value)
+        need_save = True
+      if tls_cert_value != config.relay.ui_tls_cert_file:
+        config.relay.set_ui_tls_cert_file(tls_cert_value)
+        need_save = True
+      if tls_key_value != config.relay.ui_tls_key_file:
+        config.relay.set_ui_tls_key_file(tls_key_value)
+        need_save = True
+      if tls_hostname_value != config.relay.ui_tls_selfsigned_hostname:
+        config.relay.set_ui_tls_selfsigned_hostname(tls_hostname_value)
         need_save = True
 
       if need_save:

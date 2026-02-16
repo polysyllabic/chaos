@@ -82,6 +82,12 @@ chaos_defaults = {
   'nick': 'your_bot',
   'oauth': 'oauth:',
   'eventsub_oauth': 'oauth:',
+  'ui_auth_mode': 'unset',
+  'ui_password_encrypted': '',
+  'ui_tls_mode': 'off',
+  'ui_tls_cert_file': '',
+  'ui_tls_key_file': '',
+  'ui_tls_selfsigned_hostname': 'localhost',
   'owner': 'bot_owner',
   'channel': 'your_channel',
   'info_cmd_cooldown': 5.0,
@@ -222,6 +228,12 @@ class ChaosRelay:
 
     self.ui_rate = 20.0
     self.ui_port = 80
+    self.ui_auth_mode = 'unset'
+    self.ui_password_encrypted = ''
+    self.ui_tls_mode = 'off'
+    self.ui_tls_cert_file = ''
+    self.ui_tls_key_file = ''
+    self.ui_tls_selfsigned_hostname = 'localhost'
     self.need_save = False
     self.new_game_data = False
 
@@ -470,6 +482,12 @@ class ChaosRelay:
     self.set_redemption_cooldown(self.get_attribute('redemption_cooldown'))
     self.set_ui_rate(self.get_attribute('ui_rate'))
     self.set_ui_port(self.get_attribute('ui_port'))
+    self.set_ui_auth_mode(self.get_attribute('ui_auth_mode'))
+    self.set_ui_password_encrypted(self.get_attribute('ui_password_encrypted'))
+    self.set_ui_tls_mode(self.get_attribute('ui_tls_mode'))
+    self.set_ui_tls_cert_file(self.get_attribute('ui_tls_cert_file'))
+    self.set_ui_tls_key_file(self.get_attribute('ui_tls_key_file'))
+    self.set_ui_tls_selfsigned_hostname(self.get_attribute('ui_tls_selfsigned_hostname'))
 
     self.set_game_errors(0)
     self.set_vote_time(0.5)
@@ -713,6 +731,33 @@ class ChaosRelay:
 
   def set_ui_port(self, value):
     self._set_value('ui_port', int(value), 'ui_port')
+
+  def set_ui_auth_mode(self, value):
+    mode = str(value).strip().lower()
+    if mode not in ('unset', 'password', 'none'):
+      mode = 'none'
+    self._set_value('ui_auth_mode', mode, 'ui_auth_mode')
+
+  def set_ui_password_encrypted(self, value):
+    self._set_value('ui_password_encrypted', str(value), 'ui_password_encrypted')
+
+  def set_ui_tls_mode(self, value):
+    mode = str(value).strip().lower()
+    if mode not in ('off', 'self-signed', 'custom'):
+      mode = 'off'
+    self._set_value('ui_tls_mode', mode, 'ui_tls_mode')
+
+  def set_ui_tls_cert_file(self, value):
+    self._set_value('ui_tls_cert_file', str(value), 'ui_tls_cert_file')
+
+  def set_ui_tls_key_file(self, value):
+    self._set_value('ui_tls_key_file', str(value), 'ui_tls_key_file')
+
+  def set_ui_tls_selfsigned_hostname(self, value):
+    hostname = str(value).strip()
+    if not hostname:
+      hostname = 'localhost'
+    self._set_value('ui_tls_selfsigned_hostname', hostname, 'ui_tls_selfsigned_hostname')
 
   def set_need_save(self, value):
     value = bool(value)
