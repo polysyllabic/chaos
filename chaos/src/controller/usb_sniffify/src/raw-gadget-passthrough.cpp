@@ -57,7 +57,25 @@ void cancelTrackedTransfers(EndpointInfo* endpointInfo) {
 }
 }
 
+bool RawGadgetPassthrough::hasUsbPermissions() {
+  return geteuid() == 0;
+}
+
+void RawGadgetPassthrough::requireUsbPermissionsOrExit() {
+  if (hasUsbPermissions()) {
+    return;
+  }
+
+  std::fprintf(stderr,
+               "ERROR: Insufficient permissions to access USB passthrough. "
+               "Run this command with sudo.\n");
+  std::fflush(stderr);
+  std::exit(EXIT_FAILURE);
+}
+
 int RawGadgetPassthrough::initialize() {
+  requireUsbPermissionsOrExit();
+
   haveProductVendor = false;
   keepRunning = false;
   sessionRunning = false;

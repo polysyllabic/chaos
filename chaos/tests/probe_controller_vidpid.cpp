@@ -47,6 +47,8 @@ namespace {
 }
 
 int main() {
+  RawGadgetPassthrough::requireUsbPermissionsOrExit();
+
   int vendor = 0;
   int product = 0;
   if (!probeInterceptedControllerVidPid(vendor, product)) {

@@ -47,6 +47,9 @@ protected:
 class RawGadgetPassthrough {
 
 public:
+  static bool hasUsbPermissions();
+  static void requireUsbPermissionsOrExit();
+
   int initialize();
   
   /*
