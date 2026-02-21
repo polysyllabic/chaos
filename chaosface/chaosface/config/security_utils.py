@@ -19,6 +19,9 @@ from cryptography.x509.oid import NameOID
 
 CONFIG_DIR = Path.cwd() / 'configs'
 UI_AUTH_KEY_FILE = CONFIG_DIR / '.ui_auth_key'
+TLS_DIR = CONFIG_DIR / 'tls'
+DEFAULT_SELF_SIGNED_CERT_FILE = TLS_DIR / 'selfsigned-cert.pem'
+DEFAULT_SELF_SIGNED_KEY_FILE = TLS_DIR / 'selfsigned-key.pem'
 
 SCRYPT_N = 2 ** 14
 SCRYPT_R = 8
@@ -42,6 +45,10 @@ def _write_private_bytes(path: Path, data: bytes) -> None:
     os.chmod(path, 0o600)
   except OSError:
     pass
+
+
+def default_self_signed_cert_paths() -> Tuple[Path, Path]:
+  return DEFAULT_SELF_SIGNED_CERT_FILE, DEFAULT_SELF_SIGNED_KEY_FILE
 
 
 def _load_or_create_fernet() -> Optional[Fernet]:
@@ -118,11 +125,26 @@ def verify_encrypted_password(password: str, encrypted_payload: str) -> bool:
   return hmac.compare_digest(derived, expected_digest)
 
 
-def ensure_self_signed_cert(cert_path: Path, key_path: Path, hostname: str) -> Tuple[str, str]:
+def ensure_self_signed_cert(
+  cert_path: Path,
+  key_path: Path,
+  hostname: str,
+  overwrite: bool = False,
+) -> Tuple[str, str]:
   cert_file = Path(cert_path)
   key_file = Path(key_path)
   cert_file.parent.mkdir(parents=True, exist_ok=True)
   key_file.parent.mkdir(parents=True, exist_ok=True)
+
+  if overwrite:
+    try:
+      cert_file.unlink()
+    except FileNotFoundError:
+      pass
+    try:
+      key_file.unlink()
+    except FileNotFoundError:
+      pass
 
   if cert_file.exists() and key_file.exists():
     return (str(cert_file), str(key_file))

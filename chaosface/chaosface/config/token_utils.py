@@ -32,7 +32,8 @@ class Scopes:
 VALIDATE_URL = 'https://id.twitch.tv/oauth2/validate'
 AUTHORIZE_URL = 'https://id.twitch.tv/oauth2/authorize'
 REDIRECT_PATH = '/api/oauth/callback'
-DEFAULT_REDIRECT_URL = f'http://localhost{REDIRECT_PATH}'
+DEFAULT_REDIRECT_BASE = os.getenv('CHAOSFACE_OAUTH_REDIRECT_BASE', 'http://raspberrypi.local')
+DEFAULT_REDIRECT_URL = f"{DEFAULT_REDIRECT_BASE.rstrip('/')}{REDIRECT_PATH}"
 SUPPORTED_OAUTH_TARGETS = {'bot', 'eventsub'}
 OAUTH_STATE_TTL_SECONDS = 600
 
@@ -201,11 +202,11 @@ def build_authorize_url(
   return f'{AUTHORIZE_URL}?{urlencode(params)}'
 
 
-def generate_auth_url(client_id, *scopes):
-  return build_authorize_url(client_id, DEFAULT_REDIRECT_URL, list(scopes))
+def generate_auth_url(client_id, *scopes, redirect_url: str = DEFAULT_REDIRECT_URL):
+  return build_authorize_url(client_id, redirect_url, list(scopes))
 
 
-def generate_irc_oauth(client_id, *extra_scopes):
+def generate_irc_oauth(client_id, *extra_scopes, redirect_url: str = DEFAULT_REDIRECT_URL):
   return generate_auth_url(
     client_id,
     Scopes.CHAT_READ,
@@ -215,6 +216,7 @@ def generate_irc_oauth(client_id, *extra_scopes):
     Scopes.WHISPERS_EDIT,
     Scopes.CHANNEL_EDITOR,
     *extra_scopes,
+    redirect_url=redirect_url,
   )
 
 

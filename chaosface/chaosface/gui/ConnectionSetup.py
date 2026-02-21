@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import quote, urlsplit
+
 from nicegui import ui
 
 import chaosface.config.globals as config
@@ -13,14 +15,66 @@ import chaosface.config.token_utils as util
 from .ui_helpers import safe_int
 
 
+def _sanitize_hostname(value: str) -> str:
+  raw = str(value or '').strip()
+  if not raw:
+    return ''
+  if '://' in raw:
+    parsed = urlsplit(raw)
+    return parsed.hostname or ''
+  # Allow host:port or host/path values.
+  parsed = urlsplit(f'//{raw}')
+  return parsed.hostname or ''
+
+
+def _is_tls_enabled() -> bool:
+  mode = str(config.relay.ui_tls_mode or 'off').strip().lower()
+  return mode in ('self-signed', 'custom')
+
+
+def _resolve_self_signed_hostname(request) -> str:
+  configured = _sanitize_hostname(config.relay.ui_tls_selfsigned_hostname)
+  if configured and configured.lower() != 'localhost':
+    return configured
+
+  if request is not None:
+    request_host = str(getattr(request.url, 'hostname', '') or '').strip()
+    if request_host and request_host.lower() != 'localhost':
+      return request_host
+
+  pi_host = _sanitize_hostname(config.relay.pi_host)
+  if pi_host and pi_host.lower() != 'localhost':
+    return pi_host
+  return 'raspberrypi.local'
+
+
+def _resolve_ui_origin(request) -> str:
+  if request is not None:
+    scheme = str(getattr(request.url, 'scheme', '') or 'http').strip().lower() or 'http'
+    netloc = str(getattr(request.url, 'netloc', '') or '').strip()
+    if netloc:
+      return f'{scheme}://{netloc}'
+
+  scheme = 'https' if _is_tls_enabled() else 'http'
+  host = _resolve_self_signed_hostname(request=None)
+  port = safe_int(config.relay.ui_port, 80, 1, 65535)
+  default_port = 443 if scheme == 'https' else 80
+  netloc = host if port == default_port else f'{host}:{port}'
+  return f'{scheme}://{netloc}'
+
+
 def build_connection_tab() -> None:
-  bot_oauth_url = '/api/oauth/start?target=bot'
-  eventsub_oauth_url = '/api/oauth/start?target=eventsub'
-  callback_uri = f'http://localhost{util.REDIRECT_PATH}'
   client = getattr(ui.context, 'client', None)
   request = getattr(client, 'request', None)
-  if request is not None:
-    callback_uri = f"{str(request.base_url).rstrip('/')}{util.REDIRECT_PATH}"
+  callback_origin = _resolve_ui_origin(request)
+  callback_uri = f'{callback_origin}{util.REDIRECT_PATH}'
+  encoded_origin = quote(callback_origin, safe='')
+  bot_oauth_url = f'/api/oauth/start?target=bot&origin={encoded_origin}'
+  eventsub_oauth_url = f'/api/oauth/start?target=eventsub&origin={encoded_origin}'
+  tls_hostname_default = _resolve_self_signed_hostname(request)
+  tls_hostname_initial = str(config.relay.ui_tls_selfsigned_hostname or '').strip()
+  if not tls_hostname_initial or tls_hostname_initial.lower() == 'localhost':
+    tls_hostname_initial = tls_hostname_default
 
   with ui.card().classes('w-full'):
     ui.label('Connection Setup').classes('text-h6')
@@ -68,7 +122,7 @@ def build_connection_tab() -> None:
         )
         tls_hostname = ui.input(
           'Self-signed certificate hostname',
-          value=config.relay.ui_tls_selfsigned_hostname,
+          value=tls_hostname_initial,
         )
         tls_cert_file = ui.input('Custom TLS cert path', value=config.relay.ui_tls_cert_file)
         tls_key_file = ui.input('Custom TLS key path', value=config.relay.ui_tls_key_file)
@@ -156,7 +210,9 @@ def build_connection_tab() -> None:
         tls_mode_value = 'off'
       tls_cert_value = str(tls_cert_file.value or '').strip()
       tls_key_value = str(tls_key_file.value or '').strip()
-      tls_hostname_value = str(tls_hostname.value or '').strip() or 'localhost'
+      tls_hostname_value = _sanitize_hostname(str(tls_hostname.value or '').strip())
+      if not tls_hostname_value:
+        tls_hostname_value = tls_hostname_default
       if tls_mode_value == 'custom' and (not tls_cert_value or not tls_key_value):
         status_message.text = 'Custom TLS mode requires both cert and key paths'
         return
@@ -182,5 +238,26 @@ def build_connection_tab() -> None:
       else:
         status_message.text = 'No changes'
 
+    def generate_self_signed_cert():
+      hostname = _sanitize_hostname(str(tls_hostname.value or '').strip())
+      if not hostname:
+        hostname = tls_hostname_default
+      try:
+        cert_path, key_path = security_utils.default_self_signed_cert_paths()
+        cert_file, key_file = security_utils.ensure_self_signed_cert(
+          cert_path, key_path, hostname, overwrite=True
+        )
+      except Exception:
+        status_message.text = 'Failed to generate self-signed certificate'
+        return
+
+      tls_hostname.value = hostname
+      tls_mode.value = 'self-signed'
+      status_message.text = (
+        f'Generated self-signed certificate for {hostname} '
+        f'({cert_file}, {key_file}). Click Save and restart chaosface.'
+      )
+
     ui.button('Load generated tokens', on_click=load_generated_tokens)
+    ui.button('Generate self-signed cert', on_click=generate_self_signed_cert)
     ui.button('Save', on_click=save_connection)

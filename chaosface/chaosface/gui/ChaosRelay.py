@@ -19,6 +19,7 @@ import threading
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set
+from urllib.parse import urlsplit
 
 import numpy as np
 
@@ -87,7 +88,7 @@ chaos_defaults = {
   'ui_tls_mode': 'off',
   'ui_tls_cert_file': '',
   'ui_tls_key_file': '',
-  'ui_tls_selfsigned_hostname': 'localhost',
+  'ui_tls_selfsigned_hostname': 'raspberrypi.local',
   'owner': 'bot_owner',
   'channel': 'your_channel',
   'info_cmd_cooldown': 5.0,
@@ -233,7 +234,7 @@ class ChaosRelay:
     self.ui_tls_mode = 'off'
     self.ui_tls_cert_file = ''
     self.ui_tls_key_file = ''
-    self.ui_tls_selfsigned_hostname = 'localhost'
+    self.ui_tls_selfsigned_hostname = 'raspberrypi.local'
     self.need_save = False
     self.new_game_data = False
 
@@ -245,6 +246,14 @@ class ChaosRelay:
       if key not in self.chaos_config:
         self.chaos_config[key] = value
         need_save = True
+    tls_host_value = str(self.chaos_config.get('ui_tls_selfsigned_hostname', '') or '').strip()
+    if not tls_host_value or tls_host_value.lower() == 'localhost':
+      fallback_host = str(self.chaos_config.get('pi_host', '') or '').strip()
+      if '://' in fallback_host:
+        parsed = urlsplit(fallback_host)
+        fallback_host = parsed.hostname or ''
+      self.chaos_config['ui_tls_selfsigned_hostname'] = fallback_host or 'raspberrypi.local'
+      need_save = True
     if need_save:
       self.save_config_info()
 
@@ -755,8 +764,15 @@ class ChaosRelay:
 
   def set_ui_tls_selfsigned_hostname(self, value):
     hostname = str(value).strip()
-    if not hostname:
-      hostname = 'localhost'
+    if '://' in hostname:
+      parsed = urlsplit(hostname)
+      hostname = parsed.hostname or ''
+    if not hostname or hostname.lower() == 'localhost':
+      pi_host = str(self.pi_host).strip()
+      if '://' in pi_host:
+        parsed = urlsplit(pi_host)
+        pi_host = parsed.hostname or ''
+      hostname = pi_host or 'raspberrypi.local'
     self._set_value('ui_tls_selfsigned_hostname', hostname, 'ui_tls_selfsigned_hostname')
 
   def set_need_save(self, value):

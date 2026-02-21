@@ -16,7 +16,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 from fastapi import HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -225,9 +225,8 @@ def _is_public_request_path(path: str, mode: str) -> bool:
 def _resolve_tls_files() -> tuple[str, str]:
   mode = str(getattr(config.relay, 'ui_tls_mode', 'off')).strip().lower()
   if mode == 'self-signed':
-    cert_path = Path.cwd() / 'configs' / 'tls' / 'selfsigned-cert.pem'
-    key_path = Path.cwd() / 'configs' / 'tls' / 'selfsigned-key.pem'
-    hostname = str(getattr(config.relay, 'ui_tls_selfsigned_hostname', 'localhost') or 'localhost')
+    cert_path, key_path = security_utils.default_self_signed_cert_paths()
+    hostname = _default_ui_hostname()
     try:
       cert_file, key_file = security_utils.ensure_self_signed_cert(cert_path, key_path, hostname)
       return cert_file, key_file
@@ -244,6 +243,82 @@ def _resolve_tls_files() -> tuple[str, str]:
     return '', ''
 
   return '', ''
+
+
+def _sanitize_hostname(value: str) -> str:
+  raw = str(value or '').strip()
+  if not raw:
+    return ''
+  if '://' in raw:
+    parsed = urlsplit(raw)
+    return parsed.hostname or ''
+  parsed = urlsplit(f'//{raw}')
+  return parsed.hostname or ''
+
+
+def _default_ui_hostname() -> str:
+  configured = _sanitize_hostname(getattr(config.relay, 'ui_tls_selfsigned_hostname', ''))
+  if configured and configured.lower() != 'localhost':
+    return configured
+  pi_host = _sanitize_hostname(getattr(config.relay, 'pi_host', ''))
+  if pi_host and pi_host.lower() != 'localhost':
+    return pi_host
+  return 'raspberrypi.local'
+
+
+def _configured_ui_origin() -> str:
+  tls_mode = str(getattr(config.relay, 'ui_tls_mode', 'off')).strip().lower()
+  scheme = 'https' if tls_mode in ('self-signed', 'custom') else 'http'
+  host = _default_ui_hostname()
+  try:
+    port = int(getattr(config.relay, 'ui_port', 80) or 80)
+  except (TypeError, ValueError):
+    port = 80
+  default_port = 443 if scheme == 'https' else 80
+  netloc = host if port == default_port else f'{host}:{port}'
+  return f'{scheme}://{netloc}'
+
+
+def _normalized_origin(value: str) -> str:
+  raw = str(value or '').strip()
+  if not raw:
+    return ''
+  parsed = urlsplit(raw)
+  if parsed.scheme not in ('http', 'https') or not parsed.hostname:
+    return ''
+  host = parsed.hostname
+  if ':' in host and not host.startswith('['):
+    host = f'[{host}]'
+  try:
+    port = parsed.port
+  except ValueError:
+    return ''
+  default_port = 443 if parsed.scheme == 'https' else 80
+  netloc = host if port in (None, default_port) else f'{host}:{port}'
+  return f'{parsed.scheme}://{netloc}'
+
+
+def _origin_from_url(value: str) -> str:
+  raw = str(value or '').strip()
+  if not raw:
+    return ''
+  parsed = urlsplit(raw)
+  if parsed.scheme not in ('http', 'https') or not parsed.netloc:
+    return ''
+  return _normalized_origin(f'{parsed.scheme}://{parsed.netloc}')
+
+
+def _resolve_oauth_redirect_uri(request: Request) -> str:
+  candidate = _normalized_origin(str(request.query_params.get('origin') or '').strip())
+  if not candidate:
+    candidate = _normalized_origin(str(request.headers.get('origin') or '').strip())
+  if not candidate:
+    candidate = _origin_from_url(str(request.headers.get('referer') or '').strip())
+  if not candidate:
+    candidate = _normalized_origin(str(request.base_url).rstrip('/'))
+  if not candidate:
+    candidate = _configured_ui_origin()
+  return f'{candidate}{token_utils.REDIRECT_PATH}'
 
 
 def _oauth_callback_html() -> str:
@@ -465,7 +540,7 @@ async def api_oauth_start(request: Request, target: str) -> RedirectResponse:
     raise HTTPException(status_code=400, detail='Set Twitch client_id before generating OAuth tokens')
 
   state = token_utils.create_oauth_state(oauth_target)
-  redirect_uri = str(request.url_for('api_oauth_callback'))
+  redirect_uri = _resolve_oauth_redirect_uri(request)
   scopes = token_utils.get_scopes_for_target(oauth_target)
   auth_url = token_utils.build_authorize_url(client_id, redirect_uri, list(scopes), state)
   return RedirectResponse(auth_url)

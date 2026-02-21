@@ -99,7 +99,7 @@ whichever you choose, the bot will write messages in chat from that account.
    the Raspberry Pi and waiting for it to boot up.
 
 3. Open a browser and navigate to the Chaos page:
-   - If you're running Chaosface on the Pi: http://raspberrypi.local/.
+   - If you're running Chaosface on the Pi, the default is http://raspberrypi.local/.
    - If you're running Chaosface on the same computer as the browser, go to http://localhost/.
 
 4. Go to the "Connection Setup" tab and enter your bot name and channel name.
@@ -111,10 +111,11 @@ whichever you choose, the bot will write messages in chat from that account.
    
     A. If you're using a bot account, sign in to Twitch with that account. Otherwise, stay logged
        in to your main streaming account.
-    B. Click on the link to get the bot's OAuth token. You will be taken to a Twitch page that
-       creates the token for you.
-    C. Copy the token that Twitch gives you, including the initial 'oauth:' prefix, and paste it
-       in the 'Bot OAuth Token' field.  
+    B. Click **Start bot OAuth login** in the Connection Setup tab. This opens Twitch auth in a
+       new tab and uses the callback URL shown in the UI (do not hard-code localhost unless that is
+       actually where Chaosface is running).
+    C. After permission is granted, Chaosface stores the generated token from the callback page.
+    D. Click **Load generated tokens** and then **Save** in Connection Setup.
 
 6. An EventSub OAuth token is only required if you want to allow chat members to redeem channel
    points or bits to acquire modifier credits. If you don't plan to use either feature, you can
@@ -123,14 +124,16 @@ whichever you choose, the bot will write messages in chat from that account.
    bot permissions to read EventSub events about channel-point redemptions and bit donations.
 
     A. Log in to Twitch with your main account.
-    B. From the "Connection Setup" tab, click to get an EventSub token.
+    B. From the "Connection Setup" tab, click **Start EventSub OAuth login**.
     C. An authorization dialog from Twitch will appear asking if you want to give permissions to
        "TCC Chaos Interfaceface." Grant the permissions.
-    D. After you grant permission, you will be redirected to a page that shows you an OAuth token.
-       Copy the complete token (including the 'oauth:' prefix) and paste it into the "EventSub
-       OAuth Token" field.  
+    D. After permission is granted, Chaosface stores the generated token from the callback page.
+       Click **Load generated tokens** and then **Save**.
 
-7. Save the settings. If this is your first time entering credentials, the bot waits to connect
+7. If you enable self-signed TLS in Connection Setup, use **Generate self-signed cert** to create
+   a certificate/key on the Chaosface host. Save settings and restart Chaosface to apply TLS
+   changes.
+8. Save the settings. If this is your first time entering credentials, the bot waits to connect
    until after you have entered your credentials. After that, saving updated credentials will
    automatically restart the chatbot to re-initialize the Twitch connection.
 
