@@ -490,8 +490,9 @@ The core of TCC involves the Chaos engine, written in C++ for speed. At the lowe
 engine works by forwarding USB protocols using the Linux raw-gadget kernel module. For every USB
 request, the engine duplicates the request and passes it along. However, in the case of messages
 corresponding to controller buttons/joysticks, the data is passed to other processes that can meddle
-with the data. This forwarding infrastructure is done by using
-[usb-sniffify](https://github.com/blegas78/usb-sniffify), a library that combines
+with the data. This forwarding infrastructure is done by using a vendored copy
+of [usb-sniffify](https://github.com/polysyllabic/usb-sniffify) under
+`chaos/src/controller/usb_sniffify`, a library that combines
 [raw-gadget](https://github.com/xairy/raw-gadget) and [libusb](https://libusb.info).
 
 The Chatbot, stream overlays, and vote tracking are written in Python. The chatbot's basic

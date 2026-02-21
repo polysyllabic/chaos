@@ -21,9 +21,9 @@
 #include <array>
 
 #include <thread.hpp>
-#include <raw-gadget.hpp> // for EndpointObserver and RawGadgetPassthrough
 
 #include "Controller.hpp"
+#include "UsbPassthrough.hpp"
 
 namespace Chaos {
 
@@ -35,23 +35,24 @@ namespace Chaos {
    * GPIO cable, but I haven't ported that over, since it seems like an obsolete interface now that
    * USB interception is available.
    */
-  class ControllerRaw : public Controller, public EndpointObserver, public Thread {
+  class ControllerRaw : public Controller, public UsbPassthrough::Observer, public Thread {
   private:
-	  ControllerState* mControllerState;
+	  ControllerState* mControllerState = nullptr;
 
   	// bool applyHardware(const DeviceEvent& event);
 	
 	  // Handles the DeviceEvent queue 
 	  void doAction();
 	
-	  void notification(unsigned char* buffer, int length); // overloaded from EndpointObserver
+	  void notification(unsigned char* buffer, int length) override;
 
-	  RawGadgetPassthrough mRawGadgetPassthrough;
+	  UsbPassthrough mUsbPassthrough;
 
   public:
     ControllerRaw();
+    ~ControllerRaw() override;
 
 	  void initialize();
-	
+		
   };
 };

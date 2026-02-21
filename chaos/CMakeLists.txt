@@ -93,13 +93,8 @@ FetchContent_Declare(
 	GIT_REPOSITORY https://github.com/zeromq/cppzmq.git
 	GIT_TAG	       origin/master
 )
-FetchContent_Declare(
-	sniffify
-	GIT_REPOSITORY https://github.com/polysyllabic/usb-sniffify.git
-	GIT_TAG	       origin/main
-)
 
-FetchContent_MakeAvailable(tomlplusplus plog cppzmq sniffify)
+FetchContent_MakeAvailable(tomlplusplus plog cppzmq)
 
 find_package (Threads REQUIRED)
 find_package (Libusb1 REQUIRED)
@@ -170,15 +165,13 @@ target_include_directories (chaos PRIVATE include
 	${tomlplusplus_SOURCE_DIR}/include
 	${plog_SOURCE_DIR}/include
 	${cppzmq_SOURCE_DIR}
-	${sniffify_SOURCE_DIR}/include
 	${LIBUSB1_INCLUDE_DIRS}
 )
 
 target_link_libraries(chaos	PUBLIC chaos_communicator
-    chaos_utils
-    chaos_controller #chaos_engine chaos_menus chaos_mods
-		sniffify
-		${LIBUSB_LIBRARIES})
+	    chaos_utils
+	    chaos_controller #chaos_engine chaos_menus chaos_mods
+			${LIBUSB_LIBRARIES})
 
 install(TARGETS chaos RUNTIME DESTINATION "${CHAOS_INSTALL_ROOT}")
 install(FILES chaosconfig.toml DESTINATION "${CHAOS_INSTALL_ROOT}")

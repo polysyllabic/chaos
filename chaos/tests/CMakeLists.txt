@@ -64,3 +64,7 @@ target_link_libraries(test_engine_lifecycle PRIVATE
   chaos_communicator
   chaos_utils
 )
+
+# Hardware probe helper: prints VID/PID for the controller on the intercepted USB port.
+add_executable(probe_controller_vidpid probe_controller_vidpid.cpp)
+target_link_libraries(probe_controller_vidpid PRIVATE chaos_usb_transport)

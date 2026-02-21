@@ -17,7 +17,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <cstddef>
+#include <cstdint>
 #include <plog/Log.h>
+#include <array>
 
 #include <ControllerState.hpp>
 #include <Dualshock.hpp>
@@ -26,6 +28,40 @@
 using namespace Chaos;
 
 double ControllerState::touchpad_inactive_delay = 0.04;
+
+namespace {
+  struct VendorProductId {
+    int vendor;
+    int product;
+    const char* description;
+  };
+
+  // Known controllers that can talk to the console only over Bluetooth.
+  constexpr std::array<VendorProductId, 1> kBluetoothOnlyControllers = {{
+    {0x054c, 0x05c4, "Sony DualShock 4 (CUH-ZCT1)"}
+  }};
+
+  // Controllers compatible with DualShock 4
+  constexpr std::array<VendorProductId, 16> kDualshockCompatibleControllers = {{
+    {0x054c, 0x09cc, "Sony DualShock 4 Slim (CUH-ZCT2)"},
+
+    // Non-Sony PS4-equivalent controllers/adapters gathered from Valve's steam-devices list:
+    // https://github.com/ValveSoftware/steam-devices/blob/master/60-steam-input.rules
+    {0x146b, 0x0d01, "Nacon PS4 Revolution Pro Controller"},
+    {0x1532, 0x1000, "Razer Raiju PS4 Controller"},
+    {0x1532, 0x1007, "Razer Raiju 2 Tournament Edition"},
+    {0x1532, 0x1004, "Razer Raiju Ultimate (USB)"},
+    {0x0f0d, 0x0055, "HORIPAD 4 FPS"},
+    {0x0f0d, 0x0066, "HORIPAD 4 FPS Plus"},
+    {0x0f0d, 0x00ee, "HORIPAD mini 4"},
+    {0x0f0d, 0x012d, "HORI Wireless Pad ONYX Plus"},
+    {0x9886, 0x0025, "Astro C40"},
+    {0x044f, 0xd00e, "Thrustmaster eSwap Pro"},
+    {0x0c12, 0x1cf6, "EMiO Elite Controller for PS4"},
+    {0x0c12, 0x0e10, "Armor 3 Pad PS4"},
+    {0x2f24, 0x00f8, "Mayflash Magic-S Pro adapter"}
+  }};
+}
 
 ControllerState::ControllerState() :
   stateLength(0),
@@ -80,14 +116,30 @@ void ControllerState::addTouchpadInactivityEvents(std::vector<DeviceEvent>& even
 }
 
 ControllerState* ControllerState::factory(int vendor, int product) {
-  
-  if (vendor == 0x054c && product == 0x09cc) {
-    return new Dualshock;
-  } else if (vendor==0x2f24  && product==0x00f8) {	// Magic-S Pro
-    return new Dualshock;
-  } else if (vendor == 0x054c && product == 0x0ce6) {
-    PLOG_ERROR << "DualSense is no longer supported.";
-  }	
+
+  if (vendor == 0x054c && product == 0x0ce6) {
+    PLOG_ERROR << "DualSense is not supported.";
+    return nullptr;
+  }
+
+  for (const auto& id : kBluetoothOnlyControllers) {
+    if (vendor == id.vendor && product == id.product) {
+      PLOG_ERROR << "Controller not supported because it lacks usb support: " << id.description
+                 << " (VID=0x" << std::hex << id.vendor << ", PID=0x" << id.product << std::dec << ")";
+      return nullptr;
+    }
+  }
+
+  for (const auto& id : kDualshockCompatibleControllers) {
+    if (vendor == id.vendor && product == id.product) {
+      PLOG_INFO << "Detected supported DualShock-compatible controller: " << id.description
+                << " (VID=0x" << std::hex << id.vendor << ", PID=0x" << id.product << std::dec << ")";
+      return new Dualshock;
+    }
+  }
+
+  PLOG_ERROR << "Unsupported controller VID/PID: VID=0x"
+               << std::hex << vendor << ", PID=0x" << product << std::dec;
   return nullptr;
 }
 

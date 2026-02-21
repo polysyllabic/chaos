@@ -17,8 +17,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <iomanip>
+#include <cstdlib>
 #include <cstring>
+#include <iomanip>
+#include <unistd.h>
 #include <plog/Log.h>
 
 #include "ControllerRaw.hpp"
@@ -30,28 +32,35 @@ ControllerRaw::ControllerRaw() : Controller() {
   initialize();
 }
 
+ControllerRaw::~ControllerRaw() {
+  mUsbPassthrough.stop();
+  WaitForInternalThreadToExit();
+  delete mControllerState;
+  mControllerState = nullptr;
+}
+
 void ControllerRaw::initialize() {
   PLOG_VERBOSE << "Initializing controller";
-  this->setEndpoint(0x84);	// Works for both dualshock4 and dualsense
+  mUsbPassthrough.setEndpoint(0x84);  // Works for both dualshock4 and dualsense
 
   // Register to be notified when the raw gadget has an event
-  mRawGadgetPassthrough.addObserver(this);	
-  mRawGadgetPassthrough.initialize();
-  mRawGadgetPassthrough.start();
-	
+  mUsbPassthrough.addObserver(this);
+  mUsbPassthrough.initialize();
+  mUsbPassthrough.start();
+		
   // Wait for vendor and product ID
-  while (!mRawGadgetPassthrough.readyProductVendor()) {
+  while (!mUsbPassthrough.readyProductVendor()) {
     usleep(10000);
   }
-	
-  mControllerState = ControllerState::factory(mRawGadgetPassthrough.getVendor(), mRawGadgetPassthrough.getProduct());
+		
+  mControllerState = ControllerState::factory(mUsbPassthrough.getVendor(), mUsbPassthrough.getProduct());
   //chaosHid = new ChaosUhid(mControllerState);
   //chaosHid->start();
 	
   if (mControllerState == nullptr) {
     PLOG_ERROR << "ERROR!  Could not build a ControllerState for vendor=0x"
-	       << std::setfill('0') << std::setw(4) << std::hex << mRawGadgetPassthrough.getVendor()
-	       << " product=0x" << mRawGadgetPassthrough.getProduct() << std::dec;
+	       << std::setfill('0') << std::setw(4) << std::hex << mUsbPassthrough.getVendor()
+	       << " product=0x" << mUsbPassthrough.getProduct() << std::dec;
     exit(EXIT_FAILURE);
   }
 }
@@ -87,6 +96,10 @@ void ControllerRaw::doAction() {
 }
 
 void ControllerRaw::notification(unsigned char* buffer, int length) {
+  if (mControllerState == nullptr) {
+    PLOG_WARNING << "Dropping controller report because controller state is not initialized.";
+    return;
+  }
   if (length < 64) {
     PLOG_WARNING << "Dropping short controller report: expected 64 bytes, got " << length;
     return;

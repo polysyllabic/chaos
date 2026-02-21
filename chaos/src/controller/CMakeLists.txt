@@ -1,4 +1,6 @@
 
+add_subdirectory(usb_sniffify EXCLUDE_FROM_ALL)
+
 add_library (chaos_controller 
   Controller.cpp
   Controller.hpp
@@ -17,21 +19,22 @@ add_library (chaos_controller
   signals.hpp
   Touchpad.hpp
   Touchpad.cpp
+  UsbPassthrough.hpp
+  UsbPassthrough.cpp
   )
 
 target_compile_features(chaos_controller PRIVATE cxx_std_17)
 
 target_include_directories(chaos_controller
   PRIVATE
-  	${plog_SOURCE_DIR}/include
+    ${plog_SOURCE_DIR}/include
     ${tomlplusplus_SOURCE_DIR}/include
     ${chaos_utils_SOURCE_DIR}
-    ${sniffify_SOURCE_DIR}/include
     ${LIBUSB1_INCLUDE_DIRS}
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(chaos_controller 
     chaos_utils
-    sniffify
+    chaos_usb_transport
     ${LIBUSB_LIBRARIES}
 )
