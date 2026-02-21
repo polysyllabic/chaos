@@ -38,6 +38,10 @@ namespace Chaos {
   class ControllerRaw : public Controller, public UsbPassthrough::Observer, public Thread {
   private:
 	  ControllerState* mControllerState = nullptr;
+    int mLastFactoryVendor = -1;
+    int mLastFactoryProduct = -1;
+
+    void initializeControllerStateIfPossible();
 
   	// bool applyHardware(const DeviceEvent& event);
 	

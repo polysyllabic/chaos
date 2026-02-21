@@ -42,7 +42,7 @@ namespace Chaos {
     void setEndpoint(unsigned char endpoint);
     void addObserver(Observer* observer);
 
-    void initialize();
+    int initialize();
     void start();
     void stop();
 

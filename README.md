@@ -167,6 +167,9 @@ new TLOU2 configuration file include the following:
 - Criss-Cross Joysticks: Vertical and horizontal axes of both joysticks are swapped
 - Drift Left: Add controller drift
 
+The low-level usb interception should be more stable in this version. In particular, hot-plugging
+the controller is now supported.
+
 ## Required Hardware
 
 Apart from a PlayStation (or PC if you're playing a PC game), you will need the following
@@ -475,25 +478,14 @@ Currently TLOU2 is the only supported game.  See TLOU2 specific instructions her
 
 ## Known Issues
 
-### No USB Hot-Plugging
-If the controller becomes disconnected, you must restart the chaos service or reboot the Pi. This is
-annoying, and needs to be fixed. An overhaul to usb-sniffify to allow hot-plugging is necessary.
-
-### USB crashing or delaying inputs over time on PS5
-This can usually only currently be corrected with a reboot of the Pi. A check of dmesg will show
-many errors, and they are generally fine, but eventually the kernel will prevent raw-gadget from
-running. This may be a limitation of the raw-gadget Linux kernel module.
-
 ## Design
 
 The core of TCC involves the Chaos engine, written in C++ for speed. At the lowest level, the Chaos
 engine works by forwarding USB protocols using the Linux raw-gadget kernel module. For every USB
 request, the engine duplicates the request and passes it along. However, in the case of messages
 corresponding to controller buttons/joysticks, the data is passed to other processes that can meddle
-with the data. This forwarding infrastructure is done by using a vendored copy
-of [usb-sniffify](https://github.com/polysyllabic/usb-sniffify) under
-`chaos/src/controller/usb_sniffify`, a library that combines
-[raw-gadget](https://github.com/xairy/raw-gadget) and [libusb](https://libusb.info).
+with the data. This forwarding infrastructure is done by through the a custom library (usb-sniffify)
+that combines [raw-gadget](https://github.com/xairy/raw-gadget) and [libusb](https://libusb.info).
 
 The Chatbot, stream overlays, and vote tracking are written in Python. The chatbot's basic
 Twitch connectivity is implemented with [PythonTwitchBotFramework](https://github.com/sharkbound/PythonTwitchBotFramework).

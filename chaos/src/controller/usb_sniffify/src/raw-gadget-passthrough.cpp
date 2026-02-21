@@ -18,206 +18,337 @@
 
 int RawGadgetPassthrough::initialize() {
   haveProductVendor = false;
+  keepRunning = false;
+  sessionRunning = false;
   libusbEventThreadStarted = false;
 
-  fd = usb_raw_open();
-  
-  int endpoint = 0;
-  context = NULL;
-  
+  vendor = 0;
+  product = 0;
+  fd = -1;
+  devices = nullptr;
+  deviceHandle = nullptr;
+
+  mEndpointZeroInfo.bNumConfigurations = 0;
+  mEndpointZeroInfo.activeConfiguration = -1;
+  mEndpointZeroInfo.mConfigurationInfos = nullptr;
+  mEndpointZeroInfo.fd = -1;
+  mEndpointZeroInfo.dev_handle = nullptr;
+  mEndpointZeroInfo.parent = this;
+
+  if (context != nullptr) {
+    libusb_exit(context);
+    context = nullptr;
+  }
+
   int r = libusb_init(&context);
-  if(r < 0) {
+  if (r < 0) {
     PLOG_ERROR << "libusb_init() Error " << r;
     return 1;
   }
 
-  //libusb_set_debug(context, 0);
   libusb_set_option(context, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_INFO);
-  
+  return 0;
+}
+
+int RawGadgetPassthrough::connectDevice() {
+  if (context == nullptr) {
+    PLOG_ERROR << "Cannot connect device: libusb context is null.";
+    return 1;
+  }
+  if (fd < 0) {
+    PLOG_ERROR << "Cannot connect device: raw gadget fd is invalid.";
+    return 1;
+  }
+
   ssize_t deviceCount = libusb_get_device_list(context, &devices);
-  if(deviceCount < 0) {
+  if (deviceCount < 0) {
     PLOG_ERROR << "Could not get libusb device list";
     return 1;
   }
   PLOG_VERBOSE << "Found " << deviceCount << " USB devices.";
-  
+
   int devIndex = -1;
   for (int i = 0; i < deviceCount; i++) {
-    PLOG_VERBOSE << "Device: " << i << " | Bus " << (int) libusb_get_bus_number(devices[i]) << 
-      " Port " << (int) libusb_get_port_number(devices[i]);
+    PLOG_VERBOSE << "Device: " << i << " | Bus " << (int)libusb_get_bus_number(devices[i])
+                 << " Port " << (int)libusb_get_port_number(devices[i]);
     // Specific for lower USB2 port on rPi 4 with raspbian
-    if (libusb_get_bus_number(devices[i]) == 1 && (int) libusb_get_port_number(devices[i]) == 4) {
+    if (libusb_get_bus_number(devices[i]) == 1 &&
+        (int)libusb_get_port_number(devices[i]) == 4) {
       devIndex = i;
       PLOG_VERBOSE << " |-- This is the device of interest!";
     }
   }
   if (devIndex < 0) {
-    PLOG_ERROR << "ERROR!  No USB on the lower rPi USB 2.0 port?";
-    exit(EXIT_FAILURE);
+    libusb_free_device_list(devices, 1);
+    devices = nullptr;
+    PLOG_VERBOSE << "No controller currently attached to intercepted USB port.";
+    return 1;
   }
 
-  if( libusb_open(devices[devIndex], &deviceHandle)  != LIBUSB_SUCCESS ) {
-    PLOG_ERROR << "Failed to open libusb device";
-    exit(EXIT_FAILURE);
-  }
-  PLOG_VERBOSE << "USB device has been opened!";
-
-  // Free the list, unref the devices in it
+  int openResult = libusb_open(devices[devIndex], &deviceHandle);
   libusb_free_device_list(devices, 1);
-  
-   // Find out if kernel driver is attached
+  devices = nullptr;
+  if (openResult != LIBUSB_SUCCESS || deviceHandle == nullptr) {
+    PLOG_ERROR << "Failed to open libusb device";
+    return 1;
+  }
+  PLOG_VERBOSE << "USB device has been opened.";
+
   if (libusb_kernel_driver_active(deviceHandle, 0) == 1) {
-    PLOG_VERBOSE << "Kernel Driver Active";
+    PLOG_VERBOSE << "Kernel driver active on interface 0";
     if (libusb_detach_kernel_driver(deviceHandle, 0) == 0) {
-      PLOG_VERBOSE << "Kernel Driver Detached!";
+      PLOG_VERBOSE << "Kernel driver detached from interface 0";
     }
   }
   if (libusb_set_auto_detach_kernel_driver(deviceHandle, true) != LIBUSB_SUCCESS) {
-    PLOG_ERROR << "FAILED to perform libusb_set_auto_detach_kernel_driver()";
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "Failed to perform libusb_set_auto_detach_kernel_driver().";
+    cleanupDevice();
+    return 1;
   }
-  
+
   struct libusb_device_descriptor deviceDescriptor;
-  if (libusb_get_device_descriptor(libusb_get_device(deviceHandle), &deviceDescriptor) != LIBUSB_SUCCESS ) {
-    PLOG_ERROR << "FAILED to call libusb_get_device_descriptor()";
-    exit(EXIT_FAILURE);
+  if (libusb_get_device_descriptor(libusb_get_device(deviceHandle), &deviceDescriptor) != LIBUSB_SUCCESS) {
+    PLOG_ERROR << "Failed to call libusb_get_device_descriptor().";
+    cleanupDevice();
+    return 1;
   }
 
   PLOG_VERBOSE << "Have Device Descriptor!";
-  PLOG_VERBOSE << " - bLength            : " << (int) deviceDescriptor.bLength;
-  PLOG_VERBOSE << " - bDescriptorType    : " << (int) deviceDescriptor.bDescriptorType;
-  PLOG_VERBOSE << " - bcdUSB             : 0x" << std::hex << (int) deviceDescriptor.bcdUSB << std::dec;
-  PLOG_VERBOSE << " - bDeviceClass       : " << (int) deviceDescriptor.bDeviceClass;
-  PLOG_VERBOSE << " - bDeviceSubClass    : " << (int) deviceDescriptor.bDeviceSubClass;
-  PLOG_VERBOSE << " - bDeviceProtocol    : " << (int) deviceDescriptor.bDeviceProtocol;
-  PLOG_VERBOSE << " - bMaxPacketSize0    : " << (int) deviceDescriptor.bMaxPacketSize0;
-  PLOG_VERBOSE << " - idVendor           : 0x" << std::hex << (int) deviceDescriptor.idVendor << std::dec;
-  PLOG_VERBOSE << " - idProduct          : 0x" << std::hex << (int) deviceDescriptor.idProduct << std::dec;
-  PLOG_VERBOSE << " - bcdDevice          : " << (int) deviceDescriptor.bcdDevice;
-  PLOG_VERBOSE << " - iManufacturer      : " << (int) deviceDescriptor.iManufacturer;
-  PLOG_VERBOSE << " - iProduct           : " << (int) deviceDescriptor.iProduct;
-  PLOG_VERBOSE << " - iSerialNumber      : " << (int) deviceDescriptor.iSerialNumber;
-  PLOG_VERBOSE << " - bNumConfigurations : " << (int) deviceDescriptor.bNumConfigurations;
-  
+  PLOG_VERBOSE << " - idVendor           : 0x" << std::hex << (int)deviceDescriptor.idVendor << std::dec;
+  PLOG_VERBOSE << " - idProduct          : 0x" << std::hex << (int)deviceDescriptor.idProduct << std::dec;
+  PLOG_VERBOSE << " - bNumConfigurations : " << (int)deviceDescriptor.bNumConfigurations;
+
   vendor = deviceDescriptor.idVendor;
   product = deviceDescriptor.idProduct;
   haveProductVendor = true;
-  
+
   mEndpointZeroInfo.bNumConfigurations = deviceDescriptor.bNumConfigurations;
   mEndpointZeroInfo.activeConfiguration = -1;
-  mEndpointZeroInfo.mConfigurationInfos = (ConfigurationInfo*)malloc( deviceDescriptor.bNumConfigurations * sizeof(ConfigurationInfo));
+  mEndpointZeroInfo.mConfigurationInfos = (ConfigurationInfo*)calloc(
+      deviceDescriptor.bNumConfigurations, sizeof(ConfigurationInfo));
   mEndpointZeroInfo.fd = fd;
   mEndpointZeroInfo.dev_handle = deviceHandle;
-  
   mEndpointZeroInfo.parent = this;
-  
+
+  if (mEndpointZeroInfo.mConfigurationInfos == nullptr && deviceDescriptor.bNumConfigurations > 0) {
+    PLOG_ERROR << "Failed to allocate configuration info table.";
+    cleanupDevice();
+    return 1;
+  }
+
   for (int configIndex = 0; configIndex < deviceDescriptor.bNumConfigurations; configIndex++) {
-    struct libusb_config_descriptor* configDescriptor;
-    
-    ConfigurationInfo* configInfo = &mEndpointZeroInfo.mConfigurationInfos[configIndex];
-    configInfo->parent = &mEndpointZeroInfo;
-    
-    if(libusb_get_config_descriptor(libusb_get_device(deviceHandle), configIndex, &configDescriptor) != LIBUSB_SUCCESS) {
-      PLOG_ERROR << "Failed to get usb config descriptor";
-      exit(EXIT_FAILURE);
+    struct libusb_config_descriptor* configDescriptor = nullptr;
+    if (libusb_get_config_descriptor(libusb_get_device(deviceHandle), configIndex, &configDescriptor) !=
+        LIBUSB_SUCCESS) {
+      PLOG_ERROR << "Failed to get USB config descriptor";
+      cleanupDevice();
+      return 1;
     }
 
-    PLOG_VERBOSE << "Have Config Descriptor!";
-    PLOG_VERBOSE << " - bLength            : " << (int) configDescriptor->bLength;
-    PLOG_VERBOSE << " - bDescriptorType    : " << (int) configDescriptor->bDescriptorType;
-    PLOG_VERBOSE << " - wTotalLength       : " << (int) configDescriptor->wTotalLength;
-    PLOG_VERBOSE << " - bNumInterfaces     : " << (int) configDescriptor->bNumInterfaces;
-    PLOG_VERBOSE << " - bConfigurationValue: " << (int) configDescriptor->bConfigurationValue;
-    PLOG_VERBOSE << " - iConfiguration     : " << (int) configDescriptor->iConfiguration;
-    PLOG_VERBOSE << " - bmAttributes       : " << (int) configDescriptor->bmAttributes;
-    PLOG_VERBOSE << " - MaxPower           : " << (int) configDescriptor->MaxPower;
-    PLOG_VERBOSE << " - extra_length       : " << (int) configDescriptor->extra_length;
-    
+    ConfigurationInfo* configInfo = &mEndpointZeroInfo.mConfigurationInfos[configIndex];
+    configInfo->parent = &mEndpointZeroInfo;
     configInfo->activeInterface = -1;
     configInfo->bNumInterfaces = configDescriptor->bNumInterfaces;
-    configInfo->mInterfaceInfos = (InterfaceInfo *) malloc(configDescriptor->bNumInterfaces * sizeof(InterfaceInfo));
-    
-    int totalEndpoints = 0;
+    configInfo->mInterfaceInfos = (InterfaceInfo*)calloc(configDescriptor->bNumInterfaces, sizeof(InterfaceInfo));
+    if (configInfo->mInterfaceInfos == nullptr && configDescriptor->bNumInterfaces > 0) {
+      libusb_free_config_descriptor(configDescriptor);
+      PLOG_ERROR << "Failed to allocate interface info table.";
+      cleanupDevice();
+      return 1;
+    }
+
     for (int i = 0; i < configDescriptor->bNumInterfaces; i++) {
       int numAlternates = configDescriptor->interface[i].num_altsetting;
       InterfaceInfo* interfaceInfo = &configInfo->mInterfaceInfos[i];
       interfaceInfo->activeAlternate = -1;
       interfaceInfo->bNumAlternates = numAlternates;
-      interfaceInfo->mAlternateInfos = (AlternateInfo*) malloc(numAlternates * sizeof(AlternateInfo));
-      
+      interfaceInfo->mAlternateInfos = (AlternateInfo*)calloc(numAlternates, sizeof(AlternateInfo));
       interfaceInfo->parent = configInfo;
-      
+      if (interfaceInfo->mAlternateInfos == nullptr && numAlternates > 0) {
+        libusb_free_config_descriptor(configDescriptor);
+        PLOG_ERROR << "Failed to allocate alternate info table.";
+        cleanupDevice();
+        return 1;
+      }
+
+      if (numAlternates > 0) {
+        int ifaceNumber = configDescriptor->interface[i].altsetting[0].bInterfaceNumber;
+        int claimResult = libusb_claim_interface(deviceHandle, ifaceNumber);
+        if (claimResult < 0) {
+          libusb_free_config_descriptor(configDescriptor);
+          PLOG_ERROR << "Cannot claim interface " << ifaceNumber << ": "
+                     << libusb_error_name(claimResult);
+          cleanupDevice();
+          return 1;
+        }
+      }
+
       for (int a = 0; a < numAlternates; a++) {
-        const struct libusb_interface_descriptor *interfaceDescriptor = &configDescriptor->interface[i].altsetting[a];
+        const struct libusb_interface_descriptor* interfaceDescriptor =
+            &configDescriptor->interface[i].altsetting[a];
         AlternateInfo* alternateInfo = &interfaceInfo->mAlternateInfos[a];
         alternateInfo->bInterfaceNumber = interfaceDescriptor->bInterfaceNumber;
         alternateInfo->bNumEndpoints = interfaceDescriptor->bNumEndpoints;
-        alternateInfo->mEndpointInfos = (EndpointInfo *) malloc(interfaceDescriptor->bNumEndpoints * sizeof(EndpointInfo));
-        
+        alternateInfo->mEndpointInfos =
+            (EndpointInfo*)calloc(interfaceDescriptor->bNumEndpoints, sizeof(EndpointInfo));
         alternateInfo->parent = interfaceInfo;
-        
-        PLOG_VERBOSE << " | - Interface " << (int) interfaceDescriptor->bInterfaceNumber << " Alternate " << a;
-        
-        r = libusb_claim_interface(deviceHandle, interfaceDescriptor->bInterfaceNumber);
-        if(r < 0) {
-          PLOG_ERROR << "Cannot claim interface";
+        if (alternateInfo->mEndpointInfos == nullptr && interfaceDescriptor->bNumEndpoints > 0) {
+          libusb_free_config_descriptor(configDescriptor);
+          PLOG_ERROR << "Failed to allocate endpoint info table.";
+          cleanupDevice();
           return 1;
         }
-        PLOG_VERBOSE << "Claimed Interface " << (int) configDescriptor->interface[i].altsetting->bInterfaceNumber;
-        
-        totalEndpoints += interfaceDescriptor->bNumEndpoints;
-        PLOG_VERBOSE << "   - bNumEndpoints      :" << (int) interfaceDescriptor->bNumEndpoints;
-        PLOG_VERBOSE << "   - Endpoints          :";
+
+        PLOG_VERBOSE << " | - Interface " << (int)interfaceDescriptor->bInterfaceNumber
+                     << " Alternate " << a;
         for (int e = 0; e < interfaceDescriptor->bNumEndpoints; e++) {
-          //libusb_set_interface_alt_setting(deviceHandle, i, a );  // no idea how to use this properly, but putting htis here wrok son a PS5 controller
-          const struct libusb_endpoint_descriptor *endpointDescriptor = &interfaceDescriptor->endpoint[e];
-          
+          const struct libusb_endpoint_descriptor* endpointDescriptor = &interfaceDescriptor->endpoint[e];
           EndpointInfo* endpointInfo = &alternateInfo->mEndpointInfos[e];
           endpointInfo->fd = fd;
           endpointInfo->ep_int = -1;
           endpointInfo->deviceHandle = deviceHandle;
-          endpointInfo->keepRunning = true;
+          endpointInfo->keepRunning = false;
           endpointInfo->stop = true;
+          endpointInfo->threadStarted = false;
           endpointInfo->busyPackets = 0;
-          endpointInfo->usb_endpoint.bLength =  endpointDescriptor->bLength;
-          endpointInfo->usb_endpoint.bDescriptorType =  endpointDescriptor->bDescriptorType;
+          endpointInfo->usb_endpoint.bLength = endpointDescriptor->bLength;
+          endpointInfo->usb_endpoint.bDescriptorType = endpointDescriptor->bDescriptorType;
           endpointInfo->usb_endpoint.bEndpointAddress = endpointDescriptor->bEndpointAddress;
           endpointInfo->usb_endpoint.bmAttributes = endpointDescriptor->bmAttributes;
           endpointInfo->usb_endpoint.wMaxPacketSize = endpointDescriptor->wMaxPacketSize;
           endpointInfo->usb_endpoint.bInterval = endpointDescriptor->bInterval;
-          endpointInfo->bIntervalInMicroseconds = pow(2, endpointDescriptor->bInterval) * 125;  // TODO: 125 may change to 1000 if device is low sped
-          endpointInfo->data = (unsigned char*)malloc( endpointDescriptor->wMaxPacketSize * sizeof(unsigned char));
-          
+          endpointInfo->bIntervalInMicroseconds = pow(2, endpointDescriptor->bInterval) * 125;
+          size_t maxPacket = endpointDescriptor->wMaxPacketSize > 0 ? endpointDescriptor->wMaxPacketSize : 1;
+          endpointInfo->data = (unsigned char*)malloc(maxPacket * sizeof(unsigned char));
           endpointInfo->parent = alternateInfo;
-          
-          //pthread_create(&endpointThreads[endpoint++], NULL, ep_loop_thread, endpointInfo);
-          
-          PLOG_VERBOSE << "   | - bEndpointAddress   : " << std::hex << (int) endpointDescriptor->bEndpointAddress;
-          PLOG_VERBOSE << "     - wMaxPacketSize     : " << (int) endpointDescriptor->wMaxPacketSize;
-          PLOG_VERBOSE << "     - bmAttributes       : " << (int) endpointDescriptor->bmAttributes;
-          
-          switch (endpointDescriptor->bmAttributes & LIBUSB_TRANSFER_TYPE_MASK) {
-            case LIBUSB_TRANSFER_TYPE_CONTROL:
-              PLOG_VERBOSE << "     | - Control";
-              break;
-            case LIBUSB_TRANSFER_TYPE_ISOCHRONOUS:
-              PLOG_VERBOSE << "     | - Isochronous";
-              break;
-            case LIBUSB_TRANSFER_TYPE_BULK: 
-              PLOG_VERBOSE << "     | - Bulk";
-              break;
-            case LIBUSB_TRANSFER_TYPE_INTERRUPT:
-              PLOG_VERBOSE << "     | - Interrupt";
-              break;
-            default:
-              break;
+          if (endpointInfo->data == nullptr) {
+            libusb_free_config_descriptor(configDescriptor);
+            PLOG_ERROR << "Failed to allocate endpoint transfer buffer.";
+            cleanupDevice();
+            return 1;
           }
-          
         }
       }
     }
-  }  
+    libusb_free_config_descriptor(configDescriptor);
+  }
+
   return 0;
+}
+
+void RawGadgetPassthrough::teardownActiveEndpoints() {
+  if (mEndpointZeroInfo.mConfigurationInfos == nullptr) {
+    return;
+  }
+
+  for (int c = 0; c < mEndpointZeroInfo.bNumConfigurations; c++) {
+    ConfigurationInfo* configInfo = &mEndpointZeroInfo.mConfigurationInfos[c];
+    for (int i = 0; i < configInfo->bNumInterfaces; i++) {
+      InterfaceInfo* interfaceInfo = &configInfo->mInterfaceInfos[i];
+      for (int a = 0; a < interfaceInfo->bNumAlternates; a++) {
+        AlternateInfo* alternateInfo = &interfaceInfo->mAlternateInfos[a];
+        for (int e = 0; e < alternateInfo->bNumEndpoints; e++) {
+          EndpointInfo* endpointInfo = &alternateInfo->mEndpointInfos[e];
+          endpointInfo->stop = true;
+          endpointInfo->keepRunning = false;
+          if (endpointInfo->threadStarted) {
+            pthread_join(endpointInfo->thread, NULL);
+            endpointInfo->threadStarted = false;
+          }
+          if (endpointInfo->ep_int >= 0 && fd >= 0) {
+            int endpointHandle = endpointInfo->ep_int;
+            endpointInfo->ep_int = -1;
+            int ret = usb_raw_ep_disable(fd, endpointHandle);
+            if (ret < 0) {
+              PLOG_WARNING << "Failed to disable endpoint handle " << endpointHandle;
+            }
+          }
+          endpointInfo->fd = -1;
+          endpointInfo->busyPackets = 0;
+        }
+      }
+    }
+  }
+}
+
+void RawGadgetPassthrough::cleanupDevice() {
+  teardownActiveEndpoints();
+
+  if (deviceHandle != nullptr && mEndpointZeroInfo.mConfigurationInfos != nullptr) {
+    bool released[256] = {false};
+    for (int c = 0; c < mEndpointZeroInfo.bNumConfigurations; c++) {
+      ConfigurationInfo* configInfo = &mEndpointZeroInfo.mConfigurationInfos[c];
+      for (int i = 0; i < configInfo->bNumInterfaces; i++) {
+        InterfaceInfo* interfaceInfo = &configInfo->mInterfaceInfos[i];
+        if (interfaceInfo->bNumAlternates <= 0 || interfaceInfo->mAlternateInfos == nullptr) {
+          continue;
+        }
+        int ifaceNum = interfaceInfo->mAlternateInfos[0].bInterfaceNumber;
+        if (ifaceNum < 0 || ifaceNum > 255 || released[ifaceNum]) {
+          continue;
+        }
+        int releaseResult = libusb_release_interface(deviceHandle, ifaceNum);
+        if (releaseResult < 0) {
+          PLOG_VERBOSE << "Failed to release interface " << ifaceNum
+                       << ": " << libusb_error_name(releaseResult);
+        }
+        released[ifaceNum] = true;
+      }
+    }
+  }
+
+  if (mEndpointZeroInfo.mConfigurationInfos != nullptr) {
+    for (int c = 0; c < mEndpointZeroInfo.bNumConfigurations; c++) {
+      ConfigurationInfo* configInfo = &mEndpointZeroInfo.mConfigurationInfos[c];
+      if (configInfo->mInterfaceInfos == nullptr) {
+        continue;
+      }
+      for (int i = 0; i < configInfo->bNumInterfaces; i++) {
+        InterfaceInfo* interfaceInfo = &configInfo->mInterfaceInfos[i];
+        if (interfaceInfo->mAlternateInfos == nullptr) {
+          continue;
+        }
+        for (int a = 0; a < interfaceInfo->bNumAlternates; a++) {
+          AlternateInfo* alternateInfo = &interfaceInfo->mAlternateInfos[a];
+          if (alternateInfo->mEndpointInfos == nullptr) {
+            continue;
+          }
+          for (int e = 0; e < alternateInfo->bNumEndpoints; e++) {
+            EndpointInfo* endpointInfo = &alternateInfo->mEndpointInfos[e];
+            free(endpointInfo->data);
+            endpointInfo->data = nullptr;
+          }
+          free(alternateInfo->mEndpointInfos);
+          alternateInfo->mEndpointInfos = nullptr;
+        }
+        free(interfaceInfo->mAlternateInfos);
+        interfaceInfo->mAlternateInfos = nullptr;
+      }
+      free(configInfo->mInterfaceInfos);
+      configInfo->mInterfaceInfos = nullptr;
+    }
+    free(mEndpointZeroInfo.mConfigurationInfos);
+    mEndpointZeroInfo.mConfigurationInfos = nullptr;
+  }
+
+  mEndpointZeroInfo.bNumConfigurations = 0;
+  mEndpointZeroInfo.activeConfiguration = -1;
+
+  if (devices != nullptr) {
+    libusb_free_device_list(devices, 1);
+    devices = nullptr;
+  }
+  if (deviceHandle != nullptr) {
+    libusb_close(deviceHandle);
+    deviceHandle = nullptr;
+  }
+  if (fd >= 0) {
+    close(fd);
+    fd = -1;
+  }
+  mEndpointZeroInfo.fd = -1;
+  mEndpointZeroInfo.dev_handle = nullptr;
+  sessionRunning = false;
 }
 
 void RawGadgetPassthrough::setEndpoint(AlternateInfo* info, int endpoint, bool enable) {
@@ -225,22 +356,43 @@ void RawGadgetPassthrough::setEndpoint(AlternateInfo* info, int endpoint, bool e
   
   if (enable) {
     PLOG_VERBOSE << "Attempting to enable EP 0x" << std::hex << (int) endpointInfo->usb_endpoint.bEndpointAddress;
+    endpointInfo->fd = fd;
+    endpointInfo->deviceHandle = deviceHandle;
     endpointInfo->ep_int = usb_raw_ep_enable(endpointInfo->fd, &endpointInfo->usb_endpoint);
+    if (endpointInfo->ep_int < 0) {
+      PLOG_ERROR << "Failed to enable endpoint for passthrough.";
+      requestReconnect();
+      return;
+    }
     endpointInfo->stop = false;
     endpointInfo->keepRunning = true;
       
-    pthread_create(&endpointInfo->thread, NULL, epLoopThread, endpointInfo);
+    if (pthread_create(&endpointInfo->thread, NULL, epLoopThread, endpointInfo) == 0) {
+      endpointInfo->threadStarted = true;
+    } else {
+      endpointInfo->keepRunning = false;
+      endpointInfo->stop = true;
+      endpointInfo->ep_int = -1;
+      PLOG_ERROR << "Failed to start endpoint thread.";
+      requestReconnect();
+      return;
+    }
       
     } else {  // may need mutex here
-      int temp = endpointInfo->ep_int;
       endpointInfo->stop = true;
       endpointInfo->keepRunning = false;
-      pthread_join(endpointInfo->thread, NULL);
+      if (endpointInfo->threadStarted) {
+        pthread_join(endpointInfo->thread, NULL);
+        endpointInfo->threadStarted = false;
+      }
       
-      PLOG_VERBOSE << "Attempting to disable EP with: 0x" << std::hex << temp << std::dec;
-      int ret = usb_raw_ep_disable(endpointInfo->fd, temp);
-      PLOG_VERBOSE << "usb_raw_ep_disable returned " << ret;
-      endpointInfo->ep_int = ret;
+      if (endpointInfo->ep_int >= 0) {
+        int temp = endpointInfo->ep_int;
+        endpointInfo->ep_int = -1;
+        PLOG_VERBOSE << "Attempting to disable EP with: 0x" << std::hex << temp << std::dec;
+        int ret = usb_raw_ep_disable(endpointInfo->fd, temp);
+        PLOG_VERBOSE << "usb_raw_ep_disable returned " << ret;
+      }
     }
   PLOG_VERBOSE << " ---- 0x" << std::hex << (int) endpointInfo->usb_endpoint.bEndpointAddress << std::dec
     << " ep_int = " << endpointInfo->ep_int;
@@ -311,7 +463,6 @@ bool RawGadgetPassthrough::ep0Request(RawGadgetPassthrough* mRawGadgetPassthroug
          struct usb_raw_control_io *io, bool *done) {
   
   EndpointZeroInfo* info = &mRawGadgetPassthrough->mEndpointZeroInfo;
-  int r;
   
   io->inner.length = event->ctrl.wLength;
   
@@ -330,8 +481,14 @@ bool RawGadgetPassthrough::ep0Request(RawGadgetPassthrough* mRawGadgetPassthroug
         // ready for use.
         mRawGadgetPassthrough->setConfiguration( (event->ctrl.wValue & 0xff) -1);
         
-        usb_raw_vbus_draw(info->fd, 0x32*5); // TODO: grab from descriptor for passthrough
-        usb_raw_configure(info->fd);
+        if (usb_raw_vbus_draw(info->fd, 0x32 * 5) < 0) { // TODO: grab from descriptor for passthrough
+          mRawGadgetPassthrough->requestReconnect();
+          return false;
+        }
+        if (usb_raw_configure(info->fd) < 0) {
+          mRawGadgetPassthrough->requestReconnect();
+          return false;
+        }
         break;
       case USB_REQ_SET_INTERFACE:
         PLOG_VERBOSE << "Setting Interface to: " << event->ctrl.wIndex << " Alternate: " <<  event->ctrl.wValue;
@@ -399,13 +556,18 @@ bool RawGadgetPassthrough::ep0Loop( void* rawgadgetobject) {
   event.inner.type = 0;
   event.inner.length = sizeof(event.ctrl);
   
-  usb_raw_event_fetch(info->fd, (struct usb_raw_event *)&event);
+  if (usb_raw_event_fetch(info->fd, (struct usb_raw_event *)&event) < 0) {
+    mRawGadgetPassthrough->requestReconnect();
+    return false;
+  }
   log_event((struct usb_raw_event *)&event);
   
   switch (event.inner.type) {
     case USB_RAW_EVENT_CONNECT:
       PLOG_VERBOSE << "ep0Loop(): Recieved a USB_RAW_EVENT_CONNECT";
-      process_eps_info(info);
+      if (!process_eps_info(info)) {
+        mRawGadgetPassthrough->requestReconnect();
+      }
       return false;
       break;
       
@@ -426,7 +588,9 @@ bool RawGadgetPassthrough::ep0Loop( void* rawgadgetobject) {
   bool reply = ep0Request( mRawGadgetPassthrough, &event, &io, &done);
   if (!reply) {
     PLOG_ERROR << "ep0: stalling";
-    usb_raw_ep0_stall(info->fd);
+    if (usb_raw_ep0_stall(info->fd) < 0) {
+      mRawGadgetPassthrough->requestReconnect();
+    }
     return false;
   }
   
@@ -447,7 +611,8 @@ bool RawGadgetPassthrough::ep0Loop( void* rawgadgetobject) {
     if (rv < 0) {
       PLOG_ERROR << "libusb_control_transfer error: " << libusb_error_name(rv);
       PLOG_ERROR << "ep0: stalling";
-     usb_raw_ep0_stall(info->fd);
+      usb_raw_ep0_stall(info->fd);
+      mRawGadgetPassthrough->requestReconnect();
       return false;
     }
 #else
@@ -461,9 +626,17 @@ bool RawGadgetPassthrough::ep0Loop( void* rawgadgetobject) {
 #endif
     io.inner.length = rv;
     rv = usb_raw_ep0_write(info->fd, (struct usb_raw_ep_io *)&io);
+    if (rv < 0) {
+      mRawGadgetPassthrough->requestReconnect();
+      return false;
+    }
     PLOG_VERBOSE << "ep0: transferred " << rv << " bytes (in: DEVICE -> HOST)";
   } else {
     rv = usb_raw_ep0_read(info->fd, (struct usb_raw_ep_io *)&io);
+    if (rv < 0) {
+      mRawGadgetPassthrough->requestReconnect();
+      return false;
+    }
     PLOG_VERBOSE << "ep0: transferred " << rv << " bytes (out: HOST -> DEVICE)";
     
     int r = libusb_control_transfer(info->dev_handle,
@@ -477,6 +650,8 @@ bool RawGadgetPassthrough::ep0Loop( void* rawgadgetobject) {
     
     if (r < 0) {
       PLOG_ERROR << "libusb_control_transfer() returned < 0 in ep0Loop(). r = " << r;
+      mRawGadgetPassthrough->requestReconnect();
+      return false;
     }
   }
   PLOG_VERBOSE << "data: " << plog::hexdump(&io.inner.data[0], io.inner.length);
@@ -486,8 +661,7 @@ bool RawGadgetPassthrough::ep0Loop( void* rawgadgetobject) {
 void* RawGadgetPassthrough::ep0LoopThread( void* rawgadgetobject ) {
   RawGadgetPassthrough* mRawGadgetPassthrough = (RawGadgetPassthrough*) rawgadgetobject;
   
-  EndpointZeroInfo* info = &mRawGadgetPassthrough->mEndpointZeroInfo;
-  while(mRawGadgetPassthrough->keepRunning) {
+  while (mRawGadgetPassthrough->keepRunning && mRawGadgetPassthrough->sessionRunning) {
     ep0Loop(mRawGadgetPassthrough);
   }
   return NULL;
@@ -502,27 +676,69 @@ void* RawGadgetPassthrough::libusbEventHandler( void* rawgadgetobject ) {
   const char *device = "fe980000.usb";//dummy_udc.0";
   const char *driver = "fe980000.usb";//dummy_udc";
   
-  // raw-gadget fun
-  PLOG_VERBOSE << "Starting raw-gadget";
-  usb_raw_init(mRawGadgetPassthrough->fd, USB_SPEED_HIGH, driver, device);
-  usb_raw_run(mRawGadgetPassthrough->fd);
-  
-  // Start ep0 thread afer endpoints, I believe
-  PLOG_VERBOSE << "Starting ep0 thread";
-  pthread_create(&mRawGadgetPassthrough->threadEp0, NULL, ep0LoopThread, mRawGadgetPassthrough);
-  
-  struct timeval timeout;
-  timeout.tv_sec = 0;
-  timeout.tv_usec = 0;
-  while(mRawGadgetPassthrough->keepRunning) {
-    if(libusb_handle_events_timeout(mRawGadgetPassthrough->context, &timeout) != LIBUSB_SUCCESS) {  // needed for iso transfers I believe
-      PLOG_ERROR << "libusb_handle_events() FAILED";
+  bool ep0ThreadStarted = false;
+  while (mRawGadgetPassthrough->keepRunning) {
+    if (!mRawGadgetPassthrough->sessionRunning) {
+      mRawGadgetPassthrough->cleanupDevice();
+      mRawGadgetPassthrough->fd = usb_raw_open();
+      if (mRawGadgetPassthrough->fd < 0) {
+        usleep(250000);
+        continue;
+      }
+      mRawGadgetPassthrough->mEndpointZeroInfo.fd = mRawGadgetPassthrough->fd;
+
+      if (mRawGadgetPassthrough->connectDevice() != 0) {
+        mRawGadgetPassthrough->cleanupDevice();
+        usleep(250000);
+        continue;
+      }
+
+      // raw-gadget fun
+      PLOG_VERBOSE << "Starting raw-gadget";
+      if (usb_raw_init(mRawGadgetPassthrough->fd, USB_SPEED_HIGH, driver, device) < 0 ||
+          usb_raw_run(mRawGadgetPassthrough->fd) < 0) {
+        mRawGadgetPassthrough->cleanupDevice();
+        usleep(250000);
+        continue;
+      }
+
+      // Start ep0 thread after raw-gadget setup.
+      PLOG_VERBOSE << "Starting ep0 thread";
+      mRawGadgetPassthrough->sessionRunning = true;
+      if (pthread_create(&mRawGadgetPassthrough->threadEp0, NULL, ep0LoopThread, mRawGadgetPassthrough) != 0) {
+        PLOG_ERROR << "Failed to create ep0 thread";
+        mRawGadgetPassthrough->sessionRunning = false;
+        mRawGadgetPassthrough->cleanupDevice();
+        usleep(250000);
+        continue;
+      }
+      ep0ThreadStarted = true;
     }
-    usleep(1);
+
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 10000;
+    int eventResult = libusb_handle_events_timeout(mRawGadgetPassthrough->context, &timeout);
+    if (eventResult != LIBUSB_SUCCESS && eventResult != LIBUSB_ERROR_TIMEOUT) {
+      PLOG_ERROR << "libusb_handle_events_timeout() failed: " << libusb_error_name(eventResult);
+      mRawGadgetPassthrough->requestReconnect();
+    }
+
+    if (!mRawGadgetPassthrough->sessionRunning) {
+      if (ep0ThreadStarted) {
+        pthread_join(mRawGadgetPassthrough->threadEp0, NULL);
+        ep0ThreadStarted = false;
+      }
+      mRawGadgetPassthrough->cleanupDevice();
+      usleep(100000);
+    }
   }
-  pthread_join(mRawGadgetPassthrough->threadEp0, NULL);
-  close(mRawGadgetPassthrough->fd);
-  
+
+  mRawGadgetPassthrough->requestReconnect();
+  if (ep0ThreadStarted) {
+    pthread_join(mRawGadgetPassthrough->threadEp0, NULL);
+  }
+  mRawGadgetPassthrough->cleanupDevice();
   return NULL;
 }
 
@@ -543,9 +759,15 @@ void RawGadgetPassthrough::start() {
 
 void RawGadgetPassthrough::stop() {
   keepRunning = false;
+  requestReconnect();
   if (libusbEventThreadStarted) {
     pthread_join(libusbEventThread, NULL);
     libusbEventThreadStarted = false;
+  }
+  cleanupDevice();
+  if (context != nullptr) {
+    libusb_exit(context);
+    context = nullptr;
   }
 }
 
@@ -562,7 +784,7 @@ void* RawGadgetPassthrough::epLoopThread( void* data ) {
   int idleDelay = 1000000;
   int idleCount = 0;
   bool priorenable = false;
-  while(ep->keepRunning || (ep->busyPackets > 0)) {
+  while ((ep->keepRunning && mRawGadgetPassthrough->sessionRunning) || (ep->busyPackets > 0)) {
     if (ep->ep_int >= 0 && !ep->stop) {
       if (priorenable == false &&
         (ep->usb_endpoint.bmAttributes & LIBUSB_TRANSFER_TYPE_MASK) == LIBUSB_TRANSFER_TYPE_ISOCHRONOUS) {
@@ -657,18 +879,25 @@ void RawGadgetPassthrough::epDeviceToHostWorkInterrupt( EndpointInfo* epInfo ) {
 
   if(libusb_submit_transfer(transfer) != LIBUSB_SUCCESS) {
     PLOG_ERROR << "libusb_submit_transfer(transfer) failed";
-    exit(EXIT_FAILURE);
+    epInfo->busyPackets--;
+    libusb_free_transfer(transfer);
+    requestReconnect();
+    return;
   }
 }
 
 void RawGadgetPassthrough::cbTransferIn(struct libusb_transfer *xfr) {
-  if (xfr->status != LIBUSB_TRANSFER_COMPLETED) {
-    PLOG_ERROR << "Transfer status " << xfr->status;
-    return;
-  }
-  
   EndpointInfo* epInfo = (EndpointInfo*)xfr->user_data;
   RawGadgetPassthrough* mRawGadgetPassthrough = epInfo->parent->parent->parent->parent->parent;
+  if (xfr->status != LIBUSB_TRANSFER_COMPLETED) {
+    PLOG_ERROR << "Transfer status " << xfr->status;
+    epInfo->busyPackets--;
+    libusb_free_transfer(xfr);
+    if (xfr->status == LIBUSB_TRANSFER_NO_DEVICE || xfr->status == LIBUSB_TRANSFER_ERROR) {
+      mRawGadgetPassthrough->requestReconnect();
+    }
+    return;
+  }
   
   struct usb_raw_int_io io;
   io.inner.ep = epInfo->ep_int;
@@ -713,7 +942,7 @@ void RawGadgetPassthrough::cbTransferIn(struct libusb_transfer *xfr) {
     if (rv < 0) {
       if (errno != ETIMEDOUT) {
         PLOG_ERROR << "bulk/interrupt write to host  usb_raw_ep_write() returned " << rv;
-        exit(EXIT_FAILURE);
+        mRawGadgetPassthrough->requestReconnect();
       }
       
     } else if (rv != xfr->actual_length) {
@@ -723,6 +952,18 @@ void RawGadgetPassthrough::cbTransferIn(struct libusb_transfer *xfr) {
   
   epInfo->busyPackets--;
   libusb_free_transfer(xfr);
+}
+
+void RawGadgetPassthrough::requestReconnect() {
+  bool wasRunning = sessionRunning.exchange(false);
+  if (fd >= 0) {
+    close(fd);
+    fd = -1;
+    mEndpointZeroInfo.fd = -1;
+  }
+  if (wasRunning) {
+    PLOG_WARNING << "Controller transport interrupted. Waiting for reconnect.";
+  }
 }
 
 bool RawGadgetPassthrough::readyProductVendor() {

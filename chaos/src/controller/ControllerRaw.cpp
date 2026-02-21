@@ -45,23 +45,34 @@ void ControllerRaw::initialize() {
 
   // Register to be notified when the raw gadget has an event
   mUsbPassthrough.addObserver(this);
-  mUsbPassthrough.initialize();
-  mUsbPassthrough.start();
-		
-  // Wait for vendor and product ID
-  while (!mUsbPassthrough.readyProductVendor()) {
-    usleep(10000);
+  if (mUsbPassthrough.initialize() != 0) {
+    PLOG_ERROR << "UsbPassthrough initialization failed. Controller hot-plug will be unavailable.";
+    return;
   }
-		
-  mControllerState = ControllerState::factory(mUsbPassthrough.getVendor(), mUsbPassthrough.getProduct());
-  //chaosHid = new ChaosUhid(mControllerState);
-  //chaosHid->start();
-	
+  mUsbPassthrough.start();
+
+  initializeControllerStateIfPossible();
+}
+
+void ControllerRaw::initializeControllerStateIfPossible() {
+  if (mControllerState != nullptr || !mUsbPassthrough.readyProductVendor()) {
+    return;
+  }
+
+  const int vendor = mUsbPassthrough.getVendor();
+  const int product = mUsbPassthrough.getProduct();
+  if (vendor == mLastFactoryVendor && product == mLastFactoryProduct) {
+    return;
+  }
+
+  mLastFactoryVendor = vendor;
+  mLastFactoryProduct = product;
+  mControllerState = ControllerState::factory(vendor, product);
   if (mControllerState == nullptr) {
-    PLOG_ERROR << "ERROR!  Could not build a ControllerState for vendor=0x"
-	       << std::setfill('0') << std::setw(4) << std::hex << mUsbPassthrough.getVendor()
-	       << " product=0x" << mUsbPassthrough.getProduct() << std::dec;
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "Could not build ControllerState for vendor=0x"
+               << std::setfill('0') << std::setw(4) << std::hex << vendor
+               << " product=0x" << std::setw(4) << product << std::dec
+               << ". Waiting for a supported controller to be plugged in.";
   }
 }
 
@@ -96,8 +107,9 @@ void ControllerRaw::doAction() {
 }
 
 void ControllerRaw::notification(unsigned char* buffer, int length) {
+  initializeControllerStateIfPossible();
   if (mControllerState == nullptr) {
-    PLOG_WARNING << "Dropping controller report because controller state is not initialized.";
+    PLOG_VERBOSE << "Dropping controller report because controller state is not initialized.";
     return;
   }
   if (length < 64) {

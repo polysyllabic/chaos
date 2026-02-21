@@ -67,8 +67,8 @@ void UsbPassthrough::addObserver(Observer* observer) {
   impl->adapters.push_back(std::move(adapter));
 }
 
-void UsbPassthrough::initialize() {
-  impl->passthrough.initialize();
+int UsbPassthrough::initialize() {
+  return impl->passthrough.initialize();
 }
 
 void UsbPassthrough::start() {

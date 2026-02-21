@@ -56,11 +56,15 @@ bool assign_ep_address(struct usb_raw_ep_info *info,
   return true;
 }
 
-void process_eps_info(EndpointZeroInfo* epZeroInfo) {
+bool process_eps_info(EndpointZeroInfo* epZeroInfo) {
   struct usb_raw_eps_info info;
   memset(&info, 0, sizeof(info));
   
   int num = usb_raw_eps_info(epZeroInfo->fd, &info);
+  if (num < 0) {
+    PLOG_ERROR << "Failed to fetch raw endpoint information.";
+    return false;
+  }
   for (int i = 0; i < num; i++) {
     PLOG_VERBOSE << "ep #" << i << ":  name: " << &info.eps[i].name[0] << "  addr: " << info.eps[i].addr;
     PLOG_VERBOSE << "  type: " << (info.eps[i].caps.type_iso ? "iso " : "___ ") <<
@@ -86,12 +90,16 @@ void process_eps_info(EndpointZeroInfo* epZeroInfo) {
           }
 
           int int_in_addr = usb_endpoint_num(&eInfo->usb_endpoint);
-          assert(int_in_addr != 0);
+          if (int_in_addr == 0) {
+            PLOG_ERROR << "Failed to assign endpoint address while processing endpoint info.";
+            return false;
+          }
           PLOG_VERBOSE << "int_in: addr = " << int_in_addr;
         }
       }
     }
   }
+  return true;
 }
 
 /*----------------------------------------------------------------------*/
@@ -100,13 +108,12 @@ int usb_raw_open() {
   //int fd = open("/dev/raw-gadget", O_RDWR | O_NONBLOCK );
   int fd = open("/dev/raw-gadget", O_RDWR );
   if (fd < 0) {
-    PLOG_FATAL << "usb_raw_open(): Can't open USB";
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "usb_raw_open(): Can't open USB";
   }
   return fd;
 }
 
-void usb_raw_init(int fd, enum usb_device_speed speed,
+int usb_raw_init(int fd, enum usb_device_speed speed,
       const char *driver, const char *device) {
   struct usb_raw_init arg;
   strcpy((char *)&arg.driver_name[0], driver);
@@ -114,32 +121,34 @@ void usb_raw_init(int fd, enum usb_device_speed speed,
   arg.speed = speed;
   int rv = ioctl(fd, USB_RAW_IOCTL_INIT, &arg);
   if (rv < 0) {
-    PLOG_FATAL << "ioctl(USB_RAW_IOCTL_INIT): " << strerror(errno);
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "ioctl(USB_RAW_IOCTL_INIT): " << strerror(errno);
+    return rv;
   }
+  return rv;
 }
 
-void usb_raw_run(int fd) {
+int usb_raw_run(int fd) {
   int rv = ioctl(fd, USB_RAW_IOCTL_RUN, 0);
   if (rv < 0) {
-    PLOG_FATAL << "ioctl(USB_RAW_IOCTL_RUN): " << strerror(errno);
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "ioctl(USB_RAW_IOCTL_RUN): " << strerror(errno);
+    return rv;
   }
+  return rv;
 }
 
-void usb_raw_event_fetch(int fd, struct usb_raw_event *event) {
+int usb_raw_event_fetch(int fd, struct usb_raw_event *event) {
   int rv = ioctl(fd, USB_RAW_IOCTL_EVENT_FETCH, event);
   if (rv < 0) {
-    PLOG_FATAL << "ioctl(USB_RAW_IOCTL_EVENT_FETCH): " << strerror(errno);
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "ioctl(USB_RAW_IOCTL_EVENT_FETCH): " << strerror(errno);
+    return rv;
   }
+  return rv;
 }
 
 int usb_raw_ep0_read(int fd, struct usb_raw_ep_io *io) {
   int rv = ioctl(fd, USB_RAW_IOCTL_EP0_READ, io);
   if (rv < 0) {
-    PLOG_FATAL << "ioctl(USB_RAW_IOCTL_EP0_READ): " << strerror(errno);
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "ioctl(USB_RAW_IOCTL_EP0_READ): " << strerror(errno);
   }
   return rv;
 }
@@ -147,8 +156,7 @@ int usb_raw_ep0_read(int fd, struct usb_raw_ep_io *io) {
 int usb_raw_ep0_write(int fd, struct usb_raw_ep_io *io) {
   int rv = ioctl(fd, USB_RAW_IOCTL_EP0_WRITE, io);
   if (rv < 0) {
-    PLOG_FATAL << "ioctl(USB_RAW_IOCTL_EP0_WRITE): " << strerror(errno);
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "ioctl(USB_RAW_IOCTL_EP0_WRITE): " << strerror(errno);
   }
   return rv;
 }
@@ -156,8 +164,7 @@ int usb_raw_ep0_write(int fd, struct usb_raw_ep_io *io) {
 int usb_raw_ep_enable(int fd, struct usb_endpoint_descriptor *desc) {
   int rv = ioctl(fd, USB_RAW_IOCTL_EP_ENABLE, desc);
   if (rv < 0) {
-    PLOG_FATAL << "ioctl(USB_RAW_IOCTL_EP_ENABLE): " << strerror(errno);
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "ioctl(USB_RAW_IOCTL_EP_ENABLE): " << strerror(errno);
   }
   return rv;
 }
@@ -165,8 +172,7 @@ int usb_raw_ep_enable(int fd, struct usb_endpoint_descriptor *desc) {
 int usb_raw_ep_disable(int fd, uint32_t something) {
   int rv = ioctl(fd, USB_RAW_IOCTL_EP_DISABLE, something);
   if (rv < 0) {
-    PLOG_FATAL << "ioctl(USB_RAW_IOCTL_EP_DISABLE): " << strerror(errno);
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "ioctl(USB_RAW_IOCTL_EP_DISABLE): " << strerror(errno);
   }
   return rv;
 }
@@ -189,51 +195,49 @@ int usb_raw_ep_write(int fd, struct usb_raw_ep_io *io) {
     if(errno == ETIMEDOUT ) {
       return rv;
     }
-    PLOG_FATAL << "ioctl(USB_RAW_IOCTL_EP_WRITE): " << strerror(errno);
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "ioctl(USB_RAW_IOCTL_EP_WRITE): " << strerror(errno);
   }
   return rv;
 }
 
-void usb_raw_configure(int fd) {
+int usb_raw_configure(int fd) {
   int rv = ioctl(fd, USB_RAW_IOCTL_CONFIGURE, 0);
   if (rv < 0) {
-    PLOG_FATAL << "ioctl(USB_RAW_IOCTL_CONFIGURED): " << strerror(errno);
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "ioctl(USB_RAW_IOCTL_CONFIGURED): " << strerror(errno);
   }
+  return rv;
 }
 
-void usb_raw_vbus_draw(int fd, uint32_t power) {
+int usb_raw_vbus_draw(int fd, uint32_t power) {
   int rv = ioctl(fd, USB_RAW_IOCTL_VBUS_DRAW, power);
   if (rv < 0) {
-    PLOG_FATAL << "ioctl(USB_RAW_IOCTL_VBUS_DRAW): " << strerror(errno);
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "ioctl(USB_RAW_IOCTL_VBUS_DRAW): " << strerror(errno);
   }
+  return rv;
 }
 
 int usb_raw_eps_info(int fd, struct usb_raw_eps_info *info) {
   int rv = ioctl(fd, USB_RAW_IOCTL_EPS_INFO, info);
   if (rv < 0) {
-    PLOG_FATAL << "ioctl(USB_RAW_IOCTL_EPS_INFO): " << strerror(errno);
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "ioctl(USB_RAW_IOCTL_EPS_INFO): " << strerror(errno);
   }
   return rv;
 }
 
-void usb_raw_ep0_stall(int fd) {
+int usb_raw_ep0_stall(int fd) {
   int rv = ioctl(fd, USB_RAW_IOCTL_EP0_STALL, 0);
   if (rv < 0) {
-    PLOG_FATAL << "ioctl(USB_RAW_IOCTL_EP0_STALL): " << strerror(errno);
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "ioctl(USB_RAW_IOCTL_EP0_STALL): " << strerror(errno);
   }
+  return rv;
 }
 
-void usb_raw_ep_set_halt(int fd, int ep) {
+int usb_raw_ep_set_halt(int fd, int ep) {
   int rv = ioctl(fd, USB_RAW_IOCTL_EP_SET_HALT, ep);
   if (rv < 0) {
-    PLOG_FATAL << "ioctl(USB_RAW_IOCTL_EP_SET_HALT): " << strerror(errno);
-    exit(EXIT_FAILURE);
+    PLOG_ERROR << "ioctl(USB_RAW_IOCTL_EP_SET_HALT): " << strerror(errno);
   }
+  return rv;
 }
 
 /*----------------------------------------------------------------------*/

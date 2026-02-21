@@ -1,5 +1,6 @@
 #pragma once
 #include <libusb.h>
+#include <atomic>
 #include <vector>
 
 #include "raw-helper.h"
@@ -67,27 +68,33 @@ public:
   bool readyProductVendor();
   int getVendor();
   int getProduct();
+  void requestReconnect();
   
 private:
-  int product;
-  int vendor;
-  bool haveProductVendor;
+  int product = 0;
+  int vendor = 0;
+  std::atomic<bool> haveProductVendor{false};
   std::vector<EndpointObserver*> observers;
   
-  bool keepRunning;
+  std::atomic<bool> keepRunning{false};
+  std::atomic<bool> sessionRunning{false};
   bool libusbEventThreadStarted = false;
   pthread_t libusbEventThread;
   
   pthread_t threadEp0;
   
-  int fd;  // for ioctl raw_gadget
+  int fd = -1;  // for ioctl raw_gadget
   EndpointZeroInfo mEndpointZeroInfo;
   pthread_t endpointThreads[60]; // crawl before I walk
   
   
-  libusb_device **devices;
-  libusb_device_handle *deviceHandle;
-  libusb_context *context;
+  libusb_device **devices = nullptr;
+  libusb_device_handle *deviceHandle = nullptr;
+  libusb_context *context = nullptr;
+
+  int connectDevice();
+  void teardownActiveEndpoints();
+  void cleanupDevice();
   
   void setEndpoint(AlternateInfo* info, int endpoint, bool enable);
   void setAlternate(InterfaceInfo* info, int alternate);

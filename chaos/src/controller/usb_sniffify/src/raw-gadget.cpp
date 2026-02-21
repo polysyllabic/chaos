@@ -241,9 +241,14 @@ void* ep0_loop_thread( void* data ) {
 
 static void cb_transfer_out(struct libusb_transfer *xfr) {
   EndpointInfo* epInfo = (EndpointInfo*)xfr->user_data;
+  RawGadgetPassthrough* mRawGadgetPassthrough = epInfo->parent->parent->parent->parent->parent;
   epInfo->busyPackets--;
   if (xfr->status != LIBUSB_TRANSFER_COMPLETED) {
     PLOG_ERROR << "transfer status " << xfr->status;
+    if (xfr->status == LIBUSB_TRANSFER_NO_DEVICE || xfr->status == LIBUSB_TRANSFER_ERROR) {
+      mRawGadgetPassthrough->requestReconnect();
+    }
+    libusb_free_transfer(xfr);
     return;
   }
   libusb_free_transfer(xfr);
@@ -306,18 +311,28 @@ void ep_out_work_interrupt( EndpointInfo* epInfo ) {
   
   epInfo->busyPackets++;
   if(libusb_submit_transfer(transfer) != LIBUSB_SUCCESS) {
+    RawGadgetPassthrough* mRawGadgetPassthrough = epInfo->parent->parent->parent->parent->parent;
     PLOG_ERROR << "libusb_submit_transfer(transfer) failed";
-    exit(EXIT_FAILURE);
+    epInfo->busyPackets--;
+    libusb_free_transfer(transfer);
+    mRawGadgetPassthrough->requestReconnect();
+    return;
   }
 }
 
 static void cb_transfer_in(struct libusb_transfer *xfr) {
+  EndpointInfo* epInfo = (EndpointInfo*)xfr->user_data;
+  RawGadgetPassthrough* mRawGadgetPassthrough = epInfo->parent->parent->parent->parent->parent;
   if (xfr->status != LIBUSB_TRANSFER_COMPLETED) {
     PLOG_INFO << "transfer status " << xfr->status;
+    epInfo->busyPackets--;
+    if (xfr->status == LIBUSB_TRANSFER_NO_DEVICE || xfr->status == LIBUSB_TRANSFER_ERROR) {
+      mRawGadgetPassthrough->requestReconnect();
+    }
+    libusb_free_transfer(xfr);
     return;
   }
   
-  EndpointInfo* epInfo = (EndpointInfo*)xfr->user_data;
   struct usb_raw_int_io io;
   io.inner.ep = epInfo->ep_int;
   io.inner.flags = 0;
@@ -350,6 +365,7 @@ static void cb_transfer_in(struct libusb_transfer *xfr) {
     int rv = usb_raw_ep_write(epInfo->fd, (struct usb_raw_ep_io *)&io);
     if (rv < 0) {
       PLOG_ERROR << "bulk/interrupt write to host usb_raw_ep_write() returned " << rv;
+      mRawGadgetPassthrough->requestReconnect();
     } else if (rv != xfr->actual_length) {
       PLOG_WARNING << "Only sent " << rv << " bytes instead of " << xfr->actual_length;
     }
@@ -398,8 +414,12 @@ void ep_in_work_interrupt( EndpointInfo* epInfo ) {
   }
 
   if(libusb_submit_transfer(transfer) != LIBUSB_SUCCESS) {
+    RawGadgetPassthrough* mRawGadgetPassthrough = epInfo->parent->parent->parent->parent->parent;
     PLOG_ERROR << "libusb_submit_transfer(transfer) failed";
-    exit(EXIT_FAILURE);
+    epInfo->busyPackets--;
+    libusb_free_transfer(transfer);
+    mRawGadgetPassthrough->requestReconnect();
+    return;
   }
 }
 
@@ -538,4 +558,3 @@ void* ep_loop_thread( void* data ) {
   PLOG_VERBOSE << "Terminating thread for endpoint 0x" << std::hex << (int) ep->usb_endpoint.bEndpointAddress << std::dec;
   return NULL;
 }
-

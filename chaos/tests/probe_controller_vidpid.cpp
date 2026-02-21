@@ -19,6 +19,7 @@
  */
 #include <iomanip>
 #include <iostream>
+#include <unistd.h>
 
 #include <raw-gadget.hpp>
 
@@ -28,6 +29,12 @@ namespace {
     if (passthrough.initialize() != 0) {
       return false;
     }
+
+    passthrough.start();
+    for (int i = 0; i < 500 && !passthrough.readyProductVendor(); i++) {
+      usleep(10000);
+    }
+    passthrough.stop();
 
     if (!passthrough.readyProductVendor()) {
       return false;

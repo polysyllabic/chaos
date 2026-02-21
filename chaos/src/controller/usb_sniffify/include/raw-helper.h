@@ -193,6 +193,7 @@ typedef struct EndpointInfo {
   libusb_device_handle *deviceHandle;
   bool keepRunning;  // thread management, mostly unused
   bool stop;  // for endpoint termination from interface switching
+  bool threadStarted;
   int busyPackets; // to notice then EP is safe to be diasbled
   
   pthread_t thread;  // for runnign data transfers
@@ -247,14 +248,14 @@ typedef struct EndpointZeroInfo {
 
 /*----------------------------------------------------------------------*/
 bool assign_ep_address(struct usb_raw_ep_info *info, struct usb_endpoint_descriptor *ep);
-void process_eps_info(EndpointZeroInfo* epZeroInfo);
+bool process_eps_info(EndpointZeroInfo* epZeroInfo);
 
 /*----------------------------------------------------------------------*/
 
 int usb_raw_open();
-void usb_raw_init(int fd, enum usb_device_speed speed, const char *driver, const char *device);
-void usb_raw_run(int fd);
-void usb_raw_event_fetch(int fd, struct usb_raw_event *event);
+int usb_raw_init(int fd, enum usb_device_speed speed, const char *driver, const char *device);
+int usb_raw_run(int fd);
+int usb_raw_event_fetch(int fd, struct usb_raw_event *event);
 
 int usb_raw_ep0_read(int fd, struct usb_raw_ep_io *io);
 int usb_raw_ep0_write(int fd, struct usb_raw_ep_io *io);
@@ -264,12 +265,12 @@ int usb_raw_ep_disable(int fd, uint32_t something);
 int usb_raw_ep_write(int fd, struct usb_raw_ep_io *io);
 int usb_raw_ep_read(int fd, struct usb_raw_ep_io *io);
 
-void usb_raw_configure(int fd);
-void usb_raw_vbus_draw(int fd, uint32_t power);
+int usb_raw_configure(int fd);
+int usb_raw_vbus_draw(int fd, uint32_t power);
 
 int usb_raw_eps_info(int fd, struct usb_raw_eps_info *info);
-void usb_raw_ep0_stall(int fd);
-void usb_raw_ep_set_halt(int fd, int ep);
+int usb_raw_ep0_stall(int fd);
+int usb_raw_ep_set_halt(int fd, int ep);
 
 /*----------------------------------------------------------------------*/
 
