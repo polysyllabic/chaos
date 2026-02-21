@@ -1,6 +1,7 @@
 #pragma once
 #include <libusb.h>
 #include <atomic>
+#include <array>
 #include <vector>
 
 #include "raw-helper.h"
@@ -21,12 +22,8 @@
 void ep_out_work_interrupt( EndpointInfo* epInfo );
 
 //static void cb_transfer_in(struct libusb_transfer *xfr);
-void ep_in_work_interrupt( EndpointInfo* epInfo );
-
 void ep_in_work_isochronous( EndpointInfo* epInfo );
 void ep_out_work_isochronous( EndpointInfo* epInfo );
-
-void* ep_loop_thread( void* data );
 
 class EndpointObserver {
   friend RawGadgetPassthrough;
@@ -85,9 +82,8 @@ private:
   
   int fd = -1;  // for ioctl raw_gadget
   EndpointZeroInfo mEndpointZeroInfo;
-  pthread_t endpointThreads[60]; // crawl before I walk
-  
-  
+  std::array<bool, 256> claimedInterfaces{};
+
   libusb_device **devices = nullptr;
   libusb_device_handle *deviceHandle = nullptr;
   libusb_context *context = nullptr;

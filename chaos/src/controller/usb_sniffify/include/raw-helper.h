@@ -5,6 +5,8 @@
 #include <stdbool.h>
 
 #include <pthread.h>
+#include <atomic>
+#include <vector>
 
 //#include <linux/hid.h>
 #include <linux/usb/ch9.h>
@@ -194,7 +196,10 @@ typedef struct EndpointInfo {
   bool keepRunning;  // thread management, mostly unused
   bool stop;  // for endpoint termination from interface switching
   bool threadStarted;
-  int busyPackets; // to notice then EP is safe to be diasbled
+  std::atomic<int> busyPackets; // to notice then EP is safe to be disabled
+  bool transferMutexInitialized;
+  pthread_mutex_t transferMutex;
+  std::vector<struct libusb_transfer*> activeTransfers;
   
   pthread_t thread;  // for runnign data transfers
   

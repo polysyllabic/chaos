@@ -19,6 +19,7 @@
  */
 #pragma once
 #include <array>
+#include <memory>
 
 #include <thread.hpp>
 
@@ -37,7 +38,7 @@ namespace Chaos {
    */
   class ControllerRaw : public Controller, public UsbPassthrough::Observer, public Thread {
   private:
-	  ControllerState* mControllerState = nullptr;
+    std::shared_ptr<ControllerState> mControllerState;
     int mLastFactoryVendor = -1;
     int mLastFactoryProduct = -1;
 

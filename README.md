@@ -195,10 +195,10 @@ or even without streaming at all, although you will not be able to use overlays 
 status of votes or the modifiers in effect. (This has not been tested, but suggestions for what
 to try will be found below.)
 
-**Important:** You must use the DualShock 4 Generation 2, model CUH-ZCT2U. This version has the
-lightbar visible from the front at the top of the touchpad. Gen-1 DualShocks connect to the console
-only through wifi, and a wired USB connection is needed to intercept the signals. Note also that you
-need this controller *in addition* to the Besavior to play PS5-only games.
+**Important:** You must use the DualShock 4 Generation 2, model CUH-ZCT2U, or a compatible 3rd-party
+equivalent. Gen-1 DualShocks connect to the console only through wifi, and a wired USB connection is
+needed to intercept the signals. Note also that you need this controller *in addition* to the
+Besavior to play PS5-only games.
 
 *Note:* You may be able to adapt TCC to run on other setups, particularly using different models
 of the Raspberry Pi or alternatives to the Besavior, but these are untested. See the notes below

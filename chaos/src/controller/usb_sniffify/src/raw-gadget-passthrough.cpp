@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <cstring>
 #include <errno.h>
+#include <new>
+#include <algorithm>
 
 // The logger will be initialized in the main app. It's safe not to use plog at all. The library
 // will still link correctly and there will simply be no logging.
@@ -16,11 +18,51 @@
 // what the settings are on other systems:
 //     ls /sys/class/udc/
 
+namespace {
+void trackTransfer(EndpointInfo* endpointInfo, libusb_transfer* transfer) {
+  if (!endpointInfo->transferMutexInitialized || transfer == nullptr) {
+    return;
+  }
+  pthread_mutex_lock(&endpointInfo->transferMutex);
+  endpointInfo->activeTransfers.push_back(transfer);
+  pthread_mutex_unlock(&endpointInfo->transferMutex);
+}
+
+void untrackTransfer(EndpointInfo* endpointInfo, libusb_transfer* transfer) {
+  if (!endpointInfo->transferMutexInitialized || transfer == nullptr) {
+    return;
+  }
+  pthread_mutex_lock(&endpointInfo->transferMutex);
+  auto it = std::find(endpointInfo->activeTransfers.begin(), endpointInfo->activeTransfers.end(), transfer);
+  if (it != endpointInfo->activeTransfers.end()) {
+    endpointInfo->activeTransfers.erase(it);
+  }
+  pthread_mutex_unlock(&endpointInfo->transferMutex);
+}
+
+void cancelTrackedTransfers(EndpointInfo* endpointInfo) {
+  if (!endpointInfo->transferMutexInitialized) {
+    return;
+  }
+  std::vector<libusb_transfer*> pending;
+  pthread_mutex_lock(&endpointInfo->transferMutex);
+  pending = endpointInfo->activeTransfers;
+  pthread_mutex_unlock(&endpointInfo->transferMutex);
+
+  for (libusb_transfer* transfer : pending) {
+    if (transfer != nullptr) {
+      libusb_cancel_transfer(transfer);
+    }
+  }
+}
+}
+
 int RawGadgetPassthrough::initialize() {
   haveProductVendor = false;
   keepRunning = false;
   sessionRunning = false;
   libusbEventThreadStarted = false;
+  claimedInterfaces.fill(false);
 
   vendor = 0;
   product = 0;
@@ -171,18 +213,6 @@ int RawGadgetPassthrough::connectDevice() {
         return 1;
       }
 
-      if (numAlternates > 0) {
-        int ifaceNumber = configDescriptor->interface[i].altsetting[0].bInterfaceNumber;
-        int claimResult = libusb_claim_interface(deviceHandle, ifaceNumber);
-        if (claimResult < 0) {
-          libusb_free_config_descriptor(configDescriptor);
-          PLOG_ERROR << "Cannot claim interface " << ifaceNumber << ": "
-                     << libusb_error_name(claimResult);
-          cleanupDevice();
-          return 1;
-        }
-      }
-
       for (int a = 0; a < numAlternates; a++) {
         const struct libusb_interface_descriptor* interfaceDescriptor =
             &configDescriptor->interface[i].altsetting[a];
@@ -190,7 +220,7 @@ int RawGadgetPassthrough::connectDevice() {
         alternateInfo->bInterfaceNumber = interfaceDescriptor->bInterfaceNumber;
         alternateInfo->bNumEndpoints = interfaceDescriptor->bNumEndpoints;
         alternateInfo->mEndpointInfos =
-            (EndpointInfo*)calloc(interfaceDescriptor->bNumEndpoints, sizeof(EndpointInfo));
+            new (std::nothrow) EndpointInfo[interfaceDescriptor->bNumEndpoints];
         alternateInfo->parent = interfaceInfo;
         if (alternateInfo->mEndpointInfos == nullptr && interfaceDescriptor->bNumEndpoints > 0) {
           libusb_free_config_descriptor(configDescriptor);
@@ -210,7 +240,8 @@ int RawGadgetPassthrough::connectDevice() {
           endpointInfo->keepRunning = false;
           endpointInfo->stop = true;
           endpointInfo->threadStarted = false;
-          endpointInfo->busyPackets = 0;
+          endpointInfo->busyPackets.store(0);
+          endpointInfo->transferMutexInitialized = false;
           endpointInfo->usb_endpoint.bLength = endpointDescriptor->bLength;
           endpointInfo->usb_endpoint.bDescriptorType = endpointDescriptor->bDescriptorType;
           endpointInfo->usb_endpoint.bEndpointAddress = endpointDescriptor->bEndpointAddress;
@@ -227,6 +258,13 @@ int RawGadgetPassthrough::connectDevice() {
             cleanupDevice();
             return 1;
           }
+          if (pthread_mutex_init(&endpointInfo->transferMutex, NULL) != 0) {
+            libusb_free_config_descriptor(configDescriptor);
+            PLOG_ERROR << "Failed to initialize endpoint transfer mutex.";
+            cleanupDevice();
+            return 1;
+          }
+          endpointInfo->transferMutexInitialized = true;
         }
       }
     }
@@ -251,6 +289,17 @@ void RawGadgetPassthrough::teardownActiveEndpoints() {
           EndpointInfo* endpointInfo = &alternateInfo->mEndpointInfos[e];
           endpointInfo->stop = true;
           endpointInfo->keepRunning = false;
+          cancelTrackedTransfers(endpointInfo);
+          for (int wait = 0; wait < 200 && endpointInfo->busyPackets.load() > 0; wait++) {
+            if (context != nullptr) {
+              struct timeval timeout;
+              timeout.tv_sec = 0;
+              timeout.tv_usec = 5000;
+              libusb_handle_events_timeout(context, &timeout);
+            } else {
+              usleep(5000);
+            }
+          }
           if (endpointInfo->threadStarted) {
             pthread_join(endpointInfo->thread, NULL);
             endpointInfo->threadStarted = false;
@@ -264,7 +313,12 @@ void RawGadgetPassthrough::teardownActiveEndpoints() {
             }
           }
           endpointInfo->fd = -1;
-          endpointInfo->busyPackets = 0;
+          endpointInfo->busyPackets.store(0);
+          if (endpointInfo->transferMutexInitialized) {
+            pthread_mutex_lock(&endpointInfo->transferMutex);
+            endpointInfo->activeTransfers.clear();
+            pthread_mutex_unlock(&endpointInfo->transferMutex);
+          }
         }
       }
     }
@@ -274,26 +328,17 @@ void RawGadgetPassthrough::teardownActiveEndpoints() {
 void RawGadgetPassthrough::cleanupDevice() {
   teardownActiveEndpoints();
 
-  if (deviceHandle != nullptr && mEndpointZeroInfo.mConfigurationInfos != nullptr) {
-    bool released[256] = {false};
-    for (int c = 0; c < mEndpointZeroInfo.bNumConfigurations; c++) {
-      ConfigurationInfo* configInfo = &mEndpointZeroInfo.mConfigurationInfos[c];
-      for (int i = 0; i < configInfo->bNumInterfaces; i++) {
-        InterfaceInfo* interfaceInfo = &configInfo->mInterfaceInfos[i];
-        if (interfaceInfo->bNumAlternates <= 0 || interfaceInfo->mAlternateInfos == nullptr) {
-          continue;
-        }
-        int ifaceNum = interfaceInfo->mAlternateInfos[0].bInterfaceNumber;
-        if (ifaceNum < 0 || ifaceNum > 255 || released[ifaceNum]) {
-          continue;
-        }
-        int releaseResult = libusb_release_interface(deviceHandle, ifaceNum);
-        if (releaseResult < 0) {
-          PLOG_VERBOSE << "Failed to release interface " << ifaceNum
-                       << ": " << libusb_error_name(releaseResult);
-        }
-        released[ifaceNum] = true;
+  if (deviceHandle != nullptr) {
+    for (int ifaceNum = 0; ifaceNum < 256; ifaceNum++) {
+      if (!claimedInterfaces[ifaceNum]) {
+        continue;
       }
+      int releaseResult = libusb_release_interface(deviceHandle, ifaceNum);
+      if (releaseResult < 0) {
+        PLOG_VERBOSE << "Failed to release interface " << ifaceNum
+                     << ": " << libusb_error_name(releaseResult);
+      }
+      claimedInterfaces[ifaceNum] = false;
     }
   }
 
@@ -315,10 +360,15 @@ void RawGadgetPassthrough::cleanupDevice() {
           }
           for (int e = 0; e < alternateInfo->bNumEndpoints; e++) {
             EndpointInfo* endpointInfo = &alternateInfo->mEndpointInfos[e];
+            cancelTrackedTransfers(endpointInfo);
+            if (endpointInfo->transferMutexInitialized) {
+              pthread_mutex_destroy(&endpointInfo->transferMutex);
+              endpointInfo->transferMutexInitialized = false;
+            }
             free(endpointInfo->data);
             endpointInfo->data = nullptr;
           }
-          free(alternateInfo->mEndpointInfos);
+          delete[] alternateInfo->mEndpointInfos;
           alternateInfo->mEndpointInfos = nullptr;
         }
         free(interfaceInfo->mAlternateInfos);
@@ -349,6 +399,7 @@ void RawGadgetPassthrough::cleanupDevice() {
   mEndpointZeroInfo.fd = -1;
   mEndpointZeroInfo.dev_handle = nullptr;
   sessionRunning = false;
+  claimedInterfaces.fill(false);
 }
 
 void RawGadgetPassthrough::setEndpoint(AlternateInfo* info, int endpoint, bool enable) {
@@ -381,6 +432,24 @@ void RawGadgetPassthrough::setEndpoint(AlternateInfo* info, int endpoint, bool e
     } else {  // may need mutex here
       endpointInfo->stop = true;
       endpointInfo->keepRunning = false;
+      cancelTrackedTransfers(endpointInfo);
+      for (int wait = 0; wait < 200 && endpointInfo->busyPackets.load() > 0; wait++) {
+        if (context != nullptr) {
+          struct timeval timeout;
+          timeout.tv_sec = 0;
+          timeout.tv_usec = 5000;
+          libusb_handle_events_timeout(context, &timeout);
+        } else {
+          usleep(5000);
+        }
+      }
+      if (endpointInfo->busyPackets.load() > 0) {
+        PLOG_WARNING << "Endpoint 0x" << std::hex
+                     << (int)endpointInfo->usb_endpoint.bEndpointAddress
+                     << std::dec
+                     << " still has " << endpointInfo->busyPackets.load()
+                     << " in-flight transfer(s) after cancellation wait.";
+      }
       if (endpointInfo->threadStarted) {
         pthread_join(endpointInfo->thread, NULL);
         endpointInfo->threadStarted = false;
@@ -393,68 +462,144 @@ void RawGadgetPassthrough::setEndpoint(AlternateInfo* info, int endpoint, bool e
         int ret = usb_raw_ep_disable(endpointInfo->fd, temp);
         PLOG_VERBOSE << "usb_raw_ep_disable returned " << ret;
       }
+
+      endpointInfo->busyPackets.store(0);
+      if (endpointInfo->transferMutexInitialized) {
+        pthread_mutex_lock(&endpointInfo->transferMutex);
+        endpointInfo->activeTransfers.clear();
+        pthread_mutex_unlock(&endpointInfo->transferMutex);
+      }
     }
   PLOG_VERBOSE << " ---- 0x" << std::hex << (int) endpointInfo->usb_endpoint.bEndpointAddress << std::dec
     << " ep_int = " << endpointInfo->ep_int;
 }
 
 void RawGadgetPassthrough::setAlternate(InterfaceInfo* info, int alternate) {
-  AlternateInfo* alternateInfo = &info->mAlternateInfos[alternate];
-  if (alternate >= 0) {
-    alternateInfo = &info->mAlternateInfos[alternate];
-  } else {
-    alternateInfo = &info->mAlternateInfos[info->activeAlternate];
+  if (alternate < 0) {
+    if (info->activeAlternate >= 0 && info->activeAlternate < info->bNumAlternates) {
+      PLOG_VERBOSE << "Disabling active alternate " << info->activeAlternate;
+      for (int i = 0; i < info->mAlternateInfos[info->activeAlternate].bNumEndpoints; i++) {
+        this->setEndpoint(&info->mAlternateInfos[info->activeAlternate], i, false);
+      }
+    }
+    info->activeAlternate = -1;
+    return;
   }
-  
-  if (info->activeAlternate != alternate &&
-    info->activeAlternate >= 0 &&
-    alternate >= 0) {
-    PLOG_VERBOSE << "Need to disable current Alternate " << info->activeAlternate;  // TODO;
+
+  if (alternate >= info->bNumAlternates) {
+    PLOG_ERROR << "Invalid alternate index " << alternate << " for interface.";
+    requestReconnect();
+    return;
+  }
+
+  if (info->activeAlternate == alternate) {
+    return;
+  }
+
+  if (info->activeAlternate >= 0 && info->activeAlternate < info->bNumAlternates) {
+    PLOG_VERBOSE << "Need to disable current Alternate " << info->activeAlternate;
     for (int i = 0; i < info->mAlternateInfos[info->activeAlternate].bNumEndpoints; i++) {
-      PLOG_VERBOSE << " - - | setEndpoint(?, " << i << ", false)";
       this->setEndpoint(&info->mAlternateInfos[info->activeAlternate], i, false);
     }
   }
+
+  AlternateInfo* alternateInfo = &info->mAlternateInfos[alternate];
   for (int i = 0; i < alternateInfo->bNumEndpoints; i++) {
-    PLOG_VERBOSE << " - - | setEndpoint(?, " << i << ", " << (alternate >= 0 ? "true" : "false") << ")";
-    this->setEndpoint(alternateInfo, i, alternate >= 0 ? true : false);
+    this->setEndpoint(alternateInfo, i, true);
   }
   info->activeAlternate = alternate;
 }
 
 void RawGadgetPassthrough::setInterface( ConfigurationInfo* info, int interface, int alternate) {
-  InterfaceInfo* interfaceInfo = &info->mInterfaceInfos[interface];
-  
-  if (info->activeInterface != interface &&  info->activeInterface >= 0 &&  alternate > 0) {
-    //PLOG_VERBOSE << "Need to disable current Interface of " << info->activeInterface << "," << info->mInterfaceInfos[info->activeInterface].activeAlternate;
-    //setAlternate(&info->mInterfaceInfos[info->activeInterface], -1);
+  int interfaceIndex = -1;
+  for (int i = 0; i < info->bNumInterfaces; i++) {
+    InterfaceInfo* candidate = &info->mInterfaceInfos[i];
+    if (candidate->bNumAlternates > 0 &&
+        candidate->mAlternateInfos != nullptr &&
+        candidate->mAlternateInfos[0].bInterfaceNumber == interface) {
+      interfaceIndex = i;
+      break;
+    }
   }
-  
-  PLOG_VERBOSE << "setAlternate(?, " << alternate << ")";
+  if (interfaceIndex < 0 && interface >= 0 && interface < info->bNumInterfaces) {
+    // Fall back to index-based addressing for legacy callers.
+    interfaceIndex = interface;
+  }
+  if (interfaceIndex < 0 || interfaceIndex >= info->bNumInterfaces) {
+    PLOG_ERROR << "Invalid interface selection " << interface;
+    requestReconnect();
+    return;
+  }
+
+  InterfaceInfo* interfaceInfo = &info->mInterfaceInfos[interfaceIndex];
+  if (interfaceInfo->bNumAlternates <= 0 || interfaceInfo->mAlternateInfos == nullptr) {
+    PLOG_ERROR << "Interface has no alternate settings.";
+    requestReconnect();
+    return;
+  }
+
+  const int interfaceNumber = interfaceInfo->mAlternateInfos[0].bInterfaceNumber;
+  if (interfaceNumber < 0 || interfaceNumber > 255) {
+    PLOG_ERROR << "Interface number out of supported range: " << interfaceNumber;
+    requestReconnect();
+    return;
+  }
+
+  if (alternate >= 0 && !claimedInterfaces[interfaceNumber]) {
+    int claimResult = libusb_claim_interface(mEndpointZeroInfo.dev_handle, interfaceNumber);
+    if (claimResult < 0) {
+      PLOG_ERROR << "Cannot claim interface " << interfaceNumber << ": "
+                 << libusb_error_name(claimResult);
+      requestReconnect();
+      return;
+    }
+    claimedInterfaces[interfaceNumber] = true;
+  }
+
   this->setAlternate(interfaceInfo, alternate);
-  info->activeInterface = interface;
+  info->activeInterface = interfaceIndex;
   if (alternate >= 0) {
-    if(libusb_set_interface_alt_setting(mEndpointZeroInfo.dev_handle, interface, alternate ) != LIBUSB_SUCCESS)  {
-      PLOG_ERROR << "Could not set libusb interface alt setting";
+    int altResult = libusb_set_interface_alt_setting(mEndpointZeroInfo.dev_handle, interfaceNumber, alternate);
+    if (altResult != LIBUSB_SUCCESS) {
+      PLOG_ERROR << "Could not set libusb interface alt setting: " << libusb_error_name(altResult);
+      requestReconnect();
     }
   }
 }
 
 void RawGadgetPassthrough::setConfiguration( int configuration) {
-  ConfigurationInfo* configInfo = &mEndpointZeroInfo.mConfigurationInfos[configuration];
-  
-  if (mEndpointZeroInfo.activeConfiguration != configuration &&
-    mEndpointZeroInfo.activeConfiguration >= 0 &&
-    configuration >= 0) {
+  if (configuration < -1 || configuration >= mEndpointZeroInfo.bNumConfigurations) {
+    PLOG_ERROR << "Invalid configuration index " << configuration;
+    requestReconnect();
+    return;
+  }
+
+  if (mEndpointZeroInfo.activeConfiguration >= 0 &&
+      mEndpointZeroInfo.activeConfiguration < mEndpointZeroInfo.bNumConfigurations &&
+      mEndpointZeroInfo.activeConfiguration != configuration) {
     PLOG_VERBOSE << "Need to disable current configuration!";
-    for (int i = 0; i < mEndpointZeroInfo.mConfigurationInfos[mEndpointZeroInfo.activeConfiguration].bNumInterfaces; i++) {
-      this->setInterface( &mEndpointZeroInfo.mConfigurationInfos[mEndpointZeroInfo.activeConfiguration], i, -1);  // unsure if this is needed in set config
+    ConfigurationInfo* activeInfo = &mEndpointZeroInfo.mConfigurationInfos[mEndpointZeroInfo.activeConfiguration];
+    for (int i = 0; i < activeInfo->bNumInterfaces; i++) {
+      InterfaceInfo* iface = &activeInfo->mInterfaceInfos[i];
+      int interfaceNumber = (iface->bNumAlternates > 0 && iface->mAlternateInfos != nullptr)
+                              ? iface->mAlternateInfos[0].bInterfaceNumber
+                              : i;
+      this->setInterface(activeInfo, interfaceNumber, -1);
     }
   }
-  
+
+  if (configuration < 0) {
+    mEndpointZeroInfo.activeConfiguration = -1;
+    return;
+  }
+
+  ConfigurationInfo* configInfo = &mEndpointZeroInfo.mConfigurationInfos[configuration];
   for (int i = 0; i < configInfo->bNumInterfaces; i++) {
-    PLOG_VERBOSE << "setInterface(?, " << i << ", 0)";
-    this->setInterface(configInfo, i, 0);  // unsure if this is needed in set config
+    InterfaceInfo* iface = &configInfo->mInterfaceInfos[i];
+    int interfaceNumber = (iface->bNumAlternates > 0 && iface->mAlternateInfos != nullptr)
+                            ? iface->mAlternateInfos[0].bInterfaceNumber
+                            : i;
+    this->setInterface(configInfo, interfaceNumber, 0);
   }
   mEndpointZeroInfo.activeConfiguration = configuration;
 }
@@ -470,7 +615,9 @@ bool RawGadgetPassthrough::ep0Request(RawGadgetPassthrough* mRawGadgetPassthroug
     switch(event->ctrl.bRequest) {
       case USB_REQ_SET_CONFIGURATION:
         // The lower byte of the wValue field specifies the desired configuration
-        PLOG_VERBOSE << "Setting configuration to: " << (int) (event->ctrl.wValue & 0xff);
+        {
+        int configurationValue = (event->ctrl.wValue & 0xff);
+        PLOG_VERBOSE << "Setting configuration to: " << configurationValue;
         
         // From https://usb.ktemkin.com usb_device_framework_chapter.pdf
         // 8. Based on the configuration information and how the USB device will be used, the host
@@ -479,7 +626,15 @@ bool RawGadgetPassthrough::ep0Request(RawGadgetPassthrough* mRawGadgetPassthroug
         // characteristics. The USB device may now draw the amount of VBUS power described in its
         // descriptor for the selected configuration. From the device’s point of view, it is now
         // ready for use.
-        mRawGadgetPassthrough->setConfiguration( (event->ctrl.wValue & 0xff) -1);
+        if (configurationValue == 0) {
+          mRawGadgetPassthrough->setConfiguration(-1);
+          break;
+        }
+        if (configurationValue < 0 || configurationValue > info->bNumConfigurations) {
+          PLOG_ERROR << "Host requested invalid configuration value " << configurationValue;
+          return false;
+        }
+        mRawGadgetPassthrough->setConfiguration(configurationValue - 1);
         
         if (usb_raw_vbus_draw(info->fd, 0x32 * 5) < 0) { // TODO: grab from descriptor for passthrough
           mRawGadgetPassthrough->requestReconnect();
@@ -490,9 +645,15 @@ bool RawGadgetPassthrough::ep0Request(RawGadgetPassthrough* mRawGadgetPassthroug
           return false;
         }
         break;
+        }
       case USB_REQ_SET_INTERFACE:
-        PLOG_VERBOSE << "Setting Interface to: " << event->ctrl.wIndex << " Alternate: " <<  event->ctrl.wValue;
-        mRawGadgetPassthrough->setInterface(&info->mConfigurationInfos[info->activeConfiguration], event->ctrl.wIndex,  event->ctrl.wValue);
+        if (info->activeConfiguration < 0 || info->activeConfiguration >= info->bNumConfigurations) {
+          PLOG_ERROR << "Received SET_INTERFACE before a valid active configuration.";
+          return false;
+        }
+        PLOG_VERBOSE << "Setting Interface to: " << event->ctrl.wIndex << " Alternate: " << event->ctrl.wValue;
+        mRawGadgetPassthrough->setInterface(&info->mConfigurationInfos[info->activeConfiguration],
+                                            event->ctrl.wIndex, event->ctrl.wValue);
         break;
       default:
         break;
@@ -784,7 +945,7 @@ void* RawGadgetPassthrough::epLoopThread( void* data ) {
   int idleDelay = 1000000;
   int idleCount = 0;
   bool priorenable = false;
-  while ((ep->keepRunning && mRawGadgetPassthrough->sessionRunning) || (ep->busyPackets > 0)) {
+  while ((ep->keepRunning && mRawGadgetPassthrough->sessionRunning) || (ep->busyPackets.load() > 0)) {
     if (ep->ep_int >= 0 && !ep->stop) {
       if (priorenable == false &&
         (ep->usb_endpoint.bmAttributes & LIBUSB_TRANSFER_TYPE_MASK) == LIBUSB_TRANSFER_TYPE_ISOCHRONOUS) {
@@ -828,7 +989,7 @@ void* RawGadgetPassthrough::epLoopThread( void* data ) {
       if (idleCount > 1000000/idleDelay) {
         idleCount = 0;
         PLOG_VERBOSE << "Idle: Endpoint 0x" << std::hex << (int) ep->usb_endpoint.bEndpointAddress
-          << " - ep->busyPackets=" << ep->busyPackets;
+          << " - ep->busyPackets=" << ep->busyPackets.load();
       }
       usleep(idleDelay);
     }
@@ -840,15 +1001,17 @@ void* RawGadgetPassthrough::epLoopThread( void* data ) {
 
 void RawGadgetPassthrough::epDeviceToHostWorkInterrupt( EndpointInfo* epInfo ) {
 
-  if (epInfo->busyPackets >= 1) {
+  if (epInfo->busyPackets.load() >= 1) {
     usleep(epInfo->bIntervalInMicroseconds);
     return;
   }
-  epInfo->busyPackets++;
+  epInfo->busyPackets.fetch_add(1);
   struct libusb_transfer *transfer;
   transfer = libusb_alloc_transfer(0);
   if (transfer == NULL) {
     PLOG_ERROR << "libusb_alloc_transfer(0) no memory";
+    epInfo->busyPackets.fetch_sub(1);
+    return;
   }
   switch(epInfo->usb_endpoint.bmAttributes & LIBUSB_TRANSFER_TYPE_MASK) {
     case LIBUSB_TRANSFER_TYPE_INTERRUPT:
@@ -874,12 +1037,16 @@ void RawGadgetPassthrough::epDeviceToHostWorkInterrupt( EndpointInfo* epInfo ) {
       break;
     default:
       PLOG_ERROR << "Unknopwn transfer type";
+      epInfo->busyPackets.fetch_sub(1);
+      libusb_free_transfer(transfer);
       return;
   }
 
+  trackTransfer(epInfo, transfer);
   if(libusb_submit_transfer(transfer) != LIBUSB_SUCCESS) {
     PLOG_ERROR << "libusb_submit_transfer(transfer) failed";
-    epInfo->busyPackets--;
+    epInfo->busyPackets.fetch_sub(1);
+    untrackTransfer(epInfo, transfer);
     libusb_free_transfer(transfer);
     requestReconnect();
     return;
@@ -888,10 +1055,11 @@ void RawGadgetPassthrough::epDeviceToHostWorkInterrupt( EndpointInfo* epInfo ) {
 
 void RawGadgetPassthrough::cbTransferIn(struct libusb_transfer *xfr) {
   EndpointInfo* epInfo = (EndpointInfo*)xfr->user_data;
+  untrackTransfer(epInfo, xfr);
   RawGadgetPassthrough* mRawGadgetPassthrough = epInfo->parent->parent->parent->parent->parent;
   if (xfr->status != LIBUSB_TRANSFER_COMPLETED) {
     PLOG_ERROR << "Transfer status " << xfr->status;
-    epInfo->busyPackets--;
+    epInfo->busyPackets.fetch_sub(1);
     libusb_free_transfer(xfr);
     if (xfr->status == LIBUSB_TRANSFER_NO_DEVICE || xfr->status == LIBUSB_TRANSFER_ERROR) {
       mRawGadgetPassthrough->requestReconnect();
@@ -912,21 +1080,25 @@ void RawGadgetPassthrough::cbTransferIn(struct libusb_transfer *xfr) {
         continue;
       }
       
-      io.inner.length = pack->actual_length;//0;//epInfo->wMaxPacketSize;
+      io.inner.length = pack->actual_length > EP_MAX_PACKET_INT ? EP_MAX_PACKET_INT : pack->actual_length;
       
-      memcpy(&io.inner.data[0], xfr->buffer, pack->actual_length);
+      unsigned char* packetBuffer = libusb_get_iso_packet_buffer_simple(xfr, i);
+      memcpy(&io.inner.data[0], packetBuffer, io.inner.length);
       
-      int rv = pack->actual_length;
+      int rv = usb_raw_ep_write(epInfo->fd, (struct usb_raw_ep_io *)&io);
       if (rv < 0) {
-        PLOG_ERROR << "iso write to host  usb_raw_ep_write() returned " << rv;
-      } else if (rv != pack->actual_length) {
-        PLOG_WARNING << "Only sent " << rv << " bytes instead of " << pack->actual_length;
+        if (errno != ETIMEDOUT) {
+          PLOG_ERROR << "iso write to host usb_raw_ep_write() returned " << rv;
+          mRawGadgetPassthrough->requestReconnect();
+        }
+      } else if (rv != io.inner.length) {
+        PLOG_WARNING << "Only sent " << rv << " bytes instead of " << io.inner.length;
       }
     }
   } else {
-    io.inner.length = xfr->actual_length;//0;//epInfo->wMaxPacketSize;
+    io.inner.length = xfr->actual_length > EP_MAX_PACKET_INT ? EP_MAX_PACKET_INT : xfr->actual_length;
     
-    memcpy(&io.inner.data[0], xfr->buffer, xfr->actual_length);
+    memcpy(&io.inner.data[0], xfr->buffer, io.inner.length);
     
     for (std::vector<EndpointObserver*>::iterator it = mRawGadgetPassthrough->observers.begin();
        it != mRawGadgetPassthrough->observers.end();
@@ -934,7 +1106,7 @@ void RawGadgetPassthrough::cbTransferIn(struct libusb_transfer *xfr) {
       EndpointObserver* observer = *it;
       
       if (observer->getEndpoint() == epInfo->usb_endpoint.bEndpointAddress) {
-        observer->notification(&io.inner.data[0], xfr->actual_length);
+        observer->notification(&io.inner.data[0], io.inner.length);
       }
     }
     
@@ -945,12 +1117,12 @@ void RawGadgetPassthrough::cbTransferIn(struct libusb_transfer *xfr) {
         mRawGadgetPassthrough->requestReconnect();
       }
       
-    } else if (rv != xfr->actual_length) {
-      PLOG_WARNING << "Only sent " << rv << " bytes instead of " << xfr->actual_length;
+    } else if (rv != io.inner.length) {
+      PLOG_WARNING << "Only sent " << rv << " bytes instead of " << io.inner.length;
     }
   }
   
-  epInfo->busyPackets--;
+  epInfo->busyPackets.fetch_sub(1);
   libusb_free_transfer(xfr);
 }
 

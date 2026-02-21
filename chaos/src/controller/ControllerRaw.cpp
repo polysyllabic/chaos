@@ -35,8 +35,9 @@ ControllerRaw::ControllerRaw() : Controller() {
 ControllerRaw::~ControllerRaw() {
   mUsbPassthrough.stop();
   WaitForInternalThreadToExit();
-  delete mControllerState;
-  mControllerState = nullptr;
+  lock();
+  mControllerState.reset();
+  unlock();
 }
 
 void ControllerRaw::initialize() {
@@ -55,25 +56,41 @@ void ControllerRaw::initialize() {
 }
 
 void ControllerRaw::initializeControllerStateIfPossible() {
-  if (mControllerState != nullptr || !mUsbPassthrough.readyProductVendor()) {
+  if (!mUsbPassthrough.readyProductVendor()) {
     return;
   }
 
   const int vendor = mUsbPassthrough.getVendor();
   const int product = mUsbPassthrough.getProduct();
+  lock();
   if (vendor == mLastFactoryVendor && product == mLastFactoryProduct) {
+    unlock();
     return;
+  }
+
+  if (vendor != mLastFactoryVendor || product != mLastFactoryProduct) {
+    if (mControllerState != nullptr) {
+      PLOG_INFO << "Controller VID/PID changed from 0x"
+                << std::setfill('0') << std::setw(4) << std::hex << mLastFactoryVendor
+                << ":0x" << std::setw(4) << mLastFactoryProduct
+                << " to 0x" << std::setw(4) << vendor
+                << ":0x" << std::setw(4) << product << std::dec
+                << ". Rebinding controller parser.";
+    }
+    mControllerState.reset();
+    deviceEventQueue.clear();
   }
 
   mLastFactoryVendor = vendor;
   mLastFactoryProduct = product;
-  mControllerState = ControllerState::factory(vendor, product);
+  mControllerState = std::shared_ptr<ControllerState>(ControllerState::factory(vendor, product));
   if (mControllerState == nullptr) {
     PLOG_ERROR << "Could not build ControllerState for vendor=0x"
                << std::setfill('0') << std::setw(4) << std::hex << vendor
                << " product=0x" << std::setw(4) << product << std::dec
                << ". Waiting for a supported controller to be plugged in.";
   }
+  unlock();
 }
 
 /* applyHardware() was a function for the GPIO interface. Does nothing now, so removed. 
@@ -85,18 +102,25 @@ bool ControllerRaw::applyHardware(const DeviceEvent& event) {
 
 void ControllerRaw::doAction() {
   while (true) {
+    std::shared_ptr<ControllerState> controllerStateSnapshot;
+    std::array<unsigned char, 64> bufferFront{};
     lock();
     if (deviceEventQueue.empty()) {
       unlock();
       break;
     }
-    std::array<unsigned char, 64> bufferFront = deviceEventQueue.front();
+    controllerStateSnapshot = mControllerState;
+    bufferFront = deviceEventQueue.front();
     deviceEventQueue.pop_front();
     unlock();
-			
+    
+    if (controllerStateSnapshot == nullptr) {
+      continue;
+    }
+
     // Convert the incoming buffer into a series of device events.
     std::vector<DeviceEvent> deviceEvents;
-    mControllerState->getDeviceEvents(bufferFront.data(), 64, deviceEvents);
+    controllerStateSnapshot->getDeviceEvents(bufferFront.data(), 64, deviceEvents);
 		
     for (std::vector<DeviceEvent>::iterator it=deviceEvents.begin(); it != deviceEvents.end(); it++) {
       DeviceEvent& event = *it;
@@ -108,7 +132,11 @@ void ControllerRaw::doAction() {
 
 void ControllerRaw::notification(unsigned char* buffer, int length) {
   initializeControllerStateIfPossible();
-  if (mControllerState == nullptr) {
+  std::shared_ptr<ControllerState> controllerStateSnapshot;
+  lock();
+  controllerStateSnapshot = mControllerState;
+  unlock();
+  if (controllerStateSnapshot == nullptr) {
     PLOG_VERBOSE << "Dropping controller report because controller state is not initialized.";
     return;
   }
@@ -127,5 +155,5 @@ void ControllerRaw::notification(unsigned char* buffer, int length) {
 	
   // This is our only chance to intercept the data.
   // Take the mControllerState and replace the provided buffer:
-  mControllerState->applyHackedState(buffer, controllerState);
+  controllerStateSnapshot->applyHackedState(buffer, controllerState);
 }
