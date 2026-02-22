@@ -310,6 +310,7 @@ class ChaosBot:
       raise ValueError('No bot OAuth token is configured')
 
     self._chat_twitch = await Twitch(client_id, authenticate_app=False)
+    self._chat_twitch.auto_refresh_auth = False
     await self._chat_twitch.set_user_authentication(
       bot_token,
       [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT],
@@ -336,6 +337,7 @@ class ChaosBot:
       return
 
     self._event_twitch = await Twitch(client_id, authenticate_app=False)
+    self._event_twitch.auto_refresh_auth = False
     scopes = [AuthScope.BITS_READ, AuthScope.CHANNEL_READ_REDEMPTIONS]
     await self._event_twitch.set_user_authentication(event_token, scopes, validate=False)
 
