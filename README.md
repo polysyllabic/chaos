@@ -316,6 +316,26 @@ sudo reboot
 After this final reboot, chaos should be installed and will run automatically each time you turn
 on the Raspberry Pi.
 
+### Updating an Existing Installation
+
+After the initial install, use the update scripts from the repository root:
+
+```bash
+./scripts/update_engine.sh
+./scripts/update_chaosface.sh
+./scripts/update_chaos.sh
+```
+
+- `update_engine.sh` rebuilds/reinstalls the engine and refreshes the `chaos` systemd unit files.
+- `update_chaosface.sh` redeploys Chaosface to `/usr/local/chaos`.
+- `update_chaos.sh` runs both engine and Chaosface updates in sequence.
+
+Optional flags:
+
+- `./scripts/update_engine.sh --restart-service`
+- `./scripts/update_chaosface.sh --skip-deps --restart-service`
+- `./scripts/update_chaos.sh --skip-chaosface-deps --restart-services`
+
 ### Configuring the Console
 
 Your console will need to be set up to prefer USB communication rather than bluetooth for your
@@ -657,4 +677,3 @@ effective without their contributions, so thanks to everyone that has made this 
 - - Mute certain game volumes
 - [crescenterra](https://www.twitch.tv/crescenterra)
 - - 30fps
-

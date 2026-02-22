@@ -39,9 +39,12 @@ can mean that the IP address will change. To avoid having to reset IP addresses 
 it's recommended that you have your router assign static IP addresses to both the Pi and the
 computer that will host Chaosface.
 
-If you have already installed TCC with Chaosface on the Pi, you must re-run the `install.sh`
-script and choose the options for remote installation. This will stop the chatbot from running
-from the Pi and allow you to configure the correct interface address.
+If you already have TCC installed on the Pi and only want to update the local Chaosface runtime
+in `/usr/local/chaos`, run `./scripts/update_chaosface.sh`.
+To update only the engine, run `./scripts/update_engine.sh`.
+To update both engine and Chaosface together, run `./scripts/update_chaos.sh`
+Re-run `./install.sh` only when you want to reconfigure installation options (for example,
+switching between local and remote Chaosface, or changing the configured interface address).
 
 Setting up the computer for Chaosface:
 
@@ -49,20 +52,22 @@ Setting up the computer for Chaosface:
 
 2. Download or clone this repository onto that computer.
 
-3. Run the dedicated Chaosface remote installer. This is separate from the Raspberry-Pi `install.sh`
-   and can be run by itself.
+3. Run the dedicated Chaosface standalone installer. This is separate from the Raspberry-Pi
+   `install.sh` flow and is intended for a separate computer that hosts Chaosface.
 
    Linux / macOS:
    - Open a terminal in the repository root.
-   - Run: `./chaosface/install/install_chaosface.sh`
+   - Run: `./chaosface/install/install_chaosface_standalone.sh`
 
    Windows (Command Prompt or PowerShell):
    - Open a terminal in the repository root.
-   - Run: `chaosface\install\install_chaosface.bat`
+   - Run: `chaosface\install\install_chaosface_standalone.bat`
 
    Notes:
    - By default this installs to `~/chaosface-runtime` (or `%USERPROFILE%\chaosface-runtime` on Windows).
    - To choose a different install directory, pass `--install-dir <path>` to either installer.
+   - Do not run the remote installer with `sudo` unless you also pass `--install-dir`; otherwise
+     the default `~` resolves to `/root` and the runtime lands under `/root/chaosface-runtime`.
 
 4. Start Chaosface from the installed runtime directory:
 
