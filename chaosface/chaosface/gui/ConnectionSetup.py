@@ -145,9 +145,10 @@ def build_connection_tab() -> None:
 
     with ui.column().classes('w-full'):
       ui.label('Bot Diagnostics').classes('text-subtitle1')
-      diagnostics_box = ui.column().classes(
-        'w-full h-48 overflow-auto rounded border border-gray-300 p-2'
-      )
+      diagnostics_box = ui.textarea(
+        label='',
+        value='No bot diagnostics yet.',
+      ).props('readonly').classes('w-full h-48')
 
     def load_generated_tokens():
       loaded = []
@@ -169,13 +170,15 @@ def build_connection_tab() -> None:
 
     def refresh_bot_diagnostics():
       messages = config.relay.get_bot_diagnostics()
-      diagnostics_box.clear()
-      with diagnostics_box:
-        if not messages:
-          ui.label('No bot diagnostics yet.').classes('text-xs text-gray-600')
-          return
-        for message in messages:
-          ui.label(str(message)).classes('text-xs font-mono break-all')
+      text = '\n'.join(str(message) for message in messages) if messages else 'No bot diagnostics yet.'
+      if str(diagnostics_box.value or '') != text:
+        diagnostics_box.value = text
+
+    def on_bot_diagnostics_changed(_messages):
+      if diagnostics_box.is_deleted:
+        config.relay.off('bot_diagnostics', on_bot_diagnostics_changed)
+        return
+      refresh_bot_diagnostics()
 
     def clear_bot_diagnostics():
       config.relay.clear_bot_diagnostics()
@@ -321,4 +324,4 @@ def build_connection_tab() -> None:
       ui.button('Clear bot diagnostics', on_click=clear_bot_diagnostics)
 
     refresh_bot_diagnostics()
-    ui.timer(1.0, refresh_bot_diagnostics)
+    config.relay.on('bot_diagnostics', on_bot_diagnostics_changed)
