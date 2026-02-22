@@ -210,6 +210,10 @@ def _auth_mode() -> str:
 
 
 def _is_public_request_path(path: str, mode: str) -> bool:
+  # NiceGUI transport/static endpoints must stay reachable so the client can establish
+  # the realtime channel that powers tab interactions and live status updates.
+  if path.startswith('/_nicegui/'):
+    return True
   if path.startswith('/overlays/'):
     return True
   if path in OVERLAY_PUBLIC_PATHS:
