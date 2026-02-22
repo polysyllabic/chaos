@@ -20,7 +20,12 @@ def build_game_settings_tab() -> None:
     ui.label('Game Selection').classes('text-subtitle1')
 
     with ui.row().classes('w-full items-end gap-3'):
-      game_selector = ui.select([], label='Available games').classes('w-96')
+      selector_state = {'pending_user_selection': False}
+
+      def _on_game_selector_change(_event):
+        selector_state['pending_user_selection'] = True
+
+      game_selector = ui.select([], label='Available games', on_change=_on_game_selector_change).classes('w-96')
       game_status = ui.label('').classes('text-xs')
 
       def confirm_game_selection():
@@ -28,6 +33,7 @@ def build_game_settings_tab() -> None:
         if not selected:
           status_label.text = 'Select a game before confirming'
           return
+        selector_state['pending_user_selection'] = False
         config.relay.request_game_selection(selected)
         status_label.text = f'Requested game load: {selected}'
 
@@ -44,8 +50,16 @@ def build_game_settings_tab() -> None:
         selected = ''
       if selected not in options:
         selected = options[0] if options else None
-      if game_selector.value != selected:
+      current = game_selector.value
+      if current is not None and current not in options:
+        current = None
+        selector_state['pending_user_selection'] = False
+      should_sync_from_relay = not selector_state['pending_user_selection']
+      if should_sync_from_relay and game_selector.value != selected:
         game_selector.value = selected
+      elif not should_sync_from_relay and current is None:
+        game_selector.value = selected
+        selector_state['pending_user_selection'] = False
 
       game_status.text = (
         f'Current: {config.relay.game_name or "NONE"} | '
