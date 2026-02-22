@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from urllib.parse import quote, urlsplit
+from urllib.parse import urlsplit
 
 from nicegui import ui
 
@@ -27,11 +27,6 @@ def _sanitize_hostname(value: str) -> str:
   return parsed.hostname or ''
 
 
-def _is_tls_enabled() -> bool:
-  mode = str(config.relay.ui_tls_mode or 'off').strip().lower()
-  return mode in ('self-signed', 'custom')
-
-
 def _resolve_self_signed_hostname(request) -> str:
   configured = _sanitize_hostname(config.relay.ui_tls_selfsigned_hostname)
   if configured and configured.lower() != 'localhost':
@@ -48,29 +43,12 @@ def _resolve_self_signed_hostname(request) -> str:
   return 'raspberrypi.local'
 
 
-def _resolve_ui_origin(request) -> str:
-  if request is not None:
-    scheme = str(getattr(request.url, 'scheme', '') or 'http').strip().lower() or 'http'
-    netloc = str(getattr(request.url, 'netloc', '') or '').strip()
-    if netloc:
-      return f'{scheme}://{netloc}'
-
-  scheme = 'https' if _is_tls_enabled() else 'http'
-  host = _resolve_self_signed_hostname(request=None)
-  port = safe_int(config.relay.ui_port, 80, 1, 65535)
-  default_port = 443 if scheme == 'https' else 80
-  netloc = host if port == default_port else f'{host}:{port}'
-  return f'{scheme}://{netloc}'
-
-
 def build_connection_tab() -> None:
   client = getattr(ui.context, 'client', None)
   request = getattr(client, 'request', None)
-  callback_origin = _resolve_ui_origin(request)
-  callback_uri = f'{callback_origin}{util.REDIRECT_PATH}'
-  encoded_origin = quote(callback_origin, safe='')
-  bot_oauth_url = f'/api/oauth/start?target=bot&origin={encoded_origin}'
-  eventsub_oauth_url = f'/api/oauth/start?target=eventsub&origin={encoded_origin}'
+  callback_uri = util.DEFAULT_REDIRECT_URL
+  bot_oauth_url = '/api/oauth/start?target=bot'
+  eventsub_oauth_url = '/api/oauth/start?target=eventsub'
   tls_hostname_default = _resolve_self_signed_hostname(request)
   tls_hostname_initial = str(config.relay.ui_tls_selfsigned_hostname or '').strip()
   if not tls_hostname_initial or tls_hostname_initial.lower() == 'localhost':
@@ -89,6 +67,9 @@ def build_connection_tab() -> None:
         eventsub_oauth = ui.input('EventSub OAuth token', value=config.relay.eventsub_oauth).props('type=password')
         ui.label(
           f'Configure your Twitch app redirect URI as {callback_uri}'
+        ).classes('text-caption')
+        ui.label(
+          'Use Chaosface through http://localhost:8080 (for Pi-hosted runs, use an SSH tunnel).'
         ).classes('text-caption')
         ui.link('Start bot OAuth login', bot_oauth_url, new_tab=True)
         ui.link('Start EventSub OAuth login', eventsub_oauth_url, new_tab=True)

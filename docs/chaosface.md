@@ -103,13 +103,17 @@ whichever you choose, the bot will write messages in chat from that account.
 2. Start Chaosface. If you are using the default setup, this involves simply applying power to
    the Raspberry Pi and waiting for it to boot up.
 
-3. Open a browser and navigate to the Chaos page:
-   - If you're running Chaosface on the Pi, the default is http://raspberrypi.local/.
-   - If you're running Chaosface on the same computer as the browser, go to http://localhost/.
+3. Open a browser and navigate to Chaosface at `http://localhost:8080/`.
+   - If Chaosface is running on a different machine from your browser (for example, the Pi),
+     create a local SSH tunnel first, such as `ssh -L 8080:localhost:80 pi@raspberrypi.local`,
+     then use `http://localhost:8080/` in your browser. This tunnelling is only necessary to
+     get OAuth tokens. Otherwise, you run chaosface without the ssh step.
 
 4. Go to the "Connection Setup" tab and enter your bot name and channel name.
 
-5. Next you need an OAuth token for Chaosface. The bot OAuth token lets Chaosface connect to your
+5. Next you need an OAuth token for Chaosface. Configure your Twitch app redirect URI as
+   `http://localhost:8080/api/oauth/callback`.
+   The bot OAuth token lets Chaosface connect to your
    channel and send and receive chat messages. Without it, the interface will not work. Note that
    this token does not grant that account any special permissions. For example, if you want your
    bot to be a mod, you must grant it that permission on Twitch.
@@ -117,8 +121,7 @@ whichever you choose, the bot will write messages in chat from that account.
     A. If you're using a bot account, sign in to Twitch with that account. Otherwise, stay logged
        in to your main streaming account.
     B. Click **Start bot OAuth login** in the Connection Setup tab. This opens Twitch auth in a
-       new tab and uses the callback URL shown in the UI (do not hard-code localhost unless that is
-       actually where Chaosface is running).
+       new tab and uses the fixed localhost callback URI.
     C. After permission is granted, Chaosface stores the generated token from the callback page.
     D. Click **Load generated tokens** and then **Save** in Connection Setup.
 

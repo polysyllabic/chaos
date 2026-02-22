@@ -266,59 +266,9 @@ def _default_ui_hostname() -> str:
   return 'raspberrypi.local'
 
 
-def _configured_ui_origin() -> str:
-  tls_mode = str(getattr(config.relay, 'ui_tls_mode', 'off')).strip().lower()
-  scheme = 'https' if tls_mode in ('self-signed', 'custom') else 'http'
-  host = _default_ui_hostname()
-  try:
-    port = int(getattr(config.relay, 'ui_port', 80) or 80)
-  except (TypeError, ValueError):
-    port = 80
-  default_port = 443 if scheme == 'https' else 80
-  netloc = host if port == default_port else f'{host}:{port}'
-  return f'{scheme}://{netloc}'
-
-
-def _normalized_origin(value: str) -> str:
-  raw = str(value or '').strip()
-  if not raw:
-    return ''
-  parsed = urlsplit(raw)
-  if parsed.scheme not in ('http', 'https') or not parsed.hostname:
-    return ''
-  host = parsed.hostname
-  if ':' in host and not host.startswith('['):
-    host = f'[{host}]'
-  try:
-    port = parsed.port
-  except ValueError:
-    return ''
-  default_port = 443 if parsed.scheme == 'https' else 80
-  netloc = host if port in (None, default_port) else f'{host}:{port}'
-  return f'{parsed.scheme}://{netloc}'
-
-
-def _origin_from_url(value: str) -> str:
-  raw = str(value or '').strip()
-  if not raw:
-    return ''
-  parsed = urlsplit(raw)
-  if parsed.scheme not in ('http', 'https') or not parsed.netloc:
-    return ''
-  return _normalized_origin(f'{parsed.scheme}://{parsed.netloc}')
-
-
 def _resolve_oauth_redirect_uri(request: Request) -> str:
-  candidate = _normalized_origin(str(request.query_params.get('origin') or '').strip())
-  if not candidate:
-    candidate = _normalized_origin(str(request.headers.get('origin') or '').strip())
-  if not candidate:
-    candidate = _origin_from_url(str(request.headers.get('referer') or '').strip())
-  if not candidate:
-    candidate = _normalized_origin(str(request.base_url).rstrip('/'))
-  if not candidate:
-    candidate = _configured_ui_origin()
-  return f'{candidate}{token_utils.REDIRECT_PATH}'
+  del request
+  return token_utils.DEFAULT_REDIRECT_URL
 
 
 def _oauth_callback_html() -> str:

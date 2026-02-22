@@ -32,7 +32,8 @@ class Scopes:
 VALIDATE_URL = 'https://id.twitch.tv/oauth2/validate'
 AUTHORIZE_URL = 'https://id.twitch.tv/oauth2/authorize'
 REDIRECT_PATH = '/api/oauth/callback'
-DEFAULT_REDIRECT_BASE = os.getenv('CHAOSFACE_OAUTH_REDIRECT_BASE', 'http://raspberrypi.local')
+# OAuth callback defaults to localhost tunnel flow for reproducible Twitch app setup.
+DEFAULT_REDIRECT_BASE = os.getenv('CHAOSFACE_OAUTH_REDIRECT_BASE', 'http://localhost:8080')
 DEFAULT_REDIRECT_URL = f"{DEFAULT_REDIRECT_BASE.rstrip('/')}{REDIRECT_PATH}"
 SUPPORTED_OAUTH_TARGETS = {'bot', 'eventsub'}
 OAUTH_STATE_TTL_SECONDS = 600
