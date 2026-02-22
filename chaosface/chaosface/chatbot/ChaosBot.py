@@ -193,6 +193,7 @@ class ChaosBot:
     context: ChaosBotContext,
     on_connected: Optional[Callable[[bool], None]] = None,
     on_vote: Optional[Callable[[int, str], None]] = None,
+    on_status: Optional[Callable[[str], None]] = None,
   ):
     self._ctx = context
     self._thread: Optional[threading.Thread] = None
@@ -211,6 +212,7 @@ class ChaosBot:
     self._last_apply_time = 0.0
     self._on_connected = on_connected or (lambda value: None)
     self._on_vote = on_vote or (lambda index, user: None)
+    self._on_status = on_status or (lambda message: None)
 
   def _get_event_loop(self) -> Optional[asyncio.AbstractEventLoop]:
     return self._loop
@@ -276,15 +278,19 @@ class ChaosBot:
   async def _main(self):
     while not self._shutdown.is_set():
       try:
+        self._emit_status('Connecting to Twitch...')
         await self._connect()
         while not self._shutdown.is_set():
           await asyncio.sleep(0.25)
-      except Exception:
+      except Exception as exc:
+        self._emit_status(f'Chatbot connection failed: {exc}')
         logging.exception('Chatbot connection failed')
       finally:
         await self._disconnect()
         self._emit_connected(False)
+        self._emit_status('Disconnected from Twitch.')
       if not self._shutdown.is_set():
+        self._emit_status('Retrying Twitch connection in 5 seconds...')
         await asyncio.sleep(5.0)
 
   async def _connect(self):
@@ -294,10 +300,13 @@ class ChaosBot:
     event_token = _clean_oauth(self._ctx.eventsub_oauth)
 
     if not client_id:
+      self._emit_status('Missing Twitch client_id in Connection Setup.')
       raise ValueError('No Twitch client_id is configured')
     if not self._channel_name:
+      self._emit_status('Missing streamer channel name in Connection Setup.')
       raise ValueError('No channel name is configured')
     if not bot_token:
+      self._emit_status('Missing bot OAuth token in Connection Setup.')
       raise ValueError('No bot OAuth token is configured')
 
     self._chat_twitch = await Twitch(client_id, authenticate_app=False)
@@ -314,6 +323,7 @@ class ChaosBot:
 
     await self._start_eventsub(client_id, event_token)
     self._emit_connected(True)
+    self._emit_status(f'Connected to Twitch chat for channel {self._channel_name}.')
     logging.info('Connected to Twitch chat for channel %s', self._channel_name)
 
   async def _start_eventsub(self, client_id: str, event_token: str):
@@ -321,6 +331,7 @@ class ChaosBot:
     if not need_eventsub:
       return
     if not event_token:
+      self._emit_status('EventSub token missing; bits/points redemptions will be unavailable.')
       logging.warning('Bits/points redemptions are enabled, but EventSub OAuth token is missing')
       return
 
@@ -330,6 +341,7 @@ class ChaosBot:
 
     broadcaster_id = await self._get_broadcaster_id(self._event_twitch, self._channel_name)
     if not broadcaster_id:
+      self._emit_status(f'Could not resolve broadcaster ID for {self._channel_name}; EventSub disabled.')
       logging.warning('Unable to resolve broadcaster ID for %s', self._channel_name)
       return
 
@@ -342,6 +354,7 @@ class ChaosBot:
       )
     if self._ctx.bits_redemptions:
       await self._eventsub.listen_channel_cheer(broadcaster_id, self._on_channel_cheer)
+    self._emit_status('EventSub connected successfully.')
 
   async def _get_broadcaster_id(self, twitch: Twitch, channel_name: str) -> str:
     try:
@@ -355,6 +368,7 @@ class ChaosBot:
 
   async def _on_chat_ready(self, ready_event: EventData):
     await ready_event.chat.join_room(self._channel_name)
+    self._emit_status(f'Joined Twitch room #{self._channel_name}.')
 
   async def _on_chat_message(self, msg: ChatMessage):
     message = (msg.text or '').strip()
@@ -390,6 +404,15 @@ class ChaosBot:
       self._on_vote(index, user)
     except Exception:
       logging.exception('Vote callback failed')
+
+  def _emit_status(self, message: str):
+    text = str(message or '').strip()
+    if not text:
+      return
+    try:
+      self._on_status(text)
+    except Exception:
+      logging.exception('Status callback failed')
 
   async def _handle_command(self, author: str, message: str):
     parts = message[1:].split()

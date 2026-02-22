@@ -44,6 +44,17 @@ def _resolve_self_signed_hostname(request) -> str:
 
 
 def build_connection_tab() -> None:
+  def normalize_tls_mode(value: str) -> str:
+    mode = str(value or 'off').strip().lower()
+    if mode not in ('off', 'self-signed', 'custom'):
+      return 'off'
+    return mode
+
+  def default_ui_port_for_tls_mode(mode: str) -> int:
+    return 443 if normalize_tls_mode(mode) in ('self-signed', 'custom') else 80
+
+  current_tls_mode = normalize_tls_mode(config.relay.ui_tls_mode)
+
   client = getattr(ui.context, 'client', None)
   request = getattr(client, 'request', None)
   callback_uri = util.DEFAULT_REDIRECT_URL
@@ -98,8 +109,31 @@ def build_connection_tab() -> None:
             'self-signed': 'HTTPS with self-signed certificate',
             'custom': 'HTTPS with custom certificate',
           },
-          value=config.relay.ui_tls_mode,
+          value=current_tls_mode,
           label='TLS mode',
+        )
+        ui_port = ui.number(
+          'UI port',
+          value=safe_int(config.relay.ui_port, default_ui_port_for_tls_mode(current_tls_mode), 1, 65535),
+          min=1,
+          max=65535,
+          step=1,
+        )
+        tls_mode_state = {'value': current_tls_mode}
+
+        def sync_ui_port_for_tls_mode(selected_mode: str) -> None:
+          previous_mode = normalize_tls_mode(tls_mode_state['value'])
+          next_mode = normalize_tls_mode(selected_mode)
+          previous_default_port = default_ui_port_for_tls_mode(previous_mode)
+          next_default_port = default_ui_port_for_tls_mode(next_mode)
+          current_port = safe_int(ui_port.value, previous_default_port, 1, 65535)
+          if current_port == previous_default_port:
+            ui_port.value = next_default_port
+          tls_mode_state['value'] = next_mode
+
+        tls_mode.on(
+          'update:model-value',
+          lambda event: sync_ui_port_for_tls_mode(str(getattr(event, 'value', tls_mode.value or 'off'))),
         )
         tls_hostname = ui.input(
           'Self-signed certificate hostname',
@@ -108,6 +142,12 @@ def build_connection_tab() -> None:
         tls_cert_file = ui.input('Custom TLS cert path', value=config.relay.ui_tls_cert_file)
         tls_key_file = ui.input('Custom TLS key path', value=config.relay.ui_tls_key_file)
         ui.label('Security/TLS changes require restarting chaosface service.').classes('text-caption')
+
+    with ui.column().classes('w-full'):
+      ui.label('Bot Diagnostics').classes('text-subtitle1')
+      diagnostics_box = ui.column().classes(
+        'w-full h-48 overflow-auto rounded border border-gray-300 p-2'
+      )
 
     def load_generated_tokens():
       loaded = []
@@ -126,6 +166,20 @@ def build_connection_tab() -> None:
         status_message.text = f"Loaded {' and '.join(loaded)} token(s). Click Save to apply."
       else:
         status_message.text = 'No generated tokens available yet'
+
+    def refresh_bot_diagnostics():
+      messages = config.relay.get_bot_diagnostics()
+      diagnostics_box.clear()
+      with diagnostics_box:
+        if not messages:
+          ui.label('No bot diagnostics yet.').classes('text-xs text-gray-600')
+          return
+        for message in messages:
+          ui.label(str(message)).classes('text-xs font-mono break-all')
+
+    def clear_bot_diagnostics():
+      config.relay.clear_bot_diagnostics()
+      refresh_bot_diagnostics()
 
     def save_connection():
       need_save = False
@@ -187,16 +241,33 @@ def build_connection_tab() -> None:
           need_save = True
 
       tls_mode_value = str(tls_mode.value or 'off').strip().lower()
-      if tls_mode_value not in ('off', 'self-signed', 'custom'):
-        tls_mode_value = 'off'
+      tls_mode_value = normalize_tls_mode(tls_mode_value)
+      previous_tls_mode = normalize_tls_mode(config.relay.ui_tls_mode)
       tls_cert_value = str(tls_cert_file.value or '').strip()
       tls_key_value = str(tls_key_file.value or '').strip()
+      ui_port_value = safe_int(
+        ui_port.value,
+        safe_int(config.relay.ui_port, default_ui_port_for_tls_mode(previous_tls_mode), 1, 65535),
+        1,
+        65535,
+      )
       tls_hostname_value = _sanitize_hostname(str(tls_hostname.value or '').strip())
       if not tls_hostname_value:
         tls_hostname_value = tls_hostname_default
       if tls_mode_value == 'custom' and (not tls_cert_value or not tls_key_value):
         status_message.text = 'Custom TLS mode requires both cert and key paths'
         return
+
+      previous_default_port = default_ui_port_for_tls_mode(previous_tls_mode)
+      new_default_port = default_ui_port_for_tls_mode(tls_mode_value)
+      if tls_mode_value != previous_tls_mode and ui_port_value == previous_default_port:
+        ui_port_value = new_default_port
+        ui_port.value = ui_port_value
+
+      if ui_port_value != config.relay.ui_port:
+        config.relay.set_ui_port(ui_port_value)
+        need_save = True
+
       if tls_mode_value != config.relay.ui_tls_mode:
         config.relay.set_ui_tls_mode(tls_mode_value)
         need_save = True
@@ -233,12 +304,21 @@ def build_connection_tab() -> None:
         return
 
       tls_hostname.value = hostname
+      current_mode = normalize_tls_mode(str(tls_mode.value or 'off'))
       tls_mode.value = 'self-signed'
+      current_port = safe_int(ui_port.value, default_ui_port_for_tls_mode(current_mode), 1, 65535)
+      if current_port == default_ui_port_for_tls_mode(current_mode):
+        ui_port.value = default_ui_port_for_tls_mode('self-signed')
       status_message.text = (
         f'Generated self-signed certificate for {hostname} '
         f'({cert_file}, {key_file}). Click Save and restart chaosface.'
       )
 
-    ui.button('Load generated tokens', on_click=load_generated_tokens)
-    ui.button('Generate self-signed cert', on_click=generate_self_signed_cert)
-    ui.button('Save', on_click=save_connection)
+    with ui.row().classes('gap-2'):
+      ui.button('Load generated tokens', on_click=load_generated_tokens)
+      ui.button('Generate self-signed cert', on_click=generate_self_signed_cert)
+      ui.button('Save', on_click=save_connection)
+      ui.button('Clear bot diagnostics', on_click=clear_bot_diagnostics)
+
+    refresh_bot_diagnostics()
+    ui.timer(1.0, refresh_bot_diagnostics)

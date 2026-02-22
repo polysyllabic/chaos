@@ -336,6 +336,10 @@ def _on_bot_vote(vote_num: int, user: str):
   ui_dispatch.call_soon(config.relay.tally_vote, vote_num, user)
 
 
+def _on_bot_status(message: str):
+  ui_dispatch.call_soon(config.relay.add_bot_diagnostic, message)
+
+
 def ensure_runtime_started() -> None:
   """
   Bind relay updates to the running asyncio loop and start model thread once.
@@ -545,6 +549,7 @@ def twitch_controls_chaos(args):
     context=bot_context,
     on_connected=_on_bot_connected,
     on_vote=_on_bot_vote,
+    on_status=_on_bot_status,
   )
 
   ssl_certfile, ssl_keyfile = _resolve_tls_files()

@@ -105,15 +105,15 @@ whichever you choose, the bot will write messages in chat from that account.
 
 3. Open a browser and navigate to Chaosface at `http://localhost:8080/`.
    - If Chaosface is running on a different machine from your browser (for example, the Pi),
-     create a local SSH tunnel first, such as `ssh -L 8080:localhost:80 pi@raspberrypi.local`,
+     create a local SSH tunnel first. From a terminal, run the command
+     `ssh -L 8080:localhost:80 pi@raspberrypi.local` (substitue your address for the Pi if
+     you've changed it from the default).
      then use `http://localhost:8080/` in your browser. This tunnelling is only necessary to
      get OAuth tokens. Otherwise, you run chaosface without the ssh step.
 
 4. Go to the "Connection Setup" tab and enter your bot name and channel name.
 
-5. Next you need an OAuth token for Chaosface. Configure your Twitch app redirect URI as
-   `http://localhost:8080/api/oauth/callback`.
-   The bot OAuth token lets Chaosface connect to your
+5. Next you need an OAuth token for Chaosface. The bot OAuth token lets Chaosface connect to your
    channel and send and receive chat messages. Without it, the interface will not work. Note that
    this token does not grant that account any special permissions. For example, if you want your
    bot to be a mod, you must grant it that permission on Twitch.
@@ -139,11 +139,16 @@ whichever you choose, the bot will write messages in chat from that account.
        Click **Load generated tokens** and then **Save**.
 
 7. If you enable self-signed TLS in Connection Setup, use **Generate self-signed cert** to create
-   a certificate/key on the Chaosface host. Save settings and restart Chaosface to apply TLS
-   changes.
+   a certificate/key on the Chaosface host. The UI port field can be set directly; by default it
+   uses port 80 for HTTP and port 443 for TLS, and switching TLS mode updates that default.
+   Save settings and restart Chaosface to apply TLS changes. Note that when you first try to
+   access the UI with a self-signed certificate, the browser will complain that it is insecure
+   and you will need to manually override the security warning.
 8. Save the settings. If this is your first time entering credentials, the bot waits to connect
    until after you have entered your credentials. After that, saving updated credentials will
    automatically restart the chatbot to re-initialize the Twitch connection.
+   The Connection Setup tab includes a **Bot Diagnostics** list that shows recent connect/auth
+   status and error messages from the chatbot.
 
 If the OAuth tokens expire or are manually reset, you will need to repeat these steps.
 

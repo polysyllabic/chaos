@@ -16,6 +16,7 @@ import logging
 import math
 import queue
 import threading
+import time
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set
@@ -139,6 +140,7 @@ CHAOS_CONFIG_FILE = CONFIG_PATH / 'chaos_config.json'
 CHAOS_MOD_FILE = CONFIG_PATH / 'chaos_mods.json'
 CHAOS_CREDIT_FILE = CONFIG_PATH / 'chaos_credits.json'
 CHAOS_PERMISSION_FILE = CONFIG_PATH / 'chaos_permissions.json'
+BOT_DIAGNOSTIC_LIMIT = 200
 
 
 class ChaosRelay:
@@ -188,6 +190,7 @@ class ChaosRelay:
     self.paused_bright = True
     self.connected = False
     self.connected_bright = True
+    self.bot_diagnostics: List[str] = []
 
     # Config-backed fields
     self.num_active_mods = 0
@@ -505,6 +508,7 @@ class ChaosRelay:
     self.set_paused_bright(True)
     self.set_connected(False)
     self.set_connected_bright(True)
+    self.clear_bot_diagnostics()
     self.set_mod_times([0.0] * self.num_active_mods)
     self.set_active_mods([''] * self.num_active_mods)
     self.set_votes([0] * self.vote_options)
@@ -646,6 +650,30 @@ class ChaosRelay:
 
   def set_connected_bright(self, value):
     self._set_value('connected_bright', bool(value))
+
+  def add_bot_diagnostic(self, message: str):
+    text = str(message or '').strip()
+    if not text:
+      return
+    timestamp = time.strftime('%H:%M:%S')
+    entry = f'[{timestamp}] {text}'
+    with self._lock:
+      self.bot_diagnostics.append(entry)
+      if len(self.bot_diagnostics) > BOT_DIAGNOSTIC_LIMIT:
+        self.bot_diagnostics = self.bot_diagnostics[-BOT_DIAGNOSTIC_LIMIT:]
+      snapshot = list(self.bot_diagnostics)
+    self._notify('bot_diagnostics', snapshot)
+
+  def get_bot_diagnostics(self) -> List[str]:
+    with self._lock:
+      return list(self.bot_diagnostics)
+
+  def clear_bot_diagnostics(self):
+    with self._lock:
+      had_messages = bool(self.bot_diagnostics)
+      self.bot_diagnostics = []
+    if had_messages:
+      self._notify('bot_diagnostics', [])
 
   def set_num_active_mods(self, value):
     value = max(1, int(value))
