@@ -206,6 +206,14 @@ name = "consumable selected"
 while = [ "select consumable" ]
 clear_on = [ "select weapon" ]
 
+[[condition]]
+name = "shooting"
+while = [ "aiming", "shoot"]
+
+[[condition]]
+name = "melee"
+while = [ "melee" ]
+
 #--------------------------------------------------------------------------------------------------
 # Sequences
 # A sequence holds a series of predefined inputs that are sent as a batch. 
@@ -841,7 +849,7 @@ description = "Take your time between shots. No shooting or reloading for 5-seco
 type = "cooldown"
 groups = [ "combat" ]
 applies_to = [ "shoot" ]
-while = [ "aiming", "shoot" ]
+while = [ "shooting" ]
 time_on = 0.1
 time_off = 5.0
 
