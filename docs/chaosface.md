@@ -182,13 +182,19 @@ To add these overlays to OBS or SLOBS, perform the following steps:
     - `https://<host>:<ui_port>/...` (TLS), or
     - `http://<host>:<overlay_http_port>/...` (non-TLS overlay listener)
 
+  Recommended OBS browser-source dimensions (pixels):
+  - Active Mods (`/overlays/active-mods`): width `500`, height `117`
+  - Votes (`/overlays/current-votes`): width `500`, height `117`
+  - Vote Timer (`/overlays/vote-timer`): width `1920`, height `44`
+
+  If you are using a self-signed certificate, note that OBS will silently reject https pages with self-signed
+  certificates. In this case, you should use the http addresses for your sources.
   Legacy aliases (`/ActiveMods`, `/CurrentVotes`, `/VoteTimer`, and lowercase variants) are also
   supported for compatibility.
 
 If you are running Chaosface from a different computer, adapt the URL accordingly. 
 
-It's recommended to set these browser sources to refresh when not displayed so that they can easily
-be refreshed.
+You should set these browser sources to refresh when not displayed so that they can easily be refreshed.
 
 
 Font and Color Adjustments

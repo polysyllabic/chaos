@@ -13,15 +13,9 @@ When UI TLS is enabled, Chaosface can also expose overlays on plain HTTP using
 
 I recommend the following width and height for each browser overlay:
 
-- Votes 
- - - Width: 500
- - - Height 117
- - VoteTimer
-  - - Width: 1920
-  - - Height 17
-  - ActiveMods
-   - - Width: 520
-   - - Height 117
+- Votes (`/overlays/current-votes`): width `500`, height `117`
+- Active Mods (`/overlays/active-mods`): width `500`, height `117`
+- Vote Timer (`/overlays/vote-timer`): width `1920`, height `44`
    
 ## OBS Overlay Colors
 The default colors are boring web-default blue/white colors.  You can make use of OBS filters to change the appearance.  Unfortunately you cannot pick specific colors, but you can at least match your stream branding.  Here is an example of a Color Correction filter to change the color scheme to more of a Twitch-purple.

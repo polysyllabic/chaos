@@ -18,11 +18,11 @@ def active_mods_overlay_html() -> str:
         color: #fff;
         text-shadow: -1px 0 #000, 0 1px #000, 1px 0 #000, 0 -1px #000;
       }
-      .wrap { width: 100%; max-width: 1100px; padding: 8px 12px; }
+      .wrap { width: 100%; max-width: 900px; padding: 8px 12px; }
       .title { text-align: center; font-weight: bold; font-size: 24px; margin-bottom: 8px; }
       .row {
         display: grid;
-        grid-template-columns: 2fr 3fr;
+        grid-template-columns: 3fr 2fr;
         gap: 10px;
         margin-bottom: 8px;
         align-items: center;
