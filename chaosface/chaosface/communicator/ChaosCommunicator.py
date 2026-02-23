@@ -5,7 +5,6 @@ import time
 from abc import ABC, abstractmethod
 from typing import List, Optional
 import threading
-import queue
 import zmq
 import logging
 
@@ -33,13 +32,11 @@ class ChaosCommunicator():
     self._relay_callbacks_registered = False
     self.context: Optional[zmq.Context] = None
     self.thread: Optional[threading.Thread] = None
-    self._notify_thread: Optional[threading.Thread] = None
     self.keep_running = False
     self.socket_listen: Optional[zmq.Socket] = None
     self.socket_talk: Optional[zmq.Socket] = None
     self._talk_lock = threading.Lock()
     self._listener_lock = threading.Lock()
-    self._incoming_messages: queue.Queue[str] = queue.Queue()
 
   def attach(self, observer: EngineObserver) -> None:
     logging.debug("Attached an observer.")
@@ -65,9 +62,7 @@ class ChaosCommunicator():
         
     self.keep_running = True
     self.thread = threading.Thread(target=self._listen_loop)
-    self._notify_thread = threading.Thread(target=self._notify_loop)
     self.thread.start()
-    self._notify_thread.start()
 
   def _bind_relay_callbacks(self):
     if self._relay_callbacks_registered:
@@ -118,24 +113,14 @@ class ChaosCommunicator():
 
   def stop(self):
     self.keep_running = False
-    self._incoming_messages.put_nowait('')
     if self.thread and self.thread.is_alive():
       self.thread.join()
-    if self._notify_thread and self._notify_thread.is_alive():
-      self._notify_thread.join()
 
-  def _notify_loop(self):
-    while self.keep_running or not self._incoming_messages.empty():
-      try:
-        message = self._incoming_messages.get(timeout=0.1)
-      except queue.Empty:
-        continue
-      if not message:
-        continue
-      try:
-        self.notify(message)
-      except Exception:
-        logging.exception('Unhandled exception while processing engine message')
+  def _notify_safe(self, message: str):
+    try:
+      self.notify(message)
+    except Exception:
+      logging.exception('Unhandled exception while processing engine message')
     
   def _listen_loop(self):
     while self.keep_running:
@@ -161,7 +146,12 @@ class ChaosCommunicator():
           continue
         # Dispatch processing on a worker thread so socket reads are never blocked by observer work.
         if message:
-          self._incoming_messages.put(message.decode("utf-8"))
+          try:
+            decoded = message.decode("utf-8")
+          except UnicodeDecodeError:
+            logging.warning('Received non-UTF8 message from engine; dropping it')
+            continue
+          threading.Thread(target=self._notify_safe, args=(decoded,), daemon=True).start()
   
   def send_message(self, message):
     with self._talk_lock:
@@ -221,4 +211,3 @@ if __name__ == "__main__":
   subject.send_message("game")
   time.sleep(10)
   subject.stop()
-
