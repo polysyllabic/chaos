@@ -43,6 +43,7 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
     vote_timer = ui.linear_progress(value=0.0).classes('w-full')
     vote_label = ui.label('Vote Timer: 0%').classes('text-sm')
     mods_column = ui.column().classes('w-full gap-1')
+    mod_rows: list[dict] = []
     with ui.element('div').classes('h-8'):
       pass
     ui.label('Bot Status').classes('text-subtitle1')
@@ -97,17 +98,30 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
       vote_timer.value = vote_progress
       vote_label.text = f'Vote Timer: {int(vote_progress * 100)}%'
 
-      mods_column.clear()
       active_mods = list(config.relay.active_mods or [])
       mod_times = list(config.relay.mod_times or [])
       count = max(int(config.relay.num_active_mods), len(active_mods), len(mod_times))
+
+      while len(mod_rows) < count:
+        with mods_column:
+          row = ui.row().classes('w-full items-center gap-4')
+          with row:
+            label = ui.label('').classes('min-w-72')
+            progress = ui.linear_progress(value=0.0).classes('flex-1')
+        mod_rows.append({'row': row, 'label': label, 'progress': progress})
+
+      while len(mod_rows) > count:
+        item = mod_rows.pop()
+        item['row'].delete()
+
       for idx in range(count):
         mod_name = active_mods[idx] if idx < len(active_mods) else ''
         time_remaining = clamp01(mod_times[idx] if idx < len(mod_times) else 0.0)
-        with mods_column:
-          with ui.row().classes('w-full items-center gap-4'):
-            ui.label(mod_name).classes('min-w-72')
-            ui.linear_progress(value=time_remaining).classes('flex-1')
+        item = mod_rows[idx]
+        if item['label'].text != mod_name:
+          item['label'].text = mod_name
+        if item['progress'].value != time_remaining:
+          item['progress'].value = time_remaining
       refresh_bot_status()
 
     def stop_button_clicked():

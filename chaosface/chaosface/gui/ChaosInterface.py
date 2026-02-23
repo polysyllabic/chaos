@@ -30,8 +30,8 @@ def build_chaos_interface(*, ensure_runtime_started: Callable[[], None], shutdow
     with ui.tab_panel(connection_tab):
       build_connection_tab()
 
-  streamer_timer = ui.timer(0.25, refresh_streamer)
-  game_settings_timer = ui.timer(0.5, refresh_game_settings)
+  streamer_timer = ui.timer(0.5, refresh_streamer)
+  game_settings_timer = ui.timer(1.0, refresh_game_settings)
   client = getattr(ui.context, 'client', None)
   if client is not None:
     on_disconnect = getattr(client, 'on_disconnect', None)
