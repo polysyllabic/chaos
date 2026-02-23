@@ -84,6 +84,7 @@ namespace Chaos {
     std::unordered_map<std::string, std::string> available_game_configs;
     Json::Value available_games_payload{Json::arrayValue};
     std::chrono::steady_clock::time_point next_game_announcement{};
+    std::atomic<bool> awaiting_available_games_ack{false};
     
     // overridden from ControllerInjector
     bool sniffify(const DeviceEvent& input, DeviceEvent& output);
@@ -97,6 +98,8 @@ namespace Chaos {
 
     void reportGameStatus();
     void reportAvailableGames();
+    void reportEngineStatus();
+    std::string currentEngineStatusLocked();
     std::string resolveGameConfig(const std::string& selection);
 
     void removeMod(std::shared_ptr<Modifier> mod);

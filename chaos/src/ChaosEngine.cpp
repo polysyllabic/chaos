@@ -65,7 +65,9 @@ void ChaosEngine::setAvailableGames(const std::vector<std::pair<std::string, std
   lock();
   available_game_configs = std::move(discovered_configs);
   available_games_payload = std::move(payload);
-  awaiting_game_selection.store(!available_game_configs.empty() && !game_ready.load());
+  bool waiting_for_game = !available_game_configs.empty() && !game_ready.load();
+  awaiting_game_selection.store(waiting_for_game);
+  awaiting_available_games_ack.store(waiting_for_game);
   next_game_announcement = std::chrono::steady_clock::now();
   unlock();
 }
@@ -91,8 +93,10 @@ bool ChaosEngine::setGame(const std::string& name) {
   bool playable = loaded && (game.getErrors() == 0);
   game_ready.store(playable);
   bool has_selectable_games = !available_game_configs.empty();
-  awaiting_game_selection.store(!playable && has_selectable_games);
-  if (!playable && has_selectable_games) {
+  bool waiting_for_game = !playable && has_selectable_games;
+  awaiting_game_selection.store(waiting_for_game);
+  awaiting_available_games_ack.store(waiting_for_game);
+  if (waiting_for_game) {
     next_game_announcement = std::chrono::steady_clock::now();
   }
   unlock();
@@ -188,7 +192,18 @@ void ChaosEngine::newCommand(const std::string& command) {
   }
 
   if (root.isMember("available_games")) {
+    if (awaiting_game_selection.load()) {
+      awaiting_available_games_ack.store(true);
+    }
     reportAvailableGames();
+  }
+
+  if (root.isMember("available_games_ack")) {
+    awaiting_available_games_ack.store(false);
+  }
+
+  if (root.isMember("engine_status")) {
+    reportEngineStatus();
   }
 
   if (root.isMember("select_game")) {
@@ -232,6 +247,7 @@ void ChaosEngine::reportGameStatus() {
   msg["errors"] = game.getErrors();
   msg["nmods"] = game.getNumActiveMods();
   msg["can_unpause"] = game_ready.load();
+  msg["engine_status"] = currentEngineStatusLocked();
   double t = std::chrono::duration<double>(game.getTimePerModifier()).count();
   msg["modtime"] = t;
   msg["mods"] = game.getModList();
@@ -247,8 +263,33 @@ void ChaosEngine::reportAvailableGames() {
   Json::Value msg;
   lock();
   msg["available_games"] = available_games_payload;
+  msg["engine_status"] = currentEngineStatusLocked();
   unlock();
   chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
+}
+
+void ChaosEngine::reportEngineStatus() {
+  if (!interface_enabled) {
+    return;
+  }
+  Json::Value msg;
+  lock();
+  msg["engine_status"] = currentEngineStatusLocked();
+  unlock();
+  chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
+}
+
+std::string ChaosEngine::currentEngineStatusLocked() {
+  if (game_ready.load()) {
+    return pause.load() ? "paused" : "running";
+  }
+  if (game.getErrors() > 0) {
+    return "bad_config_file";
+  }
+  if (awaiting_game_selection.load()) {
+    return "waiting_for_game";
+  }
+  return "waiting_for_game";
 }
 
 void ChaosEngine::doAction() {
@@ -257,7 +298,7 @@ void ChaosEngine::doAction() {
   bool should_announce_games = false;
   auto now = std::chrono::steady_clock::now();
   lock();
-  if (awaiting_game_selection.load() && now >= next_game_announcement) {
+  if (awaiting_game_selection.load() && awaiting_available_games_ack.load() && now >= next_game_announcement) {
     should_announce_games = true;
     next_game_announcement = now + std::chrono::seconds(5);
   }
@@ -408,7 +449,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
   if (game.matchesID(input, ControllerSignal::OPTIONS) || game.matchesID(input, ControllerSignal::PS)) {
     if(input.value == 1 && pause.load() == false) { // on rising edge
       pause.store(true);
-      chaosInterface.sendMessage("{\"pause\":1}");
+      chaosInterface.sendMessage("{\"pause\":1,\"engine_status\":\"paused\"}");
       pausePrimer = false;
       PLOG_INFO << "Game Paused";
     }
@@ -425,7 +466,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
       }
     } else if(input.value == 0 && pausePrimer == true) { // falling edge
       pause.store(false);
-      chaosInterface.sendMessage("{\"pause\":0}");
+      chaosInterface.sendMessage("{\"pause\":0,\"engine_status\":\"running\"}");
       PLOG_INFO << "Game Resumed";
     }
     output.value = 0;
