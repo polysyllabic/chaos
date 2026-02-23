@@ -54,6 +54,27 @@ OVERLAY_PUBLIC_PATHS = {
 }
 
 
+def _should_trace_request(path: str) -> bool:
+  return (
+    path == '/'
+    or path == '/login'
+    or path.startswith('/api/auth/')
+    or path.startswith('/_nicegui/')
+    or path.startswith('/_nicegui_ws/')
+    or 'socket.io' in path
+  )
+
+
+def _socket_query_details(request: Request) -> str:
+  query = request.query_params
+  fields = []
+  for key in ('EIO', 'transport', 'sid', 't'):
+    value = query.get(key)
+    if value:
+      fields.append(f'{key}={value}')
+  return ' '.join(fields)
+
+
 def _security_setup_html() -> str:
   return """<!doctype html>
 <html lang="en">
@@ -375,15 +396,19 @@ def shutdown_runtime() -> None:
 
 @app.middleware('http')
 async def ui_auth_middleware(request: Request, call_next):
-  path = _normalize_realtime_path(request.url.path)
-  if path != request.url.path:
+  started = time.monotonic()
+  original_path = request.url.path
+  path = _normalize_realtime_path(original_path)
+  normalized = (path != original_path)
+  if normalized:
     request.scope['path'] = path
     request.scope['raw_path'] = path.encode('utf-8')
   mode = _auth_mode()
+  response: Optional[Response] = None
 
   if not _is_public_request_path(path, mode):
     if mode == 'unset':
-      return RedirectResponse('/setup-security')
+      response = RedirectResponse('/setup-security')
     if mode == 'password':
       session_token = request.cookies.get(UI_SESSION_COOKIE, '')
       if not _has_ui_session(session_token):
@@ -392,10 +417,30 @@ async def ui_auth_middleware(request: Request, call_next):
           or path.startswith('/_nicegui/ws/')
           or path.startswith('/_nicegui_ws/')
         ):
-          return JSONResponse({'detail': 'Authentication required'}, status_code=401)
-        return RedirectResponse(f"/login?next={quote(path, safe='/?=&')}")
+          response = JSONResponse({'detail': 'Authentication required'}, status_code=401)
+        else:
+          response = RedirectResponse(f"/login?next={quote(path, safe='/?=&')}")
 
-  return await call_next(request)
+  if response is None:
+    response = await call_next(request)
+
+  if _should_trace_request(path):
+    elapsed_ms = (time.monotonic() - started) * 1000.0
+    socket_details = _socket_query_details(request)
+    normalized_note = f' normalized_from={original_path}' if normalized else ''
+    socket_note = f' {socket_details}' if socket_details else ''
+    logging.info(
+      'UIREQ %s %s%s mode=%s -> %s in %.1fms%s',
+      request.method,
+      path,
+      socket_note,
+      mode,
+      response.status_code,
+      elapsed_ms,
+      normalized_note,
+    )
+
+  return response
 
 
 @app.get('/setup-security', response_class=HTMLResponse)
