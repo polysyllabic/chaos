@@ -190,6 +190,7 @@ class ChaosRelay:
     self.paused_bright = True
     self.connected = False
     self.connected_bright = True
+    self.engine_status = 'not_connected'
     self.bot_diagnostics: List[str] = []
 
     # Config-backed fields
@@ -508,6 +509,7 @@ class ChaosRelay:
     self.set_paused_bright(True)
     self.set_connected(False)
     self.set_connected_bright(True)
+    self.set_engine_status('not_connected')
     self.clear_bot_status()
     self.set_mod_times([0.0] * self.num_active_mods)
     self.set_active_mods([''] * self.num_active_mods)
@@ -650,6 +652,21 @@ class ChaosRelay:
 
   def set_connected_bright(self, value):
     self._set_value('connected_bright', bool(value))
+
+  def set_engine_status(self, value):
+    state = str(value or '').strip().lower()
+    allowed = {
+      'not_connected',
+      'timeout',
+      'waiting_for_game',
+      'bad_config_file',
+      'paused',
+      'running',
+      'unknown',
+    }
+    if state not in allowed:
+      state = 'unknown'
+    self._set_value('engine_status', state)
 
   def add_bot_status(self, message: str):
     text = str(message or '').strip()

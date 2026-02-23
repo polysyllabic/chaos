@@ -27,6 +27,7 @@ def overlay_state_payload() -> Dict[str, Any]:
     'num_active_mods': int(config.relay.num_active_mods),
     'connected': bool(config.relay.connected),
     'connected_bright': bool(config.relay.connected_bright),
+    'engine_status': str(config.relay.engine_status or 'not_connected'),
     'paused': bool(config.relay.paused),
     'paused_bright': bool(config.relay.paused_bright),
   }

@@ -143,13 +143,6 @@ def build_connection_tab() -> None:
         tls_key_file = ui.input('Custom TLS key path', value=config.relay.ui_tls_key_file)
         ui.label('Security/TLS changes require restarting chaosface service.').classes('text-caption')
 
-    with ui.column().classes('w-full'):
-      ui.label('Bot Status').classes('text-subtitle1')
-      status_box = ui.textarea(
-        label='',
-        value='No bot status yet.',
-      ).props('readonly').classes('w-full h-48')
-
     def load_generated_tokens():
       loaded = []
 
@@ -167,22 +160,6 @@ def build_connection_tab() -> None:
         status_message.text = f"Loaded {' and '.join(loaded)} token(s). Click Save to apply."
       else:
         status_message.text = 'No generated tokens available yet'
-
-    def refresh_bot_status():
-      messages = config.relay.get_bot_status()
-      text = '\n'.join(str(message) for message in messages) if messages else 'No bot status yet.'
-      if str(status_box.value or '') != text:
-        status_box.value = text
-
-    def on_bot_status_changed(_messages):
-      if status_box.is_deleted:
-        config.relay.off('bot_status', on_bot_status_changed)
-        return
-      refresh_bot_status()
-
-    def clear_bot_status():
-      config.relay.clear_bot_status()
-      refresh_bot_status()
 
     def save_connection():
       need_save = False
@@ -321,7 +298,3 @@ def build_connection_tab() -> None:
       ui.button('Load generated tokens', on_click=load_generated_tokens)
       ui.button('Generate self-signed cert', on_click=generate_self_signed_cert)
       ui.button('Save', on_click=save_connection)
-      ui.button('Clear bot status', on_click=clear_bot_status)
-
-    refresh_bot_status()
-    config.relay.on('bot_status', on_bot_status_changed)

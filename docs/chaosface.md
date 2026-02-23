@@ -147,8 +147,9 @@ whichever you choose, the bot will write messages in chat from that account.
 8. Save the settings. If this is your first time entering credentials, the bot waits to connect
    until after you have entered your credentials. After that, saving updated credentials will
    automatically restart the chatbot to re-initialize the Twitch connection.
-   The Connection Setup tab includes a **Bot Status** list that shows recent connect/auth
-   status and error messages from the chatbot, plus engine message send/receive previews.
+   The Streamer Interface tab includes a **Bot Status** list (above the Quit button) that shows
+   recent connect/auth status and error messages from the chatbot, plus engine message
+   send/receive previews. The list auto-scrolls to the newest message.
 
 If the OAuth tokens expire or are manually reset, you will need to repeat these steps.
 
@@ -195,7 +196,8 @@ You can monitor the operation of Chaos from your browser.
   - If you're running Chaosface on the same computer as the browser, go to http://localhost/
 
 The default tab on this page ("Streamer Interface") shows you what mods are currently active,
-whether chaos is running or paused, and a few other diagnostic features. It *does not* show what
+the full engine state (`not connected`, `timeout`, `waiting for game`, `bad config file`,
+`paused`, or `running`), and a few other diagnostic features. It *does not* show what
 mods are currently being voted on. This allows chat to surprise you with their choice of modifiers,
 assuming you're not peeking at the sources in OBS.
 

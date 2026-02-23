@@ -25,6 +25,13 @@ from chaosface.gui import ui_dispatch
 
 class ChaosModel(EngineObserver):
   ENGINE_STATUS_PAYLOAD_MAX = 180
+  ENGINE_STATUS_UNKNOWN = 'unknown'
+  ENGINE_STATUS_NOT_CONNECTED = 'not_connected'
+  ENGINE_STATUS_TIMEOUT = 'timeout'
+  ENGINE_STATUS_WAITING_FOR_GAME = 'waiting_for_game'
+  ENGINE_STATUS_BAD_CONFIG_FILE = 'bad_config_file'
+  ENGINE_STATUS_PAUSED = 'paused'
+  ENGINE_STATUS_RUNNING = 'running'
 
   def __init__(self):
     self.thread = None
@@ -36,6 +43,7 @@ class ChaosModel(EngineObserver):
     self.chaos_communicator = ChaosCommunicator()
     self.chaos_communicator.attach(self)
     self.chaos_communicator.start()
+    self._engine_handshake_complete = False
 
   @staticmethod
   def _command_name(payload) -> str:
@@ -61,6 +69,19 @@ class ChaosModel(EngineObserver):
     command = self._command_name(payload)
     preview = self._payload_preview(payload)
     ui_dispatch.call_soon(config.relay.add_bot_status, f'{direction} [{command}] {preview}')
+
+  def _set_engine_status(self, status: str) -> None:
+    ui_dispatch.call_soon(config.relay.set_engine_status, status)
+
+  def _update_engine_status_from_payload(self, payload) -> None:
+    status = str(payload.get('engine_status', '')).strip().lower()
+    if not status:
+      return
+    self._set_engine_status(status)
+
+  @staticmethod
+  def _status_for_pause(paused: bool) -> str:
+    return ChaosModel.ENGINE_STATUS_PAUSED if paused else ChaosModel.ENGINE_STATUS_RUNNING
     
   def start(self):
     self.configure_bot()
@@ -121,14 +142,18 @@ class ChaosModel(EngineObserver):
       # start the bot again
       self.configure_bot()    
 
-  def send_engine_command(self, payload: dict) -> bool:
-    self._report_engine_message('Chaosface -> Engine', payload)
+  def send_engine_command(self, payload: dict, *, report_status: bool = True) -> bool:
+    if report_status:
+      self._report_engine_message('Chaosface -> Engine', payload)
     message = json.dumps(payload)
     sent = self.chaos_communicator.send_message(message)
     if sent is False:
       logging.warning('Engine is not responding to command: %s', payload)
-      command = self._command_name(payload)
-      ui_dispatch.call_soon(config.relay.add_bot_status, f'Engine did not acknowledge command [{command}]')
+      next_status = self.ENGINE_STATUS_TIMEOUT if self._engine_handshake_complete else self.ENGINE_STATUS_NOT_CONNECTED
+      self._set_engine_status(next_status)
+      if report_status:
+        command = self._command_name(payload)
+        ui_dispatch.call_soon(config.relay.add_bot_status, f'Engine did not acknowledge command [{command}]')
       return False
     return True
 
@@ -149,6 +174,10 @@ class ChaosModel(EngineObserver):
       return
     logging.info("Requesting game selection: %s", selected)
     self.send_engine_command({'select_game': selected})
+
+  def acknowledge_available_games(self, game_count: int):
+    payload = {'available_games_ack': True, 'count': max(0, int(game_count))}
+    self.send_engine_command(payload)
 
   def _parse_available_games(self, payload) -> list[str]:
     games = []
@@ -176,24 +205,42 @@ class ChaosModel(EngineObserver):
       logging.warning('Unparseable engine message: %s', preview)
       return
 
+    self._engine_handshake_complete = True
     self._report_engine_message('Engine -> Chaosface', received)
+    self._update_engine_status_from_payload(received)
+
+    handled = False
 
     if "pause" in received:
+      handled = True
       paused = bool(received["pause"])
       logging.info("Got a pause command of: {paused}")
       ui_dispatch.call_soon(config.relay.set_paused, paused)
+      if 'engine_status' not in received:
+        self._set_engine_status(self._status_for_pause(paused))
 
-    elif "available_games" in received:
+    if "available_games" in received:
+      handled = True
       games = self._parse_available_games(received.get('available_games'))
       ui_dispatch.call_soon(config.relay.set_available_games, games)
+      self.acknowledge_available_games(len(games))
       preferred = config.relay.get_preferred_game(games)
       if preferred and (not config.relay.valid_data or config.relay.game_name != preferred):
         self.request_game_selection(preferred)
+      elif 'engine_status' not in received and not config.relay.valid_data:
+        self._set_engine_status(self.ENGINE_STATUS_WAITING_FOR_GAME)
 
-    elif "game" in received:
+    if "game" in received:
+      handled = True
       logging.debug("Received game info!")
       ui_dispatch.call_soon(config.relay.initialize_game, received)
-    else:
+      if 'engine_status' not in received and 'pause' not in received:
+        self._set_engine_status(self._status_for_pause(config.relay.paused))
+
+    if "engine_status" in received:
+      handled = True
+
+    if not handled:
       logging.warning(f"Unprocessed message from engine: {received}")
 
   def apply_new_mod(self, mod_name):
@@ -353,6 +400,9 @@ class ChaosModel(EngineObserver):
     self.disconnected_flashing_timer = 0.0
     # Ask engine for available games. We'll request game details after a game is selected.
     self.request_available_games()
+    remembered_selection = str(config.relay.selected_game or '').strip()
+    if remembered_selection and remembered_selection.upper() != 'NONE':
+      self.request_game_selection(remembered_selection)
 
     while config.relay.keep_going:
       time.sleep(config.relay.sleep_time())
@@ -370,7 +420,7 @@ class ChaosModel(EngineObserver):
       # If we haven't yet received game data, keep requesting available games.
       if config.relay.valid_data == False:
         last_engine_request += delta_time
-        if last_engine_request > 30.0:
+        if last_engine_request > 30.0 and not list(config.relay.available_games):
           self.request_available_games()
           last_engine_request = 0.0
 
