@@ -119,6 +119,14 @@ def build_connection_tab() -> None:
           max=65535,
           step=1,
         )
+        overlay_http_port = ui.number(
+          'Overlay HTTP port',
+          value=safe_int(getattr(config.relay, 'overlay_http_port', 80), 80, 0, 65535),
+          min=0,
+          max=65535,
+          step=1,
+        )
+        ui.label('Used only when TLS is enabled for the UI. Set to 0 to disable HTTP overlays.').classes('text-caption')
         tls_mode_state = {'value': current_tls_mode}
 
         def sync_ui_port_for_tls_mode(selected_mode: str) -> None:
@@ -231,6 +239,12 @@ def build_connection_tab() -> None:
         1,
         65535,
       )
+      overlay_http_port_value = safe_int(
+        overlay_http_port.value,
+        safe_int(getattr(config.relay, 'overlay_http_port', 80), 80, 0, 65535),
+        0,
+        65535,
+      )
       tls_hostname_value = _sanitize_hostname(str(tls_hostname.value or '').strip())
       if not tls_hostname_value:
         tls_hostname_value = tls_hostname_default
@@ -246,6 +260,9 @@ def build_connection_tab() -> None:
 
       if ui_port_value != config.relay.ui_port:
         config.relay.set_ui_port(ui_port_value)
+        need_save = True
+      if overlay_http_port_value != getattr(config.relay, 'overlay_http_port', 80):
+        config.relay.set_overlay_http_port(overlay_http_port_value)
         need_save = True
 
       if tls_mode_value != config.relay.ui_tls_mode:

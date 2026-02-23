@@ -8,6 +8,8 @@ When adding browser sources for the overlay pages, use these canonical paths:
 - `/overlays/active-mods`
 
 Use `http://` when TLS is off and `https://` when TLS is enabled.
+When UI TLS is enabled, Chaosface can also expose overlays on plain HTTP using
+`http://<host>:<overlay_http_port>/...` (default overlay port `80`).
 
 I recommend the following width and height for each browser overlay:
 

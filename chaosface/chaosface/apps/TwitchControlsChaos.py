@@ -19,9 +19,10 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 from urllib.parse import parse_qs, quote, urlsplit
 
-from fastapi import HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from nicegui import app, ui
+import uvicorn
 
 import chaosface.config.globals as config
 import chaosface.config.security_utils as security_utils
@@ -44,6 +45,8 @@ _model: Optional[ChaosModel] = None
 _auth_lock = threading.Lock()
 _ui_sessions: Dict[str, float] = {}
 _uireq_probe_logged = False
+_overlay_server: Optional[uvicorn.Server] = None
+_overlay_thread: Optional[threading.Thread] = None
 
 UI_SESSION_COOKIE = 'chaosface_session'
 UI_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24
@@ -56,6 +59,38 @@ OVERLAY_PUBLIC_PATHS = {
   '/currentvotes',
   '/api/overlay/state',
 }
+
+
+def _overlay_http_port() -> int:
+  try:
+    port = int(getattr(config.relay, 'overlay_http_port', 80))
+  except Exception:
+    return 0
+  if port < 0:
+    return 0
+  if port > 65535:
+    return 65535
+  return port
+
+
+def _overlay_http_enabled(ssl_enabled: bool) -> bool:
+  if not ssl_enabled:
+    return False
+  overlay_port = _overlay_http_port()
+  if overlay_port <= 0:
+    return False
+  try:
+    ui_port = int(config.relay.get_attribute('ui_port'))
+  except Exception:
+    ui_port = 0
+  if overlay_port == ui_port:
+    logging.warning(
+      'Overlay HTTP listener disabled because overlay_http_port (%s) equals ui_port (%s)',
+      overlay_port,
+      ui_port,
+    )
+    return False
+  return True
 
 
 def _should_trace_request(path: str) -> bool:
@@ -369,33 +404,133 @@ def _on_bot_status(message: str):
   ui_dispatch.call_soon(config.relay.add_bot_status, message)
 
 
-def ensure_runtime_started() -> None:
+def ensure_runtime_started(*, bind_ui_loop: bool = True) -> None:
   """
   Bind relay updates to the running asyncio loop and start model thread once.
   """
   global _runtime_started, _model
-  if _runtime_started:
-    return
   try:
     loop = asyncio.get_running_loop()
   except RuntimeError:
     return
 
   with _runtime_lock:
-    if _runtime_started:
-      return
-    ui_dispatch.set_ui_loop(loop)
-    if _model is None:
-      _model = ChaosModel()
-    if _model.thread is None or not _model.thread.is_alive():
-      _model.start_threaded()
-    _runtime_started = True
+    if bind_ui_loop:
+      ui_dispatch.set_ui_loop(loop)
+    if not _runtime_started:
+      if _model is None:
+        _model = ChaosModel()
+      if _model.thread is None or not _model.thread.is_alive():
+        _model.start_threaded()
+      _runtime_started = True
 
 
 def shutdown_runtime() -> None:
   config.relay.keep_going = False
   if config.relay.chatbot:
     config.relay.chatbot.shutdown()
+
+
+def _overlay_state_response() -> Dict[str, Any]:
+  ensure_runtime_started(bind_ui_loop=False)
+  return overlay_state_payload()
+
+
+def _active_mods_overlay_response() -> HTMLResponse:
+  ensure_runtime_started(bind_ui_loop=False)
+  return HTMLResponse(active_mods_overlay_html())
+
+
+def _vote_timer_overlay_response() -> HTMLResponse:
+  ensure_runtime_started(bind_ui_loop=False)
+  return HTMLResponse(vote_timer_overlay_html())
+
+
+def _current_votes_overlay_response() -> HTMLResponse:
+  ensure_runtime_started(bind_ui_loop=False)
+  return HTMLResponse(current_votes_overlay_html())
+
+
+overlay_http_app = FastAPI()
+
+
+@overlay_http_app.get('/api/overlay/state')
+def overlay_http_state() -> Dict[str, Any]:
+  return _overlay_state_response()
+
+
+@overlay_http_app.get('/ActiveMods', response_class=HTMLResponse)
+@overlay_http_app.get('/activemods', response_class=HTMLResponse)
+@overlay_http_app.get('/overlays/active-mods', response_class=HTMLResponse)
+def overlay_http_active_mods() -> HTMLResponse:
+  return _active_mods_overlay_response()
+
+
+@overlay_http_app.get('/VoteTimer', response_class=HTMLResponse)
+@overlay_http_app.get('/votetimer', response_class=HTMLResponse)
+@overlay_http_app.get('/overlays/vote-timer', response_class=HTMLResponse)
+def overlay_http_vote_timer() -> HTMLResponse:
+  return _vote_timer_overlay_response()
+
+
+@overlay_http_app.get('/CurrentVotes', response_class=HTMLResponse)
+@overlay_http_app.get('/currentvotes', response_class=HTMLResponse)
+@overlay_http_app.get('/overlays/current-votes', response_class=HTMLResponse)
+def overlay_http_current_votes() -> HTMLResponse:
+  return _current_votes_overlay_response()
+
+
+def _run_overlay_http_server(port: int) -> None:
+  global _overlay_server
+  try:
+    server = uvicorn.Server(
+      uvicorn.Config(
+        overlay_http_app,
+        host='0.0.0.0',
+        port=port,
+        log_level='warning',
+        access_log=False,
+        lifespan='off',
+      )
+    )
+    _overlay_server = server
+    logging.warning('Starting overlay HTTP listener on http://0.0.0.0:%s', port)
+    server.run()
+  except Exception:
+    logging.exception('Overlay HTTP listener failed')
+  finally:
+    _overlay_server = None
+
+
+def _start_overlay_http_server(ssl_enabled: bool) -> None:
+  global _overlay_thread
+  if not _overlay_http_enabled(ssl_enabled):
+    return
+  if _overlay_thread is not None and _overlay_thread.is_alive():
+    return
+  port = _overlay_http_port()
+  _overlay_thread = threading.Thread(
+    target=_run_overlay_http_server,
+    args=(port,),
+    daemon=True,
+    name='chaosface-overlay-http',
+  )
+  _overlay_thread.start()
+  time.sleep(0.2)
+  if _overlay_thread is not None and not _overlay_thread.is_alive():
+    logging.error('Overlay HTTP listener stopped during startup (port=%s)', port)
+
+
+def _stop_overlay_http_server() -> None:
+  global _overlay_server, _overlay_thread
+  server = _overlay_server
+  if server is not None:
+    server.should_exit = True
+  thread = _overlay_thread
+  if thread is not None and thread.is_alive():
+    thread.join(timeout=2.0)
+  _overlay_server = None
+  _overlay_thread = None
 
 
 @app.middleware('http')
@@ -573,8 +708,7 @@ async def chaos_interface() -> None:
 
 @app.get('/api/overlay/state')
 async def api_overlay_state() -> Dict[str, Any]:
-  ensure_runtime_started()
-  return overlay_state_payload()
+  return _overlay_state_response()
 
 
 @app.get('/api/oauth/start')
@@ -618,24 +752,21 @@ async def api_oauth_complete(payload: Dict[str, str]) -> Dict[str, str]:
 @app.get('/activemods', response_class=HTMLResponse)
 @app.get('/overlays/active-mods', response_class=HTMLResponse)
 async def active_mods_overlay() -> HTMLResponse:
-  ensure_runtime_started()
-  return HTMLResponse(active_mods_overlay_html())
+  return _active_mods_overlay_response()
 
 
 @app.get('/VoteTimer', response_class=HTMLResponse)
 @app.get('/votetimer', response_class=HTMLResponse)
 @app.get('/overlays/vote-timer', response_class=HTMLResponse)
 async def vote_timer_overlay() -> HTMLResponse:
-  ensure_runtime_started()
-  return HTMLResponse(vote_timer_overlay_html())
+  return _vote_timer_overlay_response()
 
 
 @app.get('/CurrentVotes', response_class=HTMLResponse)
 @app.get('/currentvotes', response_class=HTMLResponse)
 @app.get('/overlays/current-votes', response_class=HTMLResponse)
 async def current_votes_overlay() -> HTMLResponse:
-  ensure_runtime_started()
-  return HTMLResponse(current_votes_overlay_html())
+  return _current_votes_overlay_response()
 
 
 def twitch_controls_chaos(args):
@@ -658,8 +789,10 @@ def twitch_controls_chaos(args):
     logging.exception('Failed to set Socket.IO transports to polling')
 
   ssl_certfile, ssl_keyfile = _resolve_tls_files()
+  ssl_enabled = bool(ssl_certfile and ssl_keyfile)
+  _start_overlay_http_server(ssl_enabled)
   try:
-    if ssl_certfile and ssl_keyfile:
+    if ssl_enabled:
       ui.run(
         host='0.0.0.0',
         port=config.relay.get_attribute('ui_port'),
@@ -678,6 +811,7 @@ def twitch_controls_chaos(args):
         reload=False,
       )
   finally:
+    _stop_overlay_http_server()
     shutdown_runtime()
 
 

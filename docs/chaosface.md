@@ -143,6 +143,8 @@ whichever you choose, the bot will write messages in chat from that account.
 7. If you enable self-signed TLS in Connection Setup, use **Generate self-signed cert** to create
    a certificate/key on the Chaosface host. The UI port field can be set directly; by default it
    uses port 80 for HTTP and port 443 for TLS, and switching TLS mode updates that default.
+   The **Overlay HTTP port** field controls an additional non-TLS listener for OBS overlays when
+   TLS is enabled for the UI (default `80`; set `0` to disable).
    Save settings and restart Chaosface to apply TLS changes. Note that when you first try to
    access the UI with a self-signed certificate, the browser will complain that it is insecure
    and you will need to manually override the security warning.
@@ -168,12 +170,17 @@ To add these overlays to OBS or SLOBS, perform the following steps:
 
 * Make a copy of the scene you normally use to stream PlayStation games. Name it something like "Twitch Controls Chaos".
 
-* To this new scene, add each of the following as a browser source. Use `http://` when TLS is
-  off and `https://` when TLS is enabled. The canonical paths are:
+* To this new scene, add each of the following as a browser source. The canonical paths are:
 
-  - Active Mods: `https://raspberrypi.local/overlays/active-mods`
-  - Votes: `https://raspberrypi.local/overlays/current-votes`
-  - Vote Timer: `https://raspberrypi.local/overlays/vote-timer`
+  - Active Mods: `/overlays/active-mods`
+  - Votes: `/overlays/current-votes`
+  - Vote Timer: `/overlays/vote-timer`
+
+  URL scheme/port:
+  - If UI TLS is off: use `http://<host>:<ui_port>/...`
+  - If UI TLS is on: use either
+    - `https://<host>:<ui_port>/...` (TLS), or
+    - `http://<host>:<overlay_http_port>/...` (non-TLS overlay listener)
 
   Legacy aliases (`/ActiveMods`, `/CurrentVotes`, `/VoteTimer`, and lowercase variants) are also
   supported for compatibility.
