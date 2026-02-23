@@ -56,6 +56,6 @@ overwrite_log = true
 log_verbosity = 4
 
 # max_log_size: Maximum log-file size in bytes
-max_log_size = 0
+max_log_size = 134217728
 # max_log_files: Maximum number of log files to keep (0 = disable log rolling)
-max_log_files = 0
+max_log_files = 8
