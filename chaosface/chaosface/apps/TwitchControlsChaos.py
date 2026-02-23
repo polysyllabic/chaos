@@ -10,13 +10,14 @@ endpoints for use as OBS browser sources.
 
 import argparse
 import asyncio
+import html
 import logging
 import secrets
 import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
-from urllib.parse import quote, urlsplit
+from urllib.parse import parse_qs, quote, urlsplit
 
 from fastapi import HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -123,8 +124,9 @@ def _security_setup_html() -> str:
 """
 
 
-def _login_page_html(next_path: str) -> str:
+def _login_page_html(next_path: str, error_message: str = '') -> str:
   safe_next = quote(next_path or '/', safe='/?=&')
+  safe_error = html.escape(str(error_message or '').strip())
   return f"""<!doctype html>
 <html lang="en">
   <head>
@@ -140,30 +142,13 @@ def _login_page_html(next_path: str) -> str:
   </head>
   <body>
     <h2>Chaosface Login</h2>
-    <label for="pwd">Password</label>
-    <input id="pwd" type="password" autocomplete="current-password" />
-    <button id="login" type="button">Login</button>
-    <p id="status" class="err"></p>
-    <script>
-      const statusEl = document.getElementById('status');
-      const pwdEl = document.getElementById('pwd');
-      async function doLogin() {{
-        const password = (pwdEl.value || '').trim();
-        const response = await fetch('/api/auth/login', {{
-          method: 'POST',
-          headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{ password }}),
-        }});
-        const data = await response.json().catch(() => ({{}}));
-        if (!response.ok) {{
-          statusEl.textContent = data.detail || 'Login failed';
-          return;
-        }}
-        window.location.href = '{safe_next}' || '/';
-      }}
-      document.getElementById('login').addEventListener('click', doLogin);
-      pwdEl.addEventListener('keydown', (e) => {{ if (e.key === 'Enter') doLogin(); }});
-    </script>
+    <form method="post" action="/api/auth/login-form">
+      <input type="hidden" name="next" value="{safe_next}" />
+      <label for="pwd">Password</label>
+      <input id="pwd" name="password" type="password" autocomplete="current-password" />
+      <button id="login" type="submit">Login</button>
+    </form>
+    <p id="status" class="err">{safe_error}</p>
   </body>
 </html>
 """
@@ -223,7 +208,7 @@ def _is_public_request_path(path: str, mode: str) -> bool:
   if mode == 'unset':
     return path in {'/setup-security', '/api/security/setup'}
   if mode == 'password':
-    if path in {'/login', '/api/auth/login', '/api/auth/logout'}:
+    if path in {'/login', '/api/auth/login', '/api/auth/login-form', '/api/auth/logout'}:
       return True
   return False
 
@@ -454,7 +439,8 @@ async def login_page(request: Request) -> Response:
     return RedirectResponse('/')
 
   next_path = str(request.query_params.get('next') or '/')
-  return HTMLResponse(_login_page_html(next_path))
+  error_message = str(request.query_params.get('error') or '').strip()
+  return HTMLResponse(_login_page_html(next_path, error_message))
 
 
 @app.post('/api/auth/login')
@@ -473,6 +459,34 @@ async def api_auth_login(request: Request, payload: Dict[str, Any]) -> JSONRespo
     key=UI_SESSION_COOKIE,
     value=token,
     # Deliberately use a session cookie so each new browser session requires login.
+    httponly=True,
+    secure=(request.url.scheme == 'https'),
+    samesite='lax',
+    path='/',
+  )
+  return response
+
+
+@app.post('/api/auth/login-form')
+async def api_auth_login_form(request: Request) -> Response:
+  if _auth_mode() != 'password':
+    return RedirectResponse('/', status_code=303)
+
+  body = (await request.body()).decode('utf-8', errors='ignore')
+  form = parse_qs(body, keep_blank_values=True)
+  password = str((form.get('password') or [''])[0])
+  next_path = str((form.get('next') or ['/'])[0]) or '/'
+  next_path = quote(next_path, safe='/?=&')
+
+  encrypted = str(getattr(config.relay, 'ui_password_encrypted', '') or '')
+  if not security_utils.verify_encrypted_password(password, encrypted):
+    return RedirectResponse(f'/login?next={next_path}&error={quote("Invalid password", safe="")}', status_code=303)
+
+  token = _create_ui_session()
+  response = RedirectResponse(next_path or '/', status_code=303)
+  response.set_cookie(
+    key=UI_SESSION_COOKIE,
+    value=token,
     httponly=True,
     secure=(request.url.scheme == 'https'),
     samesite='lax',
