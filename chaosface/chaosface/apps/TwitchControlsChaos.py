@@ -214,6 +214,8 @@ def _is_public_request_path(path: str, mode: str) -> bool:
   # the realtime channel that powers tab interactions and live status updates.
   if path.startswith('/_nicegui/'):
     return True
+  if path.startswith('/_nicegui_ws/'):
+    return True
   if path.startswith('/overlays/'):
     return True
   if path in OVERLAY_PUBLIC_PATHS:
@@ -384,7 +386,11 @@ async def ui_auth_middleware(request: Request, call_next):
     if mode == 'password':
       session_token = request.cookies.get(UI_SESSION_COOKIE, '')
       if not _has_ui_session(session_token):
-        if path.startswith('/api/') or path.startswith('/_nicegui/ws/'):
+        if (
+          path.startswith('/api/')
+          or path.startswith('/_nicegui/ws/')
+          or path.startswith('/_nicegui_ws/')
+        ):
           return JSONResponse({'detail': 'Authentication required'}, status_code=401)
         return RedirectResponse(f"/login?next={quote(path, safe='/?=&')}")
 
