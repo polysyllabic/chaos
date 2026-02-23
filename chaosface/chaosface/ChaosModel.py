@@ -37,6 +37,7 @@ class ChaosModel(EngineObserver):
     self.thread = None
     self.first_time = True
     self.bot: Optional[ChaosBot] = None
+    self._pending_game_startup_setup = False
 
     #  Socket to talk to server
     logging.info("Connecting to chaos server")
@@ -243,6 +244,7 @@ class ChaosModel(EngineObserver):
       handled = True
       logging.debug("Received game info!")
       ui_dispatch.call_soon(config.relay.initialize_game, received)
+      self._pending_game_startup_setup = True
       if 'engine_status' not in received and 'pause' not in received:
         self._set_engine_status(self._status_for_pause(config.relay.paused))
 
@@ -436,6 +438,16 @@ class ChaosModel(EngineObserver):
       game_selection = config.relay.consume_game_selection_request()
       if game_selection:
         self.request_game_selection(game_selection)
+
+      if self._pending_game_startup_setup and config.relay.valid_data:
+        if config.relay.engine_status == self.ENGINE_STATUS_PAUSED:
+          if not self._voting_disabled():
+            ui_dispatch.call_soon(config.relay.get_new_voting_pool)
+          if bool(config.relay.get_attribute('startup_random_modifier')):
+            mod_key = config.relay.get_random_mod()
+            if mod_key:
+              self.replace_mod(mod_key, refresh_voting_pool=False)
+          self._pending_game_startup_setup = False
 
       if config.relay.paused:
         if vote_open:

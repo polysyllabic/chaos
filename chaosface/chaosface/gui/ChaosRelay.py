@@ -60,6 +60,7 @@ chaos_defaults = {
   'voting_cycle': 'Continuous',
   'vote_time': 60.0,
   'vote_delay': 0.0,
+  'startup_random_modifier': False,
   'announce_candidates': False,
   'announce_winner': False,
   'announce_active': False,
@@ -206,6 +207,7 @@ class ChaosRelay:
     self.voting_type = 'Proportional'
     self.voting_cycle = 'Continuous'
     self.vote_delay = 0.0
+    self.startup_random_modifier = False
     self.bits_redemptions = False
     self.bits_per_credit = 0
     self.multiple_credits = True
@@ -494,6 +496,7 @@ class ChaosRelay:
     self.set_vote_options(self.get_attribute('vote_options'))
     self.set_voting_type(self.get_attribute('voting_type'))
     self.set_voting_cycle(self.get_attribute('voting_cycle'))
+    self.set_startup_random_modifier(self.get_attribute('startup_random_modifier'))
     self.set_announce_candidates(self.get_attribute('announce_candidates'))
     self.set_announce_active(self.get_attribute('announce_active'))
     self.set_announce_winner(self.get_attribute('announce_winner'))
@@ -794,6 +797,9 @@ class ChaosRelay:
     if value not in ('Continuous', 'Interval', 'Random', 'Triggered', 'DISABLED'):
       value = 'Continuous'
     self._set_value('voting_cycle', value, 'voting_cycle')
+
+  def set_startup_random_modifier(self, value):
+    self._set_value('startup_random_modifier', bool(value), 'startup_random_modifier')
 
   def set_bits_redemptions(self, value):
     self._set_value('bits_redemptions', bool(value), 'bits_redemptions')

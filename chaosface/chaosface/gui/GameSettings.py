@@ -148,6 +148,10 @@ def build_game_settings_tab() -> Callable[[], None]:
         announce_candidates = ui.checkbox('Announce candidates in chat', value=bool(config.relay.announce_candidates))
         announce_winner = ui.checkbox('Announce winner in chat', value=bool(config.relay.announce_winner))
         announce_active = ui.checkbox('Announce active mods in chat', value=bool(config.relay.announce_active))
+        startup_random_modifier = ui.checkbox(
+          'Apply one random modifier on startup',
+          value=bool(config.relay.startup_random_modifier),
+        )
         bits_redemptions = ui.checkbox('Allow bits redemptions', value=bool(config.relay.bits_redemptions))
         points_redemptions = ui.checkbox('Allow points redemptions', value=bool(config.relay.points_redemptions))
         raffles = ui.checkbox('Conduct raffles', value=bool(config.relay.raffles))
@@ -208,6 +212,11 @@ def build_game_settings_tab() -> Callable[[], None]:
       set_if_changed(config.relay.vote_options, safe_int(vote_options.value, config.relay.vote_options, 2, 5), config.relay.set_vote_options)
       set_if_changed(config.relay.voting_type, str(voting_type.value), config.relay.set_voting_type)
       set_if_changed(config.relay.voting_cycle, str(voting_cycle.value), config.relay.set_voting_cycle)
+      set_if_changed(
+        config.relay.startup_random_modifier,
+        bool(startup_random_modifier.value),
+        config.relay.set_startup_random_modifier,
+      )
       current_vote_time = relay_config_float('vote_time', 60.0, 1.0, 3600.0)
       new_vote_time = safe_float(vote_time.value, current_vote_time, 1.0, 3600.0)
       if current_vote_time != new_vote_time:
@@ -255,6 +264,7 @@ def build_game_settings_tab() -> Callable[[], None]:
       vote_options.value = int(config.relay.vote_options)
       voting_type.value = config.relay.voting_type
       voting_cycle.value = config.relay.voting_cycle
+      startup_random_modifier.value = bool(config.relay.startup_random_modifier)
       vote_time.value = relay_config_float('vote_time', 60.0, 1.0, 3600.0)
       vote_delay.value = relay_config_float('vote_delay', 0.0, 0.0, 3600.0)
       announce_candidates.value = bool(config.relay.announce_candidates)

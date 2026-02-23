@@ -436,6 +436,12 @@ class ChaosBot:
     if cmd == 'mods':
       await self._cmd_mods(args)
       return
+    if cmd == 'candidates':
+      await self._cmd_mods(['voting'])
+      return
+    if cmd == 'active':
+      await self._cmd_mods(['active'])
+      return
     if cmd == 'credits':
       target = args[0].lstrip('@').lower() if args else author
       await self.send_message(self._ctx.get_balance_message(target))
