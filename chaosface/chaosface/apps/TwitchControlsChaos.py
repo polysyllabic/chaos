@@ -643,6 +643,14 @@ def twitch_controls_chaos(args):
     on_status=_on_bot_status,
   )
 
+  # Prefer long-polling for compatibility with environments where websocket upgrades are flaky.
+  # This also makes transport activity visible in HTTP middleware request tracing.
+  try:
+    app.config.socket_io_js_transports = ['polling']
+    logging.warning('Configured Socket.IO transports: %s', app.config.socket_io_js_transports)
+  except Exception:
+    logging.exception('Failed to set Socket.IO transports to polling')
+
   ssl_certfile, ssl_keyfile = _resolve_tls_files()
   try:
     if ssl_certfile and ssl_keyfile:
