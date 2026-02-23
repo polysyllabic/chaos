@@ -42,7 +42,9 @@ computer that will host Chaosface.
 If you already have TCC installed on the Pi and only want to update the local Chaosface runtime
 in `/usr/local/chaos`, run `./scripts/update_chaosface.sh`.
 To update only the engine, run `./scripts/update_engine.sh`.
-To update both engine and Chaosface together, run `./scripts/update_chaos.sh`
+To update both engine and Chaosface together, run `./scripts/update_chaos.sh`.
+To sync only startup/service files (`startchaos.sh`, `chaos.service`, `chaosface.service`),
+run `./scripts/update_services.sh`.
 Re-run `./install.sh` only when you want to reconfigure installation options (for example,
 switching between local and remote Chaosface, or changing the configured interface address).
 

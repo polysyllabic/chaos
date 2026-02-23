@@ -324,17 +324,20 @@ After the initial install, use the update scripts from the repository root:
 ./scripts/update_engine.sh
 ./scripts/update_chaosface.sh
 ./scripts/update_chaos.sh
+./scripts/update_services.sh
 ```
 
 - `update_engine.sh` rebuilds/reinstalls the engine and refreshes the `chaos` systemd unit files.
 - `update_chaosface.sh` redeploys Chaosface to `/usr/local/chaos`.
 - `update_chaos.sh` runs both engine and Chaosface updates in sequence.
+- `update_services.sh` syncs `startchaos.sh` and service unit files without rebuilding engine or redeploying Chaosface.
 
 Optional flags:
 
 - `./scripts/update_engine.sh --restart-service`
 - `./scripts/update_chaosface.sh --skip-deps --restart-service`
 - `./scripts/update_chaos.sh --skip-chaosface-deps --restart-services`
+- `./scripts/update_services.sh --restart-services`
 
 ### Configuring the Console
 
