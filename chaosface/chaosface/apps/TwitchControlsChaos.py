@@ -228,6 +228,14 @@ def _is_public_request_path(path: str, mode: str) -> bool:
   return False
 
 
+def _normalize_realtime_path(path: str) -> str:
+  if path.startswith('/_nicegui/ws/socket.io'):
+    return path.replace('/_nicegui/ws/socket.io', '/_nicegui_ws/socket.io', 1)
+  if path.startswith('/_nicegui/socket.io'):
+    return path.replace('/_nicegui/socket.io', '/_nicegui_ws/socket.io', 1)
+  return path
+
+
 def _resolve_tls_files() -> tuple[str, str]:
   mode = str(getattr(config.relay, 'ui_tls_mode', 'off')).strip().lower()
   if mode == 'self-signed':
@@ -377,7 +385,10 @@ def shutdown_runtime() -> None:
 
 @app.middleware('http')
 async def ui_auth_middleware(request: Request, call_next):
-  path = request.url.path
+  path = _normalize_realtime_path(request.url.path)
+  if path != request.url.path:
+    request.scope['path'] = path
+    request.scope['raw_path'] = path.encode('utf-8')
   mode = _auth_mode()
 
   if not _is_public_request_path(path, mode):
