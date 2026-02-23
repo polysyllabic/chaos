@@ -70,12 +70,6 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> None:
         status_box.value = text
         scroll_status_to_latest()
 
-    def on_bot_status_changed(_messages):
-      if status_box.is_deleted:
-        config.relay.off('bot_status', on_bot_status_changed)
-        return
-      refresh_bot_status()
-
     def clear_bot_status():
       config.relay.clear_bot_status()
       refresh_bot_status()
@@ -110,6 +104,7 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> None:
           with ui.row().classes('w-full items-center gap-4'):
             ui.label(mod_name).classes('min-w-72')
             ui.linear_progress(value=time_remaining).classes('flex-1')
+      refresh_bot_status()
 
     def stop_button_clicked():
       shutdown_runtime()
@@ -119,5 +114,4 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> None:
       ui.button('Clear Bot Status', on_click=clear_bot_status)
       ui.button('Quit', on_click=stop_button_clicked).props('color=negative')
     refresh_bot_status()
-    config.relay.on('bot_status', on_bot_status_changed)
     ui.timer(0.25, refresh_streamer)
