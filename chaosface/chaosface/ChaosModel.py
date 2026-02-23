@@ -24,6 +24,8 @@ from chaosface.gui import ui_dispatch
 
 
 class ChaosModel(EngineObserver):
+  ENGINE_STATUS_PAYLOAD_MAX = 180
+
   def __init__(self):
     self.thread = None
     self.first_time = True
@@ -34,6 +36,31 @@ class ChaosModel(EngineObserver):
     self.chaos_communicator = ChaosCommunicator()
     self.chaos_communicator.attach(self)
     self.chaos_communicator.start()
+
+  @staticmethod
+  def _command_name(payload) -> str:
+    if isinstance(payload, dict) and payload:
+      keys = [str(key) for key in payload.keys()]
+      if len(keys) == 1:
+        return keys[0]
+      head = '+'.join(keys[:3])
+      return f'{head}+...' if len(keys) > 3 else head
+    return type(payload).__name__
+
+  def _payload_preview(self, payload) -> str:
+    try:
+      text = json.dumps(payload, ensure_ascii=False, separators=(',', ':'))
+    except TypeError:
+      text = str(payload)
+    text = str(text).replace('\n', ' ').strip()
+    if len(text) <= self.ENGINE_STATUS_PAYLOAD_MAX:
+      return text
+    return text[: self.ENGINE_STATUS_PAYLOAD_MAX - 3] + '...'
+
+  def _report_engine_message(self, direction: str, payload) -> None:
+    command = self._command_name(payload)
+    preview = self._payload_preview(payload)
+    ui_dispatch.call_soon(config.relay.add_bot_status, f'{direction} [{command}] {preview}')
     
   def start(self):
     self.configure_bot()
@@ -95,10 +122,13 @@ class ChaosModel(EngineObserver):
       self.configure_bot()    
 
   def send_engine_command(self, payload: dict) -> bool:
+    self._report_engine_message('Chaosface -> Engine', payload)
     message = json.dumps(payload)
     sent = self.chaos_communicator.send_message(message)
     if sent is False:
       logging.warning('Engine is not responding to command: %s', payload)
+      command = self._command_name(payload)
+      ui_dispatch.call_soon(config.relay.add_bot_status, f'Engine did not acknowledge command [{command}]')
       return False
     return True
 
@@ -138,7 +168,15 @@ class ChaosModel(EngineObserver):
     return games
 
   def update_command(self, message) -> None:
-    received = json.loads(message)
+    try:
+      received = json.loads(message)
+    except json.JSONDecodeError:
+      preview = self._payload_preview(message)
+      ui_dispatch.call_soon(config.relay.add_bot_status, f'Engine -> Chaosface [raw] {preview}')
+      logging.warning('Unparseable engine message: %s', preview)
+      return
+
+    self._report_engine_message('Engine -> Chaosface', received)
 
     if "pause" in received:
       paused = bool(received["pause"])

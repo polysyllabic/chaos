@@ -147,8 +147,8 @@ whichever you choose, the bot will write messages in chat from that account.
 8. Save the settings. If this is your first time entering credentials, the bot waits to connect
    until after you have entered your credentials. After that, saving updated credentials will
    automatically restart the chatbot to re-initialize the Twitch connection.
-   The Connection Setup tab includes a **Bot Diagnostics** list that shows recent connect/auth
-   status and error messages from the chatbot.
+   The Connection Setup tab includes a **Bot Status** list that shows recent connect/auth
+   status and error messages from the chatbot, plus engine message send/receive previews.
 
 If the OAuth tokens expire or are manually reset, you will need to repeat these steps.
 

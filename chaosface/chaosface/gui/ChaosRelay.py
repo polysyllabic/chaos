@@ -508,7 +508,7 @@ class ChaosRelay:
     self.set_paused_bright(True)
     self.set_connected(False)
     self.set_connected_bright(True)
-    self.clear_bot_diagnostics()
+    self.clear_bot_status()
     self.set_mod_times([0.0] * self.num_active_mods)
     self.set_active_mods([''] * self.num_active_mods)
     self.set_votes([0] * self.vote_options)
@@ -651,7 +651,7 @@ class ChaosRelay:
   def set_connected_bright(self, value):
     self._set_value('connected_bright', bool(value))
 
-  def add_bot_diagnostic(self, message: str):
+  def add_bot_status(self, message: str):
     text = str(message or '').strip()
     if not text:
       return
@@ -662,18 +662,29 @@ class ChaosRelay:
       if len(self.bot_diagnostics) > BOT_DIAGNOSTIC_LIMIT:
         self.bot_diagnostics = self.bot_diagnostics[-BOT_DIAGNOSTIC_LIMIT:]
       snapshot = list(self.bot_diagnostics)
+    self._notify('bot_status', snapshot)
     self._notify('bot_diagnostics', snapshot)
 
-  def get_bot_diagnostics(self) -> List[str]:
+  def add_bot_diagnostic(self, message: str):
+    self.add_bot_status(message)
+
+  def get_bot_status(self) -> List[str]:
     with self._lock:
       return list(self.bot_diagnostics)
 
-  def clear_bot_diagnostics(self):
+  def get_bot_diagnostics(self) -> List[str]:
+    return self.get_bot_status()
+
+  def clear_bot_status(self):
     with self._lock:
       had_messages = bool(self.bot_diagnostics)
       self.bot_diagnostics = []
     if had_messages:
+      self._notify('bot_status', [])
       self._notify('bot_diagnostics', [])
+
+  def clear_bot_diagnostics(self):
+    self.clear_bot_status()
 
   def set_num_active_mods(self, value):
     value = max(1, int(value))

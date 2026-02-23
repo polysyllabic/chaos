@@ -343,7 +343,7 @@ def _on_bot_vote(vote_num: int, user: str):
 
 
 def _on_bot_status(message: str):
-  ui_dispatch.call_soon(config.relay.add_bot_diagnostic, message)
+  ui_dispatch.call_soon(config.relay.add_bot_status, message)
 
 
 def ensure_runtime_started() -> None:
