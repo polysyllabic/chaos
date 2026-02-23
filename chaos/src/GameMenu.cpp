@@ -144,3 +144,13 @@ bool GameMenu::insertMenuItem(std::string& name, std::shared_ptr<MenuItem> new_i
   auto [it, result] = menu.try_emplace(name, new_item);
   return result;
 }
+
+void GameMenu::clear() {
+  if (!menu.empty()) {
+    PLOG_DEBUG << "Clearing existing menu data";
+    menu.clear();
+  }
+  remember_last = false;
+  hide_guarded = false;
+  defined_sequences = nullptr;
+}

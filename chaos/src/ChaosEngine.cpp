@@ -89,18 +89,32 @@ bool ChaosEngine::setGame(const std::string& name) {
   pausePrimer = false;
   paused_for_interface_timeout.store(false);
 
+  std::vector<std::shared_ptr<Modifier>> mods_to_finish;
   lock();
+  mods_to_finish.assign(modifiers.begin(), modifiers.end());
+  modifiers.clear();
+  modifiersThatNeedToStart.clear();
+  modifiersThatNeedToStop.clear();
+
   bool loaded = game.loadConfigFile(name, this);
   bool playable = loaded && (game.getErrors() == 0);
   game_ready.store(playable);
   bool has_selectable_games = !available_game_configs.empty();
   bool waiting_for_game = !playable && has_selectable_games;
   awaiting_game_selection.store(waiting_for_game);
-  awaiting_available_games_ack.store(waiting_for_game);
+  // Do not trigger periodic available_games rebroadcasts after a load attempt.
+  // Wait for an explicit request from chaosface before announcing again.
+  awaiting_available_games_ack.store(false);
   if (waiting_for_game) {
     next_game_announcement = std::chrono::steady_clock::now();
   }
   unlock();
+
+  for (auto& mod : mods_to_finish) {
+    if (mod) {
+      mod->_finish();
+    }
+  }
 
   if (!playable) {
     PLOG_WARNING << "Game configuration '" << name

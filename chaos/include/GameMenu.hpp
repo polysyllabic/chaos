@@ -164,6 +164,13 @@ namespace Chaos {
 
     bool insertMenuItem(std::string& name, std::shared_ptr<MenuItem> new_item);
 
+    /**
+     * \brief Clear all menu definitions and reset menu-level options.
+     *
+     * Used when reloading a game configuration to ensure stale menu items do not persist.
+     */
+    void clear();
+
 
   };
 };

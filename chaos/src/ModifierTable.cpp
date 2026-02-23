@@ -25,17 +25,20 @@
 
 using namespace Chaos;
 
+void ModifierTable::clear() {
+  if (!mod_map.empty()) {
+    PLOG_VERBOSE << "Clearing existing Modifier data.";
+    mod_map.clear();
+  }
+}
+
 // Handles the static initialization. We construct the list of mods from their TOML-file
 // definitions.
 int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
                                 double default_time, bool use_menu) {
   int parse_errors = 0;
   PLOG_DEBUG << "Building modifier list";
-  
-  if (mod_map.size() > 0) {
-    PLOG_VERBOSE << "Clearing existing Modifier data.";
-    mod_map.clear();
-  }
+  clear();
 
   // Should have an array of tables, each one defining an individual modifier.
   toml::array* arr = config["modifier"].as_array();

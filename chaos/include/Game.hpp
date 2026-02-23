@@ -213,6 +213,11 @@ namespace Chaos {
     
   private:
     /**
+     * \brief Clear loaded game data before parsing a new game file.
+     */
+    void resetLoadedData();
+
+    /**
      * The name of this game
      */
     std::string name;

@@ -39,6 +39,11 @@ namespace Chaos {
 
   public:
     /**
+     * \brief Clear all defined modifiers.
+     */
+    void clear();
+
+    /**
      * \brief Create the overall list of mods from the TOML file.
      * \param config The object containing the fully parsed TOML file
      * \param engine Reference to the engine interface

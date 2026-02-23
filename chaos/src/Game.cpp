@@ -212,6 +212,16 @@ Game::Game(Controller& c) : controller{c}, signal_table{c} {
   sequences = std::make_shared<SequenceTable>();
 }
 
+void Game::resetLoadedData() {
+  game_commands.clear();
+  game_conditions.clear();
+  menu.clear();
+  if (sequences) {
+    sequences->clearSequenceList();
+  }
+  modifiers.clear();
+}
+
 bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine) {
   parse_errors = 0;
   parse_warnings = 0;
@@ -242,6 +252,9 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
     configuration = std::move(template_config);
   }
   configuration.erase(INPUT_FILE_KEY);
+
+  // Always start from a clean state when loading/reloading a game configuration.
+  resetLoadedData();
   
   // Get the basic game information. We send these to the interface. 
   name = configuration["game"].value_or<std::string>("Unknown Game");
