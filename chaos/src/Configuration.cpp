@@ -116,6 +116,19 @@ Configuration::Configuration(const std::string& fname) {
   listener_port = configuration["listener_port"].value_or(5555);
   PLOG_VERBOSE << "chaosface listen endpoint: " << getListenerAddress();
 
+  default_mod_list_path = configuration["default_mod_list_path"].value_or("");
+  if (default_mod_list_path.empty()) {
+    // Backward-compatible alias for a previous typo in documentation.
+    default_mod_list_path = configuration["default_mod_list_past"].value_or("");
+    if (!default_mod_list_path.empty()) {
+      PLOG_WARNING << "Config key 'default_mod_list_past' is deprecated. Use 'default_mod_list_path'.";
+    }
+  }
+  if (default_mod_list_path.empty()) {
+    default_mod_list_path = "https://github.com/polysyllabic/chaos/tree/main/chaos/examples/modlists/";
+  }
+  PLOG_VERBOSE << "Default mod list URI base: " << default_mod_list_path;
+
   game_directory = configuration["game_directory"].value_or(".");
   // Error if directory does not exist, or the path contains an ordinary file
   if (! std::filesystem::exists(game_directory)) {
@@ -202,5 +215,4 @@ void Configuration::discoverAvailableGames() {
   available_games = std::move(discovered);
   PLOG_INFO << "Discovered " << available_games.size() << " playable game configuration files.";
 }
-
 

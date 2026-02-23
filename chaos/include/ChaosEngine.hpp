@@ -82,6 +82,8 @@ namespace Chaos {
     bool pausedPrior = false;
     int primary_mods = 0;
     bool interface_enabled{true};
+    std::string default_mod_list_path;
+    std::string current_game_mod_list_uri;
     std::unordered_map<std::string, std::string> available_game_configs;
     Json::Value available_games_payload{Json::arrayValue};
     std::chrono::steady_clock::time_point next_game_announcement{};
@@ -102,12 +104,14 @@ namespace Chaos {
     void reportEngineStatus();
     std::string currentEngineStatusLocked();
     std::string resolveGameConfig(const std::string& selection);
+    std::string resolveModListUri(const std::string& configured_uri) const;
 
     void removeMod(std::shared_ptr<Modifier> mod);
 
   public:
     ChaosEngine(Controller& c, const std::string& listener_endpoint,
-                const std::string& talker_endpoint, bool enable_interface = true);
+                const std::string& talker_endpoint, bool enable_interface = true,
+                const std::string& default_mod_list_uri_base = "");
     
     void sendInterfaceMessage(const std::string& msg);
 

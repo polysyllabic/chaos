@@ -54,6 +54,7 @@ namespace Chaos {
     unsigned int interface_port;
     unsigned int listener_port;
     std::vector<std::pair<std::string, std::string>> available_games;
+    std::string default_mod_list_path;
 
     void discoverAvailableGames();
 
@@ -107,6 +108,11 @@ namespace Chaos {
      * We listen to all local IP addresses on this port.
      */
     std::string getListenerAddress() { return "tcp://*:" + std::to_string(listener_port); }
+
+    /**
+     * \brief Get the default base URI used to resolve relative per-game mod-list links.
+     */
+    const std::string& getDefaultModListPath() const { return default_mod_list_path; }
 
     /**
      * \brief Check if version found in TOML file matches what we expect

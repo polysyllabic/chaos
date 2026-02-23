@@ -43,10 +43,18 @@ The following settings apply to the operation of the engine for the whole game.
 - `input_file`: Optional path to a shared template file. This key is valid only for
   `chaos_toml = "main"`. Template files (`chaos_toml = "template"`) must not define `input_file`.
 
+- `mod_list`: Optional location of the modifier-list page/file for this game.
+  - If this is a full URI (for example `https://...`), that URI is used as-is.
+  - If this is only a file name/path (for example `tlou_mods.txt`), the engine prefixes
+    `default_mod_list_path` from `chaosconfig.toml` to construct the final URI sent to chaosface.
+
 When `input_file` is set, the template file is loaded first and then the main file is overlaid on
 top of it. Values defined in the main file take precedence over the template. For named arrays
 (`command`, `condition`, `sequence`, `modifier`, and `menu.layout`), entries with the same `name`
 are merged; entries only present in the template are inherited.
+
+In `chaosconfig.toml`, `default_mod_list_path` defines the base URI used to resolve relative
+`mod_list` values. (The alias `default_mod_list_past` is also accepted for backward compatibility.)
 
 - `game`: User-friendly name of the game this configuration file defines.
 

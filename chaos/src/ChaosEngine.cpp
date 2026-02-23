@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <cmath>
 #include <algorithm>
+#include <cctype>
 #include <vector>
 #include <plog/Log.h>
 #include <toml++/toml.h>
@@ -32,14 +33,63 @@
 
 using namespace Chaos;
 
+namespace {
+  bool looksLikeAbsoluteUri(const std::string& value) {
+    std::string trimmed = value;
+    trimmed.erase(trimmed.begin(),
+                  std::find_if(trimmed.begin(), trimmed.end(),
+                               [](unsigned char ch) { return !std::isspace(ch); }));
+    trimmed.erase(std::find_if(trimmed.rbegin(), trimmed.rend(),
+                               [](unsigned char ch) { return !std::isspace(ch); }).base(),
+                  trimmed.end());
+    if (trimmed.empty()) {
+      return false;
+    }
+    size_t scheme_pos = trimmed.find("://");
+    if (scheme_pos == std::string::npos || scheme_pos == 0) {
+      return false;
+    }
+    for (size_t i = 0; i < scheme_pos; ++i) {
+      unsigned char ch = static_cast<unsigned char>(trimmed[i]);
+      if (!(std::isalnum(ch) || ch == '+' || ch == '-' || ch == '.')) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  std::string joinUriPath(const std::string& base, const std::string& leaf) {
+    if (base.empty()) {
+      return leaf;
+    }
+    if (leaf.empty()) {
+      return base;
+    }
+    bool base_has_slash = base.back() == '/';
+    bool leaf_has_slash = leaf.front() == '/';
+    if (base_has_slash && leaf_has_slash) {
+      return base + leaf.substr(1);
+    }
+    if (!base_has_slash && !leaf_has_slash) {
+      return base + "/" + leaf;
+    }
+    return base + leaf;
+  }
+}
+
 ChaosEngine::ChaosEngine(Controller& c, const std::string& listener_endpoint,
-                         const std::string& talker_endpoint, bool enable_interface) : 
+                         const std::string& talker_endpoint, bool enable_interface,
+                         const std::string& default_mod_list_uri_base) :
   controller{c}, game{c}, pause{true}
 {
   time.initialize();
   jsonReader = jsonReaderBuilder.newCharReader();
   controller.addInjector(this);
   interface_enabled = enable_interface;
+  default_mod_list_path = default_mod_list_uri_base;
+  if (default_mod_list_path.empty()) {
+    default_mod_list_path = "https://github.com/polysyllabic/chaos/tree/main/chaos/examples/modlists/";
+  }
   next_game_announcement = std::chrono::steady_clock::now();
   if (enable_interface) {
     chaosInterface.setObserver(this);
@@ -84,6 +134,16 @@ std::string ChaosEngine::resolveGameConfig(const std::string& selection) {
   return resolved;
 }
 
+std::string ChaosEngine::resolveModListUri(const std::string& configured_uri) const {
+  if (configured_uri.empty()) {
+    return "";
+  }
+  if (looksLikeAbsoluteUri(configured_uri)) {
+    return configured_uri;
+  }
+  return joinUriPath(default_mod_list_path, configured_uri);
+}
+
 bool ChaosEngine::setGame(const std::string& name) {
   pause.store(true);
   pausePrimer = false;
@@ -97,6 +157,7 @@ bool ChaosEngine::setGame(const std::string& name) {
   modifiersThatNeedToStop.clear();
 
   bool loaded = game.loadConfigFile(name, this);
+  current_game_mod_list_uri = loaded ? resolveModListUri(game.getModListLocation()) : "";
   bool playable = loaded && (game.getErrors() == 0);
   game_ready.store(playable);
   bool has_selectable_games = !available_game_configs.empty();
@@ -272,6 +333,7 @@ void ChaosEngine::reportGameStatus() {
   double t = std::chrono::duration<double>(game.getTimePerModifier()).count();
   msg["modtime"] = t;
   msg["mods"] = game.getModList();
+  msg["mod_list"] = current_game_mod_list_uri;
   unlock();
   chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
 }

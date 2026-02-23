@@ -80,6 +80,14 @@ namespace Chaos {
     const std::string& getName() { return name; }
 
     /**
+     * \brief Get the mod-list location declared by the loaded game config.
+     *
+     * This is either an absolute URI or a relative path to resolve against the
+     * engine's default mod-list URI base.
+     */
+    const std::string& getModListLocation() const { return mod_list_location; }
+
+    /**
      * \brief Get the maximum number of active primary mods to run
      * 
      * \return int Number of modifiers
@@ -221,6 +229,11 @@ namespace Chaos {
      * The name of this game
      */
     std::string name;
+
+    /**
+     * Optional mod-list location declared in the game config.
+     */
+    std::string mod_list_location;
 
     /**
      * \brief Running count of total errors encountered in initializing the configuration file

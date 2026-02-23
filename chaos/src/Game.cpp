@@ -215,6 +215,7 @@ Game::Game(Controller& c) : controller{c}, signal_table{c} {
 void Game::resetLoadedData() {
   game_commands.clear();
   game_conditions.clear();
+  mod_list_location.clear();
   menu.clear();
   if (sequences) {
     sequences->clearSequenceList();
@@ -258,6 +259,12 @@ bool Game::loadConfigFile(const std::string& configfile, EngineInterface* engine
   
   // Get the basic game information. We send these to the interface. 
   name = configuration["game"].value_or<std::string>("Unknown Game");
+  mod_list_location = configuration["mod_list"].value_or<std::string>("");
+  if (configuration.contains("mod_list") && !configuration["mod_list"].is_string()) {
+    ++parse_errors;
+    PLOG_ERROR << "Top-level key 'mod_list' must be a string";
+    mod_list_location.clear();
+  }
   PLOG_INFO << "Playing " << name;
 
   active_modifiers = configuration["mod_defaults"]["active_modifiers"].value_or(3);

@@ -123,6 +123,8 @@ chaos_defaults = {
   'msg_credit_transfer': '@{} has given @{} 1 mod credit',
   'msg_mod_list': 'A list of the available mods for this game can be found here: {}',
   'mod_list_link': 'https://github.com/polysyllabic/chaos/blob/main/chaos/examples/tlou_mods.txt',
+  'default_mod_list_link': '',
+  'mod_list_overrides': {},
   'msg_raffle_open': 'A raffle for a modifier credit {status}. Type !join to enter.',
 }
 
@@ -192,6 +194,8 @@ class ChaosRelay:
     self.connected_bright = True
     self.engine_status = 'not_connected'
     self.bot_diagnostics: List[str] = []
+    self.default_mod_list_link = ''
+    self.mod_list_overrides: Dict[str, str] = {}
 
     # Config-backed fields
     self.num_active_mods = 0
@@ -443,6 +447,17 @@ class ChaosRelay:
     self.permission_groups = clean_groups
     return changed
 
+  def _sanitize_mod_list_overrides(self, value) -> Dict[str, str]:
+    clean: Dict[str, str] = {}
+    if not isinstance(value, dict):
+      return clean
+    for raw_game, raw_uri in value.items():
+      game_name = str(raw_game).strip()
+      uri = str(raw_uri).strip()
+      if game_name and uri:
+        clean[game_name] = uri
+    return clean
+
   def _ensure_streamer_admin(self):
     streamer = self._normalize_user(self.channel_name)
     admin_group = self.permission_groups.setdefault('admin', {'members': [], 'permissions': []})
@@ -469,6 +484,9 @@ class ChaosRelay:
     self.set_selected_game(selected_game)
     self.set_selected_game_history(self.get_attribute('selected_game_history'))
     self.set_available_games(self.get_attribute('available_games'))
+    self.set_default_mod_list_link(self.get_attribute('default_mod_list_link'))
+    self.set_mod_list_overrides(self.get_attribute('mod_list_overrides'))
+    self.set_mod_list_link(self.get_attribute('mod_list_link'), persist_override=False)
     self.set_num_active_mods(self.get_attribute('active_modifiers'))
     self.set_time_per_modifier(self.get_attribute('modifier_time'))
     self.set_softmax_factor(self.get_attribute('softmax_factor'))
@@ -534,6 +552,15 @@ class ChaosRelay:
     logging.info("Setting game data for %s", gamedata['game'])
     self.set_game_name(gamedata['game'])
     self.record_selected_game(gamedata['game'])
+    default_mod_list = str(
+      gamedata.get('mod_list')
+      or gamedata.get('mod_list_link')
+      or gamedata.get('mod_list_uri')
+      or ''
+    ).strip()
+    self.set_default_mod_list_link(default_mod_list)
+    override_mod_list = self.get_mod_list_override(self.game_name)
+    self.set_mod_list_link(override_mod_list or default_mod_list, persist_override=False)
     self.set_game_errors(int(gamedata['errors']))
     self.set_num_active_mods(int(gamedata['nmods']))
     self.set_time_per_modifier(float(gamedata['modtime']))
@@ -601,6 +628,38 @@ class ChaosRelay:
           games.append(game_name)
     games.sort(key=lambda name: name.lower())
     self._set_value('available_games', games, 'available_games')
+
+  def set_default_mod_list_link(self, value):
+    uri = str(value or '').strip()
+    self._set_value('default_mod_list_link', uri, 'default_mod_list_link')
+
+  def set_mod_list_overrides(self, value):
+    clean = self._sanitize_mod_list_overrides(value)
+    self._set_value('mod_list_overrides', clean, 'mod_list_overrides')
+
+  def get_mod_list_override(self, game_name: str) -> str:
+    name = str(game_name or '').strip()
+    if not name:
+      return ''
+    return str(self.mod_list_overrides.get(name, '')).strip()
+
+  def set_mod_list_link(self, value, *, persist_override: bool = True):
+    uri = str(value or '').strip()
+    self._set_value('mod_list_link', uri, 'mod_list_link')
+    if not persist_override:
+      return
+
+    game_name = str(self.game_name or '').strip()
+    if not game_name or game_name.upper() == 'NONE':
+      return
+
+    overrides = dict(self.mod_list_overrides)
+    default_uri = str(self.default_mod_list_link or '').strip()
+    if uri and uri != default_uri:
+      overrides[game_name] = uri
+    else:
+      overrides.pop(game_name, None)
+    self.set_mod_list_overrides(overrides)
 
   def record_selected_game(self, game_name: str):
     name = str(game_name).strip()

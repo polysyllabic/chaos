@@ -50,7 +50,8 @@ int main(int argc, char** argv) {
     // input injection is wired before any controller events are processed.
     controller = std::make_unique<ControllerRaw>();
     engine = std::make_unique<ChaosEngine>(*controller, chaos_config.getListenerAddress(),
-                                           chaos_config.getInterfaceAddress());
+                                           chaos_config.getInterfaceAddress(), true,
+                                           chaos_config.getDefaultModListPath());
 
     engine->setAvailableGames(chaos_config.getAvailableGames());
     if (!configfile.empty()) {

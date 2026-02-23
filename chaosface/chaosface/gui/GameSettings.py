@@ -71,6 +71,48 @@ def build_game_settings_tab() -> Callable[[], None]:
         f'Selections stored: {len(config.relay.selected_game_history)}'
       )
 
+      current_game = str(config.relay.game_name or 'NONE')
+      if mod_list_state['bound_game'] != current_game:
+        mod_list_state['bound_game'] = current_game
+        mod_list_state['pending_user_edit'] = False
+
+      effective_mod_list = str(config.relay.mod_list_link or '')
+      if not mod_list_state['pending_user_edit'] and mod_list_link.value != effective_mod_list:
+        mod_list_link.value = effective_mod_list
+
+      default_mod_list = str(config.relay.default_mod_list_link or '').strip()
+      default_mod_list_hint.text = (
+        f'Engine default: {default_mod_list}'
+        if default_mod_list else
+        'Engine default: (not provided by current game)'
+      )
+
+    ui.separator()
+    ui.label('Modifier List Link').classes('text-subtitle1')
+    with ui.row().classes('w-full items-end gap-3'):
+      mod_list_state = {
+        'pending_user_edit': False,
+        'bound_game': str(config.relay.game_name or 'NONE'),
+      }
+
+      def _on_mod_list_change(_event):
+        mod_list_state['pending_user_edit'] = True
+
+      mod_list_link = ui.input(
+        'URI used by !mods',
+        value=str(config.relay.mod_list_link or ''),
+        on_change=_on_mod_list_change,
+      ).classes('w-full')
+
+      default_mod_list_hint = ui.label('').classes('text-xs')
+
+      def reset_mod_list_to_default():
+        mod_list_link.value = str(config.relay.default_mod_list_link or '')
+        mod_list_state['pending_user_edit'] = True
+        status_label.text = 'Mod-list link reset to engine default (click Save to persist)'
+
+      ui.button('Default', on_click=reset_mod_list_to_default)
+
     refresh_game_selector()
 
     ui.separator()
@@ -191,6 +233,11 @@ def build_game_settings_tab() -> Callable[[], None]:
       set_if_changed(config.relay.bits_per_credit, safe_int(bits_per_credit.value, config.relay.bits_per_credit, 1, 100000), config.relay.set_bits_per_credit)
       set_if_changed(config.relay.points_reward_title, str(points_reward_title.value), config.relay.set_points_reward_title)
       set_if_changed(config.relay.raffle_time, safe_float(raffle_time.value, config.relay.raffle_time, 10.0, 3600.0), config.relay.set_raffle_time)
+      new_mod_list_link = str(mod_list_link.value or '').strip()
+      if str(config.relay.mod_list_link or '') != new_mod_list_link:
+        config.relay.set_mod_list_link(new_mod_list_link, persist_override=True)
+        need_save = True
+      mod_list_state['pending_user_edit'] = False
       sync_enabled_mods()
       config.relay.save_mod_info()
 
@@ -221,6 +268,9 @@ def build_game_settings_tab() -> Callable[[], None]:
       bits_per_credit.value = int(config.relay.bits_per_credit)
       points_reward_title.value = str(config.relay.points_reward_title)
       raffle_time.value = float(config.relay.raffle_time)
+      mod_list_link.value = str(config.relay.mod_list_link or '')
+      mod_list_state['pending_user_edit'] = False
+      mod_list_state['bound_game'] = str(config.relay.game_name or 'NONE')
       render_mod_toggles()
       status_label.text = 'Restored saved settings'
 

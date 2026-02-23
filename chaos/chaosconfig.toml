@@ -20,6 +20,10 @@ game_directory = "./games/"
 # If this string does not contain an absolute path, we look for the file in the game_directory.
 default_game = "tlou2.toml"
 
+# Base URI for per-game mod-list links. If a game's `mod_list` value is only a file name, this
+# prefix is prepended by the engine.
+default_mod_list_path = "https://github.com/polysyllabic/chaos/tree/main/chaos/examples/modlists/"
+
 # IP address/domain name of the computer running the chaos interface. Use 'localhost' if you're
 # running both the interface and the engine on the Raspberry Pi.
 interface_addr = "localhost"
