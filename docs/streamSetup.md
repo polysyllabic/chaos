@@ -13,8 +13,8 @@ When UI TLS is enabled, Chaosface can also expose overlays on plain HTTP using
 
 I recommend the following width and height for each browser overlay:
 
-- Votes (`/overlays/current-votes`): width `500`, height `117`
-- Active Mods (`/overlays/active-mods`): width `500`, height `117`
+- Votes (`/overlays/current-votes`): width `500`, height `160`
+- Active Mods (`/overlays/active-mods`): width `500`, height `160`
 - Vote Timer (`/overlays/vote-timer`): width `1920`, height `44`
    
 ## OBS Overlay Colors

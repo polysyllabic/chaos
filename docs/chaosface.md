@@ -183,8 +183,8 @@ To add these overlays to OBS or SLOBS, perform the following steps:
     - `http://<host>:<overlay_http_port>/...` (non-TLS overlay listener)
 
   Recommended OBS browser-source dimensions (pixels):
-  - Active Mods (`/overlays/active-mods`): width `500`, height `117`
-  - Votes (`/overlays/current-votes`): width `500`, height `117`
+  - Active Mods (`/overlays/active-mods`): width `500`, height `160`
+  - Votes (`/overlays/current-votes`): width `500`, height `160`
   - Vote Timer (`/overlays/vote-timer`): width `1920`, height `44`
 
   If you are using a self-signed certificate, note that OBS will silently reject https pages with self-signed
@@ -195,6 +195,15 @@ To add these overlays to OBS or SLOBS, perform the following steps:
 If you are running Chaosface from a different computer, adapt the URL accordingly. 
 
 You should set these browser sources to refresh when not displayed so that they can easily be refreshed.
+
+The `SOURCE CONFIGURATION` tab lets you tune source layout and colors without editing files:
+
+* Current Votes: name/bar spacing, text color, bar color
+* Active Mods: name/bar spacing, text color, bar color
+* Vote Timer: bar color
+
+Color fields accept standard CSS names, hex values, and `rgb(...)`/`rgba(...)` values. A color
+picker is shown when supported by the installed NiceGUI version.
 
 
 Font and Color Adjustments

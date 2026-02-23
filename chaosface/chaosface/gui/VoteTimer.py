@@ -11,6 +11,7 @@ def vote_timer_overlay_html() -> str:
     <title>Vote Timer</title>
     <style>
       :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
       body {
         margin: 0;
         font-family: Arial, sans-serif;
@@ -40,7 +41,9 @@ def vote_timer_overlay_html() -> str:
         const response = await fetch('/api/overlay/state', { cache: 'no-store' });
         const state = await response.json();
         const progress = Math.max(0, Math.min(1, Number(state.vote_time || 0)));
-        document.getElementById('timerFill').style.width = `${progress * 100}%`;
+        const fill = document.getElementById('timerFill');
+        fill.style.width = `${progress * 100}%`;
+        fill.style.background = String(state.overlay_vote_timer_bar_color || 'rgba(240, 240, 240, 0.85)');
       }
       setInterval(refresh, 250);
       refresh();

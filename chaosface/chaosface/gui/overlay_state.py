@@ -30,4 +30,11 @@ def overlay_state_payload() -> Dict[str, Any]:
     'engine_status': str(config.relay.engine_status or 'not_connected'),
     'paused': bool(config.relay.paused),
     'paused_bright': bool(config.relay.paused_bright),
+    'overlay_current_votes_gap': int(config.relay.overlay_current_votes_gap),
+    'overlay_active_mods_gap': int(config.relay.overlay_active_mods_gap),
+    'overlay_current_votes_text_color': str(config.relay.overlay_current_votes_text_color or '#ffffff'),
+    'overlay_current_votes_bar_color': str(config.relay.overlay_current_votes_bar_color or 'rgba(245, 245, 245, 0.8)'),
+    'overlay_active_mods_text_color': str(config.relay.overlay_active_mods_text_color or '#ffffff'),
+    'overlay_active_mods_bar_color': str(config.relay.overlay_active_mods_bar_color or 'rgba(245, 245, 245, 0.75)'),
+    'overlay_vote_timer_bar_color': str(config.relay.overlay_vote_timer_bar_color or 'rgba(240, 240, 240, 0.85)'),
   }

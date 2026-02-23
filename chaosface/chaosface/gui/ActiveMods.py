@@ -11,6 +11,7 @@ def active_mods_overlay_html() -> str:
     <title>Active Mods</title>
     <style>
       :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
       body {
         margin: 0;
         font-family: Arial, sans-serif;
@@ -28,6 +29,7 @@ def active_mods_overlay_html() -> str:
         align-items: center;
       }
       .mod-label { font-size: 20px; font-weight: bold; min-height: 28px; }
+      .bar-cell { padding-right: 4px; }
       .bar {
         height: 24px;
         border: 1px solid #000;
@@ -52,6 +54,10 @@ def active_mods_overlay_html() -> str:
         const response = await fetch('/api/overlay/state', { cache: 'no-store' });
         const state = await response.json();
         const modsRoot = document.getElementById('mods');
+        const textColor = String(state.overlay_active_mods_text_color || '#ffffff');
+        const barColor = String(state.overlay_active_mods_bar_color || 'rgba(245, 245, 245, 0.75)');
+        const gap = Math.max(0, Math.min(120, Number(state.overlay_active_mods_gap || 10)));
+        document.body.style.color = textColor;
         const names = state.active_mods || [];
         const times = state.mod_times || [];
         const count = Math.max(state.num_active_mods || 0, names.length, times.length);
@@ -60,9 +66,9 @@ def active_mods_overlay_html() -> str:
           const modName = names[i] || '';
           const progress = Math.max(0, Math.min(1, Number(times[i] || 0)));
           html += `
-            <div class="row">
+            <div class="row" style="gap:${gap}px">
               <div class="mod-label">${modName}</div>
-              <div class="bar"><div class="bar-fill" style="width:${progress * 100}%"></div></div>
+              <div class="bar-cell"><div class="bar"><div class="bar-fill" style="width:${progress * 100}%;background:${barColor}"></div></div></div>
             </div>`;
         }
         modsRoot.innerHTML = html;

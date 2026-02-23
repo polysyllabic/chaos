@@ -11,6 +11,7 @@ def current_votes_overlay_html() -> str:
     <title>Current Votes</title>
     <style>
       :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
       body {
         margin: 0;
         font-family: Arial, sans-serif;
@@ -62,6 +63,7 @@ def current_votes_overlay_html() -> str:
         font-size: 14px;
         font-weight: bold;
       }
+      .bar-cell { padding-right: 4px; }
     </style>
   </head>
   <body>
@@ -76,6 +78,10 @@ def current_votes_overlay_html() -> str:
       async function refresh() {
         const response = await fetch('/api/overlay/state', { cache: 'no-store' });
         const state = await response.json();
+        const textColor = String(state.overlay_current_votes_text_color || '#ffffff');
+        const barColor = String(state.overlay_current_votes_bar_color || 'rgba(245, 245, 245, 0.8)');
+        const gap = Math.max(0, Math.min(120, Number(state.overlay_current_votes_gap || 10)));
+        document.body.style.color = textColor;
         const names = state.candidate_mods || [];
         const votes = state.votes || [];
         const totalVotes = Number(state.vote_total || 0);
@@ -88,11 +94,13 @@ def current_votes_overlay_html() -> str:
           const percent = totalVotes > 0 ? (vote / totalVotes) : (count > 0 ? 1 / count : 0);
           const pctText = `${Math.round(percent * 100)}%`;
           html += `
-            <div class="row">
+            <div class="row" style="gap:${gap}px">
               <div class="label">${i + 1} ${name}</div>
-              <div class="bar">
-                <div class="bar-fill" style="width:${percent * 100}%"></div>
-                <div class="bar-text">${pctText}</div>
+              <div class="bar-cell">
+                <div class="bar">
+                  <div class="bar-fill" style="width:${percent * 100}%;background:${barColor}"></div>
+                  <div class="bar-text">${pctText}</div>
+                </div>
               </div>
             </div>`;
         }

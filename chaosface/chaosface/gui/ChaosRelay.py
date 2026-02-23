@@ -68,6 +68,13 @@ chaos_defaults = {
   'listen_port': 5556,
   'talk_port': 5555,
   'obs_overlays': True,
+  'overlay_current_votes_gap': 10,
+  'overlay_active_mods_gap': 10,
+  'overlay_current_votes_text_color': '#ffffff',
+  'overlay_current_votes_bar_color': 'rgba(245, 245, 245, 0.8)',
+  'overlay_active_mods_text_color': '#ffffff',
+  'overlay_active_mods_bar_color': 'rgba(245, 245, 245, 0.75)',
+  'overlay_vote_timer_bar_color': 'rgba(240, 240, 240, 0.85)',
   'use_gui': True,
   'ui_rate': 20.0,
   'ui_port': 80,
@@ -234,6 +241,13 @@ class ChaosRelay:
     self.announce_active = False
     self.announce_winner = False
     self.obs_overlays = True
+    self.overlay_current_votes_gap = 10
+    self.overlay_active_mods_gap = 10
+    self.overlay_current_votes_text_color = '#ffffff'
+    self.overlay_current_votes_bar_color = 'rgba(245, 245, 245, 0.8)'
+    self.overlay_active_mods_text_color = '#ffffff'
+    self.overlay_active_mods_bar_color = 'rgba(245, 245, 245, 0.75)'
+    self.overlay_vote_timer_bar_color = 'rgba(240, 240, 240, 0.85)'
     self.overlay_font = ''
     self.overlay_font_size = 24.0
     self.overlay_font_color = '#ffffff'
@@ -502,6 +516,13 @@ class ChaosRelay:
     self.set_announce_candidates(self.get_attribute('announce_candidates'))
     self.set_announce_active(self.get_attribute('announce_active'))
     self.set_announce_winner(self.get_attribute('announce_winner'))
+    self.set_overlay_current_votes_gap(self.get_attribute('overlay_current_votes_gap'))
+    self.set_overlay_active_mods_gap(self.get_attribute('overlay_active_mods_gap'))
+    self.set_overlay_current_votes_text_color(self.get_attribute('overlay_current_votes_text_color'))
+    self.set_overlay_current_votes_bar_color(self.get_attribute('overlay_current_votes_bar_color'))
+    self.set_overlay_active_mods_text_color(self.get_attribute('overlay_active_mods_text_color'))
+    self.set_overlay_active_mods_bar_color(self.get_attribute('overlay_active_mods_bar_color'))
+    self.set_overlay_vote_timer_bar_color(self.get_attribute('overlay_vote_timer_bar_color'))
     self.set_pi_host(self.get_attribute('pi_host'))
     self.set_listen_port(self.get_attribute('listen_port'))
     self.set_talk_port(self.get_attribute('talk_port'))
@@ -861,6 +882,39 @@ class ChaosRelay:
 
   def set_obs_overlays(self, value):
     self._set_value('obs_overlays', bool(value), 'obs_overlays')
+
+  @staticmethod
+  def _normalize_overlay_color(value, fallback: str) -> str:
+    color = str(value or '').strip()
+    return color if color else fallback
+
+  def set_overlay_current_votes_gap(self, value):
+    gap = max(0, min(120, int(value)))
+    self._set_value('overlay_current_votes_gap', gap, 'overlay_current_votes_gap')
+
+  def set_overlay_active_mods_gap(self, value):
+    gap = max(0, min(120, int(value)))
+    self._set_value('overlay_active_mods_gap', gap, 'overlay_active_mods_gap')
+
+  def set_overlay_current_votes_text_color(self, value):
+    color = self._normalize_overlay_color(value, '#ffffff')
+    self._set_value('overlay_current_votes_text_color', color, 'overlay_current_votes_text_color')
+
+  def set_overlay_current_votes_bar_color(self, value):
+    color = self._normalize_overlay_color(value, 'rgba(245, 245, 245, 0.8)')
+    self._set_value('overlay_current_votes_bar_color', color, 'overlay_current_votes_bar_color')
+
+  def set_overlay_active_mods_text_color(self, value):
+    color = self._normalize_overlay_color(value, '#ffffff')
+    self._set_value('overlay_active_mods_text_color', color, 'overlay_active_mods_text_color')
+
+  def set_overlay_active_mods_bar_color(self, value):
+    color = self._normalize_overlay_color(value, 'rgba(245, 245, 245, 0.75)')
+    self._set_value('overlay_active_mods_bar_color', color, 'overlay_active_mods_bar_color')
+
+  def set_overlay_vote_timer_bar_color(self, value):
+    color = self._normalize_overlay_color(value, 'rgba(240, 240, 240, 0.85)')
+    self._set_value('overlay_vote_timer_bar_color', color, 'overlay_vote_timer_bar_color')
 
   def set_ui_rate(self, value):
     self._set_value('ui_rate', max(1.0, float(value)), 'ui_rate')
