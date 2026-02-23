@@ -214,10 +214,15 @@ def _is_public_request_path(path: str, mode: str) -> bool:
 
 
 def _normalize_realtime_path(path: str) -> str:
+  # Canonical endpoint used by NiceGUI's mounted Socket.IO app.
+  canonical = '/_nicegui_ws/socket.io'
+
+  if path.startswith('/_nicegui_ws/socket.io/'):
+    return path.replace('/_nicegui_ws/socket.io/', canonical, 1)
   if path.startswith('/_nicegui/ws/socket.io'):
-    return path.replace('/_nicegui/ws/socket.io', '/_nicegui_ws/socket.io', 1)
+    return path.replace('/_nicegui/ws/socket.io', canonical, 1)
   if path.startswith('/_nicegui/socket.io'):
-    return path.replace('/_nicegui/socket.io', '/_nicegui_ws/socket.io', 1)
+    return path.replace('/_nicegui/socket.io', canonical, 1)
   return path
 
 
