@@ -168,11 +168,15 @@ To add these overlays to OBS or SLOBS, perform the following steps:
 
 * Make a copy of the scene you normally use to stream PlayStation games. Name it something like "Twitch Controls Chaos".
 
-* To this new scene, add each of the following as a browser source. The default URLs are as follows.
+* To this new scene, add each of the following as a browser source. Use `http://` when TLS is
+  off and `https://` when TLS is enabled. The canonical paths are:
 
-  - Active Mods: http://raspberrypi.local/ActiveMods
-  - Votes: http://raspberrypi.local/CurrentVotes
-  - Vote Timer: http://raspberrypi.local/VoteTimer
+  - Active Mods: `https://raspberrypi.local/overlays/active-mods`
+  - Votes: `https://raspberrypi.local/overlays/current-votes`
+  - Vote Timer: `https://raspberrypi.local/overlays/vote-timer`
+
+  Legacy aliases (`/ActiveMods`, `/CurrentVotes`, `/VoteTimer`, and lowercase variants) are also
+  supported for compatibility.
 
 If you are running Chaosface from a different computer, adapt the URL accordingly. 
 

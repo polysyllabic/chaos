@@ -49,8 +49,11 @@ UI_SESSION_COOKIE = 'chaosface_session'
 UI_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24
 OVERLAY_PUBLIC_PATHS = {
   '/ActiveMods',
+  '/activemods',
   '/VoteTimer',
+  '/votetimer',
   '/CurrentVotes',
+  '/currentvotes',
   '/api/overlay/state',
 }
 
@@ -612,6 +615,7 @@ async def api_oauth_complete(payload: Dict[str, str]) -> Dict[str, str]:
 
 
 @app.get('/ActiveMods', response_class=HTMLResponse)
+@app.get('/activemods', response_class=HTMLResponse)
 @app.get('/overlays/active-mods', response_class=HTMLResponse)
 async def active_mods_overlay() -> HTMLResponse:
   ensure_runtime_started()
@@ -619,6 +623,7 @@ async def active_mods_overlay() -> HTMLResponse:
 
 
 @app.get('/VoteTimer', response_class=HTMLResponse)
+@app.get('/votetimer', response_class=HTMLResponse)
 @app.get('/overlays/vote-timer', response_class=HTMLResponse)
 async def vote_timer_overlay() -> HTMLResponse:
   ensure_runtime_started()
@@ -626,6 +631,7 @@ async def vote_timer_overlay() -> HTMLResponse:
 
 
 @app.get('/CurrentVotes', response_class=HTMLResponse)
+@app.get('/currentvotes', response_class=HTMLResponse)
 @app.get('/overlays/current-votes', response_class=HTMLResponse)
 async def current_votes_overlay() -> HTMLResponse:
   ensure_runtime_started()

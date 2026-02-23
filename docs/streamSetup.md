@@ -1,7 +1,15 @@
 # Stream Setup
 
 ## OBS Overlay Sizes
-When adding browser sources in your chat for the Votes, VoteTime, and ActiveMods pages, I recommend the following width and height for each browser overlay:
+When adding browser sources for the overlay pages, use these canonical paths:
+
+- `/overlays/current-votes`
+- `/overlays/vote-timer`
+- `/overlays/active-mods`
+
+Use `http://` when TLS is off and `https://` when TLS is enabled.
+
+I recommend the following width and height for each browser overlay:
 
 - Votes 
  - - Width: 500
