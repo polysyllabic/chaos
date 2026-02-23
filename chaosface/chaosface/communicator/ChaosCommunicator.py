@@ -5,6 +5,7 @@ import time
 from abc import ABC, abstractmethod
 from typing import List, Optional
 import threading
+import queue
 import zmq
 import logging
 
@@ -32,9 +33,13 @@ class ChaosCommunicator():
     self._relay_callbacks_registered = False
     self.context: Optional[zmq.Context] = None
     self.thread: Optional[threading.Thread] = None
+    self._notify_thread: Optional[threading.Thread] = None
     self.keep_running = False
     self.socket_listen: Optional[zmq.Socket] = None
     self.socket_talk: Optional[zmq.Socket] = None
+    self._talk_lock = threading.Lock()
+    self._listener_lock = threading.Lock()
+    self._incoming_messages: queue.Queue[str] = queue.Queue()
 
   def attach(self, observer: EngineObserver) -> None:
     logging.debug("Attached an observer.")
@@ -60,7 +65,9 @@ class ChaosCommunicator():
         
     self.keep_running = True
     self.thread = threading.Thread(target=self._listen_loop)
+    self._notify_thread = threading.Thread(target=self._notify_loop)
     self.thread.start()
+    self._notify_thread.start()
 
   def _bind_relay_callbacks(self):
     if self._relay_callbacks_registered:
@@ -75,22 +82,117 @@ class ChaosCommunicator():
     self.listen_port = port
     if self.context is None:
       raise RuntimeError('Communicator context has not been initialized')
-    if self.socket_listen is not None:
-      # Close and reconnect socket
-      self.socket_listen.setsockopt(zmq.LINGER, 0)
-      self.socket_listen.close()
-    listener_socket = self.context.socket(zmq.REP)
-    logging.debug(f"Bind listener to tcp://*:{self.listen_port}")
-    try:
-      listener_socket.bind(f"tcp://*:{self.listen_port}")
-    except zmq.error.ZMQError as e:
-      logging.error(f"Could not bind listener socket: {e}")
-      raise e
-    self.socket_listen = listener_socket
+    with self._listener_lock:
+      if self.socket_listen is not None:
+        # Close and reconnect socket
+        self.socket_listen.setsockopt(zmq.LINGER, 0)
+        self.socket_listen.close()
+      listener_socket = self.context.socket(zmq.REP)
+      logging.debug(f"Bind listener to tcp://*:{self.listen_port}")
+      try:
+        listener_socket.bind(f"tcp://*:{self.listen_port}")
+      except zmq.error.ZMQError as e:
+        logging.error(f"Could not bind listener socket: {e}")
+        raise e
+      self.socket_listen = listener_socket
 
   def connect_talker(self, host_addr, port):
     self.pi_host = host_addr
     self.talk_port = port
+    if self.context is None:
+      raise RuntimeError('Communicator context has not been initialized')
+    with self._talk_lock:
+      if self.socket_talk is not None:
+        logging.debug('Closing open socket')
+        self.socket_talk.setsockopt(zmq.LINGER, 0)
+        self.socket_talk.close()
+      talk_socket = self.context.socket(zmq.REQ)
+      logging.debug(f"Connect talker to tcp://{host_addr}:{self.talk_port}")
+      try:
+        talk_socket.connect(f"tcp://{host_addr}:{self.talk_port}")
+      except zmq.error.ZMQError as e:
+        logging.error(f"Could not connect to {host_addr}:{self.talk_port}")
+        raise e
+      talk_socket.setsockopt(zmq.RCVTIMEO, self.request_timeout)
+      self.socket_talk = talk_socket
+
+  def stop(self):
+    self.keep_running = False
+    self._incoming_messages.put_nowait('')
+    if self.thread and self.thread.is_alive():
+      self.thread.join()
+    if self._notify_thread and self._notify_thread.is_alive():
+      self._notify_thread.join()
+
+  def _notify_loop(self):
+    while self.keep_running or not self._incoming_messages.empty():
+      try:
+        message = self._incoming_messages.get(timeout=0.1)
+      except queue.Empty:
+        continue
+      if not message:
+        continue
+      try:
+        self.notify(message)
+      except Exception:
+        logging.exception('Unhandled exception while processing engine message')
+    
+  def _listen_loop(self):
+    while self.keep_running:
+      with self._listener_lock:
+        socket_listen = self.socket_listen
+      if socket_listen is None:
+        time.sleep(0.05)
+        continue
+      #  Poll for engine message.
+      if (socket_listen.poll(self.request_timeout) & zmq.POLLIN) != 0:
+        try:
+          message = socket_listen.recv()
+        except zmq.error.ZMQError:
+          if self.keep_running:
+            logging.exception('Error receiving message from engine')
+          continue
+        # Return acknowledgment immediately so the engine can continue sending.
+        try:
+          socket_listen.send(b"Pong")
+        except zmq.error.ZMQError:
+          if self.keep_running:
+            logging.exception('Error acknowledging message from engine')
+          continue
+        # Dispatch processing on a worker thread so socket reads are never blocked by observer work.
+        if message:
+          self._incoming_messages.put(message.decode("utf-8"))
+  
+  def send_message(self, message):
+    with self._talk_lock:
+      if self.socket_talk is None:
+        logging.error('Talk socket is not connected')
+        return False
+      logging.debug("Sending message: " + message)
+      self.socket_talk.send_string(message)
+      # In case the server is dead, we don't wait infinitely for a response. If we get none, we
+      # return False to indicate that we couldn't send the message
+      retries_left = self.request_retries
+      while retries_left != 0:
+        if self.socket_talk is None:
+          logging.error('Talk socket was closed before a reply was received')
+          return False
+        if (self.socket_talk.poll(self.request_timeout) & zmq.POLLIN) != 0:
+          self.socket_talk.recv()
+          logging.debug('Message acknowledged')
+          return True
+        else:
+          retries_left -= 1
+          logging.debug('No response: renewing socket and resending')
+          self._reconnect_talker_locked()
+          assert self.socket_talk is not None
+          self.socket_talk.send_string(message)
+      
+      # restart socket for future attempts
+      self._reconnect_talker_locked()
+      return False
+
+  def _reconnect_talker_locked(self):
     if self.context is None:
       raise RuntimeError('Communicator context has not been initialized')
     if self.socket_talk is not None:
@@ -98,60 +200,14 @@ class ChaosCommunicator():
       self.socket_talk.setsockopt(zmq.LINGER, 0)
       self.socket_talk.close()
     talk_socket = self.context.socket(zmq.REQ)
-    logging.debug(f"Connect talker to tcp://{host_addr}:{self.talk_port}")
+    logging.debug(f"Connect talker to tcp://{self.pi_host}:{self.talk_port}")
     try:
-      talk_socket.connect(f"tcp://{host_addr}:{self.talk_port}")
+      talk_socket.connect(f"tcp://{self.pi_host}:{self.talk_port}")
     except zmq.error.ZMQError as e:
-      logging.error(f"Could not connect to {host_addr}:{self.talk_port}")
+      logging.error(f"Could not connect to {self.pi_host}:{self.talk_port}")
       raise e
     talk_socket.setsockopt(zmq.RCVTIMEO, self.request_timeout)
     self.socket_talk = talk_socket
-
-  def stop(self):
-    self.keep_running = False
-    if self.thread and self.thread.is_alive():
-      self.thread.join()
-    
-  def _listen_loop(self):
-    while self.keep_running:
-      if self.socket_listen is None:
-        time.sleep(0.05)
-        continue
-      #  Poll for engine message.
-      if (self.socket_listen.poll(self.request_timeout) & zmq.POLLIN) != 0:
-        message = self.socket_listen.recv()
-        # Return acknowledgment
-        self.socket_listen.send(b"Pong")
-        # Tell observers what we received, if the message is non-empty
-        if message:
-          self.notify(message.decode("utf-8"))
-  
-  def send_message(self, message):
-    if self.socket_talk is None:
-      logging.error('Talk socket is not connected')
-      return False
-    logging.debug("Sending message: " + message)
-    self.socket_talk.send_string(message)
-    # In case the server is dead, we don't wait infinitely for a response. If we get none, we
-    # return False to indicate that we couldn't send the message
-    retries_left = self.request_retries
-    while retries_left != 0:
-      if self.socket_talk is None:
-        logging.error('Talk socket was closed before a reply was received')
-        return False
-      if (self.socket_talk.poll(self.request_timeout) & zmq.POLLIN) != 0:
-        reply = self.socket_talk.recv()
-        logging.debug('Message acknowledged')
-        return True
-      else:
-        retries_left -= 1
-        logging.debug('No response: renewing socket and resending')
-        self.connect_talker(self.pi_host, self.talk_port)
-        self.socket_talk.send_string(message)
-    
-    # restart socket for future attempts
-    self.connect_talker(self.pi_host, self.talk_port)
-    return False  
 class TestObserver(EngineObserver):
   def update_command(self, message ) -> None:
     print("Notified about message: " + str(message))
@@ -165,5 +221,4 @@ if __name__ == "__main__":
   subject.send_message("game")
   time.sleep(10)
   subject.stop()
-
 
