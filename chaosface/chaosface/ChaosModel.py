@@ -224,11 +224,20 @@ class ChaosModel(EngineObserver):
       games = self._parse_available_games(received.get('available_games'))
       ui_dispatch.call_soon(config.relay.set_available_games, games)
       self.acknowledge_available_games(len(games))
+      reported_status = str(received.get('engine_status', '')).strip().lower()
+      engine_needs_game = reported_status in (self.ENGINE_STATUS_WAITING_FOR_GAME, self.ENGINE_STATUS_BAD_CONFIG_FILE)
+      if engine_needs_game:
+        config.relay.valid_data = False
+        ui_dispatch.call_soon(config.relay.reset_current_mods)
       preferred = config.relay.get_preferred_game(games)
-      if preferred and (not config.relay.valid_data or config.relay.game_name != preferred):
+      if preferred and (engine_needs_game or not config.relay.valid_data or config.relay.game_name != preferred):
         self.request_game_selection(preferred)
       elif 'engine_status' not in received and not config.relay.valid_data:
         self._set_engine_status(self.ENGINE_STATUS_WAITING_FOR_GAME)
+
+    if "mods_reset" in received:
+      handled = True
+      ui_dispatch.call_soon(config.relay.reset_current_mods)
 
     if "game" in received:
       handled = True

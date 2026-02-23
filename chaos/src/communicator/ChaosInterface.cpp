@@ -31,6 +31,7 @@ void ChaosInterface::setupInterface(const std::string& listener_endpoint, const 
 
   listener.setEndpoint(listener_endpoint);
   talker.setEndpoint(talker_endpoint);
+  talker_healthy.store(true);
   listener.start();
   start();
 }
@@ -45,7 +46,16 @@ void ChaosInterface::doAction() {
     std::string message = outgoingQueue.front();
     outgoingQueue.pop();
     unlock();
-    talker.sendMessage(message);
+    bool sent = talker.sendMessage(message);
+    if (!sent) {
+      talker_healthy.store(false);
+      PLOG_WARNING << "Timeout sending message to chaosface interface.";
+    } else {
+      bool was_healthy = talker_healthy.exchange(true);
+      if (!was_healthy) {
+        PLOG_INFO << "Recovered communication with chaosface interface.";
+      }
+    }
   }
   pause();
 }

@@ -555,6 +555,8 @@ class ChaosRelay:
         self.enabled_mods.append(mod_key)
 
     self.reset_softmax()
+    self.reset_current_mods()
+    self.reset_voting()
     self.save_mod_info()
     self.set_new_game_data(True)
     self.valid_data = True

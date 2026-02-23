@@ -50,6 +50,7 @@ sudo systemctl enable chaos
 
 if (( restart_service )); then
   echo "Restarting chaos service"
+  sudo systemctl reset-failed chaos || true
   sudo systemctl restart chaos
   sudo systemctl status chaos --no-pager --lines=20 || true
 fi

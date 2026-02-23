@@ -87,6 +87,7 @@ std::string ChaosEngine::resolveGameConfig(const std::string& selection) {
 bool ChaosEngine::setGame(const std::string& name) {
   pause.store(true);
   pausePrimer = false;
+  paused_for_interface_timeout.store(false);
 
   lock();
   bool loaded = game.loadConfigFile(name, this);
@@ -209,11 +210,17 @@ void ChaosEngine::newCommand(const std::string& command) {
   if (root.isMember("select_game")) {
     std::string requested_game = root["select_game"].asString();
     setGame(resolveGameConfig(requested_game));
+    if (interface_enabled) {
+      chaosInterface.sendMessage("{\"mods_reset\":1}");
+    }
     reportGameStatus();
   }
 
   if (root.isMember("newgame")) {
     setGame(resolveGameConfig(root["newgame"].asString()));
+    if (interface_enabled) {
+      chaosInterface.sendMessage("{\"mods_reset\":1}");
+    }
     reportGameStatus();
   }
 
@@ -305,6 +312,20 @@ void ChaosEngine::doAction() {
   unlock();
   if (should_announce_games) {
     reportAvailableGames();
+  }
+
+  if (interface_enabled && !chaosInterface.isTalkerHealthy()) {
+    if (!pause.load()) {
+      pause.store(true);
+      pausePrimer = false;
+      paused_for_interface_timeout.store(true);
+      PLOG_WARNING << "Pausing engine because communication with chaosface timed out.";
+    }
+  } else if (paused_for_interface_timeout.load()) {
+    paused_for_interface_timeout.store(false);
+    PLOG_INFO << "Chaosface communication restored; engine remains paused awaiting manual resume.";
+    chaosInterface.sendMessage("{\"pause\":1,\"engine_status\":\"paused\"}");
+    reportGameStatus();
   }
 		
   // Update timers/states of modifiers
@@ -449,6 +470,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
   if (game.matchesID(input, ControllerSignal::OPTIONS) || game.matchesID(input, ControllerSignal::PS)) {
     if(input.value == 1 && pause.load() == false) { // on rising edge
       pause.store(true);
+      paused_for_interface_timeout.store(false);
       chaosInterface.sendMessage("{\"pause\":1,\"engine_status\":\"paused\"}");
       pausePrimer = false;
       PLOG_INFO << "Game Paused";
@@ -458,14 +480,20 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
   // The share button resumes the chaos engine
   if (game.matchesID(input, ControllerSignal::SHARE)) {
     if(input.value == 1 && pause.load() == true) { // on rising edge
-      if (game_ready.load()) {
+      bool interface_ready = (!interface_enabled) || chaosInterface.isTalkerHealthy();
+      if (game_ready.load() && interface_ready) {
         pausePrimer = true;
       } else {
         pausePrimer = false;
-        PLOG_WARNING << "Ignoring unpause command: no valid game configuration loaded.";
+        if (!game_ready.load()) {
+          PLOG_WARNING << "Ignoring unpause command: no valid game configuration loaded.";
+        } else {
+          PLOG_WARNING << "Ignoring unpause command: chaosface interface is disconnected.";
+        }
       }
     } else if(input.value == 0 && pausePrimer == true) { // falling edge
       pause.store(false);
+      paused_for_interface_timeout.store(false);
       chaosInterface.sendMessage("{\"pause\":0,\"engine_status\":\"running\"}");
       PLOG_INFO << "Game Resumed";
     }

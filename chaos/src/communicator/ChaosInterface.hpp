@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <atomic>
 #include <queue>
 #include <string>
 #include <thread.hpp>
@@ -39,6 +40,7 @@ namespace Chaos {
     CommandSender talker;
 
     std::queue<std::string> outgoingQueue;
+    std::atomic<bool> talker_healthy{true};
 
     void doAction();
 
@@ -47,6 +49,7 @@ namespace Chaos {
     void setupInterface(const std::string& listener_endpoint, const std::string& talker_endpoint);
     bool sendMessage(std::string message);
     void setObserver(CommandObserver* observer);
+    bool isTalkerHealthy() const { return talker_healthy.load(); }
   };
 
 };
