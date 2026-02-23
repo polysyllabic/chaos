@@ -43,6 +43,7 @@ _runtime_lock = threading.Lock()
 _model: Optional[ChaosModel] = None
 _auth_lock = threading.Lock()
 _ui_sessions: Dict[str, float] = {}
+_uireq_probe_logged = False
 
 UI_SESSION_COOKIE = 'chaosface_session'
 UI_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24
@@ -396,6 +397,11 @@ def shutdown_runtime() -> None:
 
 @app.middleware('http')
 async def ui_auth_middleware(request: Request, call_next):
+  global _uireq_probe_logged
+  if not _uireq_probe_logged:
+    logging.warning('UIREQ middleware instrumentation is active')
+    _uireq_probe_logged = True
+
   started = time.monotonic()
   original_path = request.url.path
   path = _normalize_realtime_path(original_path)
@@ -429,7 +435,7 @@ async def ui_auth_middleware(request: Request, call_next):
     socket_details = _socket_query_details(request)
     normalized_note = f' normalized_from={original_path}' if normalized else ''
     socket_note = f' {socket_details}' if socket_details else ''
-    logging.info(
+    logging.warning(
       'UIREQ %s %s%s mode=%s -> %s in %.1fms%s',
       request.method,
       path,
