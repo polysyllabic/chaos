@@ -194,6 +194,7 @@ class ChaosRelay:
     self.connected_bright = True
     self.engine_status = 'not_connected'
     self.bot_diagnostics: List[str] = []
+    self.mod_list_link = ''
     self.default_mod_list_link = ''
     self.mod_list_overrides: Dict[str, str] = {}
 
