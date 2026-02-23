@@ -13,7 +13,7 @@ import chaosface.config.globals as config
 from .ui_helpers import clamp01
 
 
-def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> None:
+def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], None]:
   engine_status_labels = {
     'not_connected': 'Engine: Not Connected',
     'timeout': 'Engine: Connection Timeout',
@@ -64,6 +64,8 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> None:
       )
 
     def refresh_bot_status():
+      if status_box.is_deleted:
+        return
       messages = config.relay.get_bot_status()
       text = '\n'.join(str(message) for message in messages) if messages else 'No bot status yet.'
       if str(status_box.value or '') != text:
@@ -75,6 +77,8 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> None:
       refresh_bot_status()
 
     def refresh_streamer():
+      if connection_label.is_deleted or engine_status_label.is_deleted:
+        return
       connected = bool(config.relay.connected)
       connected_bright = bool(config.relay.connected_bright)
       engine_status = str(config.relay.engine_status or 'unknown').strip().lower()
@@ -114,4 +118,4 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> None:
       ui.button('Clear Bot Status', on_click=clear_bot_status)
       ui.button('Quit', on_click=stop_button_clicked).props('color=negative')
     refresh_bot_status()
-    ui.timer(0.25, refresh_streamer)
+    return refresh_streamer

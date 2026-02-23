@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from typing import Callable
+
 from nicegui import ui
 
 import chaosface.config.globals as config
@@ -11,7 +13,7 @@ import chaosface.config.globals as config
 from .ui_helpers import relay_config_float, safe_float, safe_int, sync_enabled_mods
 
 
-def build_game_settings_tab() -> None:
+def build_game_settings_tab() -> Callable[[], None]:
   with ui.card().classes('w-full'):
     ui.label('Game Settings').classes('text-h6')
 
@@ -40,6 +42,8 @@ def build_game_settings_tab() -> None:
       ui.button('Confirm Game', on_click=confirm_game_selection)
 
     def refresh_game_selector():
+      if game_selector.is_deleted:
+        return
       options = list(config.relay.available_games)
       if game_selector.options != options:
         game_selector.options = options
@@ -68,7 +72,6 @@ def build_game_settings_tab() -> None:
       )
 
     refresh_game_selector()
-    ui.timer(0.5, refresh_game_selector)
 
     ui.separator()
 
@@ -229,3 +232,5 @@ def build_game_settings_tab() -> None:
       ui.button('Save', on_click=save_settings)
       ui.button('Restore', on_click=restore_settings)
       ui.button('Reset Modifier History', on_click=reset_softmax)
+
+    return refresh_game_selector
