@@ -1,0 +1,73 @@
+The following modifiers are available for Horizon Zero Dawn (PS4):
+
+1. Aim Delay: Introduces a 1 second delay to aiming
+2. Aim In Place: Movement is disabled if aiming
+3. Bad Stamina: Running is disabled after 2 seconds and takes 4 seconds to recharge.
+4. Chaos: Applies 5 random modifiers
+5. Controller Flip: Up is down. Joysticks and D-pad inverted vertially, L1 swapped with L2, Triangle swapped with X, etc.
+6. Controller Mirror: Left and right joysticks are swapped. R2 is now L2. Circle is D-pad left, etc.
+7. Criss-Cross Joysticks: Swap vertical and horizontal joystick axes. Up and down are now left and right.
+8. D-pad Rotate: Rotates the D-pad inputs clockwise
+9. Desk Pop: We honor the flag, and you crap on it when you don't shoot your gun https://www.youtube.com/watch?v=wWZTTtE5_zQ
+10. Disable Camera: Good luck with aiming and looking around!
+11. Disable D-pad: Inventory selection is disabled
+12. Dodge Delay: Introduces a 0.5 second delay to dodging
+13. Double Tap: It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins.
+14. Drunk: Random joystick motion. Also don't push things too far, or you may stumble (go prone)
+15. Factions Pro: Keeping things toxic with teabagging
+16. Force Aiming: The aiming button is held
+17. Force Running: To move is to run (mostly)
+18. Hoarder: Cannot use bombs or traps
+19. Input Delay: Introduces a 0.2 second delay to the controller
+20. Inverted: Inverts the vertical axis for aiming
+21. Joystick Delay: Introduces a 0.2 second delay to movement and aiming.
+22. Jump Delay: Introduces a 2.0 second delay to jump presses
+23. Keep Dodging: Repeaated dodges. Don't stand too near a ledge
+24. Keep Jumping: Repeated presses of jump
+25. Leeroy Jenkins: Alright let's do this! LEEEEROOOOOY NNNJEEEENNKIINNS!!! (Holds forward and sprint)
+26. Literally Melee Only: Nothing but melee. Literally
+27. Max Sensitivity: Goodbye precision aiming. Joystick postions multiplied by 5.
+28. Mega Scope Sway: Good luck landing shots
+29. Melee Delay: Introduces a 0.5 second delay to melee presses
+30. Melee Only: No projectile weapons, and no inventory items
+31. Min Sensitivity: It's like slomo, but not for the enemies. Joystick positions divided by 2.5.
+32. Moonwalk: Be like Michael Jackson! Trying to walk forward will actually make you go backward.
+33. Moose: The moose is dead. The moose does not move. (Disables movement)
+34. Motion Control Aiming: No more aiming with the joystick. Tilt the controller to aim/look instead.
+35. Motion Control Movement: No more movement with the joystick. Tilt the controller to move instead.
+36. Mystery: Applies a random modifier
+37. Nascar: There is no going right in Nascar. Right movement/camera disabled
+38. No Aiming Camera: Camera is disabled if aiming
+39. No Backward Movement: Moving backwards is not allowed
+40. No Crouching: And you thought you were going to sneak through this area
+41. No Dodge Roll: Stand and fight!
+42. No Forward Movement: Moving forward is not allowed
+43. No Grab: Swiper no swiping! No looting or interacting with anything. Say goodbye to the everything button.
+44. No Horizontal Aim: The horizontal camera is disabled
+45. No Jumping: No climbing or jumping
+46. No Multi-Shot: Double and triple shots are disabled
+47. No Reload/Shoot: Can't reload or draw the bow while aiming.
+48. No Slow-Mo: No slow motion. Aiming is still allowed
+49. No Strafing: Forwards/back movement is disabled. Only side-to-side motion is allowed.
+50. No Weapon Wheel: You can't open the weapon wheel
+51. Only Aim Movement: Movement is disabled if not aiming
+52. Only Strafe Movement: Side-to-side movement is disabled. Only forward/back motion is allowed.
+53. Pacifist%: No shooting or melee.
+54. Periodic Focus Mode: Stop, look, listen to your heart, hear what it's saying.
+55. Rachy Flail: The only way to melee is to follow the master techniques of RachyMonster
+56. Random Movement: Random joystick motion
+57. Random Remap: Randomly remaps buttons (square, circle, triangle, X, L1, R1, L2, R2, L3, R3)
+58. Rubbernecking: Woah! What's behind you? Invokes a periodic, 180-degree quick turn.
+59. Select Delay: Introduces a 5 second delay to selecting weapons or consumables
+60. Shape Shuffle: Randomly remaps the shape buttons (square, circle, triangle, X)
+61. Shooting Delay: Introduces a 0.5 second delay to shooting
+62. Sideways Moonwalk: Go left to go right and go right to go left
+63. Snapshot: You can only aim for 1 second at a time, so take that shot quickly.
+64. Stumblebum: Fast movement will make you go prone
+65. Swap D-Pad/Left Joystick: Retro-style motion and an odd analog inventory selector
+66. Swap Joysticks: You may want to cross your thumbs to work with your muscle memory
+67. Swap Shapes/Right Joystick: Analog actions and digital camera movement
+68. Touchpad Aiming: No more aiming with the joystick. Finally making use of the touchpad!
+69. Trigger Remap: Randomly remaps trigger/bumper buttons (L1, R1, L2, R2)
+70. Use Items: Shoots or throws 6 of whatever item is currently equipped. No effect for medkits.
+71. Zoolander: We are not an ambiturner, but at least we can look right. Left movement/camera disabled.

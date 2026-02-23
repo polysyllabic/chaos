@@ -16,6 +16,8 @@ config_file_ver = "1.0"
 # chaos_toml: Role of this file in the include chain.
 chaos_toml = "main"
 
+mod_list = "https://github.com/polysyllabic/chaos/tree/main/chaos/examples/modlists/"
+
 # game: User-friendly name of the game this configuration file defines.
 game = "Horizon Zero Dawn (PS4)"
 
