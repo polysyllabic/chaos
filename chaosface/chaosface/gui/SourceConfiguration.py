@@ -55,6 +55,7 @@ def _add_color_swatch(input_field):
     refresh(getattr(event, 'value', input_field.value))
 
   input_field.on('update:model-value', _on_input)
+  input_field.on('input', _on_input)
   input_field.on('change', _on_input)
   refresh()
   return refresh
@@ -75,7 +76,7 @@ def _coerce_hex_for_native_picker(value: str, fallback: str = '#FFFFFF') -> str:
   return fallback
 
 
-def _add_color_picker_icon(input_field, initial_value: str):
+def _add_color_picker_icon(input_field, initial_value: str, on_apply=None):
   """Attach a palette icon that opens a picker with explicit OK/Cancel apply."""
   if not hasattr(ui, 'dialog') or not hasattr(ui, 'input'):
     return None
@@ -100,6 +101,8 @@ def _add_color_picker_icon(input_field, initial_value: str):
         value = str(getattr(picker, 'value', '') or '').strip()
         if value:
           input_field.value = value
+          if callable(on_apply):
+            on_apply(value)
         dialog.close()
 
       with ui.row().classes('w-full justify-end gap-2'):
@@ -189,14 +192,22 @@ def build_source_configuration_tab() -> None:
           value=str(config.relay.overlay_current_votes_text_color or '#ffffff'),
         ).classes('w-96').props('stack-label')
         refresh_current_votes_text_swatch = _add_color_swatch(current_votes_text_color)
-        _add_color_picker_icon(current_votes_text_color, str(current_votes_text_color.value or '#ffffff'))
+        _add_color_picker_icon(
+          current_votes_text_color,
+          str(current_votes_text_color.value or '#ffffff'),
+          on_apply=refresh_current_votes_text_swatch,
+        )
       with ui.row().classes('items-end gap-3'):
         current_votes_bar_color = ui.input(
           'Bar color',
           value=str(config.relay.overlay_current_votes_bar_color or 'rgba(245, 245, 245, 0.8)'),
         ).classes('w-96').props('stack-label')
         refresh_current_votes_bar_swatch = _add_color_swatch(current_votes_bar_color)
-        _add_color_picker_icon(current_votes_bar_color, str(current_votes_bar_color.value or 'rgba(245, 245, 245, 0.8)'))
+        _add_color_picker_icon(
+          current_votes_bar_color,
+          str(current_votes_bar_color.value or 'rgba(245, 245, 245, 0.8)'),
+          on_apply=refresh_current_votes_bar_swatch,
+        )
 
     ui.separator()
     ui.label('Active Mods').classes('text-subtitle1')
@@ -214,14 +225,22 @@ def build_source_configuration_tab() -> None:
           value=str(config.relay.overlay_active_mods_text_color or '#ffffff'),
         ).classes('w-96').props('stack-label')
         refresh_active_mods_text_swatch = _add_color_swatch(active_mods_text_color)
-        _add_color_picker_icon(active_mods_text_color, str(active_mods_text_color.value or '#ffffff'))
+        _add_color_picker_icon(
+          active_mods_text_color,
+          str(active_mods_text_color.value or '#ffffff'),
+          on_apply=refresh_active_mods_text_swatch,
+        )
       with ui.row().classes('items-end gap-3'):
         active_mods_bar_color = ui.input(
           'Bar color',
           value=str(config.relay.overlay_active_mods_bar_color or 'rgba(245, 245, 245, 0.75)'),
         ).classes('w-96').props('stack-label')
         refresh_active_mods_bar_swatch = _add_color_swatch(active_mods_bar_color)
-        _add_color_picker_icon(active_mods_bar_color, str(active_mods_bar_color.value or 'rgba(245, 245, 245, 0.75)'))
+        _add_color_picker_icon(
+          active_mods_bar_color,
+          str(active_mods_bar_color.value or 'rgba(245, 245, 245, 0.75)'),
+          on_apply=refresh_active_mods_bar_swatch,
+        )
 
     ui.separator()
     ui.label('Vote Timer').classes('text-subtitle1')
@@ -232,7 +251,11 @@ def build_source_configuration_tab() -> None:
           value=str(config.relay.overlay_vote_timer_bar_color or 'rgba(240, 240, 240, 0.85)'),
         ).classes('w-96').props('stack-label')
         refresh_vote_timer_bar_swatch = _add_color_swatch(vote_timer_bar_color)
-        _add_color_picker_icon(vote_timer_bar_color, str(vote_timer_bar_color.value or 'rgba(240, 240, 240, 0.85)'))
+        _add_color_picker_icon(
+          vote_timer_bar_color,
+          str(vote_timer_bar_color.value or 'rgba(240, 240, 240, 0.85)'),
+          on_apply=refresh_vote_timer_bar_swatch,
+        )
 
     def _set_if_changed(current, value, setter):
       if current != value:
