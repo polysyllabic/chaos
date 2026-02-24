@@ -410,6 +410,7 @@ General Information Commands:
 * !chaos apply -- Get an explanation of how to apply modifier credits
 * !chaos credits -- Get an explanation of how to earn modifier credits
 * !chaos voting -- Get an explanation of the voting method
+* !chaoscmd -- Get a list of available commands for Twitch Controls Chaos
 
 Modifier Commands:
 * !apply <mod name> -- Apply a modifier (requires modifier credit and subject to cooldown)
@@ -435,6 +436,14 @@ Raffle Commands:
 * !joinchaos -- An alias for !join
 * !raffle (time) -- Start a raffle for a modifier credit (if time is omitted, default raffle time is used) Requires 'manage_raffles' permission
 * !chaosraffle -- An alias for !raffle
+
+Command Aliases
+---------------
+Command aliases allow you to rename commands to your liking. Some default aliases are listed above. You can manage these command
+names from the `Chatbot Commands` tab of the user interface. If you set an alias, it will be available as an alternate command.
+If you also set the checkbox `Use alias only` then the default command name will be disabled and only the alias will be accepted.
+You can use this feature if you already have a different bot that responds to these command names (e.g., !raffle) and want to keep
+that other bot running as before.
 
 Permissions
 -----------
@@ -463,7 +472,6 @@ require the 'manage_permissions' permission to execute:
 
 TODO List
 =========
-* Set font and colors from interface
 * Edit and load config files from the interface
 * Write counter data to files for OBS to display
 * Allow a re-start of bot and/or engine from the interface
@@ -471,4 +479,3 @@ TODO List
 * Manage command permissions through interface
 * Commands to configure game settings without UI
 * Assign permissions to moderators as a group
-* Heartbeat monitor for engine
