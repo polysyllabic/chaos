@@ -904,7 +904,11 @@ bool RawGadgetPassthrough::ep0Loop( void* rawgadgetobject) {
 
 void* RawGadgetPassthrough::ep0LoopThread( void* rawgadgetobject ) {
   RawGadgetPassthrough* mRawGadgetPassthrough = (RawGadgetPassthrough*) rawgadgetobject;
-  
+
+  // Allow forced cancellation if ep0 blocks in a kernel call during hot-unplug.
+  pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+  pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+
   while (mRawGadgetPassthrough->keepRunning && mRawGadgetPassthrough->sessionRunning) {
     ep0Loop(mRawGadgetPassthrough);
   }
@@ -923,6 +927,13 @@ void* RawGadgetPassthrough::libusbEventHandler( void* rawgadgetobject ) {
   bool ep0ThreadStarted = false;
   while (mRawGadgetPassthrough->keepRunning) {
     if (!mRawGadgetPassthrough->sessionRunning) {
+      if (ep0ThreadStarted) {
+        if (!joinThreadWithTimeout(mRawGadgetPassthrough->threadEp0, "ep0")) {
+          usleep(100000);
+          continue;
+        }
+        ep0ThreadStarted = false;
+      }
       mRawGadgetPassthrough->cleanupDevice();
       mRawGadgetPassthrough->fd = usb_raw_open();
       if (mRawGadgetPassthrough->fd < 0) {
@@ -939,10 +950,17 @@ void* RawGadgetPassthrough::libusbEventHandler( void* rawgadgetobject ) {
 
       // raw-gadget fun
       PLOG_VERBOSE << "Starting raw-gadget";
-      if (usb_raw_init(mRawGadgetPassthrough->fd, USB_SPEED_HIGH, driver, device) < 0 ||
-          usb_raw_run(mRawGadgetPassthrough->fd) < 0) {
+      int initResult = usb_raw_init(mRawGadgetPassthrough->fd, USB_SPEED_HIGH, driver, device);
+      int runResult = 0;
+      if (initResult >= 0) {
+        runResult = usb_raw_run(mRawGadgetPassthrough->fd);
+      }
+      if (initResult < 0 || runResult < 0) {
+        if (initResult >= 0 && errno == EBUSY) {
+          PLOG_WARNING << "usb_raw_run reported BUSY; waiting for prior gadget session to fully release.";
+        }
         mRawGadgetPassthrough->cleanupDevice();
-        usleep(250000);
+        usleep((initResult >= 0 && errno == EBUSY) ? 1000000 : 250000);
         continue;
       }
 
@@ -969,11 +987,6 @@ void* RawGadgetPassthrough::libusbEventHandler( void* rawgadgetobject ) {
     }
 
     if (!mRawGadgetPassthrough->sessionRunning) {
-      if (ep0ThreadStarted) {
-        joinThreadWithTimeout(mRawGadgetPassthrough->threadEp0, "ep0");
-        ep0ThreadStarted = false;
-      }
-      mRawGadgetPassthrough->cleanupDevice();
       usleep(100000);
     }
   }
@@ -1212,14 +1225,8 @@ void RawGadgetPassthrough::cbTransferIn(struct libusb_transfer *xfr) {
 void RawGadgetPassthrough::requestReconnect() {
   bool expectedRunning = true;
   if (!sessionRunning.compare_exchange_strong(expectedRunning, false)) {
-    // Reconnect is already pending; avoid closing a freshly opened fd from the next attempt.
+    // Reconnect is already pending.
     return;
-  }
-
-  if (fd >= 0) {
-    close(fd);
-    fd = -1;
-    mEndpointZeroInfo.fd = -1;
   }
   PLOG_WARNING << "Controller transport interrupted. Waiting for reconnect.";
 }
