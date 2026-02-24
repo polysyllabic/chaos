@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 
 from nicegui import ui
 
@@ -64,27 +65,59 @@ def _add_color_picker_icon(input_field, initial_value: str):
   if not hasattr(ui, 'dialog'):
     return None
 
+  picker_selector = None
+
   try:
     with ui.dialog() as dialog, ui.card().classes('w-80'):
       ui.label('Pick color').classes('text-subtitle2')
       picker = None
+      picker_class = f'source-picker-{uuid.uuid4().hex}'
       if hasattr(ui, 'color_picker'):
-        picker = ui.color_picker(value=initial_value)
+        picker = ui.color_picker(value=initial_value).classes(f'w-full {picker_class}')
+        picker_selector = f'.{picker_class}'
       elif hasattr(ui, 'color_input'):
-        picker = ui.color_input('Color', value=initial_value)
+        picker = ui.color_input('Color', value=initial_value).classes(f'w-full {picker_class}')
+        picker_selector = f'.{picker_class}'
 
       if picker is None:
         ui.label('Color picker unavailable in this build.').classes('text-xs')
       else:
         def _picker_to_input(event):
-          input_field.value = str(getattr(event, 'value', picker.value) or '')
+          event_value = getattr(event, 'value', None)
+          if isinstance(event_value, str) and event_value.strip():
+            input_field.value = event_value.strip()
+            return
+          picker_value = getattr(picker, 'value', '')
+          if isinstance(picker_value, str):
+            input_field.value = picker_value.strip()
+            return
+          # Some picker implementations emit boolean/auxiliary payloads on update.
+          # Ignore those and keep the current field value unchanged.
+          input_field.value = str(input_field.value or '').strip()
 
         picker.on('update:model-value', _picker_to_input)
       ui.button('Close', on_click=dialog.close).props('flat')
   except Exception:
     return None
 
-  return ui.button(icon='palette', on_click=dialog.open).props('flat round dense').tooltip('Pick color')
+  def _open_and_focus_picker():
+    dialog.open()
+    if not picker_selector:
+      return
+    ui.run_javascript(
+      f"""
+      setTimeout(() => {{
+        const root = document.querySelector({json.dumps(picker_selector)});
+        if (!root) return;
+        const target = root.querySelector('input, .q-field__native, .q-color-picker, .q-color');
+        if (target && typeof target.focus === 'function') target.focus();
+        if (target && typeof target.click === 'function') target.click();
+      }}, 0);
+      """,
+      timeout=0.5,
+    )
+
+  return ui.button(icon='palette', on_click=_open_and_focus_picker).props('flat round dense').tooltip('Pick color')
 
 
 async def _normalize_color_to_hex(value: str, fallback: str) -> str:
