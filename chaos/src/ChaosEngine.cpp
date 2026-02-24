@@ -158,6 +158,7 @@ bool ChaosEngine::setGame(const std::string& name) {
 
   bool loaded = game.loadConfigFile(name, this);
   current_game_mod_list_uri = loaded ? resolveModListUri(game.getModListLocation()) : "";
+  current_game_config_path = name;
   bool playable = loaded && (game.getErrors() == 0);
   game_ready.store(playable);
   bool has_selectable_games = !available_game_configs.empty();
@@ -284,9 +285,18 @@ void ChaosEngine::newCommand(const std::string& command) {
 
   if (root.isMember("select_game")) {
     std::string requested_game = root["select_game"].asString();
-    setGame(resolveGameConfig(requested_game));
-    if (interface_enabled) {
-      chaosInterface.sendMessage("{\"mods_reset\":1}");
+    std::string resolved_config = resolveGameConfig(requested_game);
+    bool duplicate_selection = false;
+    lock();
+    duplicate_selection = (!current_game_config_path.empty() && resolved_config == current_game_config_path);
+    unlock();
+    if (duplicate_selection) {
+      PLOG_INFO << "Ignoring duplicate game selection for already loaded config '" << resolved_config << "'.";
+    } else {
+      setGame(resolved_config);
+      if (interface_enabled) {
+        chaosInterface.sendMessage("{\"mods_reset\":1}");
+      }
     }
     reportGameStatus();
   }

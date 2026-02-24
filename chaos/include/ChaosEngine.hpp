@@ -83,6 +83,7 @@ namespace Chaos {
     int primary_mods = 0;
     bool interface_enabled{true};
     std::string default_mod_list_path;
+    std::string current_game_config_path;
     std::string current_game_mod_list_uri;
     std::unordered_map<std::string, std::string> available_game_configs;
     Json::Value available_games_payload{Json::arrayValue};

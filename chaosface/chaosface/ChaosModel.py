@@ -25,7 +25,8 @@ from chaosface.gui import ui_dispatch
 
 class ChaosModel(EngineObserver):
   ENGINE_STATUS_PAYLOAD_MAX = 180
-  SELECT_GAME_DEDUP_SECONDS = 2.0
+  SELECT_GAME_RETRY_SECONDS = 5.0
+  SELECT_GAME_RESPONSE_TIMEOUT_SECONDS = 10.0
   ENGINE_STATUS_UNKNOWN = 'unknown'
   ENGINE_STATUS_NOT_CONNECTED = 'not_connected'
   ENGINE_STATUS_TIMEOUT = 'timeout'
@@ -41,8 +42,12 @@ class ChaosModel(EngineObserver):
     self.first_time = True
     self.bot: Optional[ChaosBot] = None
     self._pending_game_startup_setup = False
+    self._select_game_lock = threading.Lock()
     self._pending_selected_game = ''
+    self._pending_selected_inflight = False
     self._pending_selected_sent_at = 0.0
+    self._pending_selected_retry_after = 0.0
+    self._last_reported_game = ''
 
     #  Socket to talk to server
     logging.info("Connecting to chaos server")
@@ -190,20 +195,56 @@ class ChaosModel(EngineObserver):
     selected = str(game_name).strip()
     if not selected:
       return
-    now = time.monotonic()
-    if (
-      not force
-      and selected == self._pending_selected_game
-      and (now - self._pending_selected_sent_at) < self.SELECT_GAME_DEDUP_SECONDS
-    ):
-      logging.debug("Skipping duplicate game selection request: %s", selected)
-      return
-    self._pending_selected_game = selected
-    self._pending_selected_sent_at = now
-    logging.info("Requesting game selection: %s", selected)
-    if not self.send_engine_command({'select_game': selected}):
-      self._pending_selected_game = ''
+    with self._select_game_lock:
+      if not force and selected == self._last_reported_game:
+        return
+      if selected == self._pending_selected_game:
+        return
+      if self._pending_selected_inflight and not force:
+        return
+      self._pending_selected_game = selected
+      self._pending_selected_inflight = False
       self._pending_selected_sent_at = 0.0
+      self._pending_selected_retry_after = 0.0
+    logging.info("Queued game selection request: %s", selected)
+
+  def _clear_pending_game_selection(self) -> None:
+    with self._select_game_lock:
+      self._pending_selected_game = ''
+      self._pending_selected_inflight = False
+      self._pending_selected_sent_at = 0.0
+      self._pending_selected_retry_after = 0.0
+
+  def _drive_pending_game_selection(self) -> None:
+    now = time.monotonic()
+    with self._select_game_lock:
+      selected = self._pending_selected_game
+      if not selected:
+        return
+      if self._pending_selected_inflight:
+        elapsed = now - self._pending_selected_sent_at
+        if elapsed < self.SELECT_GAME_RESPONSE_TIMEOUT_SECONDS:
+          return
+        # Response timed out; retry the same command.
+        self._pending_selected_inflight = False
+        self._pending_selected_retry_after = now
+      if now < self._pending_selected_retry_after:
+        return
+
+    logging.info("Requesting game selection: %s", selected)
+    sent = self.send_engine_command({'select_game': selected})
+
+    with self._select_game_lock:
+      # Pending command may have changed while send was in flight.
+      if selected != self._pending_selected_game:
+        return
+      if sent:
+        self._pending_selected_inflight = True
+        self._pending_selected_sent_at = time.monotonic()
+        self._pending_selected_retry_after = 0.0
+      else:
+        self._pending_selected_inflight = False
+        self._pending_selected_retry_after = time.monotonic() + self.SELECT_GAME_RETRY_SECONDS
 
   def acknowledge_available_games(self, game_count: int):
     payload = {'available_games_ack': True, 'count': max(0, int(game_count))}
@@ -274,8 +315,9 @@ class ChaosModel(EngineObserver):
       logging.debug("Received game info!")
       selected_game = str(received.get('game', '')).strip()
       if selected_game:
-        self._pending_selected_game = ''
-        self._pending_selected_sent_at = 0.0
+        with self._select_game_lock:
+          self._last_reported_game = selected_game
+        self._clear_pending_game_selection()
       ui_dispatch.call_soon(config.relay.initialize_game, received)
       self._pending_game_startup_setup = True
       if 'engine_status' not in received and 'pause' not in received:
@@ -471,6 +513,7 @@ class ChaosModel(EngineObserver):
       game_selection = config.relay.consume_game_selection_request()
       if game_selection:
         self.request_game_selection(game_selection, force=True)
+      self._drive_pending_game_selection()
 
       if self._pending_game_startup_setup and config.relay.valid_data:
         if config.relay.engine_status == self.ENGINE_STATUS_PAUSED:
