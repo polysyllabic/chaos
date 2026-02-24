@@ -115,9 +115,11 @@ this period, some categories of mods, including all those that require setting m
 put the game in an inconsistent state. Old mods may not be removed correctly, and new ones may not
 be applied. In this case, you may need to pause the game and manually set the necessary options.
 
-*Important Security Note:* TCC is not designed to run on untrusted networks. You should only run
-this if your local network is completely under your control (i.e., you manage the router that
-connects you to the internet yourself and you trust all the devices within your home network).
+*Important Security Note:* By default, TCC runs without any security. This is only safe if you
+are running it on a local network that is completely under your control (i.e., you manage the
+router that connects you to the internet yourself and you trust all the devices within your home
+network). If that is not the case, be sure to enable password protection for the UI and enable
+TLS.
 
 
 ## What's New In Chaos Unbound
@@ -343,6 +345,13 @@ Optional flags:
 - `./scripts/update_chaos.sh --skip-chaosface-deps --restart-services`
 - `./scripts/update_services.sh --restart-services`
 
+The --restart-service and --restart-services will stop the old version of the engine and/or chaosface and start the new
+one immediately after the update. If you omit this flag, you will need either to restart the services manually or
+reboot the Pi.
+
+The --skip-deps and --skip-chaosface-deps flags will skip checks for alterations in dependencies and will speed up
+updates when there are no changes to any of the 3rd-party libraries that these programs rely upon.
+
 ### Configuring the Console
 
 Your console will need to be set up to prefer USB communication rather than bluetooth for your
@@ -358,8 +367,7 @@ that computer before performing the next steps.
 
 Now that everything is installed, power up your Raspberry Pi and follow these steps:
 
-1. If you have not already created a bot account, do so here.
-TODO: bot account instructions
+1. If you don't have one already, create a separate Twitch account for the bot.
 
 If you prefer not to create a secondary account for your bot, you can still run most features
 of Chaos by entering the information for the account you broadcast from. In this case, however,
@@ -367,8 +375,8 @@ mod redemptions with channel points will not be available.
 
 2. On the same local network as the Raspberry Pi, open a browser and navigate to to
 [raspberrypi.local](http://raspberrypi.local), assuming you did not change the Pi's hostname.
-If you did set the hostname during configuration, replace "raspberrypi" with whatever name
-you chose.
+If you did set the hostname during configuration, replace "raspberrypi.local" with whatever
+name you chose.
 
 If this address does not work, you may need to find your Pi's IP address and use it directly.
 You can discover this address by going to your router's admin page, finding the list of
@@ -378,6 +386,13 @@ browser instead.
 
 3. Click on the "Settings" tab. Enter your channel name and bot account credentials, or the
 credentials for your broadcaster account if you do not have a secondary custom bot account.
+
+4. While logged in to your bot account, get an OAuth token. (See the
+[chaosface instructions](docs/chaosface.md) for details.)
+
+5. (Optional) if you want to use channel-point redemptions or bits to give users modifier
+credits, get an EvenSub OAuth token while logged in to your main streamer's account.
+(See the [chaosface instructions](docs/chaosface.md) for details.)
 
 4. Configure the overlay appearance to your liking.
 
@@ -446,7 +461,7 @@ For PS5-only games:
 
 3a. Connect the Besavior controller (or equivalent device) to the PlayStation 5 with a USB-C to USB-A cable.
 
-3b. Connect the USB-C to USB-A adaptor that comes with the Besavior to the USB-C port on the Beloaderth
+3b. Connect the USB-C to USB-A adaptor that comes with the Besavior to the USB-C port on the Beloader to the
 device on the bottom of the Besavior controller. This is a short cable with a second USB-C port on
 the side.
 
@@ -479,10 +494,10 @@ should appear on your overlay. If all these tests are OK, you are ready to go!
 
 ### Playing the Game
 
-1. The [main interface page](http://raspberrypi.local) will contain several tabs that will let you
-alter specific settings. The default tab is designed to show you the current status of Chaos without
-revealing information about which mods are winning the voting. This way (assuming you're not looking
-at the OBS overlays), what chat inflicts on you should come as a surprise.
+1. The main interface page will contain several tabs that will let you alter specific settings. The
+default tab is designed to show you the current status of Chaos without revealing information about
+which mods are winning the voting. This way (assuming you're not looking at the OBS overlays), what
+chat inflicts on you should come as a surprise.
 
 ### Pausing
 
@@ -494,16 +509,18 @@ menu without wreaking true havoc.
 - To resume Chaos, press the *Share* button.  
 - To pause Chaos, press the *Option* button.
 
->Note: This means that you will actively need to resume Chaos whenever you enter your game's pause menu.
+*Note:* This means that you will actively need to resume Chaos whenever you enter your game's pause
+menu.
+
+Because the Chaos engine requires a dedicated button to resume, the *Share* button's signal is
+never passed on to the controller. For most games, this should not create problems, since this
+button is used for console-related functions that are independent of the game itself. If you
+need access to this button for a particular game, send me the details and I'll see what I can do.
 
 ### Game-Specific Usage
 
-Currently TLOU2 is the only supported game.  See TLOU2 specific instructions here:
-
-[TLOU2 Usage](docs/TLOU2/README.md)
-
-
-## Known Issues
+TCC was originally developed for The Last of Us Part 2. Detailed instructions on how to run that
+game will be found in the [README file](docs/TLOU2/README.md) for that game.
 
 ## Design
 
@@ -514,9 +531,7 @@ corresponding to controller buttons/joysticks, the data is passed to other proce
 with the data. This forwarding infrastructure is done by through the a custom library (usb-sniffify)
 that combines [raw-gadget](https://github.com/xairy/raw-gadget) and [libusb](https://libusb.info).
 
-The Chatbot, stream overlays, and vote tracking are written in Python. The chatbot's basic
-Twitch connectivity is implemented with [PythonTwitchBotFramework](https://github.com/sharkbound/PythonTwitchBotFramework).
-The chatbot's GUI and overlays are built using [Flexx](https://github.com/flexxui/flexx).
+The Chatbot is written primarily in Python, with some HTML and JavaScript for the sources.
 
 Chaos uses [softmax](https://en.wikipedia.org/wiki/Softmax_function) to select modifiers for the
 voting pool. The effect is that the more times a particular modifier has previously won a vote,
@@ -530,8 +545,7 @@ a set amount of time, the engine will remove the modifier.
 
 Each modifier can perform a set of actions at each of these transitions. There can be unique actions
 performed as the modifier is added, while it's currently active, when it ends, and can also perform
-asynchronous actions that are controller event-based. This effectively follows UML-style state machine
-with entry/do/exit/event actions.
+asynchronous actions that are controller event-based.
 
 The Chaos engine offers the following capabilities for reading and altering controller data:
 
@@ -542,13 +556,10 @@ The Chaos engine offers the following capabilities for reading and altering cont
 - Injection - Generate arbitrary messages without any controller events
 - Direct Control - Send commands directly to the output
 
-Chaos is capable of behaviors including creating macros and remmaping controls. The same framework can
-be used as a TAS device for "Twitch Plays ..." streams, or for modifying/boosting controller performance.
-(This could be considered cheating in multiplayer games.)
-
 ### Configuration=Based Game Support
 Individual games are supported through configuration files. If you want to use TCC with a new game, you
-merely need to create an appropriate configuration file.
+merely need to create an appropriate configuration file using the correct
+[configuration file syntax](docs/chaosConfigFiles.md).
 
 
 ## Frequently Asked Questions
@@ -599,7 +610,7 @@ a client and lacks an ethernet plug, meaning that WiFi is the only method to con
 This means that the controller has to connect over Bluetooth, using the same device that's also used
 for its network connection. There may be performance issues going that route, including controller
 lag and disconnections, as well as chat/OBS overlay issues. Some of these performance issues may
-be reduced by running the chatbot on a different computer, to lighten the Pi's workload.
+be reduced by running the chatbot on a different computer to lighten the Pi's workload.
 
 *Why did Chaos stop working after I updated my Pi?*
 TCC uses a hacked version of the raw-gadget kernel module. If you updated the kernel to a newer
