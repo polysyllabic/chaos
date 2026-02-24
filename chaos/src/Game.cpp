@@ -23,6 +23,7 @@
 #include <cstddef>
 #include <limits>
 #include <string_view>
+#include <unordered_set>
 
 #include <json/json.h>
 #include <plog/Log.h>
@@ -45,6 +46,9 @@ namespace {
   constexpr std::string_view CONFIG_FILE_ROLE_KEY{"chaos_toml"};
   constexpr std::string_view GAME_NAME_KEY{"game"};
   constexpr std::string_view INPUT_FILE_KEY{"input_file"};
+  constexpr std::string_view MENU_KEY{"menu"};
+  constexpr std::string_view MENU_LAYOUT_KEY{"layout"};
+  constexpr std::string_view MENU_IGNORE_COMMON_KEY{"ignore_common"};
 
   enum class ConfigFileRole { MAIN, TEMPLATE, INVALID };
 
@@ -161,6 +165,92 @@ namespace {
 
   void mergeConfigTables(toml::table& base, const toml::table& overlay);
 
+  void reorderMenuLayoutByParent(toml::array& layout) {
+    if (!isNamedTableArray(layout)) {
+      return;
+    }
+
+    std::unordered_set<std::string> known_names;
+    for (const toml::node& node : layout) {
+      const toml::table* tbl = node.as_table();
+      if (!tbl) {
+        continue;
+      }
+      std::optional<std::string_view> name = (*tbl)["name"].value<std::string_view>();
+      if (name && !name->empty()) {
+        known_names.insert(std::string(*name));
+      }
+    }
+
+    toml::array reordered;
+    std::unordered_set<std::string> emitted_names;
+    std::vector<bool> emitted(layout.size(), false);
+    size_t emitted_count = 0;
+
+    while (emitted_count < layout.size()) {
+      bool progressed = false;
+      for (size_t i = 0; i < layout.size(); i++) {
+        if (emitted[i]) {
+          continue;
+        }
+
+        const toml::node& node = layout[i];
+        const toml::table* tbl = node.as_table();
+        if (!tbl) {
+          reordered.push_back(node);
+          emitted[i] = true;
+          emitted_count++;
+          progressed = true;
+          continue;
+        }
+
+        std::optional<std::string_view> name = (*tbl)["name"].value<std::string_view>();
+        std::optional<std::string_view> parent = (*tbl)["parent"].value<std::string_view>();
+        if (!name || name->empty()) {
+          reordered.push_back(node);
+          emitted[i] = true;
+          emitted_count++;
+          progressed = true;
+          continue;
+        }
+
+        bool can_emit = true;
+        if (parent && !parent->empty()) {
+          std::string parent_name(*parent);
+          bool parent_known = (known_names.find(parent_name) != known_names.end());
+          bool parent_emitted = (emitted_names.find(parent_name) != emitted_names.end());
+          can_emit = (!parent_known || parent_emitted);
+        }
+
+        if (!can_emit) {
+          continue;
+        }
+
+        reordered.push_back(node);
+        emitted[i] = true;
+        emitted_count++;
+        emitted_names.insert(std::string(*name));
+        progressed = true;
+      }
+
+      if (progressed) {
+        continue;
+      }
+
+      // Cyclic/self-referential parent graphs are invalid; preserve remaining order for diagnostics.
+      for (size_t i = 0; i < layout.size(); i++) {
+        if (emitted[i]) {
+          continue;
+        }
+        reordered.push_back(layout[i]);
+        emitted[i] = true;
+        emitted_count++;
+      }
+    }
+
+    layout = std::move(reordered);
+  }
+
   void mergeConfigArrays(toml::array& base, const toml::array& overlay) {
     if (isNamedTableArray(base) && isNamedTableArray(overlay)) {
       for (const toml::node& node : overlay) {
@@ -197,6 +287,20 @@ namespace {
       toml::node* base_node = base.get(key);
       if (!base_node) {
         base.insert_or_assign(key, overlay_node);
+      } else if (key == MENU_KEY && base_node->is_table() && overlay_node.is_table()) {
+        const toml::table& overlay_menu = *overlay_node.as_table();
+        bool ignore_common = overlay_menu[MENU_IGNORE_COMMON_KEY].value_or(false);
+        if (ignore_common) {
+          toml::table menu_override = overlay_menu;
+          menu_override.erase(MENU_IGNORE_COMMON_KEY);
+          base.insert_or_assign(key, std::move(menu_override));
+          continue;
+        }
+        mergeConfigTables(*base_node->as_table(), overlay_menu);
+        toml::array* merged_layout = (*base_node->as_table())[MENU_LAYOUT_KEY].as_array();
+        if (merged_layout) {
+          reorderMenuLayoutByParent(*merged_layout);
+        }
       } else if (base_node->is_table() && overlay_node.is_table()) {
         mergeConfigTables(*base_node->as_table(), *overlay_node.as_table());
       } else if (base_node->is_array() && overlay_node.is_array()) {

@@ -51,7 +51,8 @@ The following settings apply to the operation of the engine for the whole game.
 When `input_file` is set, the template file is loaded first and then the main file is overlaid on
 top of it. Values defined in the main file take precedence over the template. For named arrays
 (`command`, `condition`, `sequence`, `modifier`, and `menu.layout`), entries with the same `name`
-are merged; entries only present in the template are inherited.
+are merged; entries only present in the template are inherited. For `menu.layout`, merged entries
+are also reordered so parent menu items are processed before any children that reference them.
 
 In `chaosconfig.toml`, `default_mod_list_path` defines the base URI used to resolve relative
 `mod_list` values. (The alias `default_mod_list_past` is also accepted for backward compatibility.)
@@ -274,6 +275,11 @@ The following parameters define the menuing system:
   menu option is invisible to the user, only that scrolling through the menu items skips over this
   option while it is guarded.
 
+- `ignore_common` True/false value. Default is false. This is only relevant in a `main` file that
+  uses `input_file` and defines a `[menu]` table. If true, menu definitions from the template
+  (`input_file`) are discarded and the main file's `[menu]` table is used as the complete menu
+  definition.
+
 - `layout` - An array of inline tables that defines the menuing hierarchy. Each inline table is a
   menu item, representing one entry in the game's menu.
 
@@ -306,8 +312,7 @@ navigate to the item and how to interact with it one we've reached the item:
   implement that with the "guarded" option in the "menu" type.
 
 - `parent`: The parent menu for this item. If omitted, this item belongs to the root (main)
-  menu. Parents must be declared before any children that reference them, and only items of
-  the menu type can serve as parents. (_Optional_)
+  menu. Only items of the menu type can serve as parents. (_Optional_)
 
 - `offset`: The number of actions required to reach this item from the first item in the list.
   Must be an integer. Positive values navigate down, negative values navigate up. If the
@@ -352,8 +357,8 @@ navigate to the item and how to interact with it one we've reached the item:
 
   - `zero_reset`: Restore the menu value to default only when the counter is zero.
 
-Parent menu items and guards must be declared in the configuration file before they are
-referenced, but the definition order is otherwise unconstrained.
+Parent menu items and guards must be declared in the configuration file, but they may appear
+anywhere in `menu.layout`.
 
 ## Modifiers
 
