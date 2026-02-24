@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <new>
 #include <algorithm>
+#include <iomanip>
 
 // The logger will be initialized in the main app. It's safe not to use plog at all. The library
 // will still link correctly and there will simply be no logging.
@@ -127,21 +128,45 @@ int RawGadgetPassthrough::connectDevice() {
   }
   PLOG_VERBOSE << "Found " << deviceCount << " USB devices.";
 
+  constexpr int kPreferredBus = 1;
+  constexpr int kPreferredPort = 4;
+
   int devIndex = -1;
+  int fallbackIndex = -1;
   for (int i = 0; i < deviceCount; i++) {
-    PLOG_VERBOSE << "Device: " << i << " | Bus " << (int)libusb_get_bus_number(devices[i])
-                 << " Port " << (int)libusb_get_port_number(devices[i]);
+    int bus = (int)libusb_get_bus_number(devices[i]);
+    int port = (int)libusb_get_port_number(devices[i]);
+    PLOG_VERBOSE << "Device: " << i << " | Bus " << bus
+                 << " Port " << port;
     // Specific for lower USB2 port on rPi 4 with raspbian
-    if (libusb_get_bus_number(devices[i]) == 1 &&
-        (int)libusb_get_port_number(devices[i]) == 4) {
+    if (bus == kPreferredBus && port == kPreferredPort) {
       devIndex = i;
       PLOG_VERBOSE << " |-- This is the device of interest!";
+      continue;
     }
+
+    // On some hosts the USB topology can briefly shift after hotplug. If we already identified a
+    // controller previously, use it as a fallback match by VID/PID.
+    if (haveProductVendor.load()) {
+      struct libusb_device_descriptor desc;
+      if (libusb_get_device_descriptor(devices[i], &desc) == LIBUSB_SUCCESS &&
+          desc.idVendor == vendor &&
+          desc.idProduct == product) {
+        fallbackIndex = i;
+      }
+    }
+  }
+  if (devIndex < 0 && fallbackIndex >= 0) {
+    devIndex = fallbackIndex;
+    PLOG_WARNING << "Preferred controller port " << kPreferredBus << ":" << kPreferredPort
+                 << " was not detected; falling back to last-known VID/PID controller 0x"
+                 << std::hex << std::setfill('0') << std::setw(4) << vendor
+                 << ":0x" << std::setw(4) << product << std::dec;
   }
   if (devIndex < 0) {
     libusb_free_device_list(devices, 1);
     devices = nullptr;
-    PLOG_VERBOSE << "No controller currently attached to intercepted USB port.";
+    PLOG_INFO << "No controller currently attached to intercepted USB port.";
     return 1;
   }
 
@@ -177,6 +202,10 @@ int RawGadgetPassthrough::connectDevice() {
   PLOG_VERBOSE << " - idVendor           : 0x" << std::hex << (int)deviceDescriptor.idVendor << std::dec;
   PLOG_VERBOSE << " - idProduct          : 0x" << std::hex << (int)deviceDescriptor.idProduct << std::dec;
   PLOG_VERBOSE << " - bNumConfigurations : " << (int)deviceDescriptor.bNumConfigurations;
+  PLOG_INFO << "Controller transport connected: VID=0x"
+            << std::hex << std::setfill('0') << std::setw(4) << (int)deviceDescriptor.idVendor
+            << " PID=0x" << std::setw(4) << (int)deviceDescriptor.idProduct
+            << std::dec;
 
   vendor = deviceDescriptor.idVendor;
   product = deviceDescriptor.idProduct;
