@@ -187,6 +187,8 @@ To add these overlays to OBS or SLOBS, perform the following steps:
   - Votes (`/overlays/current-votes`): width `500`, height `160`
   - Vote Timer (`/overlays/vote-timer`): width `1920`, height `44`
 
+  These are the basic dimensions of the sources, but you can use obs to scale them however you want.
+  
   If you are using a self-signed certificate, note that OBS will silently reject https pages with self-signed
   certificates. In this case, you should use the http addresses for your sources.
   Legacy aliases (`/ActiveMods`, `/CurrentVotes`, `/VoteTimer`, and lowercase variants) are also
@@ -202,8 +204,9 @@ The `SOURCE CONFIGURATION` tab lets you tune source layout and colors without ed
 * Active Mods: name/bar spacing, text color, bar color
 * Vote Timer: bar color
 
-Color fields accept standard CSS names, hex values, and `rgb(...)`/`rgba(...)` values. A color
-picker is shown when supported by the installed NiceGUI version.
+Color fields accept standard CSS names, hex values, and `rgb(...)`/`rgba(...)` values. The picker
+control is icon-only and writes directly to the field. On save, color values are normalized and
+stored as hex.
 
 
 Font and Color Adjustments
