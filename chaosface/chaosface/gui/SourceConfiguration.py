@@ -23,33 +23,6 @@ _SOURCE_CONFIG_STYLE = """
     text-overflow: clip !important;
     max-width: none !important;
   }
-  .source-config .icon-only-color {
-    width: 34px !important;
-    min-width: 34px !important;
-  }
-  .source-config .icon-only-color .q-field__label,
-  .source-config .icon-only-color .q-field__native,
-  .source-config .icon-only-color .q-field__bottom {
-    display: none !important;
-  }
-  .source-config .icon-only-color .q-field__control {
-    min-height: 34px !important;
-    height: 34px !important;
-    padding: 0 !important;
-    background: transparent !important;
-  }
-  .source-config .icon-only-color .q-field__control:before,
-  .source-config .icon-only-color .q-field__control:after {
-    display: none !important;
-  }
-  .source-config .icon-only-color .q-field__control-container,
-  .source-config .icon-only-color .q-field__append {
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-  .source-config .icon-only-color .q-icon {
-    font-size: 22px !important;
-  }
 </style>
 """
 
@@ -87,38 +60,58 @@ def _add_color_swatch(input_field):
 
 
 def _add_color_picker_icon(input_field, initial_value: str):
-  """Attach an icon-only picker and feed selected colors directly into the text input."""
-  if not hasattr(ui, 'color_input'):
+  """Attach a palette icon that opens a picker with explicit OK/Cancel apply."""
+  if not hasattr(ui, 'dialog'):
     return None
 
+  state = {'value': str(initial_value or '').strip()}
+
   try:
-    picker = ui.color_input('', value=initial_value).classes('icon-only-color').props('dense borderless')
+    with ui.dialog() as dialog, ui.card().classes('w-auto'):
+      ui.label('Pick color').classes('text-subtitle2')
+      picker = None
+      if hasattr(ui, 'color_picker'):
+        picker = ui.color_picker(value=state['value']).classes('w-auto')
+      elif hasattr(ui, 'color_input'):
+        picker = ui.color_input('Color', value=state['value']).classes('w-80')
+      else:
+        ui.label('Color picker unavailable in this build.').classes('text-xs')
+
+      def _picker_to_state(event):
+        event_value = getattr(event, 'value', None)
+        if isinstance(event_value, str) and event_value.strip():
+          state['value'] = event_value.strip()
+          return
+        picker_value = str(getattr(picker, 'value', '') or '').strip()
+        if picker_value:
+          state['value'] = picker_value
+
+      if picker is not None:
+        picker.on('update:model-value', _picker_to_state)
+        picker.on('change', _picker_to_state)
+
+      def _apply_color():
+        value = str(state.get('value', '') or '').strip()
+        if value:
+          input_field.value = value
+        dialog.close()
+
+      with ui.row().classes('w-full justify-end gap-2'):
+        ui.button('Cancel', on_click=dialog.close).props('flat')
+        ui.button('OK', on_click=_apply_color).props('unelevated')
   except Exception:
     return None
 
-  def _picker_to_input(event):
-    event_value = getattr(event, 'value', None)
-    if isinstance(event_value, str) and event_value.strip():
-      input_field.value = event_value.strip()
-      return
-    picker_value = str(getattr(picker, 'value', '') or '').strip()
-    if picker_value:
-      input_field.value = picker_value
+  def _open_picker():
+    state['value'] = str(input_field.value or state['value'] or '').strip()
+    if picker is not None:
+      try:
+        picker.value = state['value']
+      except Exception:
+        pass
+    dialog.open()
 
-  def _input_to_picker(event):
-    value = str(getattr(event, 'value', input_field.value) or '').strip()
-    if not value:
-      return
-    try:
-      picker.value = value
-    except Exception:
-      # Invalid intermediate text while typing should not break the picker.
-      pass
-
-  picker.on('update:model-value', _picker_to_input)
-  input_field.on('update:model-value', _input_to_picker)
-  input_field.on('change', _input_to_picker)
-  return picker
+  return ui.button(icon='palette', on_click=_open_picker).props('flat round dense').tooltip('Pick color')
 
 
 async def _normalize_color_to_hex(value: str, fallback: str) -> str:
