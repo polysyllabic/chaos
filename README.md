@@ -34,9 +34,9 @@ PlayStation exclusive, and so the design of the system was specifically intended
 that console. However, the same setup should work fine for PC games that can be played with a
 controller. Mouse-and-keyboard remapping is not (yet) supported.
 
-Chaos Unbound is currently in alpha status: The engine compiles and runs (probably) but don't
-expect it to be functional just yet. If you want to play Chaos% now, you should, for the time
-being, continue to use Blegas's original version.
+Chaos Unbound is currently in betaa status: The engine compiles and runs (probably) but its
+functionality is not yet fully tested. Consider using Blegas's original version if you want
+to play TCC with TLOU2 right now.
 
 Note also that if you attempt to use this system in a competitive multiplayer game, it could
 be seen as cheating, since the fundamental processes here (intercept and modify the signals
@@ -186,7 +186,11 @@ hardware (for all steups):
 
 To play PS5-only games such as TLOU1 Remake or TLOU2 Remaster, you will also need hardware to let
 you use a non-PS5 controller without having the console reject your commands. I successfully
-used a [Besavior PS5 controller](https://www.beloader.com/products/besavior-1.html).
+used a [Besavior PS5 controller](https://www.beloader.com/products/besavior-1.html). Similar
+devices such as the same company's Besavior P5Mate Pro will likely work as well. Note that in
+these setups, the console alone doesn't provide enough power to run the intermediate device
+and the Pi, so you will need to provide additional power to the Pi. Without the extra hardware,
+the console provides enough power to run the Pi.
 
 Most of the instructions here also assume that you also use streaming software such as OBS, which will
 require you to have a capture card as well. Note that is **is** possible to run Chaos without OBS,

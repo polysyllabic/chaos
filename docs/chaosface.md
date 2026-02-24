@@ -198,7 +198,7 @@ If you are running Chaosface from a different computer, adapt the URL accordingl
 
 You should set these browser sources to refresh when not displayed so that they can easily be refreshed.
 
-The `SOURCE CONFIGURATION` tab lets you tune source layout and colors without editing files:
+The `SOURCE CONFIGURATION` tab lets you tune source layout and colors:
 
 * Current Votes: name/bar spacing, text color, bar color
 * Active Mods: name/bar spacing, text color, bar color
@@ -208,10 +208,9 @@ Color fields accept standard CSS names, hex values, and `rgb(...)`/`rgba(...)` v
 control is icon-only and writes directly to the field. On save, color values are normalized and
 stored as hex.
 
-
-Font and Color Adjustments
---------------------------
-TODO: Let this be configurable through the UI
+Note that with the original version of TCC, you had to adjust the colors of the sources by applying
+filters in OBS. If you are converting over from that old setup and aren't seeing the colors you expect,
+try deleting the old filters and setting new colors from Chaosface.
 
 Operation
 =========
@@ -227,10 +226,10 @@ You can monitor the operation of Chaos from your browser.
   - If you're running Chaosface on the same computer as the browser, go to http://localhost/
 
 The default tab on this page ("Streamer Interface") shows you what mods are currently active,
-the full engine state (`not connected`, `timeout`, `waiting for game`, `bad config file`,
-`paused`, or `running`), and a few other diagnostic features. It *does not* show what
-mods are currently being voted on. This allows chat to surprise you with their choice of modifiers,
-assuming you're not peeking at the sources in OBS.
+the engine state (`not connected`, `timeout`, `waiting for game`, `bad config file`, `paused`,
+or `running`), and a few other diagnostic features. It *does not* show what mods are currently
+being voted on. This allows chat to surprise you with their choice of modifiers, assuming you're
+not peeking at the sources in OBS.
 
 The following sections explain the basic concepts of the Chaos system and how it can be
 customized. To change settings from their default values, go to the "Game Settings" tab of

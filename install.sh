@@ -191,6 +191,7 @@ install_engine() {
   cmake ..
   make -j"$(nproc)"
   sudo make install
+  sudo install -m 0644 "${REPO_ROOT}/VERSION" "${CHAOS_INSTALL_ROOT}/VERSION"
 
   # Keep start script and service definition in sync with the local checkout.
   sudo install -m 0755 "${SCRIPTS_DIR}/startchaos.sh" "${CHAOS_INSTALL_ROOT}/startchaos.sh"

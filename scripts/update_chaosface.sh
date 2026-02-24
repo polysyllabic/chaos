@@ -83,6 +83,9 @@ sudo mkdir -p "${tmp_stage_dir}"
 sudo tar -xzf "${bundle_path}" -C "${tmp_stage_dir}"
 sudo rm -rf "${CHAOSFACE_STAGE_DIR}"
 sudo mv "${tmp_stage_dir}" "${CHAOSFACE_STAGE_DIR}"
+if [ -f "${REPO_ROOT}/VERSION" ]; then
+  sudo install -m 0644 "${REPO_ROOT}/VERSION" "${CHAOS_INSTALL_ROOT}/VERSION"
+fi
 
 echo "Preparing runtime directories"
 sudo mkdir -p "${CHAOS_INSTALL_ROOT}/configs"

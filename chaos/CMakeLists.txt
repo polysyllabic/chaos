@@ -23,8 +23,8 @@ option(install_test "Stage a test copy of chaos under ~/test for local runs" OFF
 set(CHAOS_TEST_ROOT "$ENV{HOME}/test"
     CACHE PATH "Destination root for install_test staging")
 
-# Parse version variables
-file(READ "VERSION" ver)
+# Parse version variables from the repository root shared VERSION file.
+file(READ "${CMAKE_CURRENT_LIST_DIR}/../VERSION" ver)
 
 if (${ver} MATCHES "VERSION_MAJOR[ \t]+([0-9]+)")
     set(CHAOS_MAJOR ${CMAKE_MATCH_1})

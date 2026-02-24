@@ -79,6 +79,21 @@ cd /d "%SCRIPT_DIR%"
   )
 
 
+def install_shared_version_file(script_path: Path, install_dir: Path) -> None:
+  repo_root = script_path.parents[2]
+  candidates = [
+    repo_root / "VERSION",
+    script_path.parents[1] / "VERSION",
+  ]
+  for candidate in candidates:
+    if candidate.is_file():
+      target = install_dir / "VERSION"
+      target.write_text(candidate.read_text(encoding="utf-8"), encoding="utf-8")
+      _print(f"Installed shared VERSION file at {target}")
+      return
+  _print("WARNING: Shared VERSION file not found; chaosface version will fall back to 0.0.0.")
+
+
 def install(args: argparse.Namespace) -> None:
   script_path = Path(__file__).resolve()
   project_root = script_path.parents[1]
@@ -121,6 +136,7 @@ def install(args: argparse.Namespace) -> None:
   _print("Installing Chaosface from local source")
   _run([str(venv_python), "-m", "pip", "install", "--upgrade", str(project_root)])
 
+  install_shared_version_file(script_path, install_dir)
   create_launchers(install_dir)
 
   _print("")

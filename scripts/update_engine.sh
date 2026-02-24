@@ -40,6 +40,7 @@ make -j"$(nproc)"
 
 echo "Installing engine"
 sudo make install
+sudo install -m 0644 "${REPO_ROOT}/VERSION" "${CHAOS_INSTALL_ROOT}/VERSION"
 
 echo "Synchronizing startup script and service"
 sudo install -m 0755 "${SCRIPT_DIR}/startchaos.sh" "${CHAOS_INSTALL_ROOT}/startchaos.sh"

@@ -12,11 +12,12 @@ from .ConnectionSetup import build_connection_tab
 from .GameSettings import build_game_settings_tab
 from .SourceConfiguration import build_source_configuration_tab
 from .StreamerInterface import build_streamer_tab
+from chaosface.version import get_version
 
 
 def build_chaos_interface(*, ensure_runtime_started: Callable[[], None], shutdown_runtime: Callable[[], None]) -> None:
   ensure_runtime_started()
-  ui.label('Twitch Controls Chaos').classes('text-h4')
+  ui.label(f'Twitch Controls Chaos ({get_version()})').classes('text-h4')
   tabs = ui.tabs().classes('w-full')
   with tabs:
     streamer_tab = ui.tab('Streamer Interface')
