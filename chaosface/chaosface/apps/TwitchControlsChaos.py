@@ -790,12 +790,13 @@ def twitch_controls_chaos(args):
   )
   ensure_runtime_started(bind_ui_loop=False)
 
-  # Prefer websocket for stability and responsiveness, with polling fallback for compatibility.
+  # Prefer long-polling for compatibility with environments where websocket upgrades are flaky.
+  # This also makes transport activity visible in HTTP middleware request tracing.
   try:
-    app.config.socket_io_js_transports = ['websocket', 'polling']
+    app.config.socket_io_js_transports = ['polling']
     logging.warning('Configured Socket.IO transports: %s', app.config.socket_io_js_transports)
   except Exception:
-    logging.exception('Failed to configure Socket.IO transport preferences')
+    logging.exception('Failed to set Socket.IO transports to polling')
 
   ssl_certfile, ssl_keyfile = _resolve_tls_files()
   ssl_enabled = bool(ssl_certfile and ssl_keyfile)
