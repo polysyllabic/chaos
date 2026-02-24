@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 
 from nicegui import ui
 
@@ -65,15 +66,22 @@ def _add_color_picker_icon(input_field, initial_value: str):
     return None
 
   state = {'value': str(initial_value or '').strip()}
+  picker_selector = ''
+  uses_color_input_fallback = False
 
   try:
     with ui.dialog() as dialog, ui.card().classes('w-auto'):
       ui.label('Pick color').classes('text-subtitle2')
       picker = None
       if hasattr(ui, 'color_picker'):
-        picker = ui.color_picker(value=state['value']).classes('w-auto')
+        picker_class = f'source-picker-{uuid.uuid4().hex}'
+        picker = ui.color_picker(value=state['value']).classes(f'w-auto {picker_class}')
+        picker_selector = f'.{picker_class}'
       elif hasattr(ui, 'color_input'):
-        picker = ui.color_input('Color', value=state['value']).classes('w-80')
+        picker_class = f'source-picker-{uuid.uuid4().hex}'
+        picker = ui.color_input('Color', value=state['value']).classes(f'w-80 {picker_class}')
+        picker_selector = f'.{picker_class}'
+        uses_color_input_fallback = True
       else:
         ui.label('Color picker unavailable in this build.').classes('text-xs')
 
@@ -82,16 +90,22 @@ def _add_color_picker_icon(input_field, initial_value: str):
         if isinstance(event_value, str) and event_value.strip():
           state['value'] = event_value.strip()
           return
-        picker_value = str(getattr(picker, 'value', '') or '').strip()
-        if picker_value:
-          state['value'] = picker_value
+        picker_raw = getattr(picker, 'value', None)
+        if isinstance(picker_raw, str) and picker_raw.strip():
+          state['value'] = picker_raw.strip()
 
       if picker is not None:
         picker.on('update:model-value', _picker_to_state)
         picker.on('change', _picker_to_state)
 
       def _apply_color():
-        value = str(state.get('value', '') or '').strip()
+        value = ''
+        state_value = state.get('value', None)
+        if isinstance(state_value, str) and state_value.strip():
+          value = state_value.strip()
+        picker_raw = getattr(picker, 'value', None)
+        if not value and isinstance(picker_raw, str) and picker_raw.strip():
+          value = picker_raw.strip()
         if value:
           input_field.value = value
         dialog.close()
@@ -110,6 +124,18 @@ def _add_color_picker_icon(input_field, initial_value: str):
       except Exception:
         pass
     dialog.open()
+    if uses_color_input_fallback and picker_selector:
+      ui.run_javascript(
+        f"""
+        setTimeout(() => {{
+          const root = document.querySelector({json.dumps(picker_selector)});
+          if (!root) return;
+          const target = root.querySelector('input, .q-field__native');
+          if (target && typeof target.click === 'function') target.click();
+        }}, 0);
+        """,
+        timeout=0.5,
+      )
 
   return ui.button(icon='palette', on_click=_open_picker).props('flat round dense').tooltip('Pick color')
 
