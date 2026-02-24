@@ -25,6 +25,7 @@ from chaosface.gui import ui_dispatch
 
 class ChaosModel(EngineObserver):
   ENGINE_STATUS_PAYLOAD_MAX = 180
+  SELECT_GAME_DEDUP_SECONDS = 2.0
   ENGINE_STATUS_UNKNOWN = 'unknown'
   ENGINE_STATUS_NOT_CONNECTED = 'not_connected'
   ENGINE_STATUS_TIMEOUT = 'timeout'
@@ -35,9 +36,13 @@ class ChaosModel(EngineObserver):
 
   def __init__(self):
     self.thread = None
+    self._bot_setup_thread: Optional[threading.Thread] = None
+    self._bot_setup_lock = threading.Lock()
     self.first_time = True
     self.bot: Optional[ChaosBot] = None
     self._pending_game_startup_setup = False
+    self._pending_selected_game = ''
+    self._pending_selected_sent_at = 0.0
 
     #  Socket to talk to server
     logging.info("Connecting to chaos server")
@@ -83,9 +88,20 @@ class ChaosModel(EngineObserver):
   @staticmethod
   def _status_for_pause(paused: bool) -> str:
     return ChaosModel.ENGINE_STATUS_PAUSED if paused else ChaosModel.ENGINE_STATUS_RUNNING
-    
+
+  def _start_bot_setup_thread(self) -> None:
+    with self._bot_setup_lock:
+      if self._bot_setup_thread and self._bot_setup_thread.is_alive():
+        return
+      self._bot_setup_thread = threading.Thread(
+        target=self.configure_bot,
+        name='chaosface-bot-setup',
+        daemon=True,
+      )
+      self._bot_setup_thread.start()
+
   def start(self):
-    self.configure_bot()
+    self._start_bot_setup_thread()
     self._loop()
 
   def start_threaded(self):
@@ -140,8 +156,9 @@ class ChaosModel(EngineObserver):
     """
     if self.bot:
       self.bot.shutdown()
-      # start the bot again
-      self.configure_bot()    
+      self.bot = None
+    # Start the bot again in a separate thread so engine/UI loop keeps running.
+    self._start_bot_setup_thread()
 
   def send_engine_command(self, payload: dict, *, report_status: bool = True) -> bool:
     if report_status:
@@ -169,12 +186,24 @@ class ChaosModel(EngineObserver):
     logging.debug("Asking engine for available games")
     self.send_engine_command({'available_games': True})
 
-  def request_game_selection(self, game_name: str):
+  def request_game_selection(self, game_name: str, *, force: bool = False):
     selected = str(game_name).strip()
     if not selected:
       return
+    now = time.monotonic()
+    if (
+      not force
+      and selected == self._pending_selected_game
+      and (now - self._pending_selected_sent_at) < self.SELECT_GAME_DEDUP_SECONDS
+    ):
+      logging.debug("Skipping duplicate game selection request: %s", selected)
+      return
+    self._pending_selected_game = selected
+    self._pending_selected_sent_at = now
     logging.info("Requesting game selection: %s", selected)
-    self.send_engine_command({'select_game': selected})
+    if not self.send_engine_command({'select_game': selected}):
+      self._pending_selected_game = ''
+      self._pending_selected_sent_at = 0.0
 
   def acknowledge_available_games(self, game_count: int):
     payload = {'available_games_ack': True, 'count': max(0, int(game_count))}
@@ -243,6 +272,10 @@ class ChaosModel(EngineObserver):
     if "game" in received:
       handled = True
       logging.debug("Received game info!")
+      selected_game = str(received.get('game', '')).strip()
+      if selected_game:
+        self._pending_selected_game = ''
+        self._pending_selected_sent_at = 0.0
       ui_dispatch.call_soon(config.relay.initialize_game, received)
       self._pending_game_startup_setup = True
       if 'engine_status' not in received and 'pause' not in received:
@@ -437,7 +470,7 @@ class ChaosModel(EngineObserver):
 
       game_selection = config.relay.consume_game_selection_request()
       if game_selection:
-        self.request_game_selection(game_selection)
+        self.request_game_selection(game_selection, force=True)
 
       if self._pending_game_startup_setup and config.relay.valid_data:
         if config.relay.engine_status == self.ENGINE_STATUS_PAUSED:

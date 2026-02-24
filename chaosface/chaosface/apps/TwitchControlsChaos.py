@@ -409,13 +409,14 @@ def ensure_runtime_started(*, bind_ui_loop: bool = True) -> None:
   Bind relay updates to the running asyncio loop and start model thread once.
   """
   global _runtime_started, _model
+  loop: Optional[asyncio.AbstractEventLoop] = None
   try:
     loop = asyncio.get_running_loop()
   except RuntimeError:
-    return
+    loop = None
 
   with _runtime_lock:
-    if bind_ui_loop:
+    if bind_ui_loop and loop is not None:
       ui_dispatch.set_ui_loop(loop)
     if not _runtime_started:
       if _model is None:
@@ -787,6 +788,7 @@ def twitch_controls_chaos(args):
     on_vote=_on_bot_vote,
     on_status=_on_bot_status,
   )
+  ensure_runtime_started(bind_ui_loop=False)
 
   # Prefer long-polling for compatibility with environments where websocket upgrades are flaky.
   # This also makes transport activity visible in HTTP middleware request tracing.
