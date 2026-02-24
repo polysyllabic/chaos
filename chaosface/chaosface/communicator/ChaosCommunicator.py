@@ -145,28 +145,42 @@ class ChaosCommunicator():
         time.sleep(0.05)
         continue
       #  Poll for engine message.
-      if (socket_listen.poll(self.request_timeout) & zmq.POLLIN) != 0:
-        try:
-          message = socket_listen.recv()
-        except zmq.error.ZMQError:
-          if self.keep_running:
-            logging.exception('Error receiving message from engine')
-          continue
-        # Return acknowledgment immediately so the engine can continue sending.
-        try:
-          socket_listen.send(b"Pong")
-        except zmq.error.ZMQError:
-          if self.keep_running:
-            logging.exception('Error acknowledging message from engine')
-          continue
-        # Dispatch processing on a worker thread so socket reads are never blocked by observer work.
-        if message:
+      try:
+        poll_result = socket_listen.poll(self.request_timeout)
+      except zmq.error.ZMQError:
+        if self.keep_running:
+          logging.exception('Listener poll failed; recreating listener socket')
           try:
-            decoded = message.decode("utf-8")
-          except UnicodeDecodeError:
-            logging.warning('Received non-UTF8 message from engine; dropping it')
-            continue
-          self._incoming_messages.put(decoded)
+            self.connect_listener(self.listen_port)
+          except Exception:
+            logging.exception('Failed to recreate listener socket')
+        time.sleep(0.1)
+        continue
+
+      if (poll_result & zmq.POLLIN) == 0:
+        continue
+
+      try:
+        message = socket_listen.recv()
+      except zmq.error.ZMQError:
+        if self.keep_running:
+          logging.exception('Error receiving message from engine')
+        continue
+      # Return acknowledgment immediately so the engine can continue sending.
+      try:
+        socket_listen.send(b"Pong")
+      except zmq.error.ZMQError:
+        if self.keep_running:
+          logging.exception('Error acknowledging message from engine')
+        continue
+      # Dispatch processing on a worker thread so socket reads are never blocked by observer work.
+      if message:
+        try:
+          decoded = message.decode("utf-8")
+        except UnicodeDecodeError:
+          logging.warning('Received non-UTF8 message from engine; dropping it')
+          continue
+        self._incoming_messages.put(decoded)
   
   def send_message(self, message):
     with self._talk_lock:

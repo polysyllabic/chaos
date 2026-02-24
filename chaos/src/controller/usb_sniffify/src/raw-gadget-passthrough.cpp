@@ -9,6 +9,7 @@
 #include <new>
 #include <algorithm>
 #include <iomanip>
+#include <time.h>
 
 // The logger will be initialized in the main app. It's safe not to use plog at all. The library
 // will still link correctly and there will simply be no logging.
@@ -20,6 +21,41 @@
 //     ls /sys/class/udc/
 
 namespace {
+bool joinThreadWithTimeout(pthread_t thread, const char* tag, int timeoutMs = 2000) {
+#if defined(__linux__)
+  struct timespec deadline;
+  clock_gettime(CLOCK_REALTIME, &deadline);
+  deadline.tv_sec += timeoutMs / 1000;
+  deadline.tv_nsec += (timeoutMs % 1000) * 1000000L;
+  if (deadline.tv_nsec >= 1000000000L) {
+    deadline.tv_sec += 1;
+    deadline.tv_nsec -= 1000000000L;
+  }
+
+  int joinResult = pthread_timedjoin_np(thread, NULL, &deadline);
+  if (joinResult == 0 || joinResult == ESRCH) {
+    return true;
+  }
+  if (joinResult == ETIMEDOUT) {
+    PLOG_WARNING << "Timed out waiting for " << tag << " thread to exit; cancelling thread.";
+    pthread_cancel(thread);
+    struct timespec cancelDeadline;
+    clock_gettime(CLOCK_REALTIME, &cancelDeadline);
+    cancelDeadline.tv_sec += 1;
+    joinResult = pthread_timedjoin_np(thread, NULL, &cancelDeadline);
+    if (joinResult == 0 || joinResult == ESRCH) {
+      return true;
+    }
+  }
+  PLOG_ERROR << "Failed to join " << tag << " thread. errno=" << joinResult;
+  return false;
+#else
+  (void)tag;
+  pthread_join(thread, NULL);
+  return true;
+#endif
+}
+
 void trackTransfer(EndpointInfo* endpointInfo, libusb_transfer* transfer) {
   if (!endpointInfo->transferMutexInitialized || transfer == nullptr) {
     return;
@@ -348,7 +384,7 @@ void RawGadgetPassthrough::teardownActiveEndpoints() {
             }
           }
           if (endpointInfo->threadStarted) {
-            pthread_join(endpointInfo->thread, NULL);
+            joinThreadWithTimeout(endpointInfo->thread, "endpoint");
             endpointInfo->threadStarted = false;
           }
           if (endpointInfo->ep_int >= 0 && fd >= 0) {
@@ -498,7 +534,7 @@ void RawGadgetPassthrough::setEndpoint(AlternateInfo* info, int endpoint, bool e
                      << " in-flight transfer(s) after cancellation wait.";
       }
       if (endpointInfo->threadStarted) {
-        pthread_join(endpointInfo->thread, NULL);
+        joinThreadWithTimeout(endpointInfo->thread, "endpoint");
         endpointInfo->threadStarted = false;
       }
       
@@ -934,7 +970,7 @@ void* RawGadgetPassthrough::libusbEventHandler( void* rawgadgetobject ) {
 
     if (!mRawGadgetPassthrough->sessionRunning) {
       if (ep0ThreadStarted) {
-        pthread_join(mRawGadgetPassthrough->threadEp0, NULL);
+        joinThreadWithTimeout(mRawGadgetPassthrough->threadEp0, "ep0");
         ep0ThreadStarted = false;
       }
       mRawGadgetPassthrough->cleanupDevice();
@@ -944,7 +980,7 @@ void* RawGadgetPassthrough::libusbEventHandler( void* rawgadgetobject ) {
 
   mRawGadgetPassthrough->requestReconnect();
   if (ep0ThreadStarted) {
-    pthread_join(mRawGadgetPassthrough->threadEp0, NULL);
+    joinThreadWithTimeout(mRawGadgetPassthrough->threadEp0, "ep0");
   }
   mRawGadgetPassthrough->cleanupDevice();
   return NULL;
