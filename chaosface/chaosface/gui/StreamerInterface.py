@@ -53,16 +53,21 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
     ).props('readonly').classes('w-full h-48 streamer-bot-status-box')
 
     def scroll_status_to_latest():
-      ui.run_javascript(
-        """
-        (() => {
-          const el = document.querySelector('.streamer-bot-status-box textarea');
-          if (el) {
-            el.scrollTop = el.scrollHeight;
-          }
-        })();
-        """
-      )
+      try:
+        ui.run_javascript(
+          """
+          (() => {
+            const el = document.querySelector('.streamer-bot-status-box textarea');
+            if (el) {
+              el.scrollTop = el.scrollHeight;
+            }
+          })();
+          """,
+          timeout=0.0,
+        )
+      except Exception:
+        # Ignore transient client disconnect races while keeping the refresh loop alive.
+        pass
 
     def refresh_bot_status():
       if status_box.is_deleted:
