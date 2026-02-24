@@ -177,10 +177,19 @@ class ChaosBotContext(Protocol):
   def add_group_permission(self, group: str, permission: str) -> str:
     ...
 
+  def remove_permission_group(self, group: str) -> str:
+    ...
+
   def remove_group_member(self, group: str, user: str) -> str:
     ...
 
   def remove_group_permission(self, group: str, permission: str) -> str:
+    ...
+
+  def list_permission_groups(self) -> str:
+    ...
+
+  def describe_permission_group(self, group: str) -> str:
     ...
 
 
@@ -436,6 +445,9 @@ class ChaosBot:
     if cmd_key == 'chaos':
       await self._cmd_chaos(args)
       return
+    if cmd_key == 'chaoscmd':
+      await self._cmd_chaoscmd()
+      return
     if cmd_key == 'mod':
       if args:
         await self.send_message(self._ctx.get_mod_description(' '.join(args)))
@@ -502,11 +514,20 @@ class ChaosBot:
     if cmd_key == 'addperm':
       await self._cmd_add_perm(author, args)
       return
+    if cmd_key == 'delgroup':
+      await self._cmd_del_group(author, args)
+      return
     if cmd_key == 'delmember':
       await self._cmd_del_member(author, args)
       return
     if cmd_key == 'delperm':
       await self._cmd_del_perm(author, args)
+      return
+    if cmd_key == 'permgroups':
+      await self._cmd_perm_groups(author)
+      return
+    if cmd_key == 'permgroup':
+      await self._cmd_perm_group(author, args)
       return
 
   async def _cmd_chaos(self, args):
@@ -529,9 +550,19 @@ class ChaosBot:
       return
     sub = args[0].lower()
     if sub == 'active':
-      await self.send_message(self._ctx.list_active_mods())
+      active_mods = self._ctx.list_active_mods()
+      await self.send_message(active_mods if str(active_mods).strip() else 'No active modifiers')
     elif sub == 'voting':
       await self.send_message(self._ctx.list_candidate_mods())
+
+  async def _cmd_chaoscmd(self):
+    link = self._attr_str(
+      'chaoscmd_link',
+      'https://github.com/polysyllabic/chaos/blob/main/docs/chatbotcomands.md',
+    ).strip()
+    if not link:
+      link = 'https://github.com/polysyllabic/chaos/blob/main/docs/chatbotcomands.md'
+    await self.send_message(f'A list of commands can be found here: {link}')
 
   async def _cmd_add_credits(self, author: str, args):
     if not await self._require_permission(author, 'manage_credits'):
@@ -725,6 +756,14 @@ class ChaosBot:
       return
     await self.send_message(self._ctx.add_group_permission(args[0], args[1]))
 
+  async def _cmd_del_group(self, author: str, args):
+    if not await self._require_permission(author, 'manage_permissions'):
+      return
+    if len(args) < 1:
+      await self.send_message('Usage: !delgroup <group>')
+      return
+    await self.send_message(self._ctx.remove_permission_group(args[0]))
+
   async def _cmd_del_member(self, author: str, args):
     if not await self._require_permission(author, 'manage_permissions'):
       return
@@ -740,6 +779,19 @@ class ChaosBot:
       await self.send_message('Usage: !delperm <group> <permission>')
       return
     await self.send_message(self._ctx.remove_group_permission(args[0], args[1]))
+
+  async def _cmd_perm_groups(self, author: str):
+    if not await self._require_permission(author, 'manage_permissions'):
+      return
+    await self.send_message(self._ctx.list_permission_groups())
+
+  async def _cmd_perm_group(self, author: str, args):
+    if not await self._require_permission(author, 'manage_permissions'):
+      return
+    if len(args) < 1:
+      await self.send_message('Usage: !permgroup <group>')
+      return
+    await self.send_message(self._ctx.describe_permission_group(args[0]))
 
   async def _raffle_timer_loop(self, raffle_length: int):
     self._raffle_entries = set()

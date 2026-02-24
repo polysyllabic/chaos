@@ -20,6 +20,10 @@ def test_current_alias_defaults_are_present():
 def test_resolves_existing_default_aliases():
   aliases = sanitize_alias_map({})
   alias_only = sanitize_alias_only_map({})
+  assert resolve_chatbot_command(['chaoscmd'], aliases, alias_only) == ('chaoscmd', [])
+  assert resolve_chatbot_command(['permgroups'], aliases, alias_only) == ('permgroups', [])
+  assert resolve_chatbot_command(['delgroup', 'mods'], aliases, alias_only) == ('delgroup', ['mods'])
+  assert resolve_chatbot_command(['permgroup', 'mods'], aliases, alias_only) == ('permgroup', ['mods'])
   assert resolve_chatbot_command(['candidates'], aliases, alias_only) == ('mods_voting', [])
   assert resolve_chatbot_command(['active'], aliases, alias_only) == ('mods_active', [])
   assert resolve_chatbot_command(['givecredit'], aliases, alias_only) == ('givecredits', [])

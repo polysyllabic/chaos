@@ -26,6 +26,7 @@ class ChatbotCommandSpec:
 
 CHATBOT_COMMANDS: List[ChatbotCommandSpec] = [
   ChatbotCommandSpec('chaos', 'About Chaos', ('chaos',)),
+  ChatbotCommandSpec('chaoscmd', 'Command List Link', ('chaoscmd',)),
   ChatbotCommandSpec('mod', 'Modifier Description', ('mod',)),
   ChatbotCommandSpec('mods', 'Modifier List Link', ('mods',)),
   ChatbotCommandSpec('mods_voting', 'List Candidate Mods', ('mods', 'voting'), default_alias='candidates'),
@@ -46,8 +47,11 @@ CHATBOT_COMMANDS: List[ChatbotCommandSpec] = [
   ChatbotCommandSpec('addgroup', 'Add Permission Group', ('addgroup',)),
   ChatbotCommandSpec('addmember', 'Add Group Member', ('addmember',)),
   ChatbotCommandSpec('addperm', 'Add Group Permission', ('addperm',)),
+  ChatbotCommandSpec('delgroup', 'Delete Permission Group', ('delgroup',)),
   ChatbotCommandSpec('delmember', 'Remove Group Member', ('delmember',)),
   ChatbotCommandSpec('delperm', 'Remove Group Permission', ('delperm',)),
+  ChatbotCommandSpec('permgroups', 'List Permission Groups', ('permgroups',)),
+  ChatbotCommandSpec('permgroup', 'Show Permission Group', ('permgroup',)),
 ]
 
 CHATBOT_COMMANDS_BY_KEY: Dict[str, ChatbotCommandSpec] = {spec.key: spec for spec in CHATBOT_COMMANDS}

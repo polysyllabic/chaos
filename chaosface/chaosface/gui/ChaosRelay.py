@@ -133,6 +133,7 @@ chaos_defaults = {
   'msg_credit_transfer': '@{} has given @{} 1 mod credit',
   'msg_mod_list': 'A list of the available mods for this game can be found here: {}',
   'mod_list_link': 'https://github.com/polysyllabic/chaos/blob/main/chaos/examples/tlou_mods.txt',
+  'chaoscmd_link': 'https://github.com/polysyllabic/chaos/blob/main/docs/chatbotcomands.md',
   'default_mod_list_link': '',
   'mod_list_overrides': {},
   'chatbot_command_aliases': DEFAULT_COMMAND_ALIASES.copy(),
@@ -207,6 +208,7 @@ class ChaosRelay:
     self.engine_status = 'not_connected'
     self.bot_diagnostics: List[str] = []
     self.mod_list_link = ''
+    self.chaoscmd_link = ''
     self.default_mod_list_link = ''
     self.mod_list_overrides: Dict[str, str] = {}
     self.chatbot_command_aliases: Dict[str, str] = {}
@@ -533,6 +535,7 @@ class ChaosRelay:
     self.set_default_mod_list_link(self.get_attribute('default_mod_list_link'))
     self.set_mod_list_overrides(self.get_attribute('mod_list_overrides'))
     self.set_mod_list_link(self.get_attribute('mod_list_link'), persist_override=False)
+    self.set_chaoscmd_link(self.get_attribute('chaoscmd_link'))
     self.set_chatbot_command_aliases(self.get_attribute('chatbot_command_aliases'))
     self.set_chatbot_alias_only(self.get_attribute('chatbot_alias_only'))
     self.set_num_active_mods(self.get_attribute('active_modifiers'))
@@ -741,6 +744,10 @@ class ChaosRelay:
     else:
       overrides.pop(game_name, None)
     self.set_mod_list_overrides(overrides)
+
+  def set_chaoscmd_link(self, value):
+    uri = str(value or '').strip()
+    self._set_value('chaoscmd_link', uri, 'chaoscmd_link')
 
   def record_selected_game(self, game_name: str):
     name = str(game_name).strip()
@@ -1219,6 +1226,19 @@ class ChaosRelay:
     self.save_permission_info()
     return f"Added permission '{permission_name}' to group '{group_name}'."
 
+  def remove_permission_group(self, group: str) -> str:
+    group_name = self._normalize_group(group)
+    if not group_name:
+      return 'Usage: !delgroup <group>'
+    if group_name not in self.permission_groups:
+      return f"The group '{group_name}' does not exist."
+    if group_name == 'admin':
+      return "The group 'admin' cannot be deleted."
+
+    self.permission_groups.pop(group_name, None)
+    self.save_permission_info()
+    return f"Deleted permission group '{group_name}'."
+
   def remove_group_member(self, group: str, user: str) -> str:
     group_name = self._normalize_group(group)
     user_name = self._normalize_user(user)
@@ -1252,6 +1272,30 @@ class ChaosRelay:
     self.permission_groups[group_name]['permissions'] = sorted(set(permissions))
     self.save_permission_info()
     return f"Removed permission '{permission_name}' from group '{group_name}'."
+
+  def list_permission_groups(self) -> str:
+    groups = sorted(self.permission_groups.keys())
+    if not groups:
+      return 'No permission groups are configured.'
+    return 'Permission groups: ' + ', '.join(groups)
+
+  def describe_permission_group(self, group: str) -> str:
+    group_name = self._normalize_group(group)
+    if not group_name:
+      return 'Usage: !permgroup <group>'
+    if group_name not in self.permission_groups:
+      return f"The group '{group_name}' does not exist."
+
+    group_data = self.permission_groups[group_name]
+    members = sorted(set(group_data.get('members', [])))
+    permissions = sorted(set(group_data.get('permissions', [])))
+    members_text = ', '.join(members) if members else '(none)'
+    permissions_text = ', '.join(permissions) if permissions else '(none)'
+    return (
+      f"Group '{group_name}' | "
+      f"Permissions: {permissions_text} | "
+      f"Users: {members_text}"
+    )
 
   def set_balance(self, user: str, balance: int):
     if balance < 0:

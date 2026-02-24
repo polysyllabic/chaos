@@ -113,6 +113,13 @@ def build_game_settings_tab() -> Callable[[], None]:
 
       ui.button('Default', on_click=reset_mod_list_to_default)
 
+    ui.separator()
+    ui.label('Chatbot Commands Link').classes('text-subtitle1')
+    chaoscmd_link = ui.input(
+      'URI used by !chaoscmd',
+      value=str(config.relay.chaoscmd_link or ''),
+    ).classes('w-full')
+
     refresh_game_selector()
 
     ui.separator()
@@ -246,6 +253,10 @@ def build_game_settings_tab() -> Callable[[], None]:
       if str(config.relay.mod_list_link or '') != new_mod_list_link:
         config.relay.set_mod_list_link(new_mod_list_link, persist_override=True)
         need_save = True
+      new_chaoscmd_link = str(chaoscmd_link.value or '').strip()
+      if str(config.relay.chaoscmd_link or '') != new_chaoscmd_link:
+        config.relay.set_chaoscmd_link(new_chaoscmd_link)
+        need_save = True
       mod_list_state['pending_user_edit'] = False
       sync_enabled_mods()
       config.relay.save_mod_info()
@@ -279,6 +290,7 @@ def build_game_settings_tab() -> Callable[[], None]:
       points_reward_title.value = str(config.relay.points_reward_title)
       raffle_time.value = float(config.relay.raffle_time)
       mod_list_link.value = str(config.relay.mod_list_link or '')
+      chaoscmd_link.value = str(config.relay.chaoscmd_link or '')
       mod_list_state['pending_user_edit'] = False
       mod_list_state['bound_game'] = str(config.relay.game_name or 'NONE')
       render_mod_toggles()
