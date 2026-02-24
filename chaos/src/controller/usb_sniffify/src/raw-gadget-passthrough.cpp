@@ -1174,15 +1174,18 @@ void RawGadgetPassthrough::cbTransferIn(struct libusb_transfer *xfr) {
 }
 
 void RawGadgetPassthrough::requestReconnect() {
-  bool wasRunning = sessionRunning.exchange(false);
+  bool expectedRunning = true;
+  if (!sessionRunning.compare_exchange_strong(expectedRunning, false)) {
+    // Reconnect is already pending; avoid closing a freshly opened fd from the next attempt.
+    return;
+  }
+
   if (fd >= 0) {
     close(fd);
     fd = -1;
     mEndpointZeroInfo.fd = -1;
   }
-  if (wasRunning) {
-    PLOG_WARNING << "Controller transport interrupted. Waiting for reconnect.";
-  }
+  PLOG_WARNING << "Controller transport interrupted. Waiting for reconnect.";
 }
 
 bool RawGadgetPassthrough::readyProductVendor() {
