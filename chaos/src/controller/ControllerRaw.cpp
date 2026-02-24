@@ -140,6 +140,10 @@ void ControllerRaw::notification(unsigned char* buffer, int length) {
     PLOG_VERBOSE << "Dropping controller report because controller state is not initialized.";
     return;
   }
+  if (length == 0) {
+    PLOG_VERBOSE << "Ignoring empty controller report during USB startup/reconnect.";
+    return;
+  }
   if (length < 64) {
     PLOG_WARNING << "Dropping short controller report: expected 64 bytes, got " << length;
     return;
