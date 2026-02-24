@@ -89,6 +89,11 @@ class ChaosModel(EngineObserver):
     if not status:
       return
     self._set_engine_status(status)
+    # A bad config response is a definitive result for the current load attempt.
+    # Stop retrying the same select_game command until the user picks a game again.
+    if status == self.ENGINE_STATUS_BAD_CONFIG_FILE:
+      self._clear_pending_game_selection()
+      self._pending_game_startup_setup = False
 
   @staticmethod
   def _status_for_pause(paused: bool) -> str:
@@ -296,12 +301,21 @@ class ChaosModel(EngineObserver):
       ui_dispatch.call_soon(config.relay.set_available_games, games)
       self.acknowledge_available_games(len(games))
       reported_status = str(received.get('engine_status', '')).strip().lower()
-      engine_needs_game = reported_status in (self.ENGINE_STATUS_WAITING_FOR_GAME, self.ENGINE_STATUS_BAD_CONFIG_FILE)
-      if engine_needs_game:
+      engine_waiting_for_game = (reported_status == self.ENGINE_STATUS_WAITING_FOR_GAME)
+      engine_bad_config = (reported_status == self.ENGINE_STATUS_BAD_CONFIG_FILE)
+      if engine_waiting_for_game or engine_bad_config:
         config.relay.valid_data = False
         ui_dispatch.call_soon(config.relay.reset_current_mods)
+      if engine_bad_config:
+        self._clear_pending_game_selection()
+        self._pending_game_startup_setup = False
       preferred = config.relay.get_preferred_game(games)
-      if preferred and (engine_needs_game or not config.relay.valid_data or config.relay.game_name != preferred):
+      should_auto_select = (
+        preferred
+        and not engine_bad_config
+        and (engine_waiting_for_game or not config.relay.valid_data or config.relay.game_name != preferred)
+      )
+      if should_auto_select:
         self.request_game_selection(preferred)
       elif 'engine_status' not in received and not config.relay.valid_data:
         self._set_engine_status(self.ENGINE_STATUS_WAITING_FOR_GAME)
