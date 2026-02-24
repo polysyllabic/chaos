@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import json
-import uuid
+import re
 
 from nicegui import ui
 
@@ -60,52 +60,44 @@ def _add_color_swatch(input_field):
   return refresh
 
 
+def _coerce_hex_for_native_picker(value: str, fallback: str = '#FFFFFF') -> str:
+  """
+  Convert user color text to a form accepted by native <input type=color> (#RRGGBB).
+  Alpha channels are dropped for the picker preview/control.
+  """
+  text = str(value or '').strip()
+  if re.fullmatch(r'#[0-9a-fA-F]{3}', text):
+    return '#' + ''.join(ch * 2 for ch in text[1:])
+  if re.fullmatch(r'#[0-9a-fA-F]{6}', text):
+    return text.upper()
+  if re.fullmatch(r'#[0-9a-fA-F]{8}', text):
+    return ('#' + text[1:7]).upper()
+  return fallback
+
+
 def _add_color_picker_icon(input_field, initial_value: str):
   """Attach a palette icon that opens a picker with explicit OK/Cancel apply."""
-  if not hasattr(ui, 'dialog'):
+  if not hasattr(ui, 'dialog') or not hasattr(ui, 'input'):
     return None
-
-  state = {'value': str(initial_value or '').strip()}
-  picker_selector = ''
-  uses_color_input_fallback = False
 
   try:
     with ui.dialog() as dialog, ui.card().classes('w-auto'):
       ui.label('Pick color').classes('text-subtitle2')
-      picker = None
-      if hasattr(ui, 'color_picker'):
-        picker_class = f'source-picker-{uuid.uuid4().hex}'
-        picker = ui.color_picker(value=state['value']).classes(f'w-auto {picker_class}')
-        picker_selector = f'.{picker_class}'
-      elif hasattr(ui, 'color_input'):
-        picker_class = f'source-picker-{uuid.uuid4().hex}'
-        picker = ui.color_input('Color', value=state['value']).classes(f'w-80 {picker_class}')
-        picker_selector = f'.{picker_class}'
-        uses_color_input_fallback = True
-      else:
-        ui.label('Color picker unavailable in this build.').classes('text-xs')
+      picker = ui.input(
+        'Color',
+        value=_coerce_hex_for_native_picker(str(initial_value or '').strip()),
+      ).props('type=color stack-label').classes('w-48')
 
-      def _picker_to_state(event):
-        event_value = getattr(event, 'value', None)
-        if isinstance(event_value, str) and event_value.strip():
-          state['value'] = event_value.strip()
-          return
-        picker_raw = getattr(picker, 'value', None)
-        if isinstance(picker_raw, str) and picker_raw.strip():
-          state['value'] = picker_raw.strip()
+      preview = ui.element('div').style(_swatch_style(str(picker.value or '#FFFFFF')))
 
-      if picker is not None:
-        picker.on('update:model-value', _picker_to_state)
-        picker.on('change', _picker_to_state)
+      def _refresh_preview(event):
+        preview.style(_swatch_style(str(getattr(event, 'value', picker.value) or '#FFFFFF')))
+
+      picker.on('update:model-value', _refresh_preview)
+      picker.on('change', _refresh_preview)
 
       def _apply_color():
-        value = ''
-        state_value = state.get('value', None)
-        if isinstance(state_value, str) and state_value.strip():
-          value = state_value.strip()
-        picker_raw = getattr(picker, 'value', None)
-        if not value and isinstance(picker_raw, str) and picker_raw.strip():
-          value = picker_raw.strip()
+        value = str(getattr(picker, 'value', '') or '').strip()
         if value:
           input_field.value = value
         dialog.close()
@@ -117,25 +109,9 @@ def _add_color_picker_icon(input_field, initial_value: str):
     return None
 
   def _open_picker():
-    state['value'] = str(input_field.value or state['value'] or '').strip()
-    if picker is not None:
-      try:
-        picker.value = state['value']
-      except Exception:
-        pass
+    picker.value = _coerce_hex_for_native_picker(str(input_field.value or '').strip(), '#FFFFFF')
+    preview.style(_swatch_style(str(picker.value or '#FFFFFF')))
     dialog.open()
-    if uses_color_input_fallback and picker_selector:
-      ui.run_javascript(
-        f"""
-        setTimeout(() => {{
-          const root = document.querySelector({json.dumps(picker_selector)});
-          if (!root) return;
-          const target = root.querySelector('input, .q-field__native');
-          if (target && typeof target.click === 'function') target.click();
-        }}, 0);
-        """,
-        timeout=0.5,
-      )
 
   return ui.button(icon='palette', on_click=_open_picker).props('flat round dense').tooltip('Pick color')
 
