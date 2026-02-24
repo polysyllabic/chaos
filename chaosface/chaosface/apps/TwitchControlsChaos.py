@@ -790,13 +790,13 @@ def twitch_controls_chaos(args):
   )
   ensure_runtime_started(bind_ui_loop=False)
 
-  # Prefer long-polling for compatibility with environments where websocket upgrades are flaky.
-  # This also makes transport activity visible in HTTP middleware request tracing.
+  # Use websocket first with polling fallback.
+  # Polling-only mode has shown frequent Engine.IO session invalidation on some Pi deployments.
   try:
-    app.config.socket_io_js_transports = ['polling']
+    app.config.socket_io_js_transports = ['websocket', 'polling']
     logging.warning('Configured Socket.IO transports: %s', app.config.socket_io_js_transports)
   except Exception:
-    logging.exception('Failed to set Socket.IO transports to polling')
+    logging.exception('Failed to set Socket.IO transports')
 
   ssl_certfile, ssl_keyfile = _resolve_tls_files()
   ssl_enabled = bool(ssl_certfile and ssl_keyfile)
