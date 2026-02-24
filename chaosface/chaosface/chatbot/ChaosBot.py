@@ -18,6 +18,8 @@ from twitchAPI.helper import first
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope
 
+from .command_aliases import resolve_chatbot_command, sanitize_alias_map, sanitize_alias_only_map
+
 
 def _clean_oauth(token: str) -> str:
   if not token:
@@ -245,6 +247,11 @@ class ChaosBot:
       return fallback
     return bool(value)
 
+  def _resolve_command(self, parts: list[str]):
+    aliases = sanitize_alias_map(self._ctx.get_attribute('chatbot_command_aliases'))
+    alias_only = sanitize_alias_only_map(self._ctx.get_attribute('chatbot_alias_only'))
+    return resolve_chatbot_command(parts, aliases, alias_only)
+
   async def _require_permission(self, user: str, permission: str) -> bool:
     if self._ctx.has_permission(user, permission):
       return True
@@ -420,83 +427,85 @@ class ChaosBot:
     parts = message[1:].split()
     if not parts:
       return
-    cmd = parts[0].lower()
-    args = parts[1:]
+    resolved = self._resolve_command(parts)
+    if resolved is None:
+      return
+    cmd_key, args = resolved
     is_streamer = author == self._channel_name
 
-    if cmd == 'chaos':
+    if cmd_key == 'chaos':
       await self._cmd_chaos(args)
       return
-    if cmd == 'mod':
+    if cmd_key == 'mod':
       if args:
         await self.send_message(self._ctx.get_mod_description(' '.join(args)))
       else:
         await self.send_message('Usage: !mod <mod name>')
       return
-    if cmd == 'mods':
+    if cmd_key == 'mods':
       await self._cmd_mods(args)
       return
-    if cmd == 'candidates':
-      await self._cmd_mods(['voting'])
+    if cmd_key == 'mods_voting':
+      await self._cmd_mods(['voting', *args])
       return
-    if cmd == 'active':
-      await self._cmd_mods(['active'])
+    if cmd_key == 'mods_active':
+      await self._cmd_mods(['active', *args])
       return
-    if cmd == 'credits':
+    if cmd_key == 'credits':
       target = args[0].lstrip('@').lower() if args else author
       await self.send_message(self._ctx.get_balance_message(target))
       return
-    if cmd == 'addcredits':
+    if cmd_key == 'addcredits':
       await self._cmd_add_credits(author, args)
       return
-    if cmd == 'setcredits':
+    if cmd_key == 'setcredits':
       await self._cmd_set_credits(author, args)
       return
-    if cmd in ('givecredits', 'givecredit'):
+    if cmd_key == 'givecredits':
       await self._cmd_give_credits(author, args)
       return
-    if cmd == 'apply':
+    if cmd_key == 'apply':
       await self._cmd_apply(author, args, is_streamer)
       return
-    if cmd == 'enable':
+    if cmd_key == 'enable':
       await self._cmd_enable_disable(author, args, True)
       return
-    if cmd == 'disable':
+    if cmd_key == 'disable':
       await self._cmd_enable_disable(author, args, False)
       return
-    if cmd == 'resetmods':
+    if cmd_key == 'resetmods':
       if await self._require_permission(author, 'manage_modifiers'):
         self._ctx.reset_mods = True
       return
-    if cmd in ('raffle', 'chaosraffle'):
+    if cmd_key == 'raffle':
       await self._cmd_raffle(author, args)
       return
-    if cmd in ('join', 'joinchaos'):
+    if cmd_key == 'join':
       if self._ctx.raffle_open:
         self._raffle_entries.add(author)
       return
-    if cmd in ('startvote', 'newvote'):
+    if cmd_key == 'startvote':
       await self._cmd_start_vote(author, args)
       return
-    if cmd == 'endvote':
+    if cmd_key == 'endvote':
       await self._cmd_end_vote(author)
       return
-    if cmd == 'remove':
+    if cmd_key == 'remove':
       await self._cmd_remove(author, args)
       return
-    if cmd == 'addgroup':
+    if cmd_key == 'addgroup':
       await self._cmd_add_group(author, args)
       return
-    if cmd == 'addmember':
+    if cmd_key == 'addmember':
       await self._cmd_add_member(author, args)
       return
-    if cmd == 'addperm':
+    if cmd_key == 'addperm':
       await self._cmd_add_perm(author, args)
       return
-    if cmd == 'delmember':
+    if cmd_key == 'delmember':
       await self._cmd_del_member(author, args)
       return
-    if cmd == 'delperm':
+    if cmd_key == 'delperm':
       await self._cmd_del_perm(author, args)
       return
 

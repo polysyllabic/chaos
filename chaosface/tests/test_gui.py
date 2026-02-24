@@ -3,6 +3,7 @@
 
 def test_gui_module_exports_import():
   from chaosface.gui.ActiveMods import active_mods_overlay_html
+  from chaosface.gui.ChatbotCommands import build_chatbot_commands_tab
   from chaosface.gui.ChaosInterface import build_chaos_interface
   from chaosface.gui.ConnectionSetup import build_connection_tab
   from chaosface.gui.CurrentVotes import current_votes_overlay_html
@@ -15,6 +16,7 @@ def test_gui_module_exports_import():
   assert callable(active_mods_overlay_html)
   assert callable(vote_timer_overlay_html)
   assert callable(current_votes_overlay_html)
+  assert callable(build_chatbot_commands_tab)
   assert callable(build_streamer_tab)
   assert callable(build_game_settings_tab)
   assert callable(build_connection_tab)

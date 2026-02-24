@@ -8,6 +8,7 @@ from typing import Callable
 
 from nicegui import ui
 
+from .ChatbotCommands import build_chatbot_commands_tab
 from .ConnectionSetup import build_connection_tab
 from .GameSettings import build_game_settings_tab
 from .SourceConfiguration import build_source_configuration_tab
@@ -22,6 +23,7 @@ def build_chaos_interface(*, ensure_runtime_started: Callable[[], None], shutdow
   with tabs:
     streamer_tab = ui.tab('Streamer Interface')
     game_settings_tab = ui.tab('Game Settings')
+    chatbot_commands_tab = ui.tab('CHATBOT COMMANDS')
     source_configuration_tab = ui.tab('SOURCE CONFIGURATION')
     connection_tab = ui.tab('Connection Setup')
 
@@ -30,6 +32,8 @@ def build_chaos_interface(*, ensure_runtime_started: Callable[[], None], shutdow
       refresh_streamer = build_streamer_tab(shutdown_runtime=shutdown_runtime)
     with ui.tab_panel(game_settings_tab):
       refresh_game_settings = build_game_settings_tab()
+    with ui.tab_panel(chatbot_commands_tab):
+      build_chatbot_commands_tab()
     with ui.tab_panel(source_configuration_tab):
       build_source_configuration_tab()
     with ui.tab_panel(connection_tab):

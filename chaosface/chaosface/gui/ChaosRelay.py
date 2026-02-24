@@ -25,6 +25,7 @@ from urllib.parse import urlsplit
 import numpy as np
 
 from chaosface.chatbot.ChaosBot import ChaosBot
+from chaosface.chatbot.command_aliases import DEFAULT_ALIAS_ONLY, DEFAULT_COMMAND_ALIASES
 
 _chaos_description = (
   "Twitch Controls Chaos lets chat interfere with a streamer playing a "
@@ -134,6 +135,8 @@ chaos_defaults = {
   'mod_list_link': 'https://github.com/polysyllabic/chaos/blob/main/chaos/examples/tlou_mods.txt',
   'default_mod_list_link': '',
   'mod_list_overrides': {},
+  'chatbot_command_aliases': DEFAULT_COMMAND_ALIASES.copy(),
+  'chatbot_alias_only': DEFAULT_ALIAS_ONLY.copy(),
   'msg_raffle_open': 'A raffle for a modifier credit {status}. Type !join to enter.',
 }
 
@@ -206,6 +209,8 @@ class ChaosRelay:
     self.mod_list_link = ''
     self.default_mod_list_link = ''
     self.mod_list_overrides: Dict[str, str] = {}
+    self.chatbot_command_aliases: Dict[str, str] = {}
+    self.chatbot_alias_only: Dict[str, bool] = {}
 
     # Config-backed fields
     self.num_active_mods = 0
@@ -477,6 +482,28 @@ class ChaosRelay:
         clean[game_name] = uri
     return clean
 
+  @staticmethod
+  def _normalize_command_alias(value: str) -> str:
+    alias = str(value or '').strip().lower().lstrip('!')
+    if not alias or any(ch.isspace() for ch in alias):
+      return ''
+    return alias
+
+  def _sanitize_chatbot_command_aliases(self, value) -> Dict[str, str]:
+    source = value if isinstance(value, dict) else {}
+    clean: Dict[str, str] = {}
+    for command_key, default_alias in DEFAULT_COMMAND_ALIASES.items():
+      raw_alias = source.get(command_key, default_alias)
+      clean[command_key] = self._normalize_command_alias(raw_alias)
+    return clean
+
+  def _sanitize_chatbot_alias_only(self, value) -> Dict[str, bool]:
+    source = value if isinstance(value, dict) else {}
+    clean: Dict[str, bool] = {}
+    for command_key in DEFAULT_ALIAS_ONLY:
+      clean[command_key] = bool(source.get(command_key, False))
+    return clean
+
   def _ensure_streamer_admin(self):
     streamer = self._normalize_user(self.channel_name)
     admin_group = self.permission_groups.setdefault('admin', {'members': [], 'permissions': []})
@@ -506,6 +533,8 @@ class ChaosRelay:
     self.set_default_mod_list_link(self.get_attribute('default_mod_list_link'))
     self.set_mod_list_overrides(self.get_attribute('mod_list_overrides'))
     self.set_mod_list_link(self.get_attribute('mod_list_link'), persist_override=False)
+    self.set_chatbot_command_aliases(self.get_attribute('chatbot_command_aliases'))
+    self.set_chatbot_alias_only(self.get_attribute('chatbot_alias_only'))
     self.set_num_active_mods(self.get_attribute('active_modifiers'))
     self.set_time_per_modifier(self.get_attribute('modifier_time'))
     self.set_softmax_factor(self.get_attribute('softmax_factor'))
@@ -664,6 +693,30 @@ class ChaosRelay:
   def set_mod_list_overrides(self, value):
     clean = self._sanitize_mod_list_overrides(value)
     self._set_value('mod_list_overrides', clean, 'mod_list_overrides')
+
+  def set_chatbot_command_aliases(self, value):
+    clean = self._sanitize_chatbot_command_aliases(value)
+    self._set_value('chatbot_command_aliases', clean, 'chatbot_command_aliases')
+
+  def set_chatbot_alias_only(self, value):
+    clean = self._sanitize_chatbot_alias_only(value)
+    self._set_value('chatbot_alias_only', clean, 'chatbot_alias_only')
+
+  def set_chatbot_command_alias(self, command_key: str, alias: str):
+    key = str(command_key or '').strip()
+    if key not in DEFAULT_COMMAND_ALIASES:
+      return
+    aliases = dict(self.chatbot_command_aliases)
+    aliases[key] = self._normalize_command_alias(alias)
+    self.set_chatbot_command_aliases(aliases)
+
+  def set_chatbot_alias_only_for_command(self, command_key: str, use_alias_only: bool):
+    key = str(command_key or '').strip()
+    if key not in DEFAULT_ALIAS_ONLY:
+      return
+    alias_only = dict(self.chatbot_alias_only)
+    alias_only[key] = bool(use_alias_only)
+    self.set_chatbot_alias_only(alias_only)
 
   def get_mod_list_override(self, game_name: str) -> str:
     name = str(game_name or '').strip()
