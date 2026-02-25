@@ -1436,7 +1436,7 @@ name = "Headache"
 description = "Render Mode"
 type = "menu"
 groups = [ "render mode" ]
-menu_items = [{entry = "render" }]
+menu_items = [{entry = "headache" }]
 
 [[modifier]]
 name = "Afterlife"
@@ -1769,7 +1769,7 @@ menu_items = [{entry = "reduced enemy accuracy", value = 1 }]
 
 [[modifier]]
 name = "Enhanced Dodge"
-description = "I wish I knew what this does (built-in option)"
+description = "Now perhaps you can dodge the Seraphite axe lady in the park."
 type = "menu"
 groups = [ "buff" ]
 menu_items = [{entry = "enhanced dodge", value = 1 }]
