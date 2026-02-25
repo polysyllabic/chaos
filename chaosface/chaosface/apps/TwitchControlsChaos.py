@@ -433,12 +433,34 @@ def shutdown_runtime() -> None:
     config.relay.chatbot.shutdown()
 
 
-@app.on_event('startup')
-async def _start_runtime_on_app_startup() -> None:
+def _start_runtime_on_app_startup() -> None:
   """
   Start model/engine communication as soon as the service starts, independent of UI login.
   """
   ensure_runtime_started(bind_ui_loop=True)
+
+
+app.on_startup(_start_runtime_on_app_startup)
+
+
+def _log_ui_client_connect(client=None) -> None:
+  client_id = getattr(client, 'id', 'unknown')
+  logging.warning('UICLIENT connect id=%s', client_id)
+
+
+def _log_ui_client_disconnect(client=None) -> None:
+  client_id = getattr(client, 'id', 'unknown')
+  logging.warning('UICLIENT disconnect id=%s', client_id)
+
+
+def _log_ui_client_delete(client=None) -> None:
+  client_id = getattr(client, 'id', 'unknown')
+  logging.warning('UICLIENT delete id=%s', client_id)
+
+
+app.on_connect(_log_ui_client_connect)
+app.on_disconnect(_log_ui_client_disconnect)
+app.on_delete(_log_ui_client_delete)
 
 
 def _overlay_state_response() -> Dict[str, Any]:

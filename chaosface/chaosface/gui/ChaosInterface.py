@@ -43,7 +43,11 @@ def build_chaos_interface(*, ensure_runtime_started: Callable[[], None], shutdow
   game_settings_timer = ui.timer(1.0, refresh_game_settings)
   client = getattr(ui.context, 'client', None)
   if client is not None:
-    on_disconnect = getattr(client, 'on_disconnect', None)
-    if callable(on_disconnect):
-      on_disconnect(lambda: setattr(streamer_timer, 'active', False))
-      on_disconnect(lambda: setattr(game_settings_timer, 'active', False))
+    on_connect = getattr(client, 'on_connect', None)
+    if callable(on_connect):
+      on_connect(lambda: setattr(streamer_timer, 'active', True))
+      on_connect(lambda: setattr(game_settings_timer, 'active', True))
+    on_delete = getattr(client, 'on_delete', None)
+    if callable(on_delete):
+      on_delete(lambda: setattr(streamer_timer, 'active', False))
+      on_delete(lambda: setattr(game_settings_timer, 'active', False))
