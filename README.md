@@ -167,7 +167,7 @@ new TLOU2 configuration file include the following:
 - Snapshot: You have 1 second to aim before it's canceled
 - Sniper Speed: Wait 5 seconds between each shot
 - Criss-Cross Joysticks: Vertical and horizontal axes of both joysticks are swapped
-- Drift Left: Add controller drift
+- Controller Drift: Add controller drift to the left joystick
 
 The low-level usb interception should be more stable in this version. In particular, hot-plugging
 the controller is now supported.

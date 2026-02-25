@@ -146,7 +146,7 @@ def generate_mod_list(doc: dict[str, Any], include_groups: bool, out_f: TextIO) 
   print(f"The following modifiers are available for {game_name}:\n", file=out_f)
 
   mod_list: dict[str, str] = {}
-  group_list: dict[str, list[str]] = {}
+  group_list: dict[str, set[str]] = {}
   for mod in _get_modifiers(doc):
     name = mod.get("name")
     if not isinstance(name, str) or not name:
@@ -166,7 +166,7 @@ def generate_mod_list(doc: dict[str, Any], include_groups: bool, out_f: TextIO) 
           if isinstance(group_name, str) and group_name:
             groups.append(group_name)
       for group_name in groups:
-        group_list.setdefault(group_name, []).append(name)
+        group_list.setdefault(group_name, set()).add(name)
 
   for idx, name in enumerate(sorted(mod_list), start=1):
     print(f"{idx}. {name}: {mod_list[name]}", file=out_f)
@@ -175,9 +175,11 @@ def generate_mod_list(doc: dict[str, Any], include_groups: bool, out_f: TextIO) 
     print("\n\nModifiers By Group:\n", file=out_f)
     for group_name in sorted(group_list):
       print(f"[{group_name}]:", file=out_f)
-      for mod_name in group_list[group_name]:
+      for mod_name in sorted(group_list[group_name], key=str.casefold):
         print(mod_name, file=out_f)
       print("", file=out_f)
+
+  out_f.flush()
 
 
 def build_parser() -> argparse.ArgumentParser:

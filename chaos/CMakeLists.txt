@@ -202,6 +202,54 @@ add_executable(chaos_parse_game_config
 
 target_compile_features(chaos_parse_game_config PRIVATE cxx_std_17)
 
+add_executable(validate_mod
+  include/config.hpp
+  include/CooldownModifier.hpp
+  include/DelayModifier.hpp
+  include/DisableModifier.hpp
+  include/EngineInterface.hpp
+  include/enumerations.hpp
+  include/factory.hpp
+  include/FormulaModifier.hpp
+  include/Game.hpp
+  include/GameCommand.hpp
+  include/GameCondition.hpp
+  include/GameMenu.hpp
+  include/MenuInterface.hpp
+  include/MenuItem.hpp
+  include/MenuModifier.hpp
+  include/Modifier.hpp
+  include/ModifierTable.hpp
+  include/ParentModifier.hpp
+  include/RemapModifier.hpp
+  include/RepeatModifier.hpp
+  include/ScalingModifier.hpp
+  include/Sequence.hpp
+  include/SequenceModifier.hpp
+  include/SequenceTable.hpp
+  src/CooldownModifier.cpp
+  src/DelayModifier.cpp
+  src/DisableModifier.cpp
+  src/FormulaModifier.cpp
+  src/Game.cpp
+  src/GameCommand.cpp
+  src/GameCondition.cpp
+  src/GameMenu.cpp
+  src/MenuItem.cpp
+  src/MenuModifier.cpp
+  src/Modifier.cpp
+  src/ModifierTable.cpp
+  src/ParentModifier.cpp
+  src/RemapModifier.cpp
+  src/RepeatModifier.cpp
+  src/ScalingModifier.cpp
+  src/Sequence.cpp
+  src/SequenceModifier.cpp
+  src/SequenceTable.cpp
+  utils/validate_mod.cpp)
+
+target_compile_features(validate_mod PRIVATE cxx_std_17)
+
 add_subdirectory(src/utils)
 add_subdirectory(src/communicator)
 add_subdirectory(src/controller)
@@ -224,6 +272,14 @@ target_include_directories(chaos_parse_game_config PRIVATE
   ${LIBUSB1_INCLUDE_DIRS}
 )
 
+target_include_directories(validate_mod PRIVATE
+  include
+  ${tomlplusplus_SOURCE_DIR}/include
+  ${plog_SOURCE_DIR}/include
+  ${cppzmq_SOURCE_DIR}
+  ${LIBUSB1_INCLUDE_DIRS}
+)
+
 target_link_libraries(chaos	PUBLIC chaos_communicator
 	    chaos_utils
 	    chaos_controller #chaos_engine chaos_menus chaos_mods
@@ -236,8 +292,16 @@ target_link_libraries(chaos_parse_game_config
     ${LIBUSB_LIBRARIES}
 )
 
+target_link_libraries(validate_mod
+  PUBLIC
+    chaos_utils
+    chaos_controller
+    ${LIBUSB_LIBRARIES}
+)
+
 install(TARGETS chaos RUNTIME DESTINATION "${CHAOS_INSTALL_ROOT}")
 install(TARGETS chaos_parse_game_config RUNTIME DESTINATION "${CHAOS_INSTALL_ROOT}")
+install(TARGETS validate_mod RUNTIME DESTINATION "${CHAOS_INSTALL_ROOT}")
 install(FILES chaosconfig.toml DESTINATION "${CHAOS_INSTALL_ROOT}")
 install(DIRECTORY examples/ DESTINATION "${CHAOS_INSTALL_ROOT}/games")
 
