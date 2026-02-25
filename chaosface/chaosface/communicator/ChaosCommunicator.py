@@ -27,6 +27,7 @@ class ChaosCommunicator():
   """
   request_retries = 3
   request_timeout = 30000
+  listen_poll_interval_ms = 250
 
   def __init__(self):
     self._observers: List[EngineObserver] = []
@@ -118,6 +119,16 @@ class ChaosCommunicator():
 
   def stop(self):
     self.keep_running = False
+    with self._listener_lock:
+      if self.socket_listen is not None:
+        self.socket_listen.setsockopt(zmq.LINGER, 0)
+        self.socket_listen.close()
+        self.socket_listen = None
+    with self._talk_lock:
+      if self.socket_talk is not None:
+        self.socket_talk.setsockopt(zmq.LINGER, 0)
+        self.socket_talk.close()
+        self.socket_talk = None
     self._incoming_messages.put_nowait('')
     if self.thread and self.thread.is_alive():
       self.thread.join()
@@ -146,7 +157,7 @@ class ChaosCommunicator():
         continue
       #  Poll for engine message.
       try:
-        poll_result = socket_listen.poll(self.request_timeout)
+        poll_result = socket_listen.poll(min(self.request_timeout, self.listen_poll_interval_ms))
       except zmq.error.ZMQError:
         if self.keep_running:
           logging.exception('Listener poll failed; recreating listener socket')

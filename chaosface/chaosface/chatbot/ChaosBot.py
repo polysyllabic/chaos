@@ -114,6 +114,9 @@ class ChaosBotContext(Protocol):
   def force_mod(self, value: str) -> None:
     ...
 
+  def request_force_mod(self, mod_key: str, requested_by: str = '', consume_credit: bool = False) -> bool:
+    ...
+
   def get_attribute(self, key: str) -> Any:
     ...
 
@@ -683,11 +686,16 @@ class ChaosBot:
       await self.send_message(self._attr_str('msg_mod_not_active').format(request))
       return
 
-    self._ctx.force_mod = request.lower()
+    queued = self._ctx.request_force_mod(
+      request.lower(),
+      requested_by=author,
+      consume_credit=(not is_streamer),
+    )
+    if not queued:
+      await self.send_message('Another apply request is already pending. Try again in a moment.')
+      return
     self._last_apply_time = time.monotonic()
-    if not is_streamer:
-      self._ctx.step_balance(author, -1)
-    await self.send_message(self._attr_str('msg_mod_applied'))
+    await self.send_message('Applying modifier...')
 
   async def _cmd_enable_disable(self, author: str, args, enabled: bool):
     if not await self._require_permission(author, 'manage_modifiers'):

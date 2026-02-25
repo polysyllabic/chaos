@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from chaosface.apps.TwitchControlsChaos import _safe_next_path
 from chaosface.config import security_utils, token_utils
 
 
@@ -32,3 +33,8 @@ def test_ensure_self_signed_cert_overwrite(tmp_path: Path):
 
   assert first_cert != second_cert
 
+
+def test_safe_next_path_blocks_external_redirects():
+  assert _safe_next_path('//evil.example/path') == '/'
+  assert _safe_next_path('https://evil.example/path') == '/'
+  assert _safe_next_path('/connection?tab=oauth') == '/connection?tab=oauth'

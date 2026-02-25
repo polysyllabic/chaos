@@ -3,6 +3,8 @@
 import asyncio
 
 from chaosface.chatbot.ChaosBot import ChaosBot
+from chaosface.chatbot.context import RelayBotContext
+from chaosface.gui.ChaosRelay import ChaosRelay
 
 
 class _StubContext:
@@ -54,6 +56,28 @@ class _StubContext:
       return "The group 'admin' cannot be deleted."
     self.permission_groups.pop(key, None)
     return f"Deleted permission group '{key}'."
+
+
+class _ApplyContext(_StubContext):
+  def __init__(self):
+    super().__init__()
+    self.requested_force_mod = None
+    self.balance_steps = []
+
+  @property
+  def redemption_cooldown(self) -> float:
+    return 0.0
+
+  def get_balance(self, user: str) -> int:
+    return 1
+
+  def request_force_mod(self, mod_key: str, requested_by: str = '', consume_credit: bool = False) -> bool:
+    self.requested_force_mod = (mod_key, requested_by, consume_credit)
+    return True
+
+  def step_balance(self, user: str, delta: int) -> int:
+    self.balance_steps.append((user, delta))
+    return 1
 
 
 def test_remove_requires_admin_permission():
@@ -189,3 +213,39 @@ def test_delgroup_deletes_group_when_allowed():
 
   assert messages == ["Deleted permission group 'mods'."]
   assert 'mods' not in ctx.permission_groups
+
+
+def test_delgroup_works_with_real_relay_context():
+  relay = ChaosRelay()
+  relay.add_permission_group('mods')
+  relay.add_group_permission('mods', 'manage_permissions')
+  relay.add_group_member('mods', 'manager')
+  ctx = RelayBotContext(relay)
+  bot = ChaosBot(ctx)
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._cmd_del_group('manager', ['mods']))
+
+  assert messages == ["Deleted permission group 'mods'."]
+  assert 'mods' not in relay.permission_groups
+
+
+def test_apply_queues_without_immediate_credit_debit():
+  ctx = _ApplyContext()
+  bot = ChaosBot(ctx)
+  bot._channel_name = 'streamer'
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._cmd_apply('viewer', ['Mod A'], is_streamer=False))
+
+  assert ctx.requested_force_mod == ('mod a', 'viewer', True)
+  assert ctx.balance_steps == []
+  assert messages == ['Applying modifier...']

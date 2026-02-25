@@ -176,6 +176,8 @@ class ChaosRelay:
     self.active_keys: List[str] = []
     self.candidate_keys: List[str] = []
     self.force_mod: str = ''
+    self.force_mod_requested_by: str = ''
+    self.force_mod_consume_credit = False
     self.remove_mod_request: str = ''
     self.game_selection_request: str = ''
     self.reset_mods = False
@@ -599,6 +601,9 @@ class ChaosRelay:
     self.start_vote_requested = False
     self.start_vote_duration = 0.0
     self.end_vote_requested = False
+    self.force_mod = ''
+    self.force_mod_requested_by = ''
+    self.force_mod_consume_credit = False
     self.remove_mod_request = ''
     self.game_selection_request = ''
 
@@ -904,7 +909,7 @@ class ChaosRelay:
     self._set_value('raffles', bool(value), 'raffles')
 
   def set_raffle_time(self, value):
-    self._set_value('raffle_time', max(1.0, float(value)), 'raffle_time')
+    self._set_value('raffle_time', max(30.0, float(value)), 'raffle_time')
 
   def set_redemption_cooldown(self, value):
     self._set_value('redemption_cooldown', max(0, int(value)), 'redemption_cooldown')
@@ -1177,6 +1182,28 @@ class ChaosRelay:
       request = self.remove_mod_request
       self.remove_mod_request = ''
     return request
+
+  def request_force_mod(self, mod_key: str, requested_by: str = '', consume_credit: bool = False) -> bool:
+    key = str(mod_key).strip().lower()
+    if not key:
+      return False
+    with self._lock:
+      if self.force_mod:
+        return False
+      self.force_mod = key
+      self.force_mod_requested_by = self._normalize_user(requested_by)
+      self.force_mod_consume_credit = bool(consume_credit)
+    return True
+
+  def consume_force_mod_request(self) -> tuple[str, str, bool]:
+    with self._lock:
+      mod_key = str(self.force_mod or '').strip().lower()
+      requested_by = str(self.force_mod_requested_by or '').strip().lower()
+      consume_credit = bool(self.force_mod_consume_credit)
+      self.force_mod = ''
+      self.force_mod_requested_by = ''
+      self.force_mod_consume_credit = False
+    return mod_key, requested_by, consume_credit
 
   def add_permission_group(self, group: str) -> str:
     group_name = self._normalize_group(group)

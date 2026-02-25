@@ -166,7 +166,7 @@ def build_game_settings_tab() -> Callable[[], None]:
         redemption_cooldown = ui.number('Redemption cooldown (s)', value=float(config.relay.redemption_cooldown), min=0, max=86400, step=1)
         bits_per_credit = ui.number('Bits per mod credit', value=int(config.relay.bits_per_credit), min=1, max=100000, step=1)
         points_reward_title = ui.input('Points reward title', value=str(config.relay.points_reward_title))
-        raffle_time = ui.number('Default raffle time (s)', value=float(config.relay.raffle_time), min=10, max=3600, step=1)
+        raffle_time = ui.number('Default raffle time (s)', value=float(config.relay.raffle_time), min=30, max=3600, step=1)
 
     ui.separator()
     ui.label('Available Modifiers').classes('text-subtitle1')
@@ -248,7 +248,7 @@ def build_game_settings_tab() -> Callable[[], None]:
       )
       set_if_changed(config.relay.bits_per_credit, safe_int(bits_per_credit.value, config.relay.bits_per_credit, 1, 100000), config.relay.set_bits_per_credit)
       set_if_changed(config.relay.points_reward_title, str(points_reward_title.value), config.relay.set_points_reward_title)
-      set_if_changed(config.relay.raffle_time, safe_float(raffle_time.value, config.relay.raffle_time, 10.0, 3600.0), config.relay.set_raffle_time)
+      set_if_changed(config.relay.raffle_time, safe_float(raffle_time.value, config.relay.raffle_time, 30.0, 3600.0), config.relay.set_raffle_time)
       new_mod_list_link = str(mod_list_link.value or '').strip()
       if str(config.relay.mod_list_link or '') != new_mod_list_link:
         config.relay.set_mod_list_link(new_mod_list_link, persist_override=True)

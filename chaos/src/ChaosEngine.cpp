@@ -196,12 +196,18 @@ void ChaosEngine::newCommand(const std::string& command) {
     PLOG_ERROR << "Json parsing failed: " << errs << "; command = " << command;
     return;
   }
-	
+  std::string command_id = root.isMember("command_id") ? root["command_id"].asString() : "";
+		
   if (root.isMember("winner")) {
+    std::string requested_winner = root["winner"].asString();
+    bool winner_ok = false;
+    std::string winner_message = "modifier_not_found";
+    std::string resolved_winner = requested_winner;
     lock();
-    std::shared_ptr<Modifier> mod = game.getModifier(root["winner"].asString());
+    std::shared_ptr<Modifier> mod = game.getModifier(requested_winner);
     double time_active = game.getTimePerModifier();
     if (mod != nullptr) {
+      resolved_winner = mod->getName();
       if (root.isMember("time")) {
         time_active = root["time"].asDouble();
       }
@@ -213,24 +219,35 @@ void ChaosEngine::newCommand(const std::string& command) {
       if (already_active) {
         double extended_lifespan = mod->lifetime() + time_active;
         mod->setLifespan(extended_lifespan);
+        winner_message = "modifier_refreshed";
         PLOG_INFO << "Refreshing active Modifier: " << mod->getName()
                   << " lifespan now = " << extended_lifespan;
       } else {
+        winner_message = "modifier_applied";
         PLOG_INFO << "Adding Modifier: " << mod->getName() << " lifespan = " << time_active;
         mod->setLifespan(time_active);
         modifiersThatNeedToStart.push_back(mod);
       }
+      winner_ok = true;
     } else {
       PLOG_ERROR << "ERROR: Modifier not found: " << command;
     }
     unlock();
+    reportCommandResult("winner", winner_ok, winner_message, command_id, resolved_winner);
   }
   
   // Manually remove a mod
   if (root.isMember("remove")) {
+    std::string requested_remove = root["remove"].asString();
+    bool remove_ok = false;
+    std::string remove_message = "modifier_not_found";
+    std::string resolved_remove = requested_remove;
     lock();
-    std::shared_ptr<Modifier> mod = game.getModifier(root["remove"].asString());
+    std::shared_ptr<Modifier> mod = game.getModifier(requested_remove);
     if (mod != nullptr) {
+      resolved_remove = mod->getName();
+      bool pending_start = (std::find(modifiersThatNeedToStart.begin(), modifiersThatNeedToStart.end(), mod)
+                            != modifiersThatNeedToStart.end());
       PLOG_INFO << "Manually removing modifier '" << mod->getName();
       // If queued to start, cancel that pending start.
       modifiersThatNeedToStart.remove(mod);
@@ -241,10 +258,21 @@ void ChaosEngine::newCommand(const std::string& command) {
       if (active && !already_queued) {
         modifiersThatNeedToStop.push_back(mod);
       }
+      if (pending_start) {
+        remove_ok = true;
+        remove_message = "modifier_pending_start_removed";
+      } else if (active || already_queued) {
+        remove_ok = true;
+        remove_message = "modifier_remove_queued";
+      } else {
+        remove_ok = false;
+        remove_message = "modifier_not_active";
+      }
     } else {
       PLOG_ERROR << "ERROR: Modifier not found: " << command;
     }
     unlock();
+    reportCommandResult("remove", remove_ok, remove_message, command_id, resolved_remove);
   }
 
   // Remove all mods
@@ -259,6 +287,7 @@ void ChaosEngine::newCommand(const std::string& command) {
       }
     }
     unlock();
+    reportCommandResult("reset", true, "modifiers_reset_requested", command_id);
   }
 
   if (root.isMember("game")) {
@@ -287,18 +316,23 @@ void ChaosEngine::newCommand(const std::string& command) {
     std::string requested_game = root["select_game"].asString();
     std::string resolved_config = resolveGameConfig(requested_game);
     bool duplicate_selection = false;
+    bool selection_ok = true;
+    std::string selection_message = "game_selected";
     lock();
     duplicate_selection = (!current_game_config_path.empty() && resolved_config == current_game_config_path);
     unlock();
     if (duplicate_selection) {
+      selection_message = "duplicate_selection";
       PLOG_INFO << "Ignoring duplicate game selection for already loaded config '" << resolved_config << "'.";
     } else {
-      setGame(resolved_config);
+      selection_ok = setGame(resolved_config);
+      selection_message = selection_ok ? "game_selected" : "game_config_error";
       if (interface_enabled) {
         chaosInterface.sendMessage("{\"mods_reset\":1}");
       }
     }
     reportGameStatus();
+    reportCommandResult("select_game", selection_ok, selection_message, command_id, requested_game);
   }
 
   if (root.isMember("newgame")) {
@@ -366,6 +400,29 @@ void ChaosEngine::reportEngineStatus() {
     return;
   }
   Json::Value msg;
+  lock();
+  msg["engine_status"] = currentEngineStatusLocked();
+  unlock();
+  chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
+}
+
+void ChaosEngine::reportCommandResult(const std::string& kind, bool ok, const std::string& message,
+                                      const std::string& command_id, const std::string& target) {
+  if (!interface_enabled) {
+    return;
+  }
+  Json::Value msg;
+  Json::Value result;
+  result["kind"] = kind;
+  result["ok"] = ok;
+  result["message"] = message;
+  if (!command_id.empty()) {
+    result["command_id"] = command_id;
+  }
+  if (!target.empty()) {
+    result["target"] = target;
+  }
+  msg["command_result"] = result;
   lock();
   msg["engine_status"] = currentEngineStatusLocked();
   unlock();

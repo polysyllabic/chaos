@@ -13,7 +13,8 @@ import random
 import threading
 import time
 import asyncio
-from typing import Optional
+import uuid
+from typing import Any, Optional
 
 import numpy as np
 
@@ -27,6 +28,7 @@ class ChaosModel(EngineObserver):
   ENGINE_STATUS_PAYLOAD_MAX = 180
   SELECT_GAME_RETRY_SECONDS = 5.0
   SELECT_GAME_RESPONSE_TIMEOUT_SECONDS = 10.0
+  COMMAND_RESULT_TIMEOUT_SECONDS = 5.0
   ENGINE_STATUS_UNKNOWN = 'unknown'
   ENGINE_STATUS_NOT_CONNECTED = 'not_connected'
   ENGINE_STATUS_TIMEOUT = 'timeout'
@@ -49,6 +51,9 @@ class ChaosModel(EngineObserver):
     self._pending_selected_retry_after = 0.0
     self._last_reported_game = ''
     self._last_failed_selected_game = ''
+    self._command_result_lock = threading.Lock()
+    self._command_result_condition = threading.Condition(self._command_result_lock)
+    self._command_results: dict[str, dict[str, Any]] = {}
 
     #  Socket to talk to server
     logging.info("Connecting to chaos server")
@@ -187,6 +192,77 @@ class ChaosModel(EngineObserver):
       return False
     return True
 
+  def _new_command_id(self) -> str:
+    return uuid.uuid4().hex
+
+  def _record_command_result(self, payload) -> None:
+    if not isinstance(payload, dict):
+      return
+    command_id = str(payload.get('command_id') or '').strip()
+    if not command_id:
+      return
+    with self._command_result_condition:
+      self._command_results[command_id] = payload
+      self._command_result_condition.notify_all()
+
+  def _await_command_result(self, command_id: str, timeout: float = COMMAND_RESULT_TIMEOUT_SECONDS) -> Optional[dict[str, Any]]:
+    deadline = time.monotonic() + max(0.1, float(timeout))
+    with self._command_result_condition:
+      while command_id not in self._command_results:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+          return None
+        self._command_result_condition.wait(timeout=remaining)
+      return self._command_results.pop(command_id, None)
+
+  def send_engine_command_checked(
+    self,
+    payload: dict,
+    *,
+    expected_kind: str,
+    expected_target: str = '',
+    timeout: float = COMMAND_RESULT_TIMEOUT_SECONDS,
+  ) -> tuple[bool, str]:
+    command_id = self._new_command_id()
+    command_payload = dict(payload)
+    command_payload['command_id'] = command_id
+    sent = self.send_engine_command(command_payload)
+    if not sent:
+      return False, 'command_transport_timeout'
+    result = self._await_command_result(command_id, timeout=timeout)
+    if result is None:
+      logging.warning('Timed out waiting for engine command result: %s', command_payload)
+      ui_dispatch.call_soon(
+        config.relay.add_bot_status,
+        f'Engine did not report command result [{expected_kind}]',
+      )
+      return False, 'command_result_timeout'
+
+    kind = str(result.get('kind') or '').strip().lower()
+    if kind != str(expected_kind or '').strip().lower():
+      logging.warning(
+        'Unexpected command result kind: expected=%s actual=%s payload=%s',
+        expected_kind,
+        kind,
+        result,
+      )
+      return False, 'command_result_kind_mismatch'
+
+    expected_target_clean = str(expected_target or '').strip().lower()
+    actual_target_clean = str(result.get('target') or '').strip().lower()
+    if expected_target_clean and actual_target_clean and expected_target_clean != actual_target_clean:
+      logging.warning(
+        'Unexpected command result target: expected=%s actual=%s payload=%s',
+        expected_target_clean,
+        actual_target_clean,
+        result,
+      )
+      return False, 'command_result_target_mismatch'
+
+    ok = bool(result.get('ok', False))
+    message = str(result.get('message') or '')
+    return ok, message
+
   # Ask the engine to tell us about the game we're playing
   # TODO: Send a config file from the computer running this bot
   def request_game_info(self):
@@ -303,6 +379,10 @@ class ChaosModel(EngineObserver):
 
     handled = False
 
+    if "command_result" in received:
+      handled = True
+      self._record_command_result(received.get('command_result'))
+
     if "pause" in received:
       handled = True
       paused = bool(received["pause"])
@@ -372,37 +452,58 @@ class ChaosModel(EngineObserver):
     if not handled:
       logging.warning(f"Unprocessed message from engine: {received}")
 
-  def apply_new_mod(self, mod_name):
+  def apply_new_mod(self, mod_name) -> bool:
     logging.debug("Winning mod: " + mod_name)
     to_send = {"winner": mod_name,
               "time": config.relay.get_attribute('modifier_time')}
-    self.send_engine_command(to_send)
+    ok, reason = self.send_engine_command_checked(
+      to_send,
+      expected_kind='winner',
+      expected_target=mod_name,
+    )
+    if not ok:
+      logging.warning("Engine rejected winner '%s': %s", mod_name, reason)
+    return ok
 
-  def replace_mod(self, mod_key, refresh_voting_pool: bool = True):
+  def replace_mod(self, mod_key, refresh_voting_pool: bool = True) -> bool:
     # If this is the first time, the candidate pool will be empty. Skip in this case.
     if mod_key and mod_key in config.relay.modifier_data:
       mod_name = config.relay.modifier_data[mod_key]['name']
       logging.debug(f'Telling engine about new mod {mod_name}')
       # Tell the engine
-      self.apply_new_mod(mod_name)
+      if not self.apply_new_mod(mod_name):
+        ui_dispatch.call_soon(config.relay.add_bot_status, f"Failed to apply modifier '{mod_name}'")
+        return False
       ui_dispatch.call_soon(config.relay.replace_mod, mod_key)
     else:
       logging.debug(f'Mod key "{mod_key}" not in list (not sent)')
+      return False
     # Pick new candidates, if we're voting
     if self._voting_disabled() or not refresh_voting_pool:
-      return
+      return True
     ui_dispatch.call_soon(config.relay.get_new_voting_pool)
+    return True
 
 
-  def remove_mod(self, mod_name):
+  def remove_mod(self, mod_name) -> bool:
     logging.debug("Removing mod: " + mod_name)
     to_send = {"remove": mod_name}
-    self.send_engine_command(to_send)
+    ok, reason = self.send_engine_command_checked(
+      to_send,
+      expected_kind='remove',
+      expected_target=mod_name,
+    )
+    if not ok:
+      logging.warning("Engine rejected remove '%s': %s", mod_name, reason)
+    return ok
 
-  def reset_mods(self):
+  def reset_mods(self) -> bool:
     logging.debug("Resetting all mods")
     to_send = {"reset": True }
-    self.send_engine_command(to_send)
+    ok, reason = self.send_engine_command_checked(to_send, expected_kind='reset')
+    if not ok:
+      logging.warning("Engine rejected reset: %s", reason)
+    return ok
 
   def _voting_disabled(self) -> bool:
     return (
@@ -584,23 +685,33 @@ class ChaosModel(EngineObserver):
         ui_dispatch.call_soon(config.relay.decrement_mod_times, delta_time)
 
       # Check for an immediate mod insertion/removal
-      if config.relay.force_mod:
-        self.replace_mod(config.relay.force_mod, refresh_voting_pool=vote_open)
-        config.relay.force_mod = ''
-        if vote_open:
-          vote_started_at = now
+      force_mod_key, force_mod_user, force_mod_consume_credit = config.relay.consume_force_mod_request()
+      if force_mod_key:
+        applied = self.replace_mod(force_mod_key, refresh_voting_pool=vote_open)
+        if applied:
+          if force_mod_consume_credit and force_mod_user:
+            ui_dispatch.call_soon(config.relay.step_balance, force_mod_user, -1)
+          self.send_chat_message(str(config.relay.get_attribute('msg_mod_applied') or 'Modifier applied'))
+          if vote_open:
+            vote_started_at = now
+        else:
+          self.send_chat_message('Failed to apply modifier.')
 
       remove_request = config.relay.consume_remove_mod_request()
       if remove_request:
         mod_name = remove_request
         if remove_request in config.relay.modifier_data:
           mod_name = config.relay.modifier_data[remove_request]['name']
-        self.remove_mod(mod_name)
-        ui_dispatch.call_soon(config.relay.remove_active_mod, mod_name)
+        if self.remove_mod(mod_name):
+          ui_dispatch.call_soon(config.relay.remove_active_mod, mod_name)
+        else:
+          self.send_chat_message(f"Failed to remove modifier '{mod_name}'.")
 
       if config.relay.reset_mods:
-        self.reset_mods()
-        ui_dispatch.call_soon(config.relay.reset_current_mods)
+        if self.reset_mods():
+          ui_dispatch.call_soon(config.relay.reset_current_mods)
+        else:
+          self.send_chat_message('Failed to reset modifiers.')
         config.relay.reset_mods = False
 
       cycle = config.relay.voting_cycle
@@ -632,8 +743,8 @@ class ChaosModel(EngineObserver):
           mod_key = ''
           if choose_winner and config.relay.valid_data:
             mod_key = self.select_winning_modifier()
-            self.replace_mod(mod_key, refresh_voting_pool=False)
-            if config.relay.announce_winner and mod_key:
+            applied = self.replace_mod(mod_key, refresh_voting_pool=False)
+            if config.relay.announce_winner and mod_key and applied:
               self.send_chat_message(config.relay.list_winning_mod(mod_key))
           vote_open = False
           self.vote_time = 0.0

@@ -98,6 +98,9 @@ class RelayBotContext(ChaosBotContext):
   def force_mod(self, value: str):
     self._relay.force_mod = value
 
+  def request_force_mod(self, mod_key: str, requested_by: str = '', consume_credit: bool = False) -> bool:
+    return self._relay.request_force_mod(mod_key, requested_by=requested_by, consume_credit=consume_credit)
+
   def get_attribute(self, key):
     return self._relay.get_attribute(key)
 
@@ -161,8 +164,17 @@ class RelayBotContext(ChaosBotContext):
   def add_group_permission(self, group: str, permission: str) -> str:
     return self._relay.add_group_permission(group, permission)
 
+  def remove_permission_group(self, group: str) -> str:
+    return self._relay.remove_permission_group(group)
+
   def remove_group_member(self, group: str, user: str) -> str:
     return self._relay.remove_group_member(group, user)
 
   def remove_group_permission(self, group: str, permission: str) -> str:
     return self._relay.remove_group_permission(group, permission)
+
+  def list_permission_groups(self) -> str:
+    return self._relay.list_permission_groups()
+
+  def describe_permission_group(self, group: str) -> str:
+    return self._relay.describe_permission_group(group)

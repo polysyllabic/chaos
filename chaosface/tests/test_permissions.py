@@ -108,3 +108,9 @@ def test_balance_message_pluralization():
 
   relay.set_balance('someuser', 2)
   assert '2 modifier credits.' in relay.get_balance_message('someuser')
+
+
+def test_raffle_time_has_30_second_minimum():
+  relay = ChaosRelay()
+  relay.set_raffle_time(5)
+  assert relay.raffle_time == 30.0

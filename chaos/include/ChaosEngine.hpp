@@ -103,6 +103,9 @@ namespace Chaos {
     void reportGameStatus();
     void reportAvailableGames();
     void reportEngineStatus();
+    void reportCommandResult(const std::string& kind, bool ok, const std::string& message,
+                             const std::string& command_id = "",
+                             const std::string& target = "");
     std::string currentEngineStatusLocked();
     std::string resolveGameConfig(const std::string& selection);
     std::string resolveModListUri(const std::string& configured_uri) const;

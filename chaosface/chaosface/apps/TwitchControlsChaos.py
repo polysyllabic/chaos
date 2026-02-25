@@ -186,7 +186,7 @@ def _security_setup_html() -> str:
 
 
 def _login_page_html(next_path: str, error_message: str = '') -> str:
-  safe_next = quote(next_path or '/', safe='/?=&')
+  safe_next = _safe_next_path(next_path)
   safe_error = html.escape(str(error_message or '').strip())
   return f"""<!doctype html>
 <html lang="en">
@@ -285,6 +285,19 @@ def _normalize_realtime_path(path: str) -> str:
   if path.startswith('/_nicegui/socket.io'):
     return path.replace('/_nicegui/socket.io', canonical, 1)
   return path
+
+
+def _safe_next_path(value: str) -> str:
+  raw = str(value or '').strip()
+  if not raw:
+    return '/'
+  if raw.startswith('//'):
+    return '/'
+  parsed = urlsplit(raw)
+  if parsed.scheme or parsed.netloc:
+    return '/'
+  normalized = raw if raw.startswith('/') else '/' + raw
+  return quote(normalized, safe='/?=&')
 
 
 def _resolve_tls_files() -> tuple[str, str]:
@@ -701,8 +714,7 @@ async def api_auth_login_form(request: Request) -> Response:
   body = (await request.body()).decode('utf-8', errors='ignore')
   form = parse_qs(body, keep_blank_values=True)
   password = str((form.get('password') or [''])[0])
-  next_path = str((form.get('next') or ['/'])[0]) or '/'
-  next_path = quote(next_path, safe='/?=&')
+  next_path = _safe_next_path(str((form.get('next') or ['/'])[0]) or '/')
 
   encrypted = str(getattr(config.relay, 'ui_password_encrypted', '') or '')
   if not security_utils.verify_encrypted_password(password, encrypted):
