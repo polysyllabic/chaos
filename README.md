@@ -556,10 +556,60 @@ The Chaos engine offers the following capabilities for reading and altering cont
 - Injection - Generate arbitrary messages without any controller events
 - Direct Control - Send commands directly to the output
 
-### Configuration=Based Game Support
-Individual games are supported through configuration files. If you want to use TCC with a new game, you
-merely need to create an appropriate configuration file using the correct
+### Supporting New Games
+Individual games are supported through configuration files. If you want to use TCC with a new game,
+you merely need to create an appropriate configuration file using the correct
 [configuration file syntax](docs/chaosConfigFiles.md).
+
+When creating new games, or new mods for existing games, there are several utility programs that
+may be useful. They will be found in the `chaos/utils` directory. To see all the options available
+with these utilities, run them with -h or --help as the parameter.
+
+Each of these utilities is run from a shell script. For C++ utilities, those scripts ensure the
+build tree is configured and run an incremental rebuild each time before execution.
+
+To build C++ utilities manually from the repository root, follow these steps:
+
+  `cmake -S chaos -B chaos/build`
+  `cmake --build chaos/build --target chaos_parse_game_config validate_mod -j4`
+
+The examples below assume you're running them from the repository root.
+
+- `./scripts/make_modlist.sh` Generates a text list of all the mods available for chat to vote on for this
+  game. If you put this somewhere accessible on the web, the chatbot can provide a link to users in
+  response to the !chaoscmd command.
+
+_Basic usage:_
+`./scripts/make_modlist.sh <game-config.toml> <output.txt>`
+
+_Example:_
+`./scripts/make_modlist.sh chaos/examples/tlou2.toml chaos/examples/modlists/tlou2_mods.txt`
+
+_The option -g also lists mods by their group:_
+`./scripts/make_modlist.sh -g chaos/examples/tlou2.toml chaos/examples/modlists/tlou2_mod_groups.txt`
+
+- `parse_game_config` Attempts to load a game configuration file and reports any errors it
+  encountered. Running this provides a syntax check on the configuration file before you try to use
+  it for real.
+
+_Basic usage:_
+`./chaos/utils/parse_game_config.sh <game-config.toml>`
+
+_Example:_
+`./chaos/utils/parse_game_config.sh chaos/examples/tlou2.toml`
+
+- `validate_mod` Runs a single modifier as the Chaos engine would, but without communication with the chatbot,
+and by default issuing debugging messages that will tell you how the mod is being processed. Running the
+game itself while testing the mod is optional.
+
+_Basic usage:_
+`./chaos/utils/validate_mod.sh -g <game-config.toml> -m "<modifier name>"`
+
+_Example:_
+`./chaos/utils/validate_mod.sh -g chaos/examples/tlou2.toml -m "Aimbot"`
+
+_Write logs to a file with -o:_
+`./chaos/utils/validate_mod.sh -g chaos/examples/tlou2.toml -m "Aimbot" -o /tmp/validate_mod.log`
 
 
 ## Frequently Asked Questions

@@ -3,13 +3,19 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-BUILD_DIR="${CHAOS_BUILD_DIR:-${REPO_ROOT}/chaos/build}"
+CHAOS_SRC_DIR="${REPO_ROOT}/chaos"
+BUILD_DIR="${CHAOS_BUILD_DIR:-${CHAOS_SRC_DIR}/build}"
 BIN_PATH="${BUILD_DIR}/chaos_parse_game_config"
 
-if [[ ! -x "${BIN_PATH}" ]]; then
-  echo "Building chaos_parse_game_config..." >&2
-  cmake --build "${BUILD_DIR}" --target chaos_parse_game_config -j4 >&2
-fi
+ensure_configured() {
+if [[ ! -f "${BUILD_DIR}/CMakeCache.txt" ]]; then
+    echo "Configuring CMake build tree at ${BUILD_DIR}..." >&2
+    cmake -S "${CHAOS_SRC_DIR}" -B "${BUILD_DIR}" >&2
+  fi
+}
+
+ensure_configured
+cmake --build "${BUILD_DIR}" --target chaos_parse_game_config -j4 >&2
 
 EXTRA_ARGS=()
 HAS_CHAOS_CONFIG=0
