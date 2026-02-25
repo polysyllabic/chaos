@@ -55,7 +55,7 @@ struct Options {
   std::filesystem::path game_config_path;
   std::string mod_name;
   std::optional<std::filesystem::path> log_file;
-  plog::Severity verbosity = plog::verbose;
+  plog::Severity verbosity = plog::debug;
   std::optional<double> duration_override_sec;
   useconds_t loop_sleep_us = 500;
 };
@@ -199,7 +199,7 @@ void printUsage(const char* program) {
       << "Options:\n"
       << "  -g, --game-config <path>   Game config TOML file (required)\n"
       << "  -m, --mod <name>           Modifier name to validate (required)\n"
-      << "  -v, --verbosity <0-6>      plog verbosity (default: 6/verbose)\n"
+      << "  -v, --verbosity <0-6>      plog verbosity (default: 5/debug)\n"
       << "  -o, --output <path|->      Log output destination (default: stdout)\n"
       << "  -t, --time <seconds>       Override modifier lifespan for this run\n"
       << "      --sleep-us <us>        Loop sleep interval in microseconds (default: 500)\n"
