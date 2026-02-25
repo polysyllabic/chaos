@@ -555,42 +555,42 @@ layout = [
 name = "No Melee"
 description = "Disable melee attacks and stealth kills"
 type = "disable"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "melee" ]
 
 [[modifier]]
 name = "Melee Only"
 description = "No shooting and no throwables"
 type = "disable"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "reload/toss" ]
 
 [[modifier]]
 name = "Pacifist%"
 description = "No shooting, throwing, or melee. Good luck, NPC friends!"
 type = "disable"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "melee", "reload/toss" ]
 
 [[modifier]]
 name = "No Climbing/Jumping"
 description = "No climbing or jumping"
 type = "disable"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "jump" ]
 
 [[modifier]]
-name = "No Grab"
+name = "No Swiping"
 description = "Swiper no swiping! No looting, stealth grabbing, opening doors. Say goodbye to the everything button."
 type = "disable"
-groups = [ "interact" ]
+groups = [ "Inventory" ]
 applies_to = [ "interact" ]
 
 [[modifier]]
 name = "No Crouch/Prone"
 description = "And you thought you were going to sneak through this area"
 type = "disable"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "crouch/prone" ]
 begin_sequence = [ { event = "release", command = "crouch/prone" } ]
 
@@ -598,7 +598,7 @@ begin_sequence = [ { event = "release", command = "crouch/prone" } ]
 name = "No Run/Dodge"
 description = "Better hope you're not being chased."
 type = "disable"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "dodge/sprint" ]
 begin_sequence = [ { event = "release", command = "dodge/sprint" } ]
 
@@ -606,7 +606,7 @@ begin_sequence = [ { event = "release", command = "dodge/sprint" } ]
 name = "No Aiming"
 description = "At least reloading is still possible, along with throwables and melee"
 type = "disable"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "aiming" ]
 begin_sequence = [ { event = "release", command = "aiming" } ]
 
@@ -614,14 +614,14 @@ begin_sequence = [ { event = "release", command = "aiming" } ]
 name = "No Horizontal Aim"
 description = "The horizontal camera is disabled"
 type = "disable"
-groups = [ "view" ]
+groups = [ "View" ]
 applies_to = [ "horizontal camera" ]
 
 [[modifier]]
 name = "No Scoping"
 description = "No scopes! Aiming is still allowed"
 type = "disable"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "scope" ]
 while = [ "aiming" ]
 
@@ -629,7 +629,7 @@ while = [ "aiming" ]
 name = "No Shoulder Swap"
 description = "While aiming, Square is disabled"
 type = "disable"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "shoulder swap" ]
 while = [ "aiming" ]
 
@@ -637,7 +637,7 @@ while = [ "aiming" ]
 name = "No Reloading"
 description = "You can still shoot, but you can't reload."
 type = "disable"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "reload/toss" ]
 while = [ "gun selected", "not aiming" ]
 
@@ -645,58 +645,58 @@ while = [ "gun selected", "not aiming" ]
 name = "Disable Camera"
 description = "Good luck with aiming and looking around!"
 type = "disable"
-groups = [ "view" ]
+groups = [ "View" ]
 applies_to = [ "vertical camera", "horizontal camera" ]
 
 [[modifier]]
 name = "Disable D-pad"
 description = "Inventory selection is disabled"
 type = "disable"
-groups = [ "combat", "inventory" ]
+groups = [ "Combat", "Inventory" ]
 applies_to = [ "select weapon", "select consumable" ]
 
 [[modifier]]
 name = "Moose"
 description = "The moose is dead. The moose does not move. (Disables movement)"
 type = "disable"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "vertical movement", "horizontal movement" ]
 
 [[modifier]]
-name = "Only Strafe Movement"
-description = "Side-to-side movement is disabled. Only forward/back motion is allowed."
+name = "Only Strafing"
+description = "Forwards/back movement is disabled. Only side-to-side motion is allowed."
 type = "disable"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "horizontal movement" ]
 
 [[modifier]]
 name = "No Strafing"
-description = "Forwards/back movement is disabled. Only side-to-side motion is allowed."
+description = "Side-to-side movement is disabled. Only forward/back motion is allowed."
 type = "disable"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "vertical movement" ]
 
 [[modifier]]
 name = "Only Aim Movement"
-description = "Movement is disabled if not aiming"
+description = "Movement is disabled unless aiming"
 type = "disable"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "vertical movement", "horizontal movement" ]
 while = [ "not aiming" ]
 
 [[modifier]]
 name = "No Aim Movement"
-description = "Movement is disabled if aiming"
+description = "Movement is disabled while aiming"
 type = "disable"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "vertical movement", "horizontal movement" ]
 while = [ "aiming" ]
 
 [[modifier]]
-name = "No Aiming Camera"
-description = "Camera is disabled if aiming"
+name = "Tunnel Vision"
+description = "No moving the camera while aiming"
 type = "disable"
-groups = [ "view" ]
+groups = [ "View" ]
 applies_to = [ "vertical camera", "horizontal camera" ]
 while = [ "aiming" ]
 
@@ -704,7 +704,7 @@ while = [ "aiming" ]
 name = "Nascar"
 description = "There is no going right in Nascar. Right movement/camera disabled"
 type = "disable"
-groups = [ "movement", "view" ]
+groups = [ "Movement", "View" ]
 applies_to = [ "horizontal movement", "horizontal camera" ]
 filter = "above"
 
@@ -712,7 +712,7 @@ filter = "above"
 name = "Zoolander"
 description = "We are not an ambiturner, but at least we can look right. Left movement/camera disabled."
 type = "disable"
-groups = [ "movement", "view" ]
+groups = [ "Movement", "View" ]
 applies_to = [ "horizontal movement", "horizontal camera" ]
 filter = "below"
 
@@ -720,7 +720,7 @@ filter = "below"
 name = "No Backward Movement"
 description = "Moving backwards is not allowed"
 type = "disable"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "vertical movement" ]
 filter = "above"
 
@@ -728,7 +728,7 @@ filter = "above"
 name = "No Forward Movement"
 description = "Moving forward is not allowed"
 type = "disable"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "vertical movement" ]
 filter = "below"
 
@@ -736,7 +736,7 @@ filter = "below"
 name = "No Gun Selection"
 description = "No picking a new gun"
 type = "disable"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "select weapon" ]
 begin_sequence = [ { event = "release", command = "select weapon" },
                   { event= "press", command = "select consumable" } ]
@@ -745,7 +745,7 @@ begin_sequence = [ { event = "release", command = "select weapon" },
 name = "No Short Guns"
 description = "D-Pad Right Disabled"
 type = "disable"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 filter = "above"
 applies_to = [ "select weapon" ]
 begin_sequence = [ { event = "release", command = "select weapon" },
@@ -755,7 +755,7 @@ begin_sequence = [ { event = "release", command = "select weapon" },
 name = "No Long Guns"
 description = "D-Pad Left Disabled"
 type = "disable"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 filter = "below"
 applies_to = [ "select weapon" ]
 begin_sequence = [ { event = "release", command = "select weapon" },
@@ -765,7 +765,7 @@ begin_sequence = [ { event = "release", command = "select weapon" },
 name = "No Consumables"
 description = "Selecting a brick, bottle, med kit, molly, etc. is disabled."
 type = "disable"
-groups = [ "combat", "inventory" ]
+groups = [ "Combat", "Inventory" ]
 applies_to = [ "select consumable" ]
 begin_sequence = [ { event = "release", command = "select consumable" },
                   { event= "press", command = "select weapon" } ]
@@ -776,7 +776,7 @@ begin_sequence = [ { event = "release", command = "select consumable" },
 name = "Inverted"
 description = "Inverts the vertical axis for aiming"
 type = "scaling"
-groups = [ "view" ]
+groups = [ "View" ]
 applies_to = [ "vertical camera" ]
 amplitude = -1
 
@@ -784,7 +784,7 @@ amplitude = -1
 name = "Moonwalk"
 description = "Be like Michael Jackson! Trying to walk forward will actually make you go backward."
 type = "scaling"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "vertical movement" ]
 amplitude = -1
 
@@ -792,7 +792,7 @@ amplitude = -1
 name = "Sideways Moonwalk"
 description = "Go left to go right and go right to go left"
 type = "scaling"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "horizontal movement" ]
 amplitude = -1
 
@@ -800,7 +800,7 @@ amplitude = -1
 name = "Max Sensitivity"
 description = "Goodbye precision aiming. Joystick postions multiplied by 5."
 type = "scaling"
-groups = [ "movement", "view" ]
+groups = [ "Movement", "View" ]
 applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", "vertical camera"  ]
 amplitude = 5.0
 
@@ -808,16 +808,16 @@ amplitude = 5.0
 name = "Min Sensitivity"
 description = "It's like slomo, but not for the enemies. Joystick positions divided by 2.5."
 type = "scaling"
-groups = [ "movement", "view" ]
+groups = [ "Movement", "View" ]
 applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", "vertical camera"  ]
 amplitude = 0.4
 
 [[modifier]]
-name = "Drift Left"
-description = "You've now got controller drift"
+name = "Controller Drift"
+description = "All that money you spent on a fancy controller? Useless. Add drift to left joystick."
 type = "scaling"
-groups = ["movement"]
-applies_to = [ "horizontal movement" ]
+groups = [ "Movement" ]
+applies_to = [ "horizontal movement", "vertical movement" ]
 offset = -30
 
 # == Cooldown Modifiers ==
@@ -826,7 +826,7 @@ offset = -30
 name = "Bad Stamina"
 description = "Running is disabled after 2 seconds and takes 4 seconds to recharge."
 type = "cooldown"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "dodge/sprint" ]
 while = [ "movement", "sprint" ]
 cumulative = true
@@ -837,7 +837,7 @@ time_off = 4.0
 name = "Snapshot"
 description = "You can only aim for 1 second at a time, so take that shot quickly."
 type = "cooldown"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "aiming" ]
 while = [ "aiming" ]
 time_on = 1.0
@@ -847,7 +847,7 @@ time_off = 3.0
 name = "Sniper Speed"
 description = "Take your time between shots. No shooting or reloading for 5-seconds after each shot."
 type = "cooldown"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "shoot" ]
 while = [ "shooting" ]
 time_on = 0.1
@@ -857,7 +857,7 @@ time_off = 5.0
 name = "You Good?"
 description = "Other than being really old? Melee takes a lot out of you. 5-second delay between melee attacks."
 type = "cooldown"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "melee" ]
 while = [ "melee" ]
 time_on = 0.1
@@ -867,7 +867,7 @@ time_off = 5.0
 name = "Red Light/Green Light"
 description = "After moving for 5 seconds, wait for another 5 seconds."
 type = "cooldown"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "vertical movement", "horizontal movement" ]
 while = [ "movement" ]
 cumulative = true
@@ -880,7 +880,7 @@ time_off = 5.0
 name = "Keep Proning"
 description = "Proning at inconvenient times"
 type = "repeat"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "crouch/prone" ]
 time_on = 2.0
 time_off = 2.0
@@ -891,7 +891,7 @@ finish_sequence = [{ event = "release", command = "crouch/prone" }]
 name = "Factions Pro"
 description = "Keeping things toxic with teabagging"
 type = "repeat"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "crouch/prone" ]
 time_on = 0.1
 time_off = 0.6
@@ -902,6 +902,7 @@ finish_sequence = [{ event = "release", command = "crouch/prone" }]
 name = "Anthony Caliber"
 description = "Flashlight flickering"
 type = "repeat"
+groups = [ "View" ]
 applies_to = [ "flashlight" ]
 time_on = 0.066667
 time_off = 0.089583
@@ -914,7 +915,7 @@ finish_sequence = [{ event = "release", command = "flashlight" }]
 name = "Keep Jumping"
 description = "Repeated presses of jump"
 type = "repeat"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "jump" ]
 time_on = 0.1
 time_off = 2.0
@@ -925,7 +926,7 @@ finish_sequence = [{ event = "release", command = "jump" }]
 name = "Rachy Flail"
 description = "The only way to melee is to follow the master techniques of RachyMonster"
 type = "repeat"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "melee" ]
 time_on = 0.1
 time_off = 1.2
@@ -936,7 +937,7 @@ finish_sequence = [{ event = "release", command = "melee" }]
 name = "Keep Dodging"
 description = "Repeaated dodges. Don't stand too near a ledge"
 type = "repeat"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "dodge/sprint" ]
 time_on = 0.1
 time_off = 2.0
@@ -947,7 +948,7 @@ finish_sequence = [{ event = "release", command = "dodge/sprint" }]
 name = "Periodic Listen Mode"
 description = "Stop. Look. Listen to your heart. Hear what it's saying."
 type = "repeat"
-groups = [ "view" ]
+groups = [ "View" ]
 applies_to = [ "swap/listen" ]
 time_on = 3.0
 time_off = 8.0
@@ -958,7 +959,7 @@ finish_sequence = [{ event = "release", command = "swap/listen" }]
 name = "Force Running"
 description = "To move is to run (mostly)."
 type = "repeat"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "dodge/sprint" ]
 time_on = 4.0
 time_off = 0.1
@@ -970,7 +971,7 @@ finish_sequence = [{ event = "release", command = "dodge/sprint" }]
 name = "Leeroy Jenkins"
 description = "Alright let's do this! LEEEEROOOOOY NNNJEEEENNKIINNS!!! (Holds forward and sprint)"
 type = "repeat"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "dodge/sprint", "vertical movement" ]
 begin_sequence = [ { event="hold", command = "dodge/sprint"},
       { event ="hold", command = "vertical movement", value = -128 } ]
@@ -985,7 +986,7 @@ finish_sequence = [ { event="release", command = "vertical movement"},
 name = "Sir Robin"
 description = "When danger reared its ugly head, He bravely turned his tail and fled! (Force run backwards)"
 type = "repeat"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "dodge/sprint", "vertical movement" ]
 begin_sequence = [ { event="hold", command = "dodge/sprint"},
       { event ="hold", command = "vertical movement", value = 128 } ]
@@ -1001,7 +1002,7 @@ finish_sequence = [ { event="release", command = "vertical movement"},
 name = "Force Aiming"
 description = "The aiming button is held"
 type = "repeat"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "aiming" ]
 time_on = 4.0
 time_off = 0.1
@@ -1174,7 +1175,7 @@ random_remap = [ "L1", "L2", "R1", "R2" ]
 name = "Mega Scope Sway"
 description = "Good luck landing shots"
 type = "formula"
-groups = [ "combat", "view" ]
+groups = [ "Combat", "View" ]
 applies_to = [ "horizontal camera", "vertical camera" ]
 while =  [ "aiming" ]
 formula_type = "eight_curve"
@@ -1185,7 +1186,7 @@ amplitude = 0.5
 name = "TLOU1 Run Glitch"
 description = "Is this an Any% speedrun of TLOU1? Rapid D-pad circular presses. Try moving while prone."
 type = "formula"
-groups = [ "movement", "inventory" ]
+groups = [ "Movement", "Inventory" ]
 applies_to = [ "select weapon", "select consumable" ]
 formula_type = "circle"
 period_length = 0.25
@@ -1196,7 +1197,7 @@ name = "Random Movement"
 description = "Random joystick motion"
 type = "formula"
 applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", "vertical camera"  ]
-groups = [ "movement", "view" ]
+groups = [ "Movement", "View" ]
 formula_type = "janky"
 amplitude = 0.6
 period_length = 5.0
@@ -1207,7 +1208,7 @@ period_length = 5.0
 name = "Desk Pop"
 description = "We honor the flag, and you crap on it when you don't shoot your gun https://www.youtube.com/watch?v=wWZTTtE5_zQ"
 type = "sequence"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 block_while_busy = "ALL"
 begin_sequence = [
   { event = "press", command = "select weapon", delay = 1.0 },
@@ -1220,7 +1221,7 @@ begin_sequence = [
 name = "Stumblebum"
 description = "Fast movement will make you go prone"
 type = "sequence"
-groups = [ "movement"]
+groups = [ "Movement" ]
 block_while_busy = [ "dodge/sprint", "crouch/prone" ]
 while = [ "fast movement" ]
 trigger = [ "vertical movement", "horizontal movement", "dodge/sprint" ]
@@ -1240,7 +1241,7 @@ finish_sequence = [{ event = "release", command = "dodge/sprint" },
 name = "Double Tap"
 description = "It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins."
 type = "sequence"
-groups = [ "combat" ]
+groups = [ "Combat" ]
 block_while_busy = [ "aiming", "shoot" ]
 while = [ "aiming" ]
 trigger = [ "shoot" ]
@@ -1255,7 +1256,7 @@ repeat_sequence = [
 name = "Use Items"
 description = "Shoots or throws 6 of whatever item is currently equipped. No effect for medkits."
 type = "sequence"
-groups = [ "combat", "inventory" ]
+groups = [ "Combat", "Inventory" ]
 block_while_busy = [ "aiming", "reload/toss" ]
 begin_sequence = [
   { event="hold", command = "aiming", delay = 1.0 },
@@ -1267,7 +1268,7 @@ begin_sequence = [
 name = "Toss A Molly/Bomb"
 description = "Time to riot. Chucks a molly (for Ellie) or bomb (for Abby)."
 type = "sequence"
-groups = [ "combat", "inventory" ]
+groups = [ "Combat", "Inventory" ]
 block_while_busy = "ALL"
 begin_sequence = [
   { event = "sequence", command = "disable all" },
@@ -1281,7 +1282,7 @@ begin_sequence = [
 name = "CTG Strat"
 description = "Self immolation resulting in death, at least 7/11 times"
 type = "sequence"
-groups = [ "combat", "inventory", "debuff" ]
+groups = [ "Combat", "Inventory" ]
 begin_sequence = [
   { event = "sequence", command = "disable all" },
   { event = "hold", command = "vertical camera", value = 127 },
@@ -1296,7 +1297,7 @@ begin_sequence = [
 name = "Pdub It"
 description = "RIP bricks and bottles"
 type = "sequence"
-groups = [ "inventory" ]
+groups = [ "Inventory" ]
 begin_sequence = [
   { event = "sequence", command = "disable all" },
   { event = "press", command = "select consumable", delay = 2.5 },
@@ -1307,7 +1308,7 @@ begin_sequence = [
 name = "Chuck Smoke Bomb"
 description = "It was taking up space anyway. Does nothing when playing Abby"
 type = "sequence"
-groups = [ "inventory" ]
+groups = [ "Inventory" ]
 begin_sequence = [
   { event = "sequence", command = "disable all" },
   { event = "press", command = "select consumable", value = -1, repeat = 2 },
@@ -1319,7 +1320,7 @@ begin_sequence = [
 name = "Only Prone Diving"
 description = "RIP elbows and knees. Any movement results in a prone dive."
 type = "sequence"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 block_while_busy = [ "dodge/sprint", "crouch/prone" ]
 while = [ "movement" ]
 trigger = [ "vertical movement", "horizontal movement" ]
@@ -1338,7 +1339,7 @@ finish_sequence = [{ event = "release", command = "dodge/sprint" },
 name = "Rubbernecking"
 description = "Woah! What's behind you? Invokes a periodic, 180-degree quick turn."
 type = "sequence"
-groups = [ "movement" ]
+groups = [ "Movement" ]
 block_while_busy = [ "jump", "aiming", "vertical movement", "horizontal movement" ]
 start_delay = 6.0
 cycle_delay = 0.1
@@ -1355,7 +1356,7 @@ repeat_sequence = [
 [[modifier]]
 name = "Restart Checkpoint"
 description = "Best served prior to the end of a long encounter."
-groups = [ "debuff" ]
+groups = [ "Combat" ]
 type = "menu"
 menu_items = [{entry = "restart" }]
 reset_on_finish = false
@@ -1364,63 +1365,63 @@ reset_on_finish = false
 name = "No Reticle"
 description = "Headshots just got trickier."
 type = "menu"
-groups = [ "UI" ]
+groups = [ "HUD" ]
 menu_items = [{entry = "reticle", value = 0 }]
 
 [[modifier]]
 name = "No Inventory HUD"
 description = "Want to know what weapons or throwables you're selecting? Think again."
 type = "menu"
-groups = [ "UI" ]
+groups = [ "HUD" ]
 menu_items = [{entry = "weapon cross", value = 0 }]
 
 [[modifier]]
 name = "No Damage Indicators"
 description = "Locating the source of damage will be harder."
 type = "menu"
-groups = [ "UI" ]
+groups = [ "HUD" ]
 menu_items = [{entry = "damage indicators", value = 0 }]
 
 [[modifier]]
 name = "No Awareness Indicators"
 description = "Stealth strats have no visual feedback"
 type = "menu"
-groups = [ "UI" ]
+groups = [ "HUD" ]
 menu_items = [{entry = "awareness indicators", value = 0 }]
 
 [[modifier]]
 name = "No Hit Markers"
 description = "No feedback on connected shots"
 type = "menu"
-groups = [ "UI" ]
+groups = [ "HUD" ]
 menu_items = [{entry = "hit markers", value = 0 }]
 
 [[modifier]]
 name = "No Arc Throw Paths"
 description = "The trajectory of your throwable will now be based on feel."
 type = "menu"
-groups = [ "UI" ]
+groups = [ "HUD" ]
 menu_items = [{entry = "arc throw path", value = 0 }]
 
 [[modifier]]
 name = "No Health HUD"
 description = "The health and weapon HUD is disabled."
 type = "menu"
-groups = [ "UI" ]
+groups = [ "HUD" ]
 menu_items = [{entry = "health bar", value = 0 }]
 
 [[modifier]]
 name = "Show Pickups"
 description = "Enables the HUD that shows notifications on ammo, crafting, and other pickups"
 type = "menu"
-groups = [ "UI" ]
+groups = [ "HUD" ]
 menu_items = [{entry = "pickup notifications", value = 0 }]
 
 [[modifier]]
 name = "Large Subtitles"
 description = "The ability to read subtitles even at 160p."
 type = "menu"
-groups = [ "UI" ]
+groups = [ "HUD" ]
 menu_items = [{entry = "subtitle size", value = 2 }]
 
 # Render Modes:
@@ -1428,224 +1429,224 @@ menu_items = [{entry = "subtitle size", value = 2 }]
 name = "Graphic"
 description = "Render Mode"
 type = "menu"
-groups = [ "render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "graphic" }]
 
 [[modifier]]
 name = "Headache"
 description = "Render Mode"
 type = "menu"
-groups = [ "render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "headache" }]
 
 [[modifier]]
 name = "Afterlife"
 description = "Render Mode"
 type = "menu"
-groups = [ "render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "afterlife" }]
 
 [[modifier]]
 name = "8-Bit"
 description = "Render Mode"
 type = "menu"
-groups = [ "render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "eightbit" }]
 
 [[modifier]]
 name = "Water Color"
 description = "Render Mode"
 type = "menu"
-groups = [ "render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "watercolor" }]
 
 [[modifier]]
 name = "Dungeon"
 description = "Render Mode"
 type = "menu"
-groups = [ "render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "dungeon" }]
 
 [[modifier]]
 name = "Void"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "void" }]
 
 [[modifier]]
 name = "Pop Poster"
 description = "Stream Destroyer. This kills the bitrate"
 type = "menu"
-groups = [ "render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "pop poster" }]
 
 [[modifier]]
 name = "1960"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "1960" }]
 
 [[modifier]]
 name = "Cool"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "cool" }]
 
 [[modifier]]
 name = "Warm"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "warm" }]
 
 [[modifier]]
 name = "Vibrant"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "vibrant" }]
 
 [[modifier]]
 name = "Noir"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "noir" }]
 
 [[modifier]]
 name = "Blorange"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "blorange" }]
 
 [[modifier]]
 name = "Sepia"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "sepia" }]
 
 [[modifier]]
 name = "Vintage"
 description = "Render Mode"
 type = "menu"
-groups = [ "render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "vintage" }]
 
 [[modifier]]
 name = "Beasts"
 description = "Render Mode"
 type = "menu"
-groups = [ "render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "beasts" }]
 
 [[modifier]]
 name = "Terminated"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "terminated" }]
 
 [[modifier]]
 name = "Gridlocked"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "gridlocked" }]
 
 [[modifier]]
 name = "Blacklight"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "blacklight" }]
 
 [[modifier]]
 name = "Desert Fog"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "desert fog" }]
 
 [[modifier]]
 name = "Blood"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "blood" }]
 
 [[modifier]]
 name = "Inferno"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "inferno" }]
 
 [[modifier]]
 name = "Fire"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "fire" }]
 
 [[modifier]]
 name = "Trinity"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "trinity" }]
 
 [[modifier]]
 name = "Pusher"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "pusher" }]
 
 [[modifier]]
 name = "Demons"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "demons" }]
 
 [[modifier]]
 name = "Drug Zone"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "drugzone" }]
 
 [[modifier]]
 name = "Moonlight"
 description = "Render Mode"
 type = "menu"
-groups = ["render mode" ]
+groups = [ "Display" ]
 menu_items = [{entry = "moonlight" }]
 
 [[modifier]]
 name = "Mirror World"
 description = "Wait, where do we go?"
 type = "menu"
-groups = [ "view" ]
+groups = [ "View" ]
 menu_items = [{entry = "mirror", value = 1 }]
 
 [[modifier]]
 name = "Mirror On Death"
 description = "Mirror World on Death. Can result in permanent Mirror World."
 type = "menu"
-groups = [ "view" ]
+groups = [ "View" ]
 menu_items = [{entry = "mirror on death", value = 1 }]
 
 [[modifier]]
 name = "Close POV"
 description = "Objects in mirror are closer than they appear."
 type = "menu"
-groups = [ "view" ]
+groups = [ "View" ]
 menu_items = [{entry = "camera distance", value = 0},
             {entry = "field of view", value = 0}]
 
@@ -1659,139 +1660,139 @@ menu_items = [{entry = "slow motion", value = 1 }]
 name = "Bullet Speed"
 description = "Slow motion when aiming"
 type = "menu"
-groups = [ "buff" ]
+groups = [ "Buff" ]
 menu_items = [{entry = "bullet speed", value = 1 }]
 
 [[modifier]]
 name = "Infinite Ammo"
 description = "The strimmer responds with <3"
 type = "menu"
-groups = ["buff"]
+groups = [ "Buff" ]
 menu_items = [{entry = "infinite ammo", value = 1 }]
   
 [[modifier]]
 name = "Infinite Crafting"
 description = "Molotovs for everyone!"
 type = "menu"
-groups = [ "buff" ]
+groups = [ "Buff" ]
 menu_items = [{entry = "infinite crafting", value = 1 }]
 
 [[modifier]]
 name = "Infinite Melee Durability"
 description = "Finally, realistic durability."
 type = "menu"
-groups = [ "buff" ]
+groups = [ "Buff" ]
 menu_items = [{entry = "infinite melee durability", value = 1 }]
 
 [[modifier]]
 name = "Infinite Listen Range"
 description = "There used to be a limit?"
 type = "menu"
-groups = [ "buff" ]
+groups = [ "Buff" ]
 menu_items = [{entry = "infinite listen range",  value = 1 }]
 
 [[modifier]]
 name = "One Shot"
 description = "Golden guns activated: one-shot kills."
 type = "menu"
-groups = ["buff"]
+groups = ["Buff" ]
 menu_items = [{entry = "one shot", value = 1 }]
   
 [[modifier]]
 name = "Touch Of Death"
 description = "Golden fists activated: one-hit enemy deaths"
 type = "menu"
-groups = [ "buff" ]
+groups = [ "Buff" ]
 menu_items = [{entry = "touch of death", value = 1 }]
 
 [[modifier]]
 name = "8-Bit Audio"
 description = "Audio mode. Incompatible with 4-bit"
 type = "menu"
-groups = [ "sound" ]
+groups = [ "Sound" ]
 menu_items = [{entry = "8-bit audio", value = 1 }]
   
 [[modifier]]
 name = "4-Bit Audio"
 description = "Audio mode. Incompatible with 8-bit"
 type = "menu"
-groups = [ "sound"] 
+groups = [ "Sound" ] 
 menu_items = [{entry = "4-bit audio", value = 1 }]
 
 [[modifier]]
 name = "Helium Audio"
 description = "Audio mode.  Incompatible with Xenon"
 type = "menu"
-groups = [ "sound" ]
+groups = [ "Sound" ]
 menu_items = [{entry = "helium audio", value = 1 }]
 
 [[modifier]]
 name = "Xenon Audio"
 description = "Audio mode.  Incompatible with Helium"
 type = "menu"
-groups = [ "sound" ]
+groups = [ "Sound" ]
 menu_items = [{entry = "xenon audio", value = 1 }]
 
 [[modifier]]
 name = "Infinite Hugging"
 description = "Grabbed enemies do not escape"
 type = "menu"
-groups = [ "buff" ]
+groups = [ "Buff" ]
 menu_items = [{entry = "hostages don't escape", value = 1 }]
 
 [[modifier]]
 name = "No Plus Signs"
 description = "Speedrunners need this.  Allies do not get grabbed."
 type = "menu"
-groups = [ "buff" ]
+groups = [ "Buff" ]
 menu_items = [{entry = "allies don't get grabbed", value = 1 }]
 
 [[modifier]]
 name = "Enemies Do Not Flank"
 description = "Very effective on infected Kappa"
 type = "menu"
-groups = [ "buff" ]
+groups = [ "Buff" ]
 menu_items = [{entry = "enemies don't flank", value = 1 }]
 
 [[modifier]]
 name = "Reduced Enemy Perception"
 description = "Finally, clickers are truly blind."
 type = "menu"
-groups = [ "buff" ]
+groups = [ "Buff" ]
 menu_items = [{entry = "reduced enemy perception", value = 1 }]
 
 [[modifier]]
 name = "Potato Enemies"
 description = "Enemies shoot less accurately. Does not work on melee."
 type = "menu"
-groups = [ "buff" ]
+groups = [ "Buff" ]
 menu_items = [{entry = "reduced enemy accuracy", value = 1 }]
 
 [[modifier]]
 name = "Enhanced Dodge"
 description = "Now perhaps you can dodge the Seraphite axe lady in the park."
 type = "menu"
-groups = [ "buff" ]
+groups = [ "Buff" ]
 menu_items = [{entry = "enhanced dodge", value = 1 }]
 
 [[modifier]]
 name = "Invisible While Prone"
 description = "Proning is now even more OP"
 type = "menu"
-groups = [ "buff" ]
+groups = [ "Buff" ]
 menu_items = [{entry = "invisible while prone", value = 1 }]
 
 [[modifier]]
 name = "Camera Assist"
 description = "Automatically reorients the camera in the direction of movement."
 type = "menu"
-groups = [ "navigation" ]
+groups = [ "View" ]
 menu_items = [{entry = "camera assist", value = 1 }]
 
 [[modifier]]
 name = "Aimbot"
 description = "Aimbot... but like a detuned aimbot.  Turns on lock-on aim"
-groups = [ "buff" ]
+groups = [ "Buff" ]
 type = "menu"
 menu_items = [{entry = "lock-on aim", value = 1 }]
 
@@ -1799,90 +1800,90 @@ menu_items = [{entry = "lock-on aim", value = 1 }]
 name = "Aimbot Throwables"
 description = "Aimbot for throwables. Turns on lock-on throwables"
 type = "menu"
-groups = ["buff"]
+groups = ["Buff"]
 menu_items = [{entry = "arc throw lock-on", value = 1 }]
 
 [[modifier]]
 name = "Kleptomania"
 description = "Picking up items at inconvenient times. Turns on auto pick-up"
 type = "menu"
-groups = [ "buff" ]
-menu_items = [{entry = "auto pick-up", value = 1 }]
+groups = [ "Buff" ]
+menu_items = [{entry = "auto pick-up", value = 1}]
 
 [[modifier]]
 name = "Large HUD"
 description = "HUD like in a game from the 1990s"
 type = "menu"
-groups = ["UI"]
-menu_items = [{entry = "HUD scale", value = 2 }]
+groups = [ "HUD" ]
+menu_items = [{entry = "HUD scale", value = 2}]
 
 [[modifier]]
 name = "High Contrast Display"
 description = "Render mode, but overrides any other render mode"
 type = "menu"
-groups = ["render"]
-menu_items = [{entry = "high contrast", value = 1 }]
+groups = [ "Display" ]
+menu_items = [{entry = "high contrast", value = 1}]
 
 [[modifier]]
 name = "Musical Traversal"
 description = "Add some music to climbable objects with Traversal Audio Cues"
 type = "menu"
-groups = ["sound", "movement"]
-menu_items = [{entry = "traversal cues", value = 1  }]
+groups = [ "Sound", "Movement" ]
+menu_items = [{entry = "traversal cues", value = 1}]
 
 [[modifier]]
 name = "Musical Combat"
 description = "Add some music to combat prompts with Combat Audio Cues"
 type = "menu"
-groups = ["sound"]
-menu_items = [{entry = "combat cues", value = 1 }]
+groups = [ "Sound" ]
+menu_items = [{entry = "combat cues", value = 1}]
 
 [[modifier]]
 name = "Traversal Assistance"
 description = "Climb when you really do not want to"
 type = "menu"
-groups = [ "movement" ]
-menu_items = [{entry = "traversal assistance", value = 1 }]
+groups = [ "Movement" ]
+menu_items = [{entry = "traversal assistance", value = 1}]
 
 [[modifier]]
 name = "Enhanced Listen Mode"
 description = "Press some buttons while in listen mode to find loot"
 type = "menu"
-menu_items = [{entry = "enhanced listen", value = 1 }]
+menu_items = [{entry = "enhanced listen", value = 1}]
 
 [[modifier]]
 name = "Infinite Breath"
 description = "Yup, very useful and is the most OP perk..."
 type = "menu"
-groups = [ "buff" ]
+groups = [ "Buff" ]
 menu_items = [{entry = "infinite breath", value = 1 }]
 
 [[modifier]]
 name = "Mute Sound Effects"
 description = "Gunshots hurt our ears :("
 type = "menu"
-groups = [ "sound" ]
+groups = [ "Sound" ]
 menu_items = [{entry = "effects", value = 0 }]
 
 [[modifier]]
 name = "Mute Music"
 description = "The music is too intense, let's turn it off!"
 type = "menu"
-groups = [ "sound" ]
+groups = [ "Sound" ]
 menu_items = [{entry = "music", value = 0 }]
 
 [[modifier]]
 name = "Mute Dialogue"
 description = "Sorry Shannon :("
 type = "menu"
-groups = [ "sound" ]
+groups = [ "Sound" ]
 menu_items = [{entry = "dialogue", value = 0 }]
 
 [[modifier]]
 name = "Mono Audio"
 description = "No more stereo. Where did that gunshot come from?"
 type = "menu"
-groups = [ "sound" ]
+groups = [ "Sound" ]
 menu_items = [{entry = "mono", value = 1 }]
 
 # This is a child-only mod: part of the Navigation Assistance parent mod
@@ -1899,7 +1900,7 @@ unlisted = true
 name = "Input Delay"
 description = "Introduces a 0.2 second delay to the controller"
 type = "delay"
-groups = [ "debuff", "movement", "view", "inventory", "combat" ]
+groups = [ "Movement", "View", "Inventory", "Combat" ]
 applies_to = "ALL"
 delay = 0.2
 
@@ -1907,7 +1908,7 @@ delay = 0.2
 name = "Melee Delay"
 description = "Introduces a 0.5 second delay to melee presses"
 type = "delay"
-groups = [ "debuff", "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "melee" ]
 delay = 0.5
 
@@ -1915,7 +1916,7 @@ delay = 0.5
 name = "Jump Delay"
 description = "Introduces a 2.0 second delay to jump presses"
 type = "delay"
-groups = [ "debuff", "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "jump" ]  
 delay = 2.0
 
@@ -1923,7 +1924,7 @@ delay = 2.0
 name = "Dodge Delay"
 description = "Introduces a 0.5 second delay to dodge/sprint"
 type = "delay"
-groups = [ "debuff", "movement" ]
+groups = [ "Movement" ]
 applies_to = [ "dodge/sprint" ]  
 delay = 0.5
 
@@ -1931,7 +1932,7 @@ delay = 0.5
 name = "Aim Delay"
 description = "Introduces a 1 second delay to aiming"
 type = "delay"
-groups = [ "debuff", "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "aiming" ]  
 delay = 1.0
 
@@ -1939,7 +1940,7 @@ delay = 1.0
 name = "Shooting Delay"
 description = "Introduces a 0.5 second delay to shooting and throwing"
 type = "delay"
-groups = [ "debuff", "combat" ]
+groups = [ "Combat" ]
 applies_to = [ "shoot" ]  
 delay = 0.5
 
@@ -1947,7 +1948,7 @@ delay = 0.5
 name = "Select Delay"
 description = "Introduces a 5 second delay to selecting weapons or consumables"
 type = "delay"
-groups = [ "debuff", "inventory" ]
+groups = [ "Inventory" ]
 applies_to = [ "select weapon", "select consumable" ]
 delay = 5.0
 
@@ -1955,7 +1956,7 @@ delay = 5.0
 name = "Joystick Delay"
 description = "Introduces a 0.2 second delay to movement and aiming."
 type = "delay"
-groups = [ "debuff", "movement", "view" ]
+groups = [ "Movement", "View" ]
 applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", "vertical camera"  ]
 delay = 0.2
 
@@ -1985,5 +1986,5 @@ children = [ "Enable Navigation Assistance", "Periodic Navigation Assistance"]
 name = "Drunk"
 description = "Random joystick motion. Also don't push things too far, or you may stumble (go prone)"
 type = "parent"
-groups = [ "movement", "view" ]
+groups = [ "Movement", "View" ]
 children = ["Random Movement", "Stumblebum"]
