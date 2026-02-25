@@ -50,6 +50,7 @@ _overlay_thread: Optional[threading.Thread] = None
 
 UI_SESSION_COOKIE = 'chaosface_session'
 UI_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24
+UI_RECONNECT_TIMEOUT_SECONDS = 30.0
 OVERLAY_PUBLIC_PATHS = {
   '/ActiveMods',
   '/activemods',
@@ -789,14 +790,8 @@ def twitch_controls_chaos(args):
     on_status=_on_bot_status,
   )
   ensure_runtime_started(bind_ui_loop=False)
-
-  # Use websocket first with polling fallback.
-  # Polling-only mode has shown frequent Engine.IO session invalidation on some Pi deployments.
-  try:
-    app.config.socket_io_js_transports = ['websocket', 'polling']
-    logging.warning('Configured Socket.IO transports: %s', app.config.socket_io_js_transports)
-  except Exception:
-    logging.exception('Failed to set Socket.IO transports')
+  logging.warning('Configured Socket.IO transports: %s', app.config.socket_io_js_transports)
+  logging.warning('Configured NiceGUI reconnect_timeout: %.1fs', UI_RECONNECT_TIMEOUT_SECONDS)
 
   ssl_certfile, ssl_keyfile = _resolve_tls_files()
   ssl_enabled = bool(ssl_certfile and ssl_keyfile)
@@ -809,6 +804,7 @@ def twitch_controls_chaos(args):
         title='Twitch Controls Chaos',
         show=False,
         reload=False,
+        reconnect_timeout=UI_RECONNECT_TIMEOUT_SECONDS,
         ssl_certfile=ssl_certfile,
         ssl_keyfile=ssl_keyfile,
       )
@@ -819,6 +815,7 @@ def twitch_controls_chaos(args):
         title='Twitch Controls Chaos',
         show=False,
         reload=False,
+        reconnect_timeout=UI_RECONNECT_TIMEOUT_SECONDS,
       )
   finally:
     _stop_overlay_http_server()
