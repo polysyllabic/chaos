@@ -812,6 +812,9 @@ def twitch_controls_chaos(args):
     on_status=_on_bot_status,
   )
   ensure_runtime_started(bind_ui_loop=False)
+  # Keep UI transport deterministic while we stabilize session behavior on Pi.
+  # Combined with reconnect_timeout this avoids websocket upgrade edge-cases.
+  app.config.socket_io_js_transports = ['polling']
   logging.warning('Configured Socket.IO transports: %s', app.config.socket_io_js_transports)
   logging.warning('Configured NiceGUI reconnect_timeout: %.1fs', UI_RECONNECT_TIMEOUT_SECONDS)
 

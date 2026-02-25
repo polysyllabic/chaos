@@ -48,6 +48,7 @@ class ChaosModel(EngineObserver):
     self._pending_selected_sent_at = 0.0
     self._pending_selected_retry_after = 0.0
     self._last_reported_game = ''
+    self._last_failed_selected_game = ''
 
     #  Socket to talk to server
     logging.info("Connecting to chaos server")
@@ -92,6 +93,7 @@ class ChaosModel(EngineObserver):
     # A bad config response is a definitive result for the current load attempt.
     # Stop retrying the same select_game command until the user picks a game again.
     if status == self.ENGINE_STATUS_BAD_CONFIG_FILE:
+      self._mark_failed_game_selection()
       self._clear_pending_game_selection()
       self._pending_game_startup_setup = False
 
@@ -203,15 +205,29 @@ class ChaosModel(EngineObserver):
     with self._select_game_lock:
       if not force and selected == self._last_reported_game:
         return
+      if not force and selected == self._last_failed_selected_game:
+        return
       if selected == self._pending_selected_game:
         return
       if self._pending_selected_inflight and not force:
         return
+      if selected != self._last_failed_selected_game:
+        self._last_failed_selected_game = ''
       self._pending_selected_game = selected
       self._pending_selected_inflight = False
       self._pending_selected_sent_at = 0.0
       self._pending_selected_retry_after = 0.0
     logging.info("Queued game selection request: %s", selected)
+
+  def _mark_failed_game_selection(self, fallback_game: str = '') -> None:
+    failed = str(fallback_game or '').strip()
+    with self._select_game_lock:
+      if not failed:
+        failed = str(self._pending_selected_game or '').strip()
+      if not failed:
+        failed = str(getattr(config.relay, 'selected_game', '') or '').strip()
+      if failed and failed.upper() != 'NONE':
+        self._last_failed_selected_game = failed
 
   def _clear_pending_game_selection(self) -> None:
     with self._select_game_lock:
@@ -310,9 +326,12 @@ class ChaosModel(EngineObserver):
         self._clear_pending_game_selection()
         self._pending_game_startup_setup = False
       preferred = config.relay.get_preferred_game(games)
+      with self._select_game_lock:
+        failed_selection = str(self._last_failed_selected_game or '').strip()
       should_auto_select = (
         preferred
         and not engine_bad_config
+        and preferred != failed_selection
         and (engine_waiting_for_game or not config.relay.valid_data or config.relay.game_name != preferred)
       )
       if should_auto_select:
@@ -328,12 +347,22 @@ class ChaosModel(EngineObserver):
       handled = True
       logging.debug("Received game info!")
       selected_game = str(received.get('game', '')).strip()
+      try:
+        game_errors = int(received.get('errors', 0))
+      except (TypeError, ValueError):
+        game_errors = 0
       if selected_game:
         with self._select_game_lock:
           self._last_reported_game = selected_game
+          if game_errors <= 0:
+            self._last_failed_selected_game = ''
+          else:
+            self._last_failed_selected_game = selected_game
         self._clear_pending_game_selection()
       ui_dispatch.call_soon(config.relay.initialize_game, received)
-      self._pending_game_startup_setup = True
+      self._pending_game_startup_setup = (game_errors <= 0)
+      if game_errors > 0:
+        self._mark_failed_game_selection(selected_game)
       if 'engine_status' not in received and 'pause' not in received:
         self._set_engine_status(self._status_for_pause(config.relay.paused))
 
