@@ -176,7 +176,7 @@ layout = [
       {name = "magnification", type="menu", parent="accessibility", offset = 1},
       {name = "motion sickness", type="menu", parent="accessibility", offset = 2},
       {name = "navigation", type="menu", parent="accessibility", offset = 3},
-      {name = "screen reader", type="menu", parent="accessibility", offset = -2},
+      {name = "audio cues", type="menu", parent="accessibility", offset = -2},
       {name = "combat accessibility", type="menu", parent="accessibility", offset = -1},
 
       # Options -> Accessibility -> Alternate Controls
@@ -225,15 +225,15 @@ layout = [
       {name = "infinite breath", type="option", parent="navigation", offset=-2, initial=0},
       #{name = "skip puzzle", type="option", parent="navigation", offset=-1, initial=0},
 
-      # Options -> Accessibility -> Text-to-Speech and Audio Cues
-      {name = "screen reader", type="option", parent="screen reader", offset = 0, initial=0},
-      {name = "cinematic descriptions", type="option", parent="screen reader", offset = 1, initial=0},
-      {name = "traversal cues", type="option", parent="screen reader", offset = 2, initial=0, counter="audio cues"},
-      {name = "combat cues", type="option", parent="screen reader", offset = 3, initial=0, counter="audio cues"},
-      #{name = "combat vibration", type="option", parent="screen reader", offset = 4, initial=0},
-      #{name = "guitar vibration", type="option", parent="screen reader", offset = -3, initial=0},
-      #{name = "audio volumes", type="menu", parent="screen reader", offset = -2, initial=0},
-      #{name = "cue glossary", type="menu", parent="screen reader", offset = -1, initial=0},
+      # Options -> Accessibility -> Screen Reader and Audio Cues
+      {name = "screen reader", type="option", parent="audio cues", offset = 0, initial=0},
+      {name = "cinematic descriptions", type="option", parent="audio cues", offset = 1, initial=0},
+      {name = "traversal cues", type="option", parent="audio cues", offset = 2, initial=0, counter="audio cues"},
+      {name = "combat cues", type="option", parent="audio cues", offset = 3, initial=0, counter="audio cues"},
+      #{name = "combat vibration", type="option", parent="audio cues", offset = 4, initial=0},
+      #{name = "guitar vibration", type="option", parent="audio cues", offset = -3, initial=0},
+      #{name = "audio volumes", type="menu", parent="audio cues", offset = -2, initial=0},
+      #{name = "cue glossary", type="menu", parent="audio cues", offset = -1, initial=0},
 
       # Options -> Accessibility -> Combat Accessibility
       {name = "enable combat accessibility", type="option", parent="combat accessibility", offset = 0, initial=0},
