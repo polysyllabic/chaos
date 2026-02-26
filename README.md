@@ -86,7 +86,7 @@ The TCC software consists of two programs. By default, they both run on the Rasp
 - The Chaos engine, written in C++, does the actual work of intercepting signals from the
 controller, altering them or creating new signals, and passing them on to the console.
 
-- The Chaos interface, a chatbot written in Python, monitors the streamer's twitch chat,
+- The Chaos interface, a chatbot written in Python, monitors the streamer's Twitch chat,
 conducts the votes on which mods to apply, and tells the engine what the winning mods are.
 The chatbot can be run on a separate computer, if you like.
 
@@ -111,7 +111,7 @@ events that the chatbot cannot track, such as reaching some custom channel goal.
 
 TCC requires specific hardware to run, including a Raspberry Pi 4 and a DualShock controller (the
 controller for the PlayStation 4), which may constitute a significant expense. To play PS5-only
-games on the PlayStation, you will need still more hardware.
+games on the PlayStation, you will need even more hardware.
 
 Chaos only sees the incoming pattern of controller signals. It has no idea what is actually
 happening in the game. During cutscenes, death animations, or other places where the ordinary
@@ -149,6 +149,18 @@ inputs is performed before the other modifiers are applied. This has the effect 
 that specify alterations to a particular command will continue to operate regardless of what
 control that command is currently mapped to.
 
+The switch to a configuration-file initialization for modifiers means that it is easy to create many
+types of new modifiers with only a few settings. Some examples of new modifiers included in the
+new TLOU2 configuration file include the following:
+
+- Sir Robin: Forced backwards running
+- No Aim Movement: Cannot move while aiming
+- No Aiming Camera: Cannot move the camera while aiming
+- Snapshot: You have 1 second to aim before it's canceled
+- Sniper Speed: Wait 5 seconds between each shot
+- Criss-Cross Joysticks: Vertical and horizontal axes of both joysticks are swapped
+- Controller Drift: Add controller drift to the left joystick
+
 Streamers can now choose to allow chat to acquire "redemption" credits that entitle the person with
 that credit to apply a modifier of their choosing. The modifier is applied outside of the normal
 voting and occurs immediately (or after a cooldown period that can be configured). This allows
@@ -162,18 +174,6 @@ individually:
 - Bits donation
 - Raffle
 - Gifting from those who have credits already
-
-The switch to a configuration-file initialization for modifiers means that it is easy to create many
-types of new modifiers with only a few settings. Some examples of new modifiers included in the
-new TLOU2 configuration file include the following:
-
-- Sir Robin: Forced backwards running
-- No Aim Movement: Cannot move while aiming
-- No Aiming Camera: Cannot move the camera while aiming
-- Snapshot: You have 1 second to aim before it's canceled
-- Sniper Speed: Wait 5 seconds between each shot
-- Criss-Cross Joysticks: Vertical and horizontal axes of both joysticks are swapped
-- Controller Drift: Add controller drift to the left joystick
 
 The low-level usb interception should be more stable in this version. In particular, hot-plugging
 the controller is now supported.
@@ -200,7 +200,7 @@ these setups, the console alone doesn't provide enough power to run the intermed
 and the Pi, so you will need to provide additional power to the Pi. Without the extra hardware,
 the console provides enough power to run the Pi.
 
-Most of the instructions here also assume that you also use streaming software such as OBS, which will
+Most of the instructions here assume that you also use streaming software such as OBS, which will
 require you to have a capture card as well. Note that is **is** possible to run Chaos without OBS,
 meaning that it should be possible to play Chaos while streaming directly from your PlayStation,
 or even without streaming at all, although you will not be able to use overlays to show the current
@@ -390,8 +390,8 @@ connected devices, and seeing if you can identify which one is the Pi. Alternati
 the command `hostname -I` on your Pi to get your Pi's IP address. Input this address in your
 browser instead.
 
-3. Click on the "Settings" tab. Enter your channel name and bot account credentials, or the
-credentials for your broadcaster account if you do not have a secondary custom bot account.
+3. Click on the "Settings" tab. Enter your channel name and bot-account name, or the
+name of your broadcaster channel if you do not have a secondary custom bot account.
 
 4. While logged in to your bot account, get an OAuth token. (See the
 [chaosface instructions](docs/chaosface.md) for details.)
@@ -489,7 +489,6 @@ Pi hanging and rebooting at inconvenient times.
 
 The sequence of devices is DualShock -> Raspberry Pi -> Impostor Device -> PlayStation 5
 
-
 ### Startup
 
 1. Turn on your console.  If using the Besavior setup, also ensure that the external power is
@@ -533,7 +532,7 @@ need access to this button for a particular game, send me the details and I'll s
 
 ### Game-Specific Usage
 
-TCC was originally developed for The Last of Us Part 2. Detailed instructions on how to run that
+TCC was originally developed for *The Last of Us Part 2*. Detailed instructions on how to run that
 game will be found in the [README file](docs/TLOU2/README.md) for that game.
 
 ## Design
@@ -625,6 +624,9 @@ _Example:_
 _Write logs to a file with -o:_
 `./chaos/utils/validate_mod.sh -g chaos/examples/tlou2.toml -m "Aimbot" -o /tmp/validate_mod.log`
 
+Note that while you can run `make_modlist` from any computer with Python, `parse_game_config` is a Linux
+commandline utility, and `validate_mod` must be run from the Pi itself, since it interacts with the
+controller.
 
 ## Questions That People Might Frequently Ask (if anyone asked questions)
 
@@ -654,7 +656,7 @@ is on my to-do list.
 
 *Does this work with the PC version of TLOU2?*
 
-If you can plug the DualShock + Pi into your PC instead of your console, you _can_ use TCC, but you
+If you plug the DualShock + Pi into your PC instead of your console, you _can_ use TCC, but you
 must select the game configuration file designed for the PC, since the menu options differ somewhat.
 Playing this way will _not_ intercept signals coming from mouse and keyboard, so you still need to
 use a DualShock.
@@ -682,10 +684,32 @@ for its network connection. There may be performance issues going that route, in
 lag and disconnections, as well as chat/OBS overlay issues. Some of these performance issues may
 be reduced by running the chatbot on a different computer to lighten the Pi's workload.
 
-*Why did Chaos stop working after I updated my Pi?*
-TCC uses a hacked version of the raw-gadget kernel module. If you updated the kernel to a newer
-version, the old kernel module will now be incompatible with the new one. You can manually
-rebuild the module with these commands:
+## Troubleshooting
+*TCC is selecting the wrong menu options / Some mods are still enabled*
+
+*The Last of Us: Part II* (and Part 1) use a menu system that remembers the last place you exited
+the menu. If you forget to return all menus to the top of each menu page, TCC will put the items
+in the wrong place. It can also get off if the chaos engine attempts to start or remove a mod
+when the game is not accepting commands (e.g., in a death animation). Remember, the engine has
+no way of knowing what's going on in the game, so it's on you to remember to pause the game
+when you enter one of these input-blocking moments. If you forget, you'll need to go into the
+menus and reset things to their proper state by hand.
+
+*The Pi suddenly reboots*
+
+The most likely reason is insufficient power to the Pi. The USB output from a PlayStation normally
+supplies enough power to run the Pi directly. However, if you have adopted a chained hardware
+setup, e.g., though a Besavior controller, it does _not_ have enough power to run both the Besavior
+and the Pi. It may deliver enough juice for you to boot the Pi, but it will likely fail once chaos
+and chaosface start actively running, which will increase the power draw. To fix this, you need to
+supply external power to the Pi. See the instructions for the Besavior controller above for one way
+to do this.
+
+*Chaos stops working after you update your Pi*
+
+TCC uses a hacked version of the raw-gadget kernel module. If you've updated the kernel to a newer
+version, the old kernel module will now be incompatible with the new one. You can manually rebuild
+the module with these commands:
 
 ```bash
 cd
@@ -693,10 +717,12 @@ cd chaos/raw-gadget-timeout/raw_gadget/
 make
 ```
 
-Note that the original version of Chaos, or rather the sniffify library, depends on a specific,
-older version of the linux kernel headers that were altered in later releases. To get that
-library working, you may need to revert to an older image of the OS, which is
-[available here].(https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-05-28/)
+*Running the OG TCC after updates*
+In the (unlikely) case that anyone is still trying to create a new installation of Blegas's original
+TCC, note that the original version of the sniffify library that is used to intercept USB messages
+depends on a specific, older version of the linux kernel headers that were altered in later releases.
+To get that library working, you may need to revert to an older image of the OS, which is
+[available here](https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-05-28/).
 Once flashed and booted, downloaded the corresponding kernel using this command:
 
 ```bash

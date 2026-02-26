@@ -57,7 +57,7 @@ overwrite_log = true
 # 4 = INFO
 # 5 = DEBUG
 # 6 = VERBOSE
-log_verbosity = 6
+log_verbosity = 4
 
 # max_log_size: Maximum log-file size in bytes
 max_log_size = 134217728
