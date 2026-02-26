@@ -1120,7 +1120,7 @@ void RawGadgetPassthrough::epDeviceToHostWorkInterrupt( EndpointInfo* epInfo ) {
                        epInfo,
                        0 );
       break;
-    case LIBUSB_TRANSFER_TYPE_BULK:  // TODO: need to accounf fo bulk streams maybe
+    case LIBUSB_TRANSFER_TYPE_BULK:  // TODO: need to account for bulk streams maybe
       libusb_fill_bulk_transfer(  transfer,
                        epInfo->deviceHandle,
                        epInfo->usb_endpoint.bEndpointAddress,

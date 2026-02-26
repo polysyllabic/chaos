@@ -169,7 +169,7 @@ The following parameters are used to define conditions:
     - `distance_below`: True if the Pythagorean distance of two axes is less than the threshold.
       Requires 2 axes in the list.
 
- - `clear_on`: Commands that will set a persistent trigger to false when its incomming state
+ - `clear_on`: Commands that will set a persistent trigger to false when its incoming state
    exceeds the threshold (_Required for persistent triggers_)
 
   -`clear_threshold`: Threshold for `clear_on`. If not set, uses same value as `threshold`
@@ -213,7 +213,7 @@ create separate conditions and chain them together.
 A sequence holds a series of predefined events that are sent as a batch.  Sequences can be
 defined as a preset sequence for convenience or as part of a sequence modifier.
 
-There are two mandatory and two optional arguments in a sequnce definition:
+There are two mandatory and two optional arguments in a sequence definition:
 
 - `event`: The type of event (_Required_)
   - `hold`: turn on the command
@@ -238,11 +238,11 @@ There are two mandatory and two optional arguments in a sequnce definition:
 Modifiers can set options from the menu. To do so, TCC needs to know the layout of the menu.
 
 Note that the features currently implemented were primarily designed to accommodate the menuing
-system of TLOU2 and is likely missing features needed to support some other games. Please submit
+system of TLOU2 and are likely missing features needed to support some other games. Please submit
 requests for new features if TCC cannot navigate your game's menu with the current feature set.
 
 TCC navigates the menu by issuing sequences of commands. If you use menuing options, your
-configuraiton file must define those sequences under the specific names listed here. The
+configuration file must define those sequences under the specific names listed here. The
 commands executed by each sequence can be customized to the appropriate button presses
 for each game.
 
@@ -689,11 +689,11 @@ children = ["Random Movement", "Stumblebum"]
 ```
 
 ### Remap Modifiers
-A remap modifier changes the signals comming from the controller so that one or more signals from
+A remap modifier changes the signals coming from the controller so that one or more signals from
 the controller appear to the game to be different signals.
 
 It's important to note that remapping operates on the actual controller signals, not on the
-comands, which are semantic mappings of signals. The reason for this difference is that remaps
+commands, which are semantic mappings of signals. The reason for this difference is that remaps
 are processed differently from ordinary modifiers. All active remaps are stored in a table that is
 processed at the start of the modifier loop, before any other modifiers have done their work.
 Ordinary modifiers therefore operate on the remapped signals. Since the remapped signals are what
@@ -727,7 +727,7 @@ modifier:
     - `to_min` (_optional_): When mapping buttons-to-axis, if true, the axis is set to the joystick
       minimum. If false, it is set to the joystick maximum.
     
-    - `sensitivity` (_optional_): A divisor that scales the incomming accelerometer signal down.
+    - `sensitivity` (_optional_): A divisor that scales the incoming accelerometer signal down.
     
 - `random_remap`: A list of controls that will be randomly remapped among one another. (_Optioonal_)
 
@@ -782,7 +782,7 @@ modifier type:
 
 - `amplitude`: Amount to multiply the incoming signal by (_Optional, default = 1_)
 
-- `offset`: Ammount to add to the incomming signal (_Optional, default = 0_)
+- `offset`: Amount to add to the incoming signal (_Optional, default = 0_)
 
 _Examples:_
 

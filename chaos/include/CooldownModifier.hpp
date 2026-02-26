@@ -2,7 +2,7 @@
  * Twitch Controls Chaos (TCC)
  * Copyright 2021-2026 The Twitch Controls Chaos developers. See the AUTHORS
  * file in the top-level directory of this distribution for a list of the
- * contributers.
+ * contributors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ namespace Chaos {
   /**
    * \brief Enumeration of possible cooldown states
    * 
-   * UNTRIGERED: The trigger condition for the monitored action hasn't occurred yet.
+   * UNTRIGGERED: The trigger condition for the monitored action hasn't occurred yet.
    * ALLOW: The action has been triggered and we're allowing it for a set period of time.
    * BLOCK: The allow-time has expired and we are in the cooldown period.
    */

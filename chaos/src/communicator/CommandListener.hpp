@@ -1,7 +1,7 @@
 /*
  * Twitch Controls Chaos (TCC)
  * Copyright 2026 The Twitch Controls Chaos developers. See the AUTHORS file
- * in top-level directory of this distribution for a list of the contributers.
+ * in top-level directory of this distribution for a list of the contributors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@ namespace Chaos {
     void setEndpoint(const std::string& ep);
 	
     /**
-     * \brief Set an observer for incomming messages
+     * \brief Set an observer for incoming messages
      * 
      * \param observer Pointer to the observer
      * 

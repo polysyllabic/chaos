@@ -53,7 +53,7 @@ namespace Chaos {
     /**
      * \brief Construct a new Menu Modifier object
      * 
-     * \param config Handle to the TOML configuraiton file
+     * \param config Handle to the TOML configuration file
      * \param e Pointer to the Chaos engine
      */
     MenuModifier(toml::table& config, EngineInterface* e);

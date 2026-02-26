@@ -31,17 +31,23 @@ Python is not required.
 
 When the original version was written (and when work began on Chaos Unbound), TLOU2 was a
 PlayStation exclusive, and so the design of the system was specifically intended to work with
-that console. However, the same setup should work fine for PC games that can be played with a
+that console. However, the same setup should generally work for PC games that can be played with a
 controller. Mouse-and-keyboard remapping is not (yet) supported.
 
-Chaos Unbound is currently in betaa status: The engine compiles and runs (probably) but its
+_PC Note:_ If you are trying to use this system for a PC game, note that Steam Input can cause
+serious issues with lag, especially while starting up the game. This is definitely true with
+_The Last of Us: Part II_ and likely true for other games as well. To avoid this problem, disable
+Steam Input for the relevant PC games. From your Steam library, right-click on the game, then
+select `Properties -> Controller -> Override -> Disable Steam Input`.
+
+Chaos Unbound is currently in beta status: The engine compiles and runs (mostly) but its
 functionality is not yet fully tested. Consider using Blegas's original version if you want
 to play TCC with TLOU2 right now.
 
 Note also that if you attempt to use this system in a competitive multiplayer game, it could
 be seen as cheating, since the fundamental processes here (intercept and modify the signals
 coming from the controller) are parallel to those that cheaters use to do things such as
-eliminate reoil or patch in an aim bot. Of course cheating mods make the game easier to play,
+eliminate recoil or patch in an aim bot. Of course cheating mods make the game easier to play,
 whereas TCC makes the game substantially more difficult (and amusing for your audience), but
 given that _any_ modification runs against the spirit of fair play in a multiplayer context,
 I wouldn't recommend that you try it with such games.
@@ -99,13 +105,13 @@ of the votes has a 25% chance of winning. The streamer can also configure voting
 rule. In this case, the mod with the most votes always wins and any ties are decided by random
 selection. Voting can even be disabled altogether, so that modifiers can only be applied manually.
 This last system may be useful if you want to apply some specific modifier as the result of
-events that the chatbot cannot track, such as reaching some custom channel goel.
+events that the chatbot cannot track, such as reaching some custom channel goal.
 
 ## Limitations
 
 TCC requires specific hardware to run, including a Raspberry Pi 4 and a DualShock controller (the
-controller for the PlayStation 4), which may constitue a significant expense. To play PS5-only
-games on the PlayStation, you will require still more hardware.
+controller for the PlayStation 4), which may constitute a significant expense. To play PS5-only
+games on the PlayStation, you will need still more hardware.
 
 Chaos only sees the incoming pattern of controller signals. It has no idea what is actually
 happening in the game. During cutscenes, death animations, or other places where the ordinary
@@ -175,11 +181,11 @@ the controller is now supported.
 ## Required Hardware
 
 Apart from a PlayStation (or PC if you're playing a PC game), you will need the following
-hardware (for all steups):
+hardware (for all setups):
 
 - A DualShock 4 model CUH-ZCT2U controller 
 - A Raspberry Pi 4
-- A 32GB microSD card (This is your storage device for for the Pi)
+- A 32GB microSD card (This is your storage device for the Pi)
 - A USB card reader for microSD cards
 - A micro USB A to micro USB B cable (the cable type that comes with the PS 4 DualShock)
 - A USB C to USB A cable (the cable type that comes with the PS 5 DualSense)
@@ -273,7 +279,7 @@ as you type it.
 
 7. Update your OS and system tools, and install the version-control system *git*, which is used to
 manage all the files you will need to run TCC. After you have logged in to the Pi for the first
-time, run the the following command:
+time, run the following command:
 
 ```bash
 sudo apt update && sudo apt upgrade -y
@@ -373,7 +379,7 @@ If you prefer not to create a secondary account for your bot, you can still run 
 of Chaos by entering the information for the account you broadcast from. In this case, however,
 mod redemptions with channel points will not be available.
 
-2. On the same local network as the Raspberry Pi, open a browser and navigate to to
+2. On the same local network as the Raspberry Pi, open a browser and navigate to
 [raspberrypi.local](http://raspberrypi.local), assuming you did not change the Pi's hostname.
 If you did set the hostname during configuration, replace "raspberrypi.local" with whatever
 name you chose.
@@ -441,46 +447,54 @@ The hardware chain differs depending on whether you are playing a PS4 game or a 
 
 For all games:
 
-1. Connect the DualShock controller (the PS4 controller) through a USB cable to the
-lower left USB port on your Raspberry Pi. This is the USB 2.0 port furthest from the ethernet port
-and closest to circuit board.
+1. Connect the DualShock controller (the PS4 controller) through a USB cable to the lower left
+USB port on your Raspberry Pi. This is the USB 2.0 port furthest from the ethernet port and
+closest to circuit board.
 
 2. Connect the Raspberry Pi's ethernet port to your router, unless you're using WiFi.
 
 [Cabling the Raspbery Pi](https://github.com/polysyllabic/chaos/blob/unbound/docs/images/chaos_plugging.jpg)
 
-3. The next step depends on whether you are playing a PS4 or PS5 game. If you're playing a PS4 game
-on a PS5 console, you can use the simpler, PS4 setup:
+The next step depends on what type of game you are playing.
 
-For PS4 games:
+For PS4 games (whether played on a PS4 or a PS5):
 
-Use a USB-C to USB-A cable to connect the Raspberry Pi's USB-C port to the console. The
-Pi will get its power from this connection, as well as using it to communicate with the console.
+3. Use a USB-C to USB-A cable to connect the Raspberry Pi's USB-C port to the console. The Pi will
+get its power from this connection, as well as using it to communicate with the console.
+
+For PC games:
+
+3. Connect the Pi's USB-C port to a USB port on your PC (either USB-A or USB-C will work).
 
 For PS5-only games:
 
-3a. Connect the Besavior controller (or equivalent device) to the PlayStation 5 with a USB-C to USB-A cable.
+You need a device to convince your console that you're using a DualSense (PS5) controller. We'll call
+this the "imposter" device such as a Besavior controller.
 
-3b. Connect the USB-C to USB-A adaptor that comes with the Besavior to the USB-C port on the Beloader to the
-device on the bottom of the Besavior controller. This is a short cable with a second USB-C port on
-the side.
+3. First connect the imposter device to the PlayStation 5 with a USB cable. For the Besavior
+controller, this means using the USB-C port that is in the same place as the port on an ordinary
+controller.
 
-3c. Connect the Besavior to the Raspberry Pi's USB-C port with a USB-A to USB-C cable.
+Next, connect the impostor device to the Raspberry Pi's USB-C port.
 
-3d. Connect another USB-C cable into this side port on the adapter and connect it to an external DC
-power source that can supply at least 3A. *Note:* If you use a lower-rated power supply, you may
-experience brown-outs when the Pi starts trying to draw more power than is available under load. In
-this case, you may find the Pi hanging and rebooting at inconvenient times.
+If you're using the Besavior controller, you should use plug the special cable that comes with the
+Besavior that has a male USB-C port on one side and a connector with both a female USB-C and a
+female USB-A port on the other. Connect the male USB-C side to the USB-C port on the device
+mounted below the Besavior controller. Connect the the Raspberry Pi's USB-C port to the USB-A end
+of the special connector with a USB-C to USB-A cable. Finally, connect another USB-C cable into
+the side port of the special adapter and connect it to an external DC power source that can supply
+at least 3A. *Note:* If you use a lower-rated power supply, you may experience brown-outs when the
+Pi starts trying to draw more power than is available under load. In this case, you may find the
+Pi hanging and rebooting at inconvenient times.
 
-The sequence of devices is DualShock -> Raspberry Pi -> Besavior -> PlayStation 5
+The sequence of devices is DualShock -> Raspberry Pi -> Impostor Device -> PlayStation 5
 
 
 ### Startup
 
 1. Turn on your console.  If using the Besavior setup, also ensure that the external power is
-connected. Once power is applied, the Raspberry Pi will boot up. During the Pi's boot sequence, the
-controller's bluetooth connection will let you navigate to your game. At some point, you'll see a USB
-connectivity notification, meaning that TCC is active.
+connected. Once power is applied, the Raspberry Pi will boot up. One the boot sequence and the
+Chaos engine is running, the system (either console or PC) should recognize the controller.
 
 2. If OBS was already running, refresh your browser sources. The overlays should be active.
 
@@ -612,41 +626,47 @@ _Write logs to a file with -o:_
 `./chaos/utils/validate_mod.sh -g chaos/examples/tlou2.toml -m "Aimbot" -o /tmp/validate_mod.log`
 
 
-## Frequently Asked Questions
+## Questions That People Might Frequently Ask (if anyone asked questions)
 
 *Why can't I use a first-generation DualShock controller?*
 
 The first-generation DualShock 4 controller can only send control inputs over bluetooth, making
 it unusable for this project.
 
-*I have a PlayStation 5. Why can't I use that controller?*
+*Why can't I use the DualSense (PS5) controller with TCC?*
 
-The DualSense controller for the PS 5 sends signals to the console with an encrypted checksum, and
-the private key for that remains, well, private. Although at least one key was hacked and released,
-Sony has patched that out. This meaning that any attempts to alter the signals would result in a
-signal with a mismatched checksum, since we don't know how to spoof a valid one, and the signal will
-be rejected by the console.
+The DualSense controller for the PS5 sends signals to the console along with an encrypted checksum
+that indicates what those signals should be. If the signals don't match the checksum, the input is
+rejected, and because this checksum is encrypted, there's no way for us to update the checksum to
+match. This is not a problem with PS4 games, since the console will allow you use a DualShock
+controller. For PS5 games, however, Sony wants you to use a DualSense, which won't work with TCC.
 
-One way to work around this limitation is with the Besavior, which is a custom-built PS5 controller
-that supports chaining other controllers into it. This means that, instead of plugging the Raspberry
-Pi directly into the PlayStation 5, you plug it into the Besavior and the Besavior into the
-PlayStation. The Besavior authenticates itself with the console as an authentic controller and handles
-the remapping of DualShock data to the DualSense format. Note that this method requires external
-power for the Raspberry Pi. The Besavior comes with an adaptor cable that contains a side-port for this
-power, so you should not need to supply that power through the Pi's GPIO pins.
+The way to work around this limitation is either to play the PC version of the game (if one exists)
+or to play a PS5 game on the PlayStation with a device that allows other controllers to pretend
+that they are a DualSense. The best-known examples of such hardware are products from Besavior. 
+If you're interested in going this route, I recommend you check out
+[this YouTube video](https://youtu.be/j-GCoZs3qVM?si=7RSLYm3dREmNkMga) before buying anything so
+that you understand the trade-offs involved between the various devices.
+
+
+Supporting other controllers (e.g., XBox) would be extremely useful, especially for PC games. This
+is on my to-do list.
 
 *Does this work with the PC version of TLOU2?*
 
-If you simply plug the DualShock + Pi into your PC instead of a console, it _should_ work with a few
-tweaks to the configuration file. (Testing this is high on my to-do list.) If you're asking for a
-version that works _without_ a Raspberry Pi to handle the signal conversions, that would require a
-major effort. In essence, we'd need to create some sort of driver to intercept not only controller
-input but mouse-and-keyboard inputs as well. I might consider attempting this at some point, after
-the Pi version is stable, but it's not a priority for me.
+If you can plug the DualShock + Pi into your PC instead of your console, you _can_ use TCC, but you
+must select the game configuration file designed for the PC, since the menu options differ somewhat.
+Playing this way will _not_ intercept signals coming from mouse and keyboard, so you still need to
+use a DualShock.
 
-*Do I have to use a Rapberry Pi 4?*
+If you're asking for a version that works _without_ a Raspberry Pi to handle the signal conversions,
+that would require a major effort. In essence, we'd need to create some sort of driver to intercept
+not only controller input but mouse-and-keyboard inputs as well. I might consider attempting this at
+some point, after the Pi version is stable, but it's not a priority for me.
 
-Currently the Raspberry Pi 4 is the only device tested. Some other Rasberry Pi models *may* work
+*Do I have to use a Raspberry Pi 4?*
+
+Currently the Raspberry Pi 4 is the only device tested. Some other Raspberry Pi models *may* work
 (see below), but a regular computer running Linux will not.
 
 The communication to the PlayStation requires the Pi to act as a USB client instead of a USB host.
@@ -656,7 +676,7 @@ engine.
 
 There are other Pi variants that could work, but they are untested. The Raspberry Pi 0W has the
 right hardware and is much less expensive than the Pi 4, but this has only one USB device to act as
-a client and lacks an ethernet plug, meaning that WiFi is the only method to connect to the network
+a client and lacks an ethernet plug, meaning that WiFi is the only method to connect to the network.
 This means that the controller has to connect over Bluetooth, using the same device that's also used
 for its network connection. There may be performance issues going that route, including controller
 lag and disconnections, as well as chat/OBS overlay issues. Some of these performance issues may

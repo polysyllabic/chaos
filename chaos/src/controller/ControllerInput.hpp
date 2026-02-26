@@ -2,7 +2,7 @@
  * Twitch Controls Chaos (TCC)
  * Copyright 2021-2026 The Twitch Controls Chaos developers. See the AUTHORS
  * file in the top-level directory of this distribution for a list of the
- * contributers.
+ * contributors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -161,7 +161,7 @@ namespace Chaos {
      * \brief Translate a DeviceEvent into the extended #ControllerSignalType.
      * \param event The incoming event from the controller.
      *
-     * This static function allows is to determine the category into which an incomming event falls
+     * This static function allows us to determine the category into which an incoming event falls
      * (button, axis, accelerometer, etc.).
      */
     static ControllerSignalType getType(const DeviceEvent& event);
@@ -233,10 +233,10 @@ namespace Chaos {
     short getState(bool hybrid_axis);
 
     /**
-     * \brief Does the command match the incomming device event
+     * \brief Does the command match the incoming device event
      * 
      * \param event Raw device event
-     * \return Does this signal match the incomming event.
+     * \return Does this signal match the incoming event.
      * 
      * For hybrid controls, returns true if the signal matches either the button or the axis
      * component.

@@ -2,7 +2,7 @@
  * Twitch Controls Chaos (TCC)
  * Copyright 2021-2026 The Twitch Controls Chaos developers. See the AUTHORS
  * file in the top-level directory of this distribution for a list of the
- * contributers.
+ * contributors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,7 +71,7 @@ namespace Chaos {
 
     /**
      * \brief Tests if an event matches this signal
-     * \param event The incomming event from the controller
+     * \param event The incoming event from the controller
      * \param to The input signal we're testing for
      * \return Whether event id and type match the definition for this controller input.
      *

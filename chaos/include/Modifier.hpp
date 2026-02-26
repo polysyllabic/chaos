@@ -2,7 +2,7 @@
  * Twitch Controls Chaos (TCC)
  * Copyright 2021-2026 The Twitch Controls Chaos developers. See the AUTHORS
  * file at the top-level directory of this distribution for details of the
- * contributers.
+ * contributors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +32,6 @@
 #include "enumerations.hpp"
 #include "DeviceEvent.hpp"
 #include "EngineInterface.hpp"
-//#include "Touchpad.hpp"
 #include "GameCommand.hpp"
 #include "GameCondition.hpp"
 #include "Sequence.hpp"
@@ -59,18 +58,18 @@ namespace Chaos {
    * The child class must have a public constructor that takes two parameters:
    * - A reference to a toml::table containing the TOML table that defines the modifier being
    * created
-   * - A reference to a #Game object, providing access to game-data objects that have already been
+   * - A reference to a Game object, providing access to game-data objects that have already been
    * initialized.
    * 
    * Modifiers are initialized last, so all general configuration parameters, the GameCommand,
-   * GameCondition, #Sequence, and #MenuItem entries, as well as the data on any modifiers already
+   * GameCondition, Sequence, and MenuItem entries, as well as the data on any modifiers already
    * initialized, are available to the constructor.
    * 
    * A modifier class also must declare a public static string named mod_type, whose value is
    * declared in the source module and is unique among the different modifiers. This string will be
    * used in the value of the type field in TOML modifier definitions.
    * 
-   * The the #Modifier class provides an #initialize() routine to perform initializaiton tasks from
+   * The the Modifier class provides an initialize() routine to perform initializaiton tasks from
    * the TOML configuration file that are used by many mod types. Because of the idiom used to create
    * the self-registering factory, this routine cannot be evoked with an explicit parent constructor
    * taking the toml::table object as a parameter. Instead, you should call this routine explicitly
@@ -356,12 +355,12 @@ namespace Chaos {
     virtual void finish();
 
     /**
-     * \brief Remap incomming commands
+     * \brief Remap incoming commands
      * \param[in,out] event The event coming from the controller
      * \return true if the event is valid and should be passed on to other mods and the controller
      * \return false if the event should be dropped and not sent to other mods or the controller
      *
-     * This function is called directly by the ChaosEngine class for each incomming event. Modifiers
+     * This function is called directly by the ChaosEngine class for each incoming event. Modifiers
      * 
      */
     virtual bool remap(DeviceEvent& event);
@@ -372,7 +371,7 @@ namespace Chaos {
      * \return true if the event is valid and should be passed on to other mods and the controller
      * \return false if the event should be dropped and not sent to other mods or the controller
      *
-     * This function is called directly by the ChaosEngine class for each incomming event. It
+     * This function is called directly by the ChaosEngine class for each incoming event. It
      * gives a place to handle any common tasks required for all modifiers, such as tracking
      * persistent states, after which we call the virtual tweak() function implemented by the
      * concrete child class.
@@ -412,7 +411,7 @@ namespace Chaos {
      * We traverse the conditions list and test if they are all true (default), if any are
      * true, or if none are true depending on the value of  the while operation.
      *
-     * If the #conditions list is empty, returns true. In other words, defining no conditions
+     * If the conditions list is empty, returns true. In other words, defining no conditions
      * is equivalent to "always do this action."
      */
     bool inCondition();

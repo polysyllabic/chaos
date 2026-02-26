@@ -1,7 +1,7 @@
 /*
  * Twitch Controls Chaos (TCC)
  * Copyright 2026 The Twitch Controls Chaos developers. See the AUTHORS file at
- * the top-level directory of this distribution for details of the contributers.
+ * the top-level directory of this distribution for details of the contributors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

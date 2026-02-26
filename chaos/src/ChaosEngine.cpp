@@ -2,7 +2,7 @@
  * Twitch Controls Chaos (TCC)
  * Copyright 2021-2026 The Twitch Controls Chaos developers. See the AUTHORS
  * file in the top-level directory of this distribution for a list of the
- * contributers.
+ * contributors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -646,7 +646,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
 	
   if (!pause.load()) {
     lock();
-    // First call all remaps to translate the incomming signal 
+    // First call all remaps to translate the incoming signal 
     for (auto& mod : modifiers) {
       valid = mod->remap(output);
       if (!valid) {
