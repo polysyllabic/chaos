@@ -168,6 +168,7 @@ namespace Chaos {
      * \param hide Start hidden
      * \param opt Is an option
      * \param sel Is selectable
+     * \param submenu Is item a sub-menu
      * \param conf Confirm on selection
      * \param par Parent of item
      * \param grd Guard for item
