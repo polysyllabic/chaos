@@ -9,6 +9,7 @@
 #include <new>
 #include <algorithm>
 #include <iomanip>
+#include <limits>
 #include <time.h>
 
 // The logger will be initialized in the main app. It's safe not to use plog at all. The library
@@ -92,6 +93,35 @@ void cancelTrackedTransfers(EndpointInfo* endpointInfo) {
     }
   }
 }
+
+struct SupportedControllerId {
+  uint16_t vendor;
+  uint16_t product;
+};
+
+constexpr std::array<SupportedControllerId, 14> kSupportedControllers = {{
+  {0x054c, 0x09cc},  // Sony DualShock 4 Slim (CUH-ZCT2)
+  {0x146b, 0x0d01},  // Nacon PS4 Revolution Pro Controller
+  {0x1532, 0x1000},  // Razer Raiju PS4 Controller
+  {0x1532, 0x1007},  // Razer Raiju 2 Tournament Edition
+  {0x1532, 0x1004},  // Razer Raiju Ultimate (USB)
+  {0x0f0d, 0x0055},  // HORIPAD 4 FPS
+  {0x0f0d, 0x0066},  // HORIPAD 4 FPS Plus
+  {0x0f0d, 0x00ee},  // HORIPAD mini 4
+  {0x0f0d, 0x012d},  // HORI Wireless Pad ONYX Plus
+  {0x9886, 0x0025},  // Astro C40
+  {0x044f, 0xd00e},  // Thrustmaster eSwap Pro
+  {0x0c12, 0x1cf6},  // EMiO Elite Controller for PS4
+  {0x0c12, 0x0e10},  // Armor 3 Pad PS4
+  {0x2f24, 0x00f8},  // Mayflash Magic-S Pro adapter
+}};
+
+bool isSupportedController(uint16_t vendor, uint16_t product) {
+  return std::find_if(kSupportedControllers.begin(), kSupportedControllers.end(),
+                      [vendor, product](const SupportedControllerId& id) {
+                        return id.vendor == vendor && id.product == product;
+                      }) != kSupportedControllers.end();
+}
 }
 
 bool RawGadgetPassthrough::hasUsbPermissions() {
@@ -122,6 +152,8 @@ int RawGadgetPassthrough::initialize() {
 
   vendor = 0;
   product = 0;
+  lastConnectedBus = -1;
+  lastConnectedPort = -1;
   fd = -1;
   devices = nullptr;
   deviceHandle = nullptr;
@@ -165,54 +197,116 @@ int RawGadgetPassthrough::connectDevice() {
   }
   PLOG_VERBOSE << "Found " << deviceCount << " USB devices.";
 
-  constexpr int kPreferredBus = 1;
-  constexpr int kPreferredPort = 4;
+  struct Candidate {
+    int index = -1;
+    int bus = -1;
+    int port = -1;
+    uint16_t vid = 0;
+    uint16_t pid = 0;
+    int rank = std::numeric_limits<int>::max();
+  };
+  std::vector<Candidate> candidates;
+  candidates.reserve(static_cast<size_t>(deviceCount));
 
-  int devIndex = -1;
-  int fallbackIndex = -1;
+  bool sawLastPort = false;
   for (int i = 0; i < deviceCount; i++) {
     int bus = (int)libusb_get_bus_number(devices[i]);
     int port = (int)libusb_get_port_number(devices[i]);
-    PLOG_VERBOSE << "Device: " << i << " | Bus " << bus
-                 << " Port " << port;
-    // Specific for lower USB2 port on rPi 4 with raspbian
-    if (bus == kPreferredBus && port == kPreferredPort) {
-      devIndex = i;
-      PLOG_VERBOSE << " |-- This is the device of interest!";
+    struct libusb_device_descriptor desc;
+    int descResult = libusb_get_device_descriptor(devices[i], &desc);
+    if (descResult != LIBUSB_SUCCESS) {
+      PLOG_VERBOSE << "Device: " << i << " | Bus " << bus << " Port " << port
+                   << " | descriptor unavailable";
       continue;
     }
 
-    // On some hosts the USB topology can briefly shift after hotplug. If we already identified a
-    // controller previously, use it as a fallback match by VID/PID.
-    if (haveProductVendor.load()) {
-      struct libusb_device_descriptor desc;
-      if (libusb_get_device_descriptor(devices[i], &desc) == LIBUSB_SUCCESS &&
-          desc.idVendor == vendor &&
-          desc.idProduct == product) {
-        fallbackIndex = i;
-      }
+    const bool supported = isSupportedController(desc.idVendor, desc.idProduct);
+    const bool matchesLastVidPid =
+        haveProductVendor.load() && desc.idVendor == vendor && desc.idProduct == product;
+    if (!supported && !matchesLastVidPid) {
+      PLOG_VERBOSE << "Device: " << i << " | Bus " << bus << " Port " << port
+                   << " | VID=0x" << std::hex << std::setfill('0') << std::setw(4) << desc.idVendor
+                   << " PID=0x" << std::setw(4) << desc.idProduct << std::dec
+                   << " | unsupported";
+      continue;
     }
+
+    Candidate candidate;
+    candidate.index = i;
+    candidate.bus = bus;
+    candidate.port = port;
+    candidate.vid = desc.idVendor;
+    candidate.pid = desc.idProduct;
+
+    const bool matchesLastPort = (lastConnectedBus >= 0 && lastConnectedPort >= 0 &&
+                                  bus == lastConnectedBus && port == lastConnectedPort);
+    if (matchesLastPort) {
+      candidate.rank = 0;
+      sawLastPort = true;
+    } else if (matchesLastVidPid) {
+      candidate.rank = 1;
+    } else {
+      candidate.rank = 2;
+    }
+
+    PLOG_VERBOSE << "Device: " << i << " | Bus " << bus << " Port " << port
+                 << " | VID=0x" << std::hex << std::setfill('0') << std::setw(4) << desc.idVendor
+                 << " PID=0x" << std::setw(4) << desc.idProduct << std::dec
+                 << " | rank " << candidate.rank;
+    candidates.push_back(candidate);
   }
-  if (devIndex < 0 && fallbackIndex >= 0) {
-    devIndex = fallbackIndex;
-    PLOG_WARNING << "Preferred controller port " << kPreferredBus << ":" << kPreferredPort
-                 << " was not detected; falling back to last-known VID/PID controller 0x"
-                 << std::hex << std::setfill('0') << std::setw(4) << vendor
-                 << ":0x" << std::setw(4) << product << std::dec;
+
+  if (!sawLastPort && lastConnectedBus >= 0 && lastConnectedPort >= 0) {
+    PLOG_WARNING << "Last controller port " << lastConnectedBus << ":" << lastConnectedPort
+                 << " is not currently available; selecting another compatible port.";
   }
-  if (devIndex < 0) {
+
+  if (candidates.empty()) {
     libusb_free_device_list(devices, 1);
     devices = nullptr;
-    PLOG_INFO << "No controller currently attached to intercepted USB port.";
+    PLOG_INFO << "No compatible controller currently attached on any USB port.";
     return 1;
   }
 
-  int openResult = libusb_open(devices[devIndex], &deviceHandle);
+  std::sort(candidates.begin(), candidates.end(), [](const Candidate& a, const Candidate& b) {
+    if (a.rank != b.rank) {
+      return a.rank < b.rank;
+    }
+    if (a.bus != b.bus) {
+      return a.bus < b.bus;
+    }
+    return a.port < b.port;
+  });
+
+  Candidate selected;
+  for (const Candidate& candidate : candidates) {
+    int openResult = libusb_open(devices[candidate.index], &deviceHandle);
+    if (openResult == LIBUSB_SUCCESS && deviceHandle != nullptr) {
+      selected = candidate;
+      break;
+    }
+    PLOG_WARNING << "Failed to open controller candidate on bus " << candidate.bus << " port "
+                 << candidate.port << " (VID=0x" << std::hex << std::setfill('0') << std::setw(4)
+                 << candidate.vid << " PID=0x" << std::setw(4) << candidate.pid << std::dec << ")";
+  }
+
   libusb_free_device_list(devices, 1);
   devices = nullptr;
-  if (openResult != LIBUSB_SUCCESS || deviceHandle == nullptr) {
-    PLOG_ERROR << "Failed to open libusb device";
+  if (deviceHandle == nullptr) {
+    PLOG_ERROR << "Failed to open any compatible controller device.";
     return 1;
+  }
+
+  lastConnectedBus = selected.bus;
+  lastConnectedPort = selected.port;
+  if (selected.rank == 0) {
+    PLOG_INFO << "Reusing previously connected controller port " << selected.bus << ":" << selected.port;
+  } else if (selected.rank == 1) {
+    PLOG_INFO << "Selected controller by last-known VID/PID on port "
+              << selected.bus << ":" << selected.port;
+  } else {
+    PLOG_INFO << "Selected compatible controller on port "
+              << selected.bus << ":" << selected.port;
   }
   PLOG_VERBOSE << "USB device has been opened.";
 

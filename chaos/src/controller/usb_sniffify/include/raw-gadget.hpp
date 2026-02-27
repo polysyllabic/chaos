@@ -75,6 +75,8 @@ public:
 private:
   int product = 0;
   int vendor = 0;
+  int lastConnectedBus = -1;
+  int lastConnectedPort = -1;
   std::atomic<bool> haveProductVendor{false};
   std::atomic<std::uint32_t> connectionGeneration{0};
   std::vector<EndpointObserver*> observers;

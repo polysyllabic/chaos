@@ -52,7 +52,7 @@ int main() {
   int vendor = 0;
   int product = 0;
   if (!probeInterceptedControllerVidPid(vendor, product)) {
-    std::cerr << "Failed to detect controller VID/PID on intercepted USB port." << std::endl;
+    std::cerr << "Failed to detect controller VID/PID on any available USB port." << std::endl;
     return 1;
   }
 
