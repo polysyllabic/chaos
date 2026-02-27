@@ -66,7 +66,10 @@ struct Options {
   useconds_t loop_sleep_us = 10000;
   unsigned int endpoint = 0x84;
   OutputMode mode = OutputMode::Translate;
+  bool include_accel = false;
+  int joystick_fuzz = 10;
   bool suppress_repeats_raw = true;
+  bool no_data = false;
 };
 
 std::atomic<bool> keep_running{true};
@@ -82,6 +85,9 @@ void printUsage(const char* program) {
       << "  -v, --verbosity <0-6>      plog verbosity (default: 6/verbose)\n"
       << "  -o, --output <path|->      Log output destination (default: stdout)\n"
       << "      --raw                  Use raw packet mode (default: translate mode)\n"
+      << "      --no-data              Suppress ordinary incoming data output in both modes\n"
+      << "      --accel                In translate mode, print ACCX/ACCY/ACCZ changes\n"
+      << "      --fuzz=<int>           In translate mode, suppress LX/LY/RX/RY when abs(value) < fuzz (default: 10)\n"
       << "  -e, --endpoint <value>     USB endpoint to monitor, hex or decimal (default: 0x84)\n"
       << "  -t, --time <seconds>       Optional run duration before exiting\n"
       << "      --sleep-us <us>        Poll sleep interval in microseconds (default: 10000)\n"
@@ -91,6 +97,7 @@ void printUsage(const char* program) {
       << "Notes:\n"
       << "  - Handshake/control traffic is shown by transport-layer verbose logs in both modes.\n"
       << "  - Translate mode prints signal names and values from translated device events.\n"
+      << "  - --no-data suppresses ordinary payload lines in both modes.\n"
       << "  - Raw mode prints endpoint packet bytes, suppressing consecutive duplicates by default.\n";
 }
 
@@ -147,6 +154,28 @@ bool parseArgs(int argc, char** argv, Options& options) {
     }
     if (arg == "--raw") {
       options.mode = OutputMode::Raw;
+      continue;
+    }
+    if (arg == "--no-data") {
+      options.no_data = true;
+      continue;
+    }
+    if (arg == "--accel") {
+      options.include_accel = true;
+      continue;
+    }
+    if (arg.rfind("--fuzz=", 0) == 0) {
+      try {
+        const int parsed = std::stoi(arg.substr(7));
+        if (parsed < 0) {
+          std::cerr << "Invalid value for --fuzz: " << parsed << "\n";
+          return false;
+        }
+        options.joystick_fuzz = parsed;
+      } catch (const std::exception&) {
+        std::cerr << "Invalid value for --fuzz: " << arg.substr(7) << "\n";
+        return false;
+      }
       continue;
     }
     if (arg == "-e" || arg == "--endpoint") {
@@ -234,14 +263,18 @@ public:
 
 class RawPacketObserver final : public PacketObserver {
 public:
-  explicit RawPacketObserver(bool suppress_repeats)
-      : suppress_repeats_(suppress_repeats) {}
+  RawPacketObserver(bool suppress_repeats, bool no_data)
+      : suppress_repeats_(suppress_repeats),
+        no_data_(no_data) {}
 
   const char* modeName() const override {
     return "raw";
   }
 
   void notification(unsigned char* buffer, int length) override {
+    if (no_data_) {
+      return;
+    }
     if (length < 0) {
       PLOG_WARNING << "Ignoring invalid incoming packet length " << length;
       return;
@@ -262,6 +295,7 @@ public:
 
 private:
   const bool suppress_repeats_;
+  const bool no_data_;
   std::mutex lock_;
   std::vector<unsigned char> previous_packet_;
   bool has_previous_ = false;
@@ -269,8 +303,11 @@ private:
 
 class TranslatePacketObserver final : public PacketObserver {
 public:
-  TranslatePacketObserver()
-      : signal_table_(dummy_controller_) {}
+  TranslatePacketObserver(bool include_accel, int joystick_fuzz, bool no_data)
+      : include_accel_(include_accel),
+        joystick_fuzz_(joystick_fuzz),
+        no_data_(no_data),
+        signal_table_(dummy_controller_) {}
 
   const char* modeName() const override {
     return "translate";
@@ -291,6 +328,9 @@ public:
   }
 
   void notification(unsigned char* buffer, int length) override {
+    if (no_data_) {
+      return;
+    }
     if (length == 0) {
       PLOG_VERBOSE << "Ignoring empty controller report during USB startup/reconnect.";
       return;
@@ -317,6 +357,9 @@ public:
     for (const Chaos::DeviceEvent& event : events) {
       std::shared_ptr<Chaos::ControllerInput> input = signal_table_.getInput(event);
       if (input) {
+        if (!shouldPrint(*input, event.value)) {
+          continue;
+        }
         PLOG_INFO << input->getName() << "=" << event.value;
       } else {
         PLOG_WARNING << "Unknown signal (type=" << static_cast<int>(event.type)
@@ -326,8 +369,27 @@ public:
   }
 
 private:
+  bool shouldPrint(Chaos::ControllerInput& input, short value) const {
+    switch (input.getSignal()) {
+      case Chaos::ControllerSignal::ACCX:
+      case Chaos::ControllerSignal::ACCY:
+      case Chaos::ControllerSignal::ACCZ:
+        return include_accel_;
+      case Chaos::ControllerSignal::LX:
+      case Chaos::ControllerSignal::LY:
+      case Chaos::ControllerSignal::RX:
+      case Chaos::ControllerSignal::RY:
+        return std::abs(static_cast<int>(value)) >= joystick_fuzz_;
+      default:
+        return true;
+    }
+  }
+
   static constexpr std::size_t kExpectedReportLength = 64;
 
+  const bool include_accel_;
+  const int joystick_fuzz_;
+  const bool no_data_;
   std::mutex lock_;
   int vendor_ = -1;
   int product_ = -1;
@@ -359,9 +421,12 @@ int main(int argc, char** argv) {
   Chaos::UsbPassthrough passthrough;
   std::unique_ptr<PacketObserver> packet_observer;
   if (options.mode == OutputMode::Raw) {
-    packet_observer = std::make_unique<RawPacketObserver>(options.suppress_repeats_raw);
+    packet_observer = std::make_unique<RawPacketObserver>(options.suppress_repeats_raw,
+                                                          options.no_data);
   } else {
-    packet_observer = std::make_unique<TranslatePacketObserver>();
+    packet_observer = std::make_unique<TranslatePacketObserver>(options.include_accel,
+                                                                options.joystick_fuzz,
+                                                                options.no_data);
   }
 
   passthrough.setEndpoint(static_cast<unsigned char>(options.endpoint));
@@ -379,8 +444,21 @@ int main(int argc, char** argv) {
     PLOG_INFO << (options.suppress_repeats_raw
                     ? "Raw mode: repeated identical packets are suppressed."
                     : "Raw mode: repeated packets will be printed.");
+    if (options.include_accel) {
+      PLOG_WARNING << "--accel applies only to translate mode and is ignored in raw mode.";
+    }
+    if (options.joystick_fuzz != 10) {
+      PLOG_WARNING << "--fuzz applies only to translate mode and is ignored in raw mode.";
+    }
   } else if (!options.suppress_repeats_raw) {
     PLOG_WARNING << "--print-repeats only applies to --raw mode and is ignored.";
+  } else {
+    PLOG_INFO << "Translate mode filters: accel="
+              << (options.include_accel ? "on" : "off")
+              << ", joystick_fuzz=" << options.joystick_fuzz;
+  }
+  if (options.no_data) {
+    PLOG_INFO << "Data output is disabled (--no-data). Handshake/control and transport logs remain.";
   }
   if (options.verbosity < plog::verbose) {
     PLOG_WARNING << "Handshake/control traffic logs require verbosity 6.";
