@@ -627,7 +627,9 @@ _Write logs to a file with -o:_
 - `gamepad_test` Monitors the same USB passthrough traffic path used by the engine. At default
 verbosity (6), this includes handshake/control-transfer details. By default it runs in
 _translate mode_, where incoming data is translated into controller events and prints
-`<signal name>=<value>` for changed signals.
+`<signal name>=<value>` for changed signals. In translate mode, accelerometer signals
+(`ACCX`, `ACCY`, `ACCZ`) are suppressed unless `--accel` is set, and small joystick
+drift on `LX`, `LY`, `RX`, `RY` is filtered with `--fuzz=<int>` (default `10`).
 
 _Basic usage (translate mode, default):_
 `./chaos/utils/gamepad_test.sh`
@@ -640,6 +642,12 @@ _Use raw packet mode (existing behavior):_
 
 _In raw mode, print repeated incoming packets too:_
 `./chaos/utils/gamepad_test.sh --raw --print-repeats`
+
+_In translate mode, include accelerometer and reduce joystick deadzone:_
+`./chaos/utils/gamepad_test.sh --accel --fuzz=4`
+
+_Show only handshake/control and transport logs (suppress ordinary data output):_
+`./chaos/utils/gamepad_test.sh --no-data`
 
 Note that while you can run `make_modlist` from any computer with Python, `parse_game_config` is a Linux
 commandline utility, and both `validate_mod` and `gamepad_test` must be run from the Pi itself, since they
@@ -702,6 +710,38 @@ lag and disconnections, as well as chat/OBS overlay issues. Some of these perfor
 be reduced by running the chatbot on a different computer to lighten the Pi's workload.
 
 ## Troubleshooting
+*The console isn't responding to the controller*
+
+Before you do anything else, test that each USB cable in your setup is working. Not only do
+cables break, but a surprisingly large number of cables are e-waste from the beginning.
+
+  - Test each cable separately.
+  - If you're using long cables, try the shortest ones that will work for your setup. Note that
+    the USB ports are either USB 3.0 or 3.1, depending on the port. If you're using an old USB-A cable
+    that only supports USB 2.0, power and data rates will be reduced.
+  - For USB-C cables, make sure they provide a dual, power-and-data connection. Power-only cables will
+    not work.
+  - If you're using an adapter dongle (e.g., USB-A to USB-C), try reversing the device it's attached
+    to. In other words, if it's currently attached at the console end, move it to the other device
+    and reverse the cord, or vice versa. Sometimes a connection will work one way but not the other.
+
+Verify that everything is correctly cabled, power is applied to the Pi, and the chaos engine is
+running. When the engine is operating and the DualShock is plugged in to the correct USB port on
+the Pi, the light on the back of the DualShock should be on.
+
+If your cables are good and your cabling is correct, try connecting to the console through a different
+USB port. (In particular, try using one of the USB-A ports on the back of the console rather than a
+front-side USB-C port.)
+
+If you're attempting to run this setup on a PS5 with an authentication device in the middle, verify
+that the authenticator works without the Pi present. Connect a DualShock to the authenticator and
+try to open and run a PS5 game. If this fails, you will need to configure the authenticator, following
+whatever instructions the manufacturer provides.
+
+*I can navigate through the PlayStation's system menu but I can't play a game.*
+
+Open the game you want to play and then restart the engine.
+
 *TCC is selecting the wrong menu options / Some mods are still enabled*
 
 *The Last of Us: Part II* (and Part 1) use a menu system that remembers the last place you exited
