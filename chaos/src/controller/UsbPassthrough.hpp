@@ -19,6 +19,7 @@
  */
 #pragma once
 
+#include <cstdint>
 #include <memory>
 
 namespace Chaos {
@@ -49,6 +50,7 @@ namespace Chaos {
     bool readyProductVendor() const;
     int getVendor() const;
     int getProduct() const;
+    std::uint64_t getConnectionGeneration() const;
 
   private:
     class Impl;

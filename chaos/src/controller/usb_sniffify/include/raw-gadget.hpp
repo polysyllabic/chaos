@@ -2,6 +2,7 @@
 #include <libusb.h>
 #include <atomic>
 #include <array>
+#include <cstdint>
 #include <vector>
 
 #include "raw-helper.h"
@@ -68,12 +69,14 @@ public:
   bool readyProductVendor();
   int getVendor();
   int getProduct();
+  std::uint64_t getConnectionGeneration() const;
   void requestReconnect();
   
 private:
   int product = 0;
   int vendor = 0;
   std::atomic<bool> haveProductVendor{false};
+  std::atomic<std::uint64_t> connectionGeneration{0};
   std::vector<EndpointObserver*> observers;
   
   std::atomic<bool> keepRunning{false};

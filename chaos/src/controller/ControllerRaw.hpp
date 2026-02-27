@@ -19,6 +19,7 @@
  */
 #pragma once
 #include <array>
+#include <cstdint>
 #include <memory>
 
 #include <thread.hpp>
@@ -41,6 +42,7 @@ namespace Chaos {
     std::shared_ptr<ControllerState> mControllerState;
     int mLastFactoryVendor = -1;
     int mLastFactoryProduct = -1;
+    std::uint64_t mLastTransportGeneration = 0;
 
     void initializeControllerStateIfPossible();
 

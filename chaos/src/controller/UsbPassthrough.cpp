@@ -90,3 +90,7 @@ int UsbPassthrough::getVendor() const {
 int UsbPassthrough::getProduct() const {
   return impl->passthrough.getProduct();
 }
+
+std::uint64_t UsbPassthrough::getConnectionGeneration() const {
+  return impl->passthrough.getConnectionGeneration();
+}

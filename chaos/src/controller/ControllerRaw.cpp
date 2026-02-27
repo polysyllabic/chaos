@@ -62,25 +62,36 @@ void ControllerRaw::initializeControllerStateIfPossible() {
 
   const int vendor = mUsbPassthrough.getVendor();
   const int product = mUsbPassthrough.getProduct();
+  const std::uint64_t generation = mUsbPassthrough.getConnectionGeneration();
   lock();
-  if (vendor == mLastFactoryVendor && product == mLastFactoryProduct) {
+  const bool transportReconnected = (generation != mLastTransportGeneration);
+  if (!transportReconnected &&
+      vendor == mLastFactoryVendor &&
+      product == mLastFactoryProduct &&
+      mControllerState != nullptr) {
     unlock();
     return;
   }
 
-  if (vendor != mLastFactoryVendor || product != mLastFactoryProduct) {
-    if (mControllerState != nullptr) {
+  if (transportReconnected || vendor != mLastFactoryVendor || product != mLastFactoryProduct) {
+    if (mControllerState != nullptr && (vendor != mLastFactoryVendor || product != mLastFactoryProduct)) {
       PLOG_INFO << "Controller VID/PID changed from 0x"
                 << std::setfill('0') << std::setw(4) << std::hex << mLastFactoryVendor
                 << ":0x" << std::setw(4) << mLastFactoryProduct
                 << " to 0x" << std::setw(4) << vendor
                 << ":0x" << std::setw(4) << product << std::dec
                 << ". Rebinding controller parser.";
+    } else if (mControllerState != nullptr && transportReconnected) {
+      PLOG_INFO << "Controller transport session restarted for VID=0x"
+                << std::setfill('0') << std::setw(4) << std::hex << vendor
+                << " PID=0x" << std::setw(4) << product << std::dec
+                << ". Rebinding controller parser.";
     }
     mControllerState.reset();
     deviceEventQueue.clear();
   }
 
+  mLastTransportGeneration = generation;
   mLastFactoryVendor = vendor;
   mLastFactoryProduct = product;
   mControllerState = std::shared_ptr<ControllerState>(ControllerState::factory(vendor, product));

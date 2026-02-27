@@ -114,6 +114,7 @@ int RawGadgetPassthrough::initialize() {
   requireUsbPermissionsOrExit();
 
   haveProductVendor = false;
+  connectionGeneration.store(0);
   keepRunning = false;
   sessionRunning = false;
   libusbEventThreadStarted = false;
@@ -246,6 +247,7 @@ int RawGadgetPassthrough::connectDevice() {
   vendor = deviceDescriptor.idVendor;
   product = deviceDescriptor.idProduct;
   haveProductVendor = true;
+  connectionGeneration.fetch_add(1);
 
   mEndpointZeroInfo.bNumConfigurations = deviceDescriptor.bNumConfigurations;
   mEndpointZeroInfo.activeConfiguration = -1;
@@ -1241,4 +1243,8 @@ int RawGadgetPassthrough::getVendor() {
 
 int RawGadgetPassthrough::getProduct() {
   return product;
+}
+
+std::uint64_t RawGadgetPassthrough::getConnectionGeneration() const {
+  return connectionGeneration.load();
 }
