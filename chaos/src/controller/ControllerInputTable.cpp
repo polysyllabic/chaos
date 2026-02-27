@@ -29,9 +29,7 @@ using namespace Chaos;
 // Would we ever want to expose these definitions in the config file?
 // These are the values for the DualShock2, the only controller currently supported. They're
 // defined with ID values that can be changed in case we are able to add additional controller
-// types. For the dualsense, we would need to remap the signals and pretend to be a dualshock,
-// because of its encrypted checksum, which currently prevents us from altering signals from 
-// that controller.
+// types.
 std::vector<SignalSettings> signal_settings = {
   { "X", ControllerSignal::X, ControllerSignalType::BUTTON, 0, 0 },
   { "CIRCLE",  ControllerSignal::CIRCLE, ControllerSignalType::BUTTON, 1, 0 },

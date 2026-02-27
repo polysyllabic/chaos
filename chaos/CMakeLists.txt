@@ -250,6 +250,11 @@ add_executable(validate_mod
 
 target_compile_features(validate_mod PRIVATE cxx_std_17)
 
+add_executable(gamepad_test
+  utils/gamepad_test.cpp)
+
+target_compile_features(gamepad_test PRIVATE cxx_std_17)
+
 add_subdirectory(src/utils)
 add_subdirectory(src/communicator)
 add_subdirectory(src/controller)
@@ -280,6 +285,14 @@ target_include_directories(validate_mod PRIVATE
   ${LIBUSB1_INCLUDE_DIRS}
 )
 
+target_include_directories(gamepad_test PRIVATE
+  include
+  ${tomlplusplus_SOURCE_DIR}/include
+  ${plog_SOURCE_DIR}/include
+  ${cppzmq_SOURCE_DIR}
+  ${LIBUSB1_INCLUDE_DIRS}
+)
+
 target_link_libraries(chaos	PUBLIC chaos_communicator
 	    chaos_utils
 	    chaos_controller #chaos_engine chaos_menus chaos_mods
@@ -299,9 +312,17 @@ target_link_libraries(validate_mod
     ${LIBUSB_LIBRARIES}
 )
 
+target_link_libraries(gamepad_test
+  PUBLIC
+    chaos_utils
+    chaos_controller
+    ${LIBUSB_LIBRARIES}
+)
+
 install(TARGETS chaos RUNTIME DESTINATION "${CHAOS_INSTALL_ROOT}")
 install(TARGETS chaos_parse_game_config RUNTIME DESTINATION "${CHAOS_INSTALL_ROOT}")
 install(TARGETS validate_mod RUNTIME DESTINATION "${CHAOS_INSTALL_ROOT}")
+install(TARGETS gamepad_test RUNTIME DESTINATION "${CHAOS_INSTALL_ROOT}")
 install(FILES chaosconfig.toml DESTINATION "${CHAOS_INSTALL_ROOT}")
 install(DIRECTORY examples/ DESTINATION "${CHAOS_INSTALL_ROOT}/games")
 

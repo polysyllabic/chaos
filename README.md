@@ -584,7 +584,7 @@ build tree is configured and run an incremental rebuild each time before executi
 To build C++ utilities manually from the repository root, follow these steps:
 
   `cmake -S chaos -B chaos/build`
-  `cmake --build chaos/build --target chaos_parse_game_config validate_mod -j4`
+  `cmake --build chaos/build --target chaos_parse_game_config validate_mod gamepad_test -j4`
 
 The examples below assume you're running them from the repository root.
 
@@ -624,9 +624,26 @@ _Example:_
 _Write logs to a file with -o:_
 `./chaos/utils/validate_mod.sh -g chaos/examples/tlou2.toml -m "Aimbot" -o /tmp/validate_mod.log`
 
+- `gamepad_test` Monitors the same USB passthrough traffic path used by the engine. At default
+verbosity (6), this includes handshake/control-transfer details. By default it runs in
+_translate mode_, where incoming data is translated into controller events and prints
+`<signal name>=<value>` for changed signals.
+
+_Basic usage (translate mode, default):_
+`./chaos/utils/gamepad_test.sh`
+
+_Write logs to a file with -o:_
+`./chaos/utils/gamepad_test.sh -o /tmp/gamepad_test.log`
+
+_Use raw packet mode (existing behavior):_
+`./chaos/utils/gamepad_test.sh --raw`
+
+_In raw mode, print repeated incoming packets too:_
+`./chaos/utils/gamepad_test.sh --raw --print-repeats`
+
 Note that while you can run `make_modlist` from any computer with Python, `parse_game_config` is a Linux
-commandline utility, and `validate_mod` must be run from the Pi itself, since it interacts with the
-controller.
+commandline utility, and both `validate_mod` and `gamepad_test` must be run from the Pi itself, since they
+interact with the controller transport.
 
 ## Questions That People Might Frequently Ask (if anyone asked questions)
 
