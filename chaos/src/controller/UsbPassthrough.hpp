@@ -50,7 +50,7 @@ namespace Chaos {
     bool readyProductVendor() const;
     int getVendor() const;
     int getProduct() const;
-    std::uint64_t getConnectionGeneration() const;
+    std::uint32_t getConnectionGeneration() const;
 
   private:
     class Impl;

@@ -62,7 +62,7 @@ void ControllerRaw::initializeControllerStateIfPossible() {
 
   const int vendor = mUsbPassthrough.getVendor();
   const int product = mUsbPassthrough.getProduct();
-  const std::uint64_t generation = mUsbPassthrough.getConnectionGeneration();
+  const std::uint32_t generation = mUsbPassthrough.getConnectionGeneration();
   lock();
   const bool transportReconnected = (generation != mLastTransportGeneration);
   if (!transportReconnected &&

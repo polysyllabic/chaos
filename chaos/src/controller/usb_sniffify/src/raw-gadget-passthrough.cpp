@@ -1245,6 +1245,6 @@ int RawGadgetPassthrough::getProduct() {
   return product;
 }
 
-std::uint64_t RawGadgetPassthrough::getConnectionGeneration() const {
+std::uint32_t RawGadgetPassthrough::getConnectionGeneration() const {
   return connectionGeneration.load();
 }

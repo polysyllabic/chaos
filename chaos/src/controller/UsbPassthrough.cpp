@@ -91,6 +91,6 @@ int UsbPassthrough::getProduct() const {
   return impl->passthrough.getProduct();
 }
 
-std::uint64_t UsbPassthrough::getConnectionGeneration() const {
+std::uint32_t UsbPassthrough::getConnectionGeneration() const {
   return impl->passthrough.getConnectionGeneration();
 }
