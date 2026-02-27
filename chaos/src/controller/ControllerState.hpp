@@ -72,6 +72,9 @@ namespace Chaos {
 	
     // This has to be virtual since we don't modify all values in a report structure:
     virtual void applyHackedState(unsigned char* buffer, short* chaosState) = 0;
+
+    // Mask controls that should never pass through while paused (currently Share).
+    virtual void maskPausedControls(unsigned char* buffer, int length) = 0;
 	
     virtual ~ControllerState() = 0;
 		

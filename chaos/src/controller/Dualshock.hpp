@@ -33,6 +33,7 @@ namespace Chaos {
 	
   public:
     void applyHackedState(unsigned char* buffer, short* chaosState);
+    void maskPausedControls(unsigned char* buffer, int length) override;
     
     ~Dualshock();
 

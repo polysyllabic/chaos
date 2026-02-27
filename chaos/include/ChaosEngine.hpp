@@ -92,6 +92,7 @@ namespace Chaos {
     
     // overridden from ControllerInjector
     bool sniffify(const DeviceEvent& input, DeviceEvent& output);
+    bool prefersRawPassthrough() const override { return pause.load(); }
 
     // overridden from Thread
     void doAction();

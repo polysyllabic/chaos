@@ -121,6 +121,14 @@ void Dualshock::applyHackedState(unsigned char* buffer, short* chaosState) {
   *(inputReport*) hackedState = *report;
 }
 
+void Dualshock::maskPausedControls(unsigned char* buffer, int length) {
+  if (length < static_cast<int>(sizeof(inputReport))) {
+    return;
+  }
+  inputReport* report = reinterpret_cast<inputReport*>(buffer);
+  report->BTN_GamePadButton9 = 0;
+}
+
 void Dualshock::getDeviceEvents(unsigned char* buffer, int length, std::vector<DeviceEvent>& events)  {
 	
   inputReport currentState = *(inputReport*)buffer;

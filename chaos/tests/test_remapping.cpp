@@ -128,6 +128,11 @@ public:
     (void) chaosState;
   }
 
+  void maskPausedControls(unsigned char* buffer, int length) override {
+    (void) buffer;
+    (void) length;
+  }
+
   void onTouchpadActive(short value) { noteTouchpadActiveEvent(value); }
   void onTouchpadAxis() { noteTouchpadAxisEvent(); }
   void injectIfInactive(std::vector<DeviceEvent>& events) { addTouchpadInactivityEvents(events); }

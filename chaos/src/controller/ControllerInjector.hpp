@@ -33,6 +33,13 @@ namespace Chaos {
      * Sniff the input and pass/modify it on way to the output.
      */
     virtual bool sniffify(const DeviceEvent& input, DeviceEvent& output) = 0;
+
+    /**
+     * Whether raw USB reports should bypass state reconstruction in ControllerRaw.
+     *
+     * Returning true means the incoming report should be forwarded unchanged.
+     */
+    virtual bool prefersRawPassthrough() const { return false; }
   };
 
 };

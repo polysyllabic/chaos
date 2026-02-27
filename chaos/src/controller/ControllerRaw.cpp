@@ -167,7 +167,17 @@ void ControllerRaw::notification(unsigned char* buffer, int length) {
   unlock();
 	
   resume();	// kick off the thread if paused
-	
+
+  bool bypassRewrite = false;
+  if (controllerInjector != nullptr) {
+    bypassRewrite = controllerInjector->prefersRawPassthrough();
+  }
+  if (bypassRewrite) {
+    // While paused, preserve raw controller packets except controls intentionally masked by engine policy.
+    controllerStateSnapshot->maskPausedControls(buffer, length);
+    return;
+  }
+
   // This is our only chance to intercept the data.
   // Take the mControllerState and replace the provided buffer:
   controllerStateSnapshot->applyHackedState(buffer, controllerState);
