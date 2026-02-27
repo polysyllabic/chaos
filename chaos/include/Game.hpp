@@ -26,9 +26,6 @@
 
 #include "GameMenu.hpp"
 #include "ControllerInputTable.hpp"
-//#include "GameCommandTable.hpp"
-//#include "GameConditionTable.hpp"
-//#include "ConditionTrigger.hpp"
 #include "SequenceTable.hpp"
 #include "ModifierTable.hpp"
 #include "EngineInterface.hpp"
@@ -65,7 +62,7 @@ namespace Chaos {
      * \return false If had a fatal error while loading
      * 
      * If we're reloading a new game, an early fatal error will leave the old game's data intact.
-     * A count of the number of parsing errors encountered is kept in #parse_errors so that it can
+     * A count of the number of parsing errors encountered is kept in parse_errors so that it can
      * be reported to the interface.
      */
     bool loadConfigFile(const std::string& configfile, EngineInterface* engine);

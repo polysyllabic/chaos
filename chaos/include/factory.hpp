@@ -28,7 +28,7 @@ namespace Chaos {
    * \brief The interface for a self-registering factory for child modifier classes.
    * 
    * The configuration here allows you to add new types of modifiers without needing to
-   * edit a factory class. See the #Modifier base class for more information.
+   * edit a factory class. See the Modifier base class for more information.
    */
   template <class Base, class... Args> class Factory {
     
