@@ -29,6 +29,9 @@ using namespace Chaos;
 
 Controller::Controller() {
   memset(controllerState, 0, sizeof(controllerState));
+  // Hybrid trigger axes are centered at JOYSTICK_MIN when released.
+  controllerState[((int) TYPE_AXIS << 8) + (int) AXIS_L2] = JOYSTICK_MIN;
+  controllerState[((int) TYPE_AXIS << 8) + (int) AXIS_R2] = JOYSTICK_MIN;
 }
 
 short Controller::getState(std::shared_ptr<ControllerInput> signal) {

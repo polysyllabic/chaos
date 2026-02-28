@@ -272,6 +272,50 @@ remap = [
   return ok;
 }
 
+static bool testTouchpadStopClearsHybridAxisToJoystickMin() {
+  MockEngine engine;
+  auto mod = makeRemap(
+      R"(
+name = "Touchpad Trigger Reset Test"
+type = "remap"
+disable_signals = [ "L2" ]
+remap = [
+  { from = "TOUCHPAD_ACTIVE", to = "NOTHING" }
+]
+)",
+      engine);
+
+  mod->begin();
+  engine.applied_events.clear();
+  engine.pipelined_events.clear();
+
+  auto touchpad_active = engine.getInput("TOUCHPAD_ACTIVE");
+  auto l2 = engine.getInput("L2");
+
+  bool ok = true;
+  ok &= check(touchpad_active != nullptr, "TOUCHPAD_ACTIVE input should exist");
+  ok &= check(l2 != nullptr, "L2 input should exist");
+  if (!touchpad_active || !l2) {
+    return false;
+  }
+
+  DeviceEvent start = {0, 1, touchpad_active->getButtonType(), touchpad_active->getID()};
+  ok &= check(mod->remap(start), "TOUCHPAD_ACTIVE start should be accepted");
+
+  DeviceEvent stop = {0, 0, touchpad_active->getButtonType(), touchpad_active->getID()};
+  ok &= check(mod->remap(stop), "TOUCHPAD_ACTIVE stop should be accepted");
+
+  ok &= check(engine.applied_events.size() == 1,
+              "touchpad stop should emit one axis reset for L2");
+  if (engine.applied_events.size() == 1) {
+    const auto& reset = engine.applied_events[0];
+    ok &= check(reset.type == TYPE_AXIS, "L2 reset should be an axis event");
+    ok &= check(reset.id == l2->getHybridAxis(), "L2 reset should target AXIS_L2");
+    ok &= check(reset.value == JOYSTICK_MIN, "L2 reset should use JOYSTICK_MIN");
+  }
+  return ok;
+}
+
 static bool testTouchpadInactiveDelayInjection() {
   ControllerStateProbe probe;
   ControllerState::setTouchpadInactiveDelay(0.001);
@@ -346,14 +390,26 @@ static bool testControllerInputTypeAndHybridAxisState() {
   return ok;
 }
 
+static bool testControllerDefaultHybridAxesReleased() {
+  Controller controller;
+  bool ok = true;
+  ok &= check(controller.getState(AXIS_L2, TYPE_AXIS) == JOYSTICK_MIN,
+              "AXIS_L2 default should be released (JOYSTICK_MIN)");
+  ok &= check(controller.getState(AXIS_R2, TYPE_AXIS) == JOYSTICK_MIN,
+              "AXIS_R2 default should be released (JOYSTICK_MIN)");
+  return ok;
+}
+
 int main() {
   bool ok = true;
   ok &= testAxisZeroClearsNegativeButton();
   ok &= testInvertUsesRemappedValue();
   ok &= testTouchpadStopClearsConfiguredAxes();
+  ok &= testTouchpadStopClearsHybridAxisToJoystickMin();
   ok &= testTouchpadInactiveDelayInjection();
   ok &= testTouchpadInactiveDelayParsing();
   ok &= testControllerInputTypeAndHybridAxisState();
+  ok &= testControllerDefaultHybridAxesReleased();
 
   if (!ok) {
     return 1;

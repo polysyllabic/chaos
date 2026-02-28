@@ -209,8 +209,10 @@ bool RemapModifier::remap(DeviceEvent& event) {
         // NB: If we ever do support other controllers, we'll need to get the indirect signal type, not
         // this low-level value
         for (auto s : signals) {
-          uint8_t axis_id = (s->getType() == ControllerSignalType::HYBRID) ? s->getHybridAxis() : s->getID();
-          new_event = {0, 0, TYPE_AXIS, axis_id};
+          const bool is_hybrid = (s->getType() == ControllerSignalType::HYBRID);
+          uint8_t axis_id = is_hybrid ? s->getHybridAxis() : s->getID();
+          short axis_value = is_hybrid ? JOYSTICK_MIN : 0;
+          new_event = {0, axis_value, TYPE_AXIS, axis_id};
           // Inject directly to avoid lock recursion inside the remap pass.
           engine->applyEvent(new_event);
         }

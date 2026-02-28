@@ -138,6 +138,40 @@ static void unpauseEngine(TestController& controller) {
   controller.inject({0, 0, TYPE_BUTTON, BUTTON_SHARE});
 }
 
+static bool testFirstUnpauseKeepsHybridTriggersReleased() {
+  bool ok = true;
+
+  TestController controller;
+  ChaosEngine engine(controller, "", "", false);
+  const std::string config_path = writeConfigFile();
+  ok &= check(engine.setGame(config_path), "test config should load");
+
+  engine.start();
+
+  ok &= check(engine.getState(AXIS_L2, TYPE_AXIS) == JOYSTICK_MIN,
+              "L2 axis should start released before first unpause");
+  ok &= check(engine.getState(AXIS_R2, TYPE_AXIS) == JOYSTICK_MIN,
+              "R2 axis should start released before first unpause");
+
+  unpauseEngine(controller);
+  ok &= check(waitFor([&]() { return !engine.isPaused(); }),
+              "engine should unpause on SHARE press/release");
+
+  ok &= check(engine.getState(BUTTON_L2, TYPE_BUTTON) == 0,
+              "L2 button should remain released after first unpause");
+  ok &= check(engine.getState(BUTTON_R2, TYPE_BUTTON) == 0,
+              "R2 button should remain released after first unpause");
+  ok &= check(engine.getState(AXIS_L2, TYPE_AXIS) == JOYSTICK_MIN,
+              "L2 axis should remain released after first unpause without trigger input");
+  ok &= check(engine.getState(AXIS_R2, TYPE_AXIS) == JOYSTICK_MIN,
+              "R2 axis should remain released after first unpause without trigger input");
+
+  engine.stop();
+  engine.WaitForInternalThreadToExit();
+  std::remove(config_path.c_str());
+  return ok;
+}
+
 static bool testDuplicateActivationDoesNotStack() {
   bool ok = true;
   RaceModifier::reset();
@@ -202,6 +236,7 @@ static bool testRemoveDeferredUntilUpdateCompletes() {
 
 int main() {
   bool ok = true;
+  ok &= testFirstUnpauseKeepsHybridTriggersReleased();
   ok &= testDuplicateActivationDoesNotStack();
   ok &= testRemoveDeferredUntilUpdateCompletes();
   if (!ok) {
