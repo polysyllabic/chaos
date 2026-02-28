@@ -46,8 +46,16 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
       'background:#4a352f; color:#f7ece7;'
     )
 
-    vote_timer = ui.linear_progress(value=0.0).classes('w-full')
-    vote_label = ui.label('Vote Timer: 0s remaining').classes('text-sm')
+    ui.label('Vote Timer').classes('text-sm')
+    with ui.element('div').classes('relative w-full h-6 overflow-hidden rounded').style(
+      'border:1px solid rgba(255,255,255,0.25); background:rgba(20,20,20,0.35);'
+    ):
+      vote_fill = ui.element('div').classes('absolute inset-y-0 left-0').style(
+        'width:0%; background:rgba(255,255,255,0.75); transition:width 0.2s linear;'
+      )
+      vote_remaining = ui.label('0s').classes('absolute left-2 top-1/2 -translate-y-1/2 text-xs font-semibold')
+      vote_remaining.style('color:#f7f7f7; text-shadow:0 1px 2px rgba(0,0,0,0.85); pointer-events:none;')
+    vote_fill_style = ''
     mods_column = ui.column().classes('w-full gap-1')
     mod_rows: list[dict] = []
     with ui.element('div').classes('h-8'):
@@ -131,8 +139,18 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
         f'text-align:center; background:{status_bg}; color:{status_text};'
       )
 
-      vote_timer.value = vote_progress
-      vote_label.text = f'Vote Timer: {vote_seconds_remaining}s remaining'
+      nonlocal vote_fill_style
+      new_vote_fill_style = (
+        f'width:{vote_progress * 100:.1f}%; '
+        'background:rgba(255,255,255,0.75); '
+        'transition:width 0.2s linear;'
+      )
+      if vote_fill_style != new_vote_fill_style:
+        vote_fill.style(new_vote_fill_style)
+        vote_fill_style = new_vote_fill_style
+      vote_remaining_text = f'{vote_seconds_remaining}s'
+      if vote_remaining.text != vote_remaining_text:
+        vote_remaining.text = vote_remaining_text
 
       active_mods = list(config.relay.active_mods or [])
       mod_times = list(config.relay.mod_times or [])
