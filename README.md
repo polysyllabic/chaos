@@ -34,12 +34,6 @@ PlayStation exclusive, and so the design of the system was specifically intended
 that console. However, the same setup should generally work for PC games that can be played with a
 controller. Mouse-and-keyboard remapping is not (yet) supported.
 
-_PC Note:_ If you are trying to use this system for a PC game, note that Steam Input can cause
-serious issues with lag, especially while starting up the game. This is definitely true with
-_The Last of Us: Part II_ and likely true for other games as well. To avoid this problem, disable
-Steam Input for the relevant PC games. From your Steam library, right-click on the game, then
-select `Properties -> Controller -> Override -> Disable Steam Input`.
-
 Chaos Unbound is currently in beta status: The engine compiles and runs (mostly) but its
 functionality is not yet fully tested. Consider using Blegas's original version if you want
 to play TCC with TLOU2 right now.
@@ -127,7 +121,6 @@ router that connects you to the internet yourself and you trust all the devices 
 network). If that is not the case, be sure to enable password protection for the UI and enable
 TLS.
 
-
 ## What's New In Chaos Unbound
 
 This version of Chaos is called "Chaos Unbound" because the system is no longer hard-coded to a
@@ -161,11 +154,11 @@ new TLOU2 configuration file include the following:
 - Criss-Cross Joysticks: Vertical and horizontal axes of both joysticks are swapped
 - Controller Drift: Add controller drift to the left joystick
 
-Streamers can now choose to allow chat to acquire "redemption" credits that entitle the person with
-that credit to apply a modifier of their choosing. The modifier is applied outside of the normal
-voting and occurs immediately (or after a cooldown period that can be configured). This allows
-a member of chat to apply the most chaotic modifier at a strategic time, rather than being
-subjected to the vagaries of the voting process.
+Streamers can now choose to allow chat to acquire credits that entitle the person with a credit to
+apply a modifier of their choosing. The modifier is applied outside of the normal voting and occurs
+immediately (or after a cooldown period that can be configured). This allows a member of chat to
+apply the most chaotic modifier at a strategic time, rather than being subjected to the vagaries of
+the voting process.
 
 Credits can be acquired by any of the following means, which the streamer can enable and configure
 individually:
@@ -192,13 +185,46 @@ hardware (for all setups):
 - (recommended) A cat 5 ethernet cable
 - (optional) A case for the Raspberry Pi.
 
-To play PS5-only games such as TLOU1 Remake or TLOU2 Remaster, you will also need hardware to let
-you use a non-PS5 controller without having the console reject your commands. I successfully
-used a [Besavior PS5 controller](https://www.beloader.com/products/besavior-1.html). Similar
-devices such as the same company's Besavior P5Mate Pro will likely work as well. Note that in
-these setups, the console alone doesn't provide enough power to run the intermediate device
-and the Pi, so you will need to provide additional power to the Pi. Without the extra hardware,
-the console provides enough power to run the Pi.
+To play PS5 games such as TLOU1 Remake or TLOU2 Remaster, which do not let you play with
+a DualShock controller, you will also need an authenticator device to let you use a non-PS5
+controller without having the console reject your commands. 
+
+*Authenticator devices known to work*
+
+- Besavior controller: This is a regular PS5 controller that has been customized with a backpack
+  device that lets you chain another controller into it. This is an excellent controller in its
+  own right, but you won't be using it as a controller in this configuraiton. It will just sit
+  on your desk between the Pi and the PS5.
+
+- Besavior P5Mate Pro 1000Hz: This is essentially just an authenticator/translation device. It's
+  plugged in the same way that the Besavior controller is, sitting between the Pi and the console.
+  Since it doesn't have the buttons and joysticks of a real controller, it's much less expensive
+  than the Besavior controller.
+
+Note that for either setup, the console alone likely doesn't provide enough power through the
+USB port to run the authenticator device and the Pi, so you will need to provide additional power
+to the Pi. See the cabling instructions for how to accomplish this. If you're playing a PS4 game
+where you don't need the authenticator, the console provides enough power to run the Pi.
+
+For either of these devices, see the [Besavior website](https://www.besavior.com/)
+
+*Authenticator devices that will probably work*
+
+Any device that transparently acts as a man-in-the-middle authenticator in the way that the
+two devices above do will likely also work, but I have not tested them. The Brook Wingman P5
+is an example of such a device.
+
+*Authenticator devices that definitely will not work*
+
+The P5General is another product from Besavior. It's the lowest cost option from that company,
+but you should _not_ buy it for use with TCC. The P5General isn't a passthrough device that
+translates an arbitrary controller's messages to the PS5 format. Instead, it provides services
+to authenticate USB packets before sending them on to the PlayStation. In essence, it gives
+other devices the tools they need to pretend they are PS5 controllers. Supporting this would
+require a significant effort, and since there are already several other ways to achieve the
+same functionality with much less effort, I have no plans to add support for it at this time.
+
+## Running Without OBS
 
 Most of the instructions here assume that you also use streaming software such as OBS, which will
 require you to have a capture card as well. Note that is **is** possible to run Chaos without OBS,
@@ -207,14 +233,13 @@ or even without streaming at all, although you will not be able to use overlays 
 status of votes or the modifiers in effect. (This has not been tested, but suggestions for what
 to try will be found below.)
 
-**Important:** You must use the DualShock 4 Generation 2, model CUH-ZCT2U, or a compatible 3rd-party
-equivalent. Gen-1 DualShocks connect to the console only through wifi, and a wired USB connection is
-needed to intercept the signals. Note also that you need this controller *in addition* to the
-Besavior to play PS5-only games.
+**Important:** Currently, you must use the DualShock 4 Generation 2, model CUH-ZCT2U. Some
+3rd-party equivalents may also work, but this has not been carefully tested. Gen-1 DualShocks
+connect to the console only through wifi, and a wired USB connection is needed to intercept the
+signals.
 
-*Note:* You may be able to adapt TCC to run on other setups, particularly using different models
-of the Raspberry Pi or alternatives to the Besavior, but these are untested. See the notes below
-for specific details explaining the requirements if you want to try something different.
+Supporting XBox and DualSense controllers to play PC games in on the to-do list for version 2.1.
+
 
 ## Installation
 
@@ -342,7 +367,8 @@ After the initial install, use the update scripts from the repository root:
 - `update_engine.sh` rebuilds/reinstalls the engine and refreshes the `chaos` systemd unit files.
 - `update_chaosface.sh` redeploys Chaosface to `/usr/local/chaos`.
 - `update_chaos.sh` runs both engine and Chaosface updates in sequence.
-- `update_services.sh` syncs `startchaos.sh` and service unit files without rebuilding engine or redeploying Chaosface.
+- `update_services.sh` syncs `startchaos.sh` and service unit files without rebuilding engine or
+   redeploying Chaosface.
 
 Optional flags:
 
@@ -351,20 +377,27 @@ Optional flags:
 - `./scripts/update_chaos.sh --skip-chaosface-deps --restart-services`
 - `./scripts/update_services.sh --restart-services`
 
-The --restart-service and --restart-services will stop the old version of the engine and/or chaosface and start the new
-one immediately after the update. If you omit this flag, you will need either to restart the services manually or
-reboot the Pi.
+The --restart-service and --restart-services will stop the old version of the engine and/or
+chaosface and start the new one immediately after the update. If you omit this flag, you will need
+either to restart the services manually or reboot the Pi.
 
-The --skip-deps and --skip-chaosface-deps flags will skip checks for alterations in dependencies and will speed up
-updates when there are no changes to any of the 3rd-party libraries that these programs rely upon.
+The --skip-deps and --skip-chaosface-deps flags will skip checks for alterations in dependencies
+and will speed up updates when there are no changes to any of the 3rd-party libraries that these
+programs rely upon.
 
 ### Configuring the Console
 
 Your console will need to be set up to prefer USB communication rather than bluetooth for your
 controllers. Open the system menu on your console.
 
-- On a PS5, navigate to Settings -> Accessories -> Controllers -> Communication Method -> Use USB Cable 
+- On a PS5, navigate to Settings -> Accessories -> Controllers -> Communication Method -> Use USB Cable
 - On a PS4, Navigate to Settings -> Devices -> Controllers -> Communication Method -> Use USB Cable
+
+_Note:_ This seting on its own will mean that the console uses the cable when available but
+will still use bluetooth in other contexts, for example when the Chaos engine is down. To fully
+disable bluetooth, go into Settings -> Accessories -> General -> Advanced Settings and turn off
+bluetooth. This will be necessary if you're using an authenticator device, since you need to make
+sure that your controller only connects to the console through the authenticator.
 
 ### Configuring the Chatbot
 *Note:* If you are installing chaosface on a separate computer, see the installation instructions
@@ -404,8 +437,8 @@ credits, get an EvenSub OAuth token while logged in to your main streamer's acco
 
 ### Configuring OBS/SLOBS
 
-The Chaos interface generates three browser sources that you can add as overlays to show the current
-status of Chaos to your viewers:
+The Chaos interface generates three browser sources that you can add as overlays to show the
+current status of Chaos to your viewers:
 
 - Active Mods: Shows the mods currently in effect with progress bars indicating how much time
 remains for each mod.
@@ -423,8 +456,8 @@ To add these overlays to OBS or SLOBS, perform the following steps:
 - Votes: http://raspberrypi.local/Votes/
 - Vote Timer: http://raspberrypi.local/VoteTimer/
 
-It's recommended to set these browser sources to refresh when not displayed so that they can
-easily be refreshed. Detailed setup instructions for OBS are available in the
+You should set these browser sources to refresh when not displayed so that they can easily be
+refreshed. Detailed setup instructions for OBS are available in the
 [stream setup](docs/streamSetup.md) guide.
 
 ### Running TCC Without Overlays
@@ -447,9 +480,10 @@ The hardware chain differs depending on whether you are playing a PS4 game or a 
 
 For all games:
 
-1. Connect the DualShock controller (the PS4 controller) through a USB cable to the lower left
-USB port on your Raspberry Pi. This is the USB 2.0 port furthest from the ethernet port and
-closest to circuit board.
+1. Connect the DualShock controller (the PS4 controller) through a USB cable to one of
+the USB-A ports on your Raspberry Pi. _Note:_ In the original version of TCC, you
+had to connect to the lower-left port, but this restriction has been removed from
+Chaos Unbound. 
 
 2. Connect the Raspberry Pi's ethernet port to your router, unless you're using WiFi.
 
@@ -468,32 +502,36 @@ For PC games:
 
 For PS5-only games:
 
-You need a device to convince your console that you're using a DualSense (PS5) controller. We'll call
-this the "imposter" device such as a Besavior controller.
+You need an authenticator device to convince your console that you're using a controller approved
+for the PS5.
 
-3. First connect the imposter device to the PlayStation 5 with a USB cable. For the Besavior
-controller, this means using the USB-C port that is in the same place as the port on an ordinary
-controller.
+3. First connect the authenticator device to the PlayStation 5.
 
-Next, connect the impostor device to the Raspberry Pi's USB-C port.
+Different devices require different cable types. Please read the instructions that came with your
+device.
 
-If you're using the Besavior controller, you should use plug the special cable that comes with the
-Besavior that has a male USB-C port on one side and a connector with both a female USB-C and a
-female USB-A port on the other. Connect the male USB-C side to the USB-C port on the device
-mounted below the Besavior controller. Connect the the Raspberry Pi's USB-C port to the USB-A end
-of the special connector with a USB-C to USB-A cable. Finally, connect another USB-C cable into
-the side port of the special adapter and connect it to an external DC power source that can supply
-at least 3A. *Note:* If you use a lower-rated power supply, you may experience brown-outs when the
-Pi starts trying to draw more power than is available under load. In this case, you may find the
-Pi hanging and rebooting at inconvenient times.
+In theory you can use any USB port on the console, but in practice the USB-A ports are much more
+reliable. On a PS5 Pro, these are on the back of the console only.
 
-The sequence of devices is DualShock -> Raspberry Pi -> Impostor Device -> PlayStation 5
+Also connect supplementary power. For the P5Mate, there is a port for this on the lower right side
+of the device. The Besavior controller comes with a special USB-A to USB-C cable that has an
+additional USB-C port on one side for supplementary power. Connect one end of this adapter to
+the USB-C port on the backppack device mounted on the under side of the Besavior controller, connect
+the other (USB-A) end to a regular USB-A to USB-C cable, and connect the USB-C end of that cable 
+to the Raspberry Pi's USB-C port. Supply supplementary power with another USB cable connected to
+an independent power source such as a power brick. It must be able to supply at least 3A.
+
+The full sequence of devices is DualShock -> Raspberry Pi -> Authenticator Device -> PlayStation 5
+
+*Note:* If you don't supply external power, the Pi may still boot up, but you are likely to
+experience brown-outs when the Pi runs under load. In this case, you may find the Pi hanging and
+rebooting at inconvenient times.
 
 ### Startup
 
-1. Turn on your console.  If using the Besavior setup, also ensure that the external power is
-connected. Once power is applied, the Raspberry Pi will boot up. One the boot sequence and the
-Chaos engine is running, the system (either console or PC) should recognize the controller.
+1. Turn on your console and external power, if needed. Once power is applied, the Raspberry Pi
+will boot up. After the boot sequence and the Chaos engine is running, the system (either console
+or PC) should recognize the controller.
 
 2. If OBS was already running, refresh your browser sources. The overlays should be active.
 
@@ -649,9 +687,10 @@ _In translate mode, include accelerometer and reduce joystick deadzone:_
 _Show only handshake/control and transport logs (suppress ordinary data output):_
 `./chaos/utils/gamepad_test.sh --no-data`
 
-Note that while you can run `make_modlist` from any computer with Python, `parse_game_config` is a Linux
-commandline utility, and both `validate_mod` and `gamepad_test` must be run from the Pi itself, since they
-interact with the controller transport.
+Note that while you can run `make_modlist` from any computer with Python, `parse_game_config` is a
+Linux commandline utility, and both `validate_mod` and `gamepad_test` must be run from the Pi
+itself, since they interact with the controller using hardware that exists on the Pi but not on
+ordinary PCs.
 
 ## Questions That People Might Frequently Ask (if anyone asked questions)
 
@@ -662,29 +701,30 @@ it unusable for this project.
 
 *Why can't I use the DualSense (PS5) controller with TCC?*
 
+The short story is that Sony wants to lock down its platform so you are encouraged to buy one of
+their controllers. (There is only one licensed 3rd-party controller that I know of: the Razer
+Wolverine.)
+
 The DualSense controller for the PS5 sends signals to the console along with an encrypted checksum
 that indicates what those signals should be. If the signals don't match the checksum, the input is
-rejected, and because this checksum is encrypted, there's no way for us to update the checksum to
-match. This is not a problem with PS4 games, since the console will allow you use a DualShock
-controller. For PS5 games, however, Sony wants you to use a DualSense, which won't work with TCC.
+rejected, and because this checksum is encrypted, there's no easy way for us to update it to match.
+This is not a problem with PS4 games, since the console will allow you use a DualShock controller.
+For PS5 games, however, Sony wants you to use a DualSense, which won't work with TCC.
 
-The way to work around this limitation is either to play the PC version of the game (if one exists)
-or to play a PS5 game on the PlayStation with a device that allows other controllers to pretend
-that they are a DualSense. The best-known examples of such hardware are products from Besavior. 
-If you're interested in going this route, I recommend you check out
-[this YouTube video](https://youtu.be/j-GCoZs3qVM?si=7RSLYm3dREmNkMga) before buying anything so
-that you understand the trade-offs involved between the various devices.
+For ways to remove this restriction, see the discussion of authenticator devices above.
 
+*What about using remote play?*
 
-Supporting other controllers (e.g., XBox) would be extremely useful, especially for PC games. This
-is on my to-do list.
+Some people get around the PS5 controller restriction by using remote play. However this is laggy
+and unreliable. I have no plans to support it.
 
 *Does this work with the PC version of TLOU2?*
 
 If you plug the DualShock + Pi into your PC instead of your console, you _can_ use TCC, but you
-must select the game configuration file designed for the PC, since the menu options differ somewhat.
-Playing this way will _not_ intercept signals coming from mouse and keyboard, so you still need to
-use a DualShock.
+must select the game configuration file designed for the PC, since the menu options differ
+slightly from the console version of the game. Playing this way will _not_ intercept signals
+coming from mouse and keyboard, so you still need to use a DualShock. Support for PC/XBox
+controllers is on my to-do list for version 2.1.
 
 If you're asking for a version that works _without_ a Raspberry Pi to handle the signal conversions,
 that would require a major effort. In essence, we'd need to create some sort of driver to intercept
@@ -709,6 +749,8 @@ for its network connection. There may be performance issues going that route, in
 lag and disconnections, as well as chat/OBS overlay issues. Some of these performance issues may
 be reduced by running the chatbot on a different computer to lighten the Pi's workload.
 
+If you do get TCC running on a different model, please drop me a line and let me know.
+
 ## Troubleshooting
 *The console isn't responding to the controller*
 
@@ -717,40 +759,50 @@ cables break, but a surprisingly large number of cables are e-waste from the beg
 
   - Test each cable separately.
   - If you're using long cables, try the shortest ones that will work for your setup. Note that
-    the USB ports are either USB 3.0 or 3.1, depending on the port. If you're using an old USB-A cable
-    that only supports USB 2.0, power and data rates will be reduced.
-  - For USB-C cables, make sure they provide a dual, power-and-data connection. Power-only cables will
-    not work.
-  - If you're using an adapter dongle (e.g., USB-A to USB-C), try reversing the device it's attached
-    to. In other words, if it's currently attached at the console end, move it to the other device
-    and reverse the cord, or vice versa. Sometimes a connection will work one way but not the other.
+    the USB ports are either USB 3.0 or 3.1, depending on the port. If you're using an old USB-A
+    cable that only supports USB 2.0, power and data rates will be reduced.
+  - For USB-C cables, make sure they provide a dual, power-and-data connection. Power-only cables
+    will not work.
+  - If you're using an adapter dongle (e.g., USB-A to USB-C), try reversing the device it's
+    attached to. In other words, if it's currently attached at the console end, move it to the
+    other device and reverse the cord, or vice versa. Sometimes a connection will work one way but
+    not the other.
 
 Verify that everything is correctly cabled, power is applied to the Pi, and the chaos engine is
 running. When the engine is operating and the DualShock is plugged in to the correct USB port on
 the Pi, the light on the back of the DualShock should be on.
 
-If your cables are good and your cabling is correct, try connecting to the console through a different
-USB port. (In particular, try using one of the USB-A ports on the back of the console rather than a
-front-side USB-C port.)
+If your cables are good and your cabling is correct, try connecting to the console through a
+different USB port. (In particular, try using one of the USB-A ports on the back of the console
+rather than a front-side USB-C port.)
 
-If you're attempting to run this setup on a PS5 with an authentication device in the middle, verify
-that the authenticator works without the Pi present. Connect a DualShock to the authenticator and
-try to open and run a PS5 game. If this fails, you will need to configure the authenticator, following
-whatever instructions the manufacturer provides.
+If you're attempting to run this setup on a PS5 with an authentication device in the middle,
+verify that the authenticator works without the Pi present. Connect a DualShock to the
+authenticator and try to open and run a PS5 game. If this fails, you will need to configure the
+authenticator, following whatever instructions the manufacturer provides.
 
 *I can navigate through the PlayStation's system menu but I can't play a game.*
 
-Open the game you want to play and then restart the engine.
+This is a bug that _should_ have been fixed in most if not all cases. Please report this issue if
+you encounter it, but for an immediate work-around, open the game you want to play and then
+restart the engine from the Pi's commandline: `sudo systemctl restart chaos`.
+
+*When the Pi is plugged in to my PC, loading the game takes an eternity*
+
+Steam Input can cause serious issues with lag, especially while starting up the game. This is
+definitely true with _The Last of Us: Part II_ and likely true for other games as well. To avoid
+this problem, disable Steam Input for the relevant PC games. From your Steam library, right-click
+on the game, then select `Properties -> Controller -> Override -> Disable Steam Input`.
 
 *TCC is selecting the wrong menu options / Some mods are still enabled*
 
-*The Last of Us: Part II* (and Part 1) use a menu system that remembers the last place you exited
-the menu. If you forget to return all menus to the top of each menu page, TCC will put the items
-in the wrong place. It can also get off if the chaos engine attempts to start or remove a mod
-when the game is not accepting commands (e.g., in a death animation). Remember, the engine has
-no way of knowing what's going on in the game, so it's on you to remember to pause the game
-when you enter one of these input-blocking moments. If you forget, you'll need to go into the
-menus and reset things to their proper state by hand.
+*The Last of Us: Part II* uses a menu system that remembers the last place you exited the menu. If
+you forget to return all menus to the top of each menu page, TCC will put the items in the wrong
+place. It can also get off if the chaos engine attempts to start or remove a mod when the game is
+not accepting commands (e.g., in a death animation). Remember, the engine has no way of knowing
+what's going on in the game, so it's on you to remember to pause the game when you enter one of
+these input-blocking moments. If you forget, you'll need to go into the menus and reset things to
+their proper state by hand.
 
 *The Pi suddenly reboots*
 
