@@ -167,6 +167,7 @@ def build_game_settings_tab() -> Callable[[], None]:
     filter_state = {
       'enabled': False,
       'selected_groups': set(),
+      'rendering_groups': False,
     }
 
     def _group_names(mod_data) -> set[str]:
@@ -223,17 +224,21 @@ def build_game_settings_tab() -> Callable[[], None]:
         name for name in filter_state['selected_groups'] if name in option_norms
       }
 
-      with group_toggles:
-        if not options:
-          ui.label('No modifier groups available').classes('text-xs')
-          return
-        for norm, label in options:
-          checked = norm in filter_state['selected_groups']
-          ui.checkbox(
-            label,
-            value=checked,
-            on_change=lambda event, group_norm=norm: on_group_toggle(group_norm, bool(event.value)),
-          )
+      filter_state['rendering_groups'] = True
+      try:
+        with group_toggles:
+          if not options:
+            ui.label('No modifier groups available').classes('text-xs')
+            return
+          for norm, label in options:
+            checked = norm in filter_state['selected_groups']
+            ui.checkbox(
+              label,
+              value=checked,
+              on_change=lambda event, group_norm=norm: on_group_toggle(group_norm, bool(getattr(event, 'value', False))),
+            )
+      finally:
+        filter_state['rendering_groups'] = False
 
     def render_mod_toggles():
       mod_toggles.clear()
@@ -254,6 +259,8 @@ def build_game_settings_tab() -> Callable[[], None]:
           ui.checkbox(mod_data.get('name', key), value=bool(mod_data.get('active', True)), on_change=_on_toggle)
 
     def on_group_toggle(group_norm: str, enabled: bool):
+      if filter_state['rendering_groups']:
+        return
       if enabled:
         filter_state['selected_groups'].add(group_norm)
       else:
@@ -261,7 +268,7 @@ def build_game_settings_tab() -> Callable[[], None]:
       render_mod_toggles()
 
     def on_filter_toggle(event):
-      filter_state['enabled'] = bool(event.value)
+      filter_state['enabled'] = bool(getattr(event, 'value', group_filter_checkbox.value))
       render_mod_toggles()
 
     group_filter_checkbox.on('update:model-value', on_filter_toggle)
