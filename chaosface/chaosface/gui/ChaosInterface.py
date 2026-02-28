@@ -23,7 +23,7 @@ def build_chaos_interface(*, ensure_runtime_started: Callable[[], None], shutdow
   with tabs:
     streamer_tab = ui.tab('Streamer Interface')
     game_settings_tab = ui.tab('Game Settings')
-    chatbot_commands_tab = ui.tab('CHATBOT COMMANDS')
+    chatbot_commands_tab = ui.tab('INTERFACE SETTINGS')
     source_configuration_tab = ui.tab('SOURCE CONFIGURATION')
     connection_tab = ui.tab('Connection Setup')
 

@@ -15,6 +15,20 @@ from .ui_helpers import relay_config_float, safe_float, safe_int, sync_enabled_m
 
 def build_game_settings_tab() -> Callable[[], None]:
   with ui.card().classes('w-full'):
+    def labeled_control(
+      label_text: str,
+      create_control,
+      *,
+      row_classes: str = 'w-full items-center gap-3',
+      control_classes: str = 'w-64 max-w-full',
+    ):
+      with ui.row().classes(row_classes):
+        ui.label(label_text).classes('text-body1 whitespace-normal').style('width: 22rem; min-width: 22rem;')
+        control = create_control()
+        if control_classes:
+          control.classes(control_classes)
+      return control
+
     with ui.row().classes('w-full items-start justify-between'):
       ui.label('Game Settings').classes('text-h6')
       with ui.column().classes('items-end gap-1'):
@@ -33,7 +47,12 @@ def build_game_settings_tab() -> Callable[[], None]:
       def _on_game_selector_change(_event):
         selector_state['pending_user_selection'] = True
 
-      game_selector = ui.select([], label='Available games', on_change=_on_game_selector_change).classes('w-96')
+      game_selector = labeled_control(
+        'Available games',
+        lambda: ui.select([], on_change=_on_game_selector_change),
+        row_classes='items-center gap-3',
+        control_classes='w-96',
+      )
 
       def confirm_game_selection():
         selected = str(game_selector.value or '').strip()
@@ -92,11 +111,12 @@ def build_game_settings_tab() -> Callable[[], None]:
       def _on_mod_list_change(_event):
         mod_list_state['pending_user_edit'] = True
 
-      mod_list_link = ui.input(
+      mod_list_link = labeled_control(
         'URI used by !mods',
-        value=str(config.relay.mod_list_link or ''),
-        on_change=_on_mod_list_change,
-      ).classes('max-w-full')
+        lambda: ui.input(value=str(config.relay.mod_list_link or ''), on_change=_on_mod_list_change),
+        row_classes='items-center gap-3',
+        control_classes='max-w-full',
+      )
       mod_list_link.style('width: 48ch;')
 
       def reset_mod_list_to_default():
@@ -108,10 +128,11 @@ def build_game_settings_tab() -> Callable[[], None]:
 
     ui.separator()
     ui.label('Chatbot Commands Link').classes('text-subtitle1')
-    chaoscmd_link = ui.input(
+    chaoscmd_link = labeled_control(
       'URI used by !chaoscmd',
-      value=str(config.relay.chaoscmd_link or ''),
-    ).classes('max-w-full')
+      lambda: ui.input(value=str(config.relay.chaoscmd_link or '')),
+      control_classes='max-w-full',
+    )
     chaoscmd_link.style('width: 48ch;')
 
     refresh_game_selector()
@@ -120,29 +141,50 @@ def build_game_settings_tab() -> Callable[[], None]:
 
     with ui.row().classes('w-full gap-8'):
       with ui.column().classes('w-96'):
-        num_active_mods = ui.number('Active modifiers', value=int(config.relay.num_active_mods), min=1, max=10, step=1)
-        time_per_modifier = ui.number('Time per modifier (s)', value=float(config.relay.time_per_modifier), min=1, max=172800, step=1)
-        softmax_factor = ui.slider(min=1, max=100, value=int(config.relay.softmax_factor))
-        vote_options = ui.number('Vote options', value=int(config.relay.vote_options), min=2, max=5, step=1)
-        voting_type = ui.select(['Proportional', 'Majority', 'Authoritarian'], value=config.relay.voting_type, label='Voting method')
-        voting_cycle = ui.select(
-          ['Continuous', 'Interval', 'Random', 'Triggered', 'DISABLED'],
-          value=config.relay.voting_cycle,
-          label='Voting cycle',
+        num_active_mods = labeled_control(
+          'Active modifiers',
+          lambda: ui.number(value=int(config.relay.num_active_mods), min=1, max=10, step=1),
         )
-        vote_time = ui.number(
+        time_per_modifier = labeled_control(
+          'Time per modifier (s)',
+          lambda: ui.number(value=float(config.relay.time_per_modifier), min=1, max=172800, step=1),
+        )
+        softmax_factor = labeled_control(
+          'Softmax factor',
+          lambda: ui.slider(min=1, max=100, value=int(config.relay.softmax_factor)),
+        )
+        vote_options = labeled_control(
+          'Vote options',
+          lambda: ui.number(value=int(config.relay.vote_options), min=2, max=5, step=1),
+        )
+        voting_type = labeled_control(
+          'Voting method',
+          lambda: ui.select(['Proportional', 'Majority', 'Authoritarian'], value=config.relay.voting_type),
+        )
+        voting_cycle = labeled_control(
+          'Voting cycle',
+          lambda: ui.select(
+            ['Continuous', 'Interval', 'Random', 'Triggered', 'DISABLED'],
+            value=config.relay.voting_cycle,
+          ),
+        )
+        vote_time = labeled_control(
           'Vote time (s)',
-          value=relay_config_float('vote_time', 60.0, 1.0, 3600.0),
-          min=1,
-          max=3600,
-          step=1,
+          lambda: ui.number(
+            value=relay_config_float('vote_time', 60.0, 1.0, 3600.0),
+            min=1,
+            max=3600,
+            step=1,
+          ),
         )
-        vote_delay = ui.number(
+        vote_delay = labeled_control(
           'Vote delay (s)',
-          value=relay_config_float('vote_delay', 0.0, 0.0, 3600.0),
-          min=0,
-          max=3600,
-          step=1,
+          lambda: ui.number(
+            value=relay_config_float('vote_delay', 0.0, 0.0, 3600.0),
+            min=0,
+            max=3600,
+            step=1,
+          ),
         )
 
       with ui.column().classes('w-96'):
@@ -157,13 +199,24 @@ def build_game_settings_tab() -> Callable[[], None]:
         points_redemptions = ui.checkbox('Allow points redemptions', value=bool(config.relay.points_redemptions))
         raffles = ui.checkbox('Conduct raffles', value=bool(config.relay.raffles))
         multiple_credits = ui.checkbox('Allow multiple credits per cheer', value=bool(config.relay.multiple_credits))
-        redemption_cooldown = ui.number('Redemption cooldown (s)', value=float(config.relay.redemption_cooldown), min=0, max=86400, step=1)
-        bits_per_credit = ui.number('Bits per mod credit', value=int(config.relay.bits_per_credit), min=1, max=100000, step=1)
-        points_reward_title = ui.input('Points reward title', value=str(config.relay.points_reward_title))
-        raffle_time = ui.number('Default raffle time (s)', value=float(config.relay.raffle_time), min=30, max=3600, step=1)
+        redemption_cooldown = labeled_control(
+          'Redemption cooldown (s)',
+          lambda: ui.number(value=float(config.relay.redemption_cooldown), min=0, max=86400, step=1),
+        )
+        bits_per_credit = labeled_control(
+          'Bits per mod credit',
+          lambda: ui.number(value=int(config.relay.bits_per_credit), min=1, max=100000, step=1),
+        )
+        points_reward_title = labeled_control(
+          'Points reward title',
+          lambda: ui.input(value=str(config.relay.points_reward_title)),
+        )
+        raffle_time = labeled_control(
+          'Default raffle time (s)',
+          lambda: ui.number(value=float(config.relay.raffle_time), min=30, max=3600, step=1),
+        )
 
     ui.separator()
-    ui.label('Available Modifiers').classes('text-subtitle1')
     filter_state = {
       'enabled': False,
       'selected_groups': set(),
@@ -205,6 +258,7 @@ def build_game_settings_tab() -> Callable[[], None]:
 
     with ui.row().classes('w-full items-start gap-8'):
       with ui.column().classes('w-96 max-w-full'):
+        ui.label('Available Modifiers').classes('text-subtitle1')
         with ui.row().classes('gap-2'):
           ui.button('Enable All', on_click=lambda: set_all_mods(True))
           ui.button('Disable All', on_click=lambda: set_all_mods(False))
@@ -212,6 +266,7 @@ def build_game_settings_tab() -> Callable[[], None]:
         mod_toggles.style('height: 30rem;')
 
       with ui.column().classes('w-80 max-w-full gap-2'):
+        ui.label('Modifier Groups').classes('text-subtitle1')
         group_filter_checkbox = ui.checkbox('Filter by group', value=False)
         group_toggles = ui.column().classes('w-full gap-1 overflow-y-auto border rounded p-2')
         group_toggles.style('height: 30rem;')

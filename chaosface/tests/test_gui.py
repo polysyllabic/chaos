@@ -69,3 +69,19 @@ def test_overlay_text_side_setters_normalize_invalid_values():
   finally:
     config.relay.set_overlay_current_votes_text_side(prior_votes_side)
     config.relay.set_overlay_active_mods_text_side(prior_mods_side)
+
+
+def test_ui_dark_mode_setter_updates_config():
+  import chaosface.config.globals as config
+
+  prior_dark_mode = bool(getattr(config.relay, 'ui_dark_mode', False))
+  try:
+    config.relay.set_ui_dark_mode(True)
+    assert config.relay.ui_dark_mode is True
+    assert bool(config.relay.get_attribute('ui_dark_mode')) is True
+
+    config.relay.set_ui_dark_mode(False)
+    assert config.relay.ui_dark_mode is False
+    assert bool(config.relay.get_attribute('ui_dark_mode')) is False
+  finally:
+    config.relay.set_ui_dark_mode(prior_dark_mode)

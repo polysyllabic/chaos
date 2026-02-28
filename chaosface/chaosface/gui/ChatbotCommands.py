@@ -34,14 +34,34 @@ def build_chatbot_commands_tab() -> None:
 
   aliases = sanitize_alias_map(config.relay.chatbot_command_aliases)
   alias_only = sanitize_alias_only_map(config.relay.chatbot_alias_only)
+  initial_dark_mode = bool(getattr(config.relay, 'ui_dark_mode', False))
 
   with ui.card().classes('w-full chatbot-commands'):
-    ui.label('CHATBOT COMMANDS').classes('text-h6')
+    with ui.row().classes('w-full items-start justify-between'):
+      ui.label('INTERFACE SETTINGS').classes('text-h6')
+      with ui.column().classes('items-end gap-1'):
+        button_bar = ui.row().classes('gap-2')
+        status_label = ui.label('').classes('text-sm text-right whitespace-normal')
+        status_label.style('max-width: 48ch; min-height: 1.25rem;')
+
+    ui.label('GUI Settings').classes('text-subtitle1')
+    dark_mode = ui.dark_mode(value=initial_dark_mode)
+
+    def _apply_dark_mode(enabled: bool):
+      dark_mode.set_value(bool(enabled))
+
+    dark_mode_toggle = ui.checkbox(
+      'Dark Mode',
+      value=initial_dark_mode,
+      on_change=lambda event: _apply_dark_mode(bool(getattr(event, 'value', False))),
+    )
+    _apply_dark_mode(initial_dark_mode)
+
+    ui.separator()
+    ui.label('Chatbot Commands').classes('text-subtitle1')
     ui.label(
       'Set one alias per command. Aliases must be single words (no spaces).'
     ).classes('text-caption')
-
-    status_label = ui.label('').classes('text-sm')
     rows = {}
 
     with ui.column().classes('w-full gap-2'):
@@ -107,6 +127,8 @@ def build_chatbot_commands_tab() -> None:
 
       current_aliases = sanitize_alias_map(config.relay.chatbot_command_aliases)
       current_alias_only = sanitize_alias_only_map(config.relay.chatbot_alias_only)
+      current_dark_mode = bool(getattr(config.relay, 'ui_dark_mode', False))
+      new_dark_mode = bool(dark_mode_toggle.value)
       need_save = False
 
       if current_aliases != new_aliases:
@@ -115,22 +137,28 @@ def build_chatbot_commands_tab() -> None:
       if current_alias_only != new_alias_only:
         config.relay.set_chatbot_alias_only(new_alias_only)
         need_save = True
+      if current_dark_mode != new_dark_mode:
+        config.relay.set_ui_dark_mode(new_dark_mode)
+        need_save = True
 
       if need_save:
         config.relay.set_need_save(True)
-        status_label.text = 'Chatbot command settings updated'
+        status_label.text = 'Interface settings updated'
       else:
-        status_label.text = 'No chatbot command settings changed'
+        status_label.text = 'No interface settings changed'
 
     def restore_settings():
       restored_aliases = sanitize_alias_map(config.relay.chatbot_command_aliases)
       restored_alias_only = sanitize_alias_only_map(config.relay.chatbot_alias_only)
+      restored_dark_mode = bool(getattr(config.relay, 'ui_dark_mode', False))
       for spec in CHATBOT_COMMANDS:
         widgets = rows[spec.key]
         widgets['alias'].value = str(restored_aliases.get(spec.key, '') or '')
         widgets['alias_only'].value = bool(restored_alias_only.get(spec.key, False))
-      status_label.text = 'Restored saved chatbot command settings'
+      dark_mode_toggle.value = restored_dark_mode
+      _apply_dark_mode(restored_dark_mode)
+      status_label.text = 'Restored saved interface settings'
 
-    with ui.row().classes('gap-2'):
+    with button_bar:
       ui.button('Save', on_click=save_settings)
       ui.button('Restore', on_click=restore_settings)

@@ -81,6 +81,7 @@ chaos_defaults = {
   'use_gui': True,
   'ui_rate': 20.0,
   'ui_port': 80,
+  'ui_dark_mode': False,
   'overlay_http_port': 80,
   'bits_redemptions': False,
   'bits_per_credit': 100,
@@ -268,6 +269,7 @@ class ChaosRelay:
 
     self.ui_rate = 20.0
     self.ui_port = 80
+    self.ui_dark_mode = False
     self.overlay_http_port = 80
     self.ui_auth_mode = 'unset'
     self.ui_password_encrypted = ''
@@ -580,6 +582,7 @@ class ChaosRelay:
     self.set_redemption_cooldown(self.get_attribute('redemption_cooldown'))
     self.set_ui_rate(self.get_attribute('ui_rate'))
     self.set_ui_port(self.get_attribute('ui_port'))
+    self.set_ui_dark_mode(self.get_attribute('ui_dark_mode'))
     self.set_overlay_http_port(self.get_attribute('overlay_http_port'))
     self.set_ui_auth_mode(self.get_attribute('ui_auth_mode'))
     self.set_ui_password_encrypted(self.get_attribute('ui_password_encrypted'))
@@ -1004,6 +1007,9 @@ class ChaosRelay:
 
   def set_ui_port(self, value):
     self._set_value('ui_port', int(value), 'ui_port')
+
+  def set_ui_dark_mode(self, value):
+    self._set_value('ui_dark_mode', bool(value), 'ui_dark_mode')
 
   def set_overlay_http_port(self, value):
     port = int(value)
