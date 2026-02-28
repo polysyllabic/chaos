@@ -24,21 +24,27 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
     'unknown': 'Engine: Unknown State',
   }
 
-  engine_status_colors = {
-    'not_connected': '#8b0000',
-    'timeout': '#d32f2f',
-    'waiting_for_game': '#f57c00',
-    'bad_config_file': '#c62828',
-    'paused': '#fbc02d',
-    'running': '#2e7d32',
-    'unknown': '#6d4c41',
+  engine_status_box_styles = {
+    'not_connected': ('#4a1111', '#8b0000', '#ffe9e9'),
+    'timeout': ('#6a1b1b', '#d32f2f', '#fff1f1'),
+    'waiting_for_game': ('#704107', '#f57c00', '#fff2dc'),
+    'bad_config_file': ('#6a1b1b', '#c62828', '#fff1f1'),
+    'paused': ('#fbc02d', '#9a6e00', '#111111'),
+    'running': ('#1f5f28', '#2e7d32', '#e8f5e9'),
+    'unknown': ('#4a352f', '#6d4c41', '#f7ece7'),
   }
 
   with ui.card().classes('w-full'):
     ui.label('Streamer Interface').classes('text-h6')
-    with ui.row().classes('items-center gap-6'):
+    with ui.row().classes('w-full items-center justify-between'):
       connection_label = ui.label('')
-      engine_status_label = ui.label('')
+      show_chatbot_diagnostics = ui.checkbox('Show chatbot diagnostics.', value=False)
+    engine_status_notice = ui.label('').classes('w-full')
+    engine_status_notice.style(
+      'display:block; padding:14px 16px; border-radius:10px; border:2px solid #6d4c41; '
+      'font-size:2.6rem; line-height:1.1; font-weight:800; text-align:center; '
+      'background:#4a352f; color:#f7ece7;'
+    )
 
     vote_timer = ui.linear_progress(value=0.0).classes('w-full')
     vote_label = ui.label('Vote Timer: 0s remaining').classes('text-sm')
@@ -46,11 +52,14 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
     mod_rows: list[dict] = []
     with ui.element('div').classes('h-8'):
       pass
-    ui.label('Bot Status').classes('text-subtitle1')
-    status_box = ui.textarea(
-      label='',
-      value='No bot status yet.',
-    ).props('readonly').classes('w-full h-48 streamer-bot-status-box')
+    with ui.column().classes('w-full gap-2') as diagnostics_column:
+      ui.label('Bot Status').classes('text-subtitle1')
+      status_box = ui.textarea(
+        label='',
+        value='No bot status yet.',
+      ).props('readonly').classes('w-full h-48 streamer-bot-status-box')
+      ui.button('Clear Bot Status', on_click=lambda: clear_bot_status())
+    diagnostics_column.visible = False
 
     def scroll_status_to_latest():
       try:
@@ -82,9 +91,13 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
       config.relay.clear_bot_status()
       refresh_bot_status()
 
+    def set_diagnostics_visibility(visible: bool):
+      diagnostics_column.visible = bool(visible)
+
     def refresh_streamer():
-      if connection_label.is_deleted or engine_status_label.is_deleted:
+      if connection_label.is_deleted or engine_status_notice.is_deleted:
         return
+      set_diagnostics_visibility(bool(show_chatbot_diagnostics.value))
       connected = bool(config.relay.connected)
       connected_bright = bool(config.relay.connected_bright)
       engine_status = str(config.relay.engine_status or 'unknown').strip().lower()
@@ -100,13 +113,23 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
         vote_seconds_remaining = 0
 
       connection_label.text = 'Connected to Twitch' if connected else 'Disconnected from Twitch'
-      engine_status_label.text = engine_status_labels.get(engine_status, engine_status_labels['unknown'])
       connection_color = '#2e7d32' if connected else ('#d32f2f' if connected_bright else '#8b0000')
-      status_color = engine_status_colors.get(engine_status, engine_status_colors['unknown'])
-      if engine_status == 'paused' and paused_bright:
-        status_color = '#f57c00'
       connection_label.style(f'font-weight:700; color:{connection_color}')
-      engine_status_label.style(f'font-weight:700; color:{status_color}')
+      engine_status_notice.text = engine_status_labels.get(engine_status, engine_status_labels['unknown'])
+
+      status_bg, status_border, status_text = engine_status_box_styles.get(
+        engine_status,
+        engine_status_box_styles['unknown'],
+      )
+      if engine_status == 'paused' and paused_bright:
+        status_bg = '#f57c00'
+        status_border = '#a55a00'
+        status_text = '#111111'
+      engine_status_notice.style(
+        'display:block; padding:14px 16px; border-radius:10px; border:2px solid '
+        f'{status_border}; font-size:2.6rem; line-height:1.1; font-weight:800; '
+        f'text-align:center; background:{status_bg}; color:{status_text};'
+      )
 
       vote_timer.value = vote_progress
       vote_label.text = f'Vote Timer: {vote_seconds_remaining}s remaining'
@@ -147,7 +170,6 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
       ui.notify('Stopping loop...', color='warning')
 
     with ui.row().classes('gap-2'):
-      ui.button('Clear Bot Status', on_click=clear_bot_status)
       ui.button('Quit', on_click=stop_button_clicked).props('color=negative')
     refresh_bot_status()
     return refresh_streamer
