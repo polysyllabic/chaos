@@ -34,9 +34,8 @@ PlayStation exclusive, and so the design of the system was specifically intended
 that console. However, the same setup should generally work for PC games that can be played with a
 controller. Mouse-and-keyboard remapping is not (yet) supported.
 
-Chaos Unbound is currently in beta status: The engine compiles and runs (mostly) but its
-functionality is not yet fully tested. Consider using Blegas's original version if you want
-to play TCC with TLOU2 right now.
+Chaos Unbound is currently in beta testing. There are still bugs to resolve, but if you're
+interested in giving it a try, it should be mostly playable.
 
 Note also that if you attempt to use this system in a competitive multiplayer game, it could
 be seen as cheating, since the fundamental processes here (intercept and modify the signals
