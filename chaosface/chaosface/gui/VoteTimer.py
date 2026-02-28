@@ -12,13 +12,25 @@ def vote_timer_overlay_html() -> str:
     <style>
       :root { color-scheme: dark; }
       * { box-sizing: border-box; }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
       body {
         margin: 0;
         font-family: Arial, sans-serif;
         background: transparent;
       }
-      .wrap { width: 100%; max-width: 1100px; padding: 8px 12px; }
+      .wrap {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        display: flex;
+        align-items: center;
+      }
       .bar {
+        width: 100%;
         height: 28px;
         border: 1px solid #000;
         border-radius: 8px;

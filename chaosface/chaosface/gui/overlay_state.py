@@ -34,7 +34,9 @@ def overlay_state_payload() -> Dict[str, Any]:
     'overlay_active_mods_gap': int(config.relay.overlay_active_mods_gap),
     'overlay_current_votes_text_color': str(config.relay.overlay_current_votes_text_color or '#ffffff'),
     'overlay_current_votes_bar_color': str(config.relay.overlay_current_votes_bar_color or 'rgba(245, 245, 245, 0.8)'),
+    'overlay_current_votes_text_side': str(getattr(config.relay, 'overlay_current_votes_text_side', 'right') or 'right'),
     'overlay_active_mods_text_color': str(config.relay.overlay_active_mods_text_color or '#ffffff'),
     'overlay_active_mods_bar_color': str(config.relay.overlay_active_mods_bar_color or 'rgba(245, 245, 245, 0.75)'),
+    'overlay_active_mods_text_side': str(getattr(config.relay, 'overlay_active_mods_text_side', 'right') or 'right'),
     'overlay_vote_timer_bar_color': str(config.relay.overlay_vote_timer_bar_color or 'rgba(240, 240, 240, 0.85)'),
   }

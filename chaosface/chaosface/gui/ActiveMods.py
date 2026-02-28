@@ -22,15 +22,15 @@ def active_mods_overlay_html() -> str:
       .wrap { width: 100%; max-width: 900px; padding: 8px 12px; }
       .title { text-align: center; font-weight: bold; font-size: 24px; margin-bottom: 8px; }
       .row {
-        display: grid;
-        grid-template-columns: 3fr 2fr;
+        display: flex;
         gap: 10px;
         margin-bottom: 8px;
         align-items: center;
       }
-      .mod-label { font-size: 20px; font-weight: bold; min-height: 28px; }
-      .bar-cell { padding-right: 4px; }
+      .mod-label { font-size: 20px; font-weight: bold; min-height: 28px; flex: 3; }
+      .bar-cell { flex: 2; }
       .bar {
+        width: 100%;
         height: 24px;
         border: 1px solid #000;
         border-radius: 6px;
@@ -57,6 +57,7 @@ def active_mods_overlay_html() -> str:
         const textColor = String(state.overlay_active_mods_text_color || '#ffffff');
         const barColor = String(state.overlay_active_mods_bar_color || 'rgba(245, 245, 245, 0.75)');
         const gap = Math.max(0, Math.min(120, Number(state.overlay_active_mods_gap || 10)));
+        const textSide = String(state.overlay_active_mods_text_side || 'right').toLowerCase() === 'left' ? 'left' : 'right';
         document.body.style.color = textColor;
         const names = state.active_mods || [];
         const times = state.mod_times || [];
@@ -65,10 +66,12 @@ def active_mods_overlay_html() -> str:
         for (let i = 0; i < count; i++) {
           const modName = names[i] || '';
           const progress = Math.max(0, Math.min(1, Number(times[i] || 0)));
+          const labelHtml = `<div class="mod-label">${modName}</div>`;
+          const barHtml = `<div class="bar-cell"><div class="bar"><div class="bar-fill" style="width:${progress * 100}%;background:${barColor}"></div></div></div>`;
+          const rowHtml = (textSide === 'left') ? `${labelHtml}${barHtml}` : `${barHtml}${labelHtml}`;
           html += `
             <div class="row" style="gap:${gap}px">
-              <div class="mod-label">${modName}</div>
-              <div class="bar-cell"><div class="bar"><div class="bar-fill" style="width:${progress * 100}%;background:${barColor}"></div></div></div>
+              ${rowHtml}
             </div>`;
         }
         modsRoot.innerHTML = html;

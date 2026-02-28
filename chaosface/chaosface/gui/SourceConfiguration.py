@@ -208,6 +208,11 @@ def build_source_configuration_tab() -> None:
           str(current_votes_bar_color.value or 'rgba(245, 245, 245, 0.8)'),
           on_apply=refresh_current_votes_bar_swatch,
         )
+      current_votes_text_side = ui.select(
+        {'left': 'Left of bar', 'right': 'Right of bar'},
+        value=str(getattr(config.relay, 'overlay_current_votes_text_side', 'right') or 'right'),
+        label='Text position',
+      ).classes('w-96').props('stack-label')
 
     ui.separator()
     ui.label('Active Mods').classes('text-subtitle1')
@@ -241,6 +246,11 @@ def build_source_configuration_tab() -> None:
           str(active_mods_bar_color.value or 'rgba(245, 245, 245, 0.75)'),
           on_apply=refresh_active_mods_bar_swatch,
         )
+      active_mods_text_side = ui.select(
+        {'left': 'Left of bar', 'right': 'Right of bar'},
+        value=str(getattr(config.relay, 'overlay_active_mods_text_side', 'right') or 'right'),
+        label='Text position',
+      ).classes('w-96').props('stack-label')
 
     ui.separator()
     ui.label('Vote Timer').classes('text-subtitle1')
@@ -314,6 +324,11 @@ def build_source_configuration_tab() -> None:
         config.relay.set_overlay_current_votes_bar_color,
       )
       need_save |= _set_if_changed(
+        str(getattr(config.relay, 'overlay_current_votes_text_side', 'right')),
+        str(current_votes_text_side.value or 'right'),
+        config.relay.set_overlay_current_votes_text_side,
+      )
+      need_save |= _set_if_changed(
         int(config.relay.overlay_active_mods_gap),
         safe_int(active_mods_gap.value, int(config.relay.overlay_active_mods_gap), 0, 120),
         config.relay.set_overlay_active_mods_gap,
@@ -327,6 +342,11 @@ def build_source_configuration_tab() -> None:
         str(config.relay.overlay_active_mods_bar_color),
         active_mods_bar_hex,
         config.relay.set_overlay_active_mods_bar_color,
+      )
+      need_save |= _set_if_changed(
+        str(getattr(config.relay, 'overlay_active_mods_text_side', 'right')),
+        str(active_mods_text_side.value or 'right'),
+        config.relay.set_overlay_active_mods_text_side,
       )
       need_save |= _set_if_changed(
         str(config.relay.overlay_vote_timer_bar_color),
@@ -344,9 +364,11 @@ def build_source_configuration_tab() -> None:
       current_votes_gap.value = int(config.relay.overlay_current_votes_gap)
       current_votes_text_color.value = str(config.relay.overlay_current_votes_text_color or '#ffffff')
       current_votes_bar_color.value = str(config.relay.overlay_current_votes_bar_color or 'rgba(245, 245, 245, 0.8)')
+      current_votes_text_side.value = str(getattr(config.relay, 'overlay_current_votes_text_side', 'right') or 'right')
       active_mods_gap.value = int(config.relay.overlay_active_mods_gap)
       active_mods_text_color.value = str(config.relay.overlay_active_mods_text_color or '#ffffff')
       active_mods_bar_color.value = str(config.relay.overlay_active_mods_bar_color or 'rgba(245, 245, 245, 0.75)')
+      active_mods_text_side.value = str(getattr(config.relay, 'overlay_active_mods_text_side', 'right') or 'right')
       vote_timer_bar_color.value = str(config.relay.overlay_vote_timer_bar_color or 'rgba(240, 240, 240, 0.85)')
       refresh_current_votes_text_swatch()
       refresh_current_votes_bar_swatch()

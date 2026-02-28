@@ -10,7 +10,7 @@ from nicegui import ui
 
 import chaosface.config.globals as config
 
-from .ui_helpers import clamp01
+from .ui_helpers import clamp01, safe_float
 
 
 def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], None]:
@@ -41,7 +41,7 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
       engine_status_label = ui.label('')
 
     vote_timer = ui.linear_progress(value=0.0).classes('w-full')
-    vote_label = ui.label('Vote Timer: 0%').classes('text-sm')
+    vote_label = ui.label('Vote Timer: 0s remaining').classes('text-sm')
     mods_column = ui.column().classes('w-full gap-1')
     mod_rows: list[dict] = []
     with ui.element('div').classes('h-8'):
@@ -90,6 +90,14 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
       engine_status = str(config.relay.engine_status or 'unknown').strip().lower()
       paused_bright = bool(config.relay.paused_bright)
       vote_progress = clamp01(config.relay.vote_time)
+      configured_vote_seconds = safe_float(
+        config.relay.get_attribute('vote_time'),
+        config.relay.time_per_vote(),
+        1.0,
+      )
+      vote_seconds_remaining = int(round(max(0.0, (1.0 - vote_progress) * configured_vote_seconds)))
+      if not bool(config.relay.vote_open):
+        vote_seconds_remaining = 0
 
       connection_label.text = 'Connected to Twitch' if connected else 'Disconnected from Twitch'
       engine_status_label.text = engine_status_labels.get(engine_status, engine_status_labels['unknown'])
@@ -101,7 +109,7 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
       engine_status_label.style(f'font-weight:700; color:{status_color}')
 
       vote_timer.value = vote_progress
-      vote_label.text = f'Vote Timer: {int(vote_progress * 100)}%'
+      vote_label.text = f'Vote Timer: {vote_seconds_remaining}s remaining'
 
       active_mods = list(config.relay.active_mods or [])
       mod_times = list(config.relay.mod_times or [])
@@ -113,7 +121,8 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
           with row:
             label = ui.label('').classes('min-w-72')
             progress = ui.linear_progress(value=0.0).classes('flex-1')
-        mod_rows.append({'row': row, 'label': label, 'progress': progress})
+            remaining = ui.label('0s').classes('min-w-16 text-right')
+        mod_rows.append({'row': row, 'label': label, 'progress': progress, 'remaining': remaining})
 
       while len(mod_rows) > count:
         item = mod_rows.pop()
@@ -122,11 +131,15 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
       for idx in range(count):
         mod_name = active_mods[idx] if idx < len(active_mods) else ''
         time_remaining = clamp01(mod_times[idx] if idx < len(mod_times) else 0.0)
+        seconds_remaining = int(round(max(0.0, time_remaining * max(1.0, float(config.relay.time_per_modifier)))))
         item = mod_rows[idx]
         if item['label'].text != mod_name:
           item['label'].text = mod_name
         if item['progress'].value != time_remaining:
           item['progress'].value = time_remaining
+        remaining_text = f'{seconds_remaining}s'
+        if item['remaining'].text != remaining_text:
+          item['remaining'].text = remaining_text
       refresh_bot_status()
 
     def stop_button_clicked():
