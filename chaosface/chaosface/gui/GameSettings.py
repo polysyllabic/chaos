@@ -21,9 +21,10 @@ def build_game_settings_tab() -> Callable[[], None]:
       *,
       row_classes: str = 'w-full items-center gap-3',
       control_classes: str = 'w-64 max-w-full',
+      label_style: str = 'width: 22rem; min-width: 22rem;',
     ):
       with ui.row().classes(row_classes):
-        ui.label(label_text).classes('text-body1 whitespace-normal').style('width: 22rem; min-width: 22rem;')
+        ui.label(label_text).classes('text-body1 whitespace-normal').style(label_style)
         control = create_control()
         if control_classes:
           control.classes(control_classes)
@@ -101,7 +102,6 @@ def build_game_settings_tab() -> Callable[[], None]:
         mod_list_link.value = effective_mod_list
 
     ui.separator()
-    ui.label('Modifier List Link').classes('text-subtitle1')
     with ui.row().classes('w-full items-end gap-3'):
       mod_list_state = {
         'pending_user_edit': False,
@@ -112,7 +112,7 @@ def build_game_settings_tab() -> Callable[[], None]:
         mod_list_state['pending_user_edit'] = True
 
       mod_list_link = labeled_control(
-        'URI used by !mods',
+        'Modifier List Link (used by !mods)',
         lambda: ui.input(value=str(config.relay.mod_list_link or ''), on_change=_on_mod_list_change),
         row_classes='items-center gap-3',
         control_classes='max-w-full',
@@ -127,10 +127,10 @@ def build_game_settings_tab() -> Callable[[], None]:
       ui.button('Default', on_click=reset_mod_list_to_default)
 
     ui.separator()
-    ui.label('Chatbot Commands Link').classes('text-subtitle1')
     chaoscmd_link = labeled_control(
-      'URI used by !chaoscmd',
+      'Chatbot Commands Link (used by !chaoscmd)',
       lambda: ui.input(value=str(config.relay.chaoscmd_link or '')),
+      row_classes='items-center gap-3',
       control_classes='max-w-full',
     )
     chaoscmd_link.style('width: 48ch;')
@@ -139,27 +139,45 @@ def build_game_settings_tab() -> Callable[[], None]:
 
     ui.separator()
 
+    settings_row_classes = 'w-full items-center gap-3 no-wrap'
+    settings_label_style = 'width: 13rem; min-width: 13rem;'
+
     with ui.row().classes('w-full gap-8'):
       with ui.column().classes('w-96'):
         num_active_mods = labeled_control(
           'Active modifiers',
           lambda: ui.number(value=int(config.relay.num_active_mods), min=1, max=10, step=1),
+          row_classes=settings_row_classes,
+          control_classes='w-20',
+          label_style=settings_label_style,
         )
         time_per_modifier = labeled_control(
-          'Time per modifier (s)',
+          'Time per modifier (sec)',
           lambda: ui.number(value=float(config.relay.time_per_modifier), min=1, max=172800, step=1),
+          row_classes=settings_row_classes,
+          control_classes='w-28',
+          label_style=settings_label_style,
         )
         softmax_factor = labeled_control(
           'Softmax factor',
-          lambda: ui.slider(min=1, max=100, value=int(config.relay.softmax_factor)),
+          lambda: ui.number(value=int(config.relay.softmax_factor), min=1, max=100, step=1),
+          row_classes=settings_row_classes,
+          control_classes='w-20',
+          label_style=settings_label_style,
         )
         vote_options = labeled_control(
           'Vote options',
           lambda: ui.number(value=int(config.relay.vote_options), min=2, max=5, step=1),
+          row_classes=settings_row_classes,
+          control_classes='w-20',
+          label_style=settings_label_style,
         )
         voting_type = labeled_control(
           'Voting method',
           lambda: ui.select(['Proportional', 'Majority', 'Authoritarian'], value=config.relay.voting_type),
+          row_classes=settings_row_classes,
+          control_classes='w-40',
+          label_style=settings_label_style,
         )
         voting_cycle = labeled_control(
           'Voting cycle',
@@ -167,24 +185,33 @@ def build_game_settings_tab() -> Callable[[], None]:
             ['Continuous', 'Interval', 'Random', 'Triggered', 'DISABLED'],
             value=config.relay.voting_cycle,
           ),
+          row_classes=settings_row_classes,
+          control_classes='w-40',
+          label_style=settings_label_style,
         )
         vote_time = labeled_control(
-          'Vote time (s)',
+          'Vote time (sec)',
           lambda: ui.number(
             value=relay_config_float('vote_time', 60.0, 1.0, 3600.0),
             min=1,
             max=3600,
             step=1,
           ),
+          row_classes=settings_row_classes,
+          control_classes='w-24',
+          label_style=settings_label_style,
         )
         vote_delay = labeled_control(
-          'Vote delay (s)',
+          'Vote delay (sec)',
           lambda: ui.number(
             value=relay_config_float('vote_delay', 0.0, 0.0, 3600.0),
             min=0,
             max=3600,
             step=1,
           ),
+          row_classes=settings_row_classes,
+          control_classes='w-24',
+          label_style=settings_label_style,
         )
 
       with ui.column().classes('w-96'):
@@ -200,20 +227,32 @@ def build_game_settings_tab() -> Callable[[], None]:
         raffles = ui.checkbox('Conduct raffles', value=bool(config.relay.raffles))
         multiple_credits = ui.checkbox('Allow multiple credits per cheer', value=bool(config.relay.multiple_credits))
         redemption_cooldown = labeled_control(
-          'Redemption cooldown (s)',
+          'Redemption cooldown (sec)',
           lambda: ui.number(value=float(config.relay.redemption_cooldown), min=0, max=86400, step=1),
+          row_classes=settings_row_classes,
+          control_classes='w-28',
+          label_style=settings_label_style,
         )
         bits_per_credit = labeled_control(
           'Bits per mod credit',
           lambda: ui.number(value=int(config.relay.bits_per_credit), min=1, max=100000, step=1),
+          row_classes=settings_row_classes,
+          control_classes='w-28',
+          label_style=settings_label_style,
         )
         points_reward_title = labeled_control(
           'Points reward title',
           lambda: ui.input(value=str(config.relay.points_reward_title)),
+          row_classes=settings_row_classes,
+          control_classes='w-44',
+          label_style=settings_label_style,
         )
         raffle_time = labeled_control(
-          'Default raffle time (s)',
+          'Default raffle time (sec)',
           lambda: ui.number(value=float(config.relay.raffle_time), min=30, max=3600, step=1),
+          row_classes=settings_row_classes,
+          control_classes='w-24',
+          label_style=settings_label_style,
         )
 
     ui.separator()

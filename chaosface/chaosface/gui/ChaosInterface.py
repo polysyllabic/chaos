@@ -19,7 +19,7 @@ from chaosface.version import get_version
 def build_chaos_interface(*, ensure_runtime_started: Callable[[], None], shutdown_runtime: Callable[[], None]) -> None:
   ensure_runtime_started()
   ui.label(f'Twitch Controls Chaos ({get_version()})').classes('text-h4')
-  tabs = ui.tabs().classes('w-full')
+  tabs = ui.tabs().props('align=left').classes('w-full')
   with tabs:
     streamer_tab = ui.tab('Streamer Interface')
     game_settings_tab = ui.tab('Game Settings')
