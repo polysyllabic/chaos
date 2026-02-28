@@ -150,7 +150,7 @@ void GameMenu::clear() {
     PLOG_DEBUG << "Clearing existing menu data";
     menu.clear();
   }
-  remember_last = false;
+  remember_last = true;
   hide_guarded = false;
   defined_sequences = nullptr;
 }

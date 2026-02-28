@@ -32,6 +32,7 @@ input_file = "tlou2-common.toml"
 # Menus -- The menu layout is the primary difference among TLOU2 variants
 [menu]
 ignore_common = true
+remember_last = true
 
 # === Menu Layout ===
 layout = [

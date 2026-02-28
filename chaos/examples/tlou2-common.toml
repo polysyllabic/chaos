@@ -311,7 +311,8 @@ sequence = [ ]
 # menu mods will also not be available.
 use_menu = true
 # Does the menu system remember the last position in a menu/submenu where the user leaves the
-# cursor? This is a placeholder for future expansion. Setting to false has no effect currently.
+# cursor? For TLOU2 this should be true so TCC can restore each traversed submenu to a known state
+# before exiting.
 remember_last = true
 # Are items protected by a guard option hidden when the guard option is set to off? Note that
 # "hidden" doesn't necessarily mean literally hidden from the user, just that you can't navigate

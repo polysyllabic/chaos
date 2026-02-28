@@ -50,7 +50,7 @@ namespace Chaos {
     /**
      * Does this game leave each menu in the position that it was when the user left it.
      */
-    bool remember_last = false;
+    bool remember_last = true;
 
     /**
      * Are guarded items skipped over or hidden from the user while the guard is true?

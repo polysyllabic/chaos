@@ -268,7 +268,7 @@ The following parameters define the menuing system:
   to false, you can skip all the menu layout, but menu mods will also not be available.
 
 - `remember_last` True/false value indicating whether the menu system remembers the last position
-  in a menu/submenu where the user leaves the cursor. 
+  in a menu/submenu where the user leaves the cursor. Default is true.
 
 - `hide_guarded_items` True/false value. If true, items that are protected by a guard are "hidden"
   from the menuing system while the guard is in place. This doesn't necessarily mean that the

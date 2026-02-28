@@ -447,7 +447,7 @@ void Game::makeMenu(toml::table& config) {
     return;
   }
 
-  bool remember_last = (*menu_list)["remember_last"].value_or(false);
+  bool remember_last = (*menu_list)["remember_last"].value_or(true);
   PLOG_VERBOSE << "menu remember_last = " << remember_last;
   menu.setRememberLast(remember_last);
 
