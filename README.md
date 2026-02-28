@@ -531,12 +531,13 @@ rebooting at inconvenient times.
 
 1. Turn on your console and external power, if needed. Once power is applied, the Raspberry Pi
 will boot up. After the boot sequence and the Chaos engine is running, the system (either console
-or PC) should recognize the controller.
+or PC) should recognize the controller. Assuming you've turned off bluetooth, note that you will
+need to press the power button on the console itse.f.
 
 2. If OBS was already running, refresh your browser sources. The overlays should be active.
 
 3. Next, check that the controller is connected properly. Start up and load into your game so that
-you are controlling your character. After you press the "Share" button, the VoteTimer progress bar
+you are controlling your character. After you press the "Share" button, the vote-timer progress bar
 should start moving. If the timer runs and you can control your character, then the engine is
 running correctly and communicating with the interface.
 
@@ -561,7 +562,7 @@ menu without wreaking true havoc.
 - To pause Chaos, press the *Option* button.
 
 *Note:* This means that you will actively need to resume Chaos whenever you enter your game's pause
-menu.
+menu. The streamer UI flashes annoyingly to remind you when you are paused.
 
 Because the Chaos engine requires a dedicated button to resume, the *Share* button's signal is
 never passed on to the controller. For most games, this should not create problems, since this
