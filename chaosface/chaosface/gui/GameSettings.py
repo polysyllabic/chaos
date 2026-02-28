@@ -15,11 +15,17 @@ from .ui_helpers import relay_config_float, safe_float, safe_int, sync_enabled_m
 
 def build_game_settings_tab() -> Callable[[], None]:
   with ui.card().classes('w-full'):
-    ui.label('Game Settings').classes('text-h6')
-
-    status_label = ui.label('').classes('text-sm')
+    with ui.row().classes('w-full items-start justify-between'):
+      ui.label('Game Settings').classes('text-h6')
+      with ui.column().classes('items-end gap-1'):
+        button_bar = ui.row().classes('gap-2')
+        status_label = ui.label('').classes('text-sm text-right whitespace-normal')
+        status_label.style('max-width: 48ch; min-height: 1.25rem;')
 
     ui.label('Game Selection').classes('text-subtitle1')
+
+    game_status = ui.label('').classes('text-xs whitespace-normal')
+    game_status.style('max-width: 48ch; min-height: 1rem;')
 
     with ui.row().classes('w-full items-end gap-3'):
       selector_state = {'pending_user_selection': False}
@@ -28,7 +34,6 @@ def build_game_settings_tab() -> Callable[[], None]:
         selector_state['pending_user_selection'] = True
 
       game_selector = ui.select([], label='Available games', on_change=_on_game_selector_change).classes('w-96')
-      game_status = ui.label('').classes('text-xs')
 
       def confirm_game_selection():
         selected = str(game_selector.value or '').strip()
@@ -65,11 +70,7 @@ def build_game_settings_tab() -> Callable[[], None]:
         game_selector.value = selected
         selector_state['pending_user_selection'] = False
 
-      game_status.text = (
-        f'Current: {config.relay.game_name or "NONE"} | '
-        f'Most recent: {config.relay.selected_game or "NONE"} | '
-        f'Selections stored: {len(config.relay.selected_game_history)}'
-      )
+      game_status.text = f'Current game: {config.relay.game_name or "NONE"}'
 
       current_game = str(config.relay.game_name or 'NONE')
       if mod_list_state['bound_game'] != current_game:
@@ -79,13 +80,6 @@ def build_game_settings_tab() -> Callable[[], None]:
       effective_mod_list = str(config.relay.mod_list_link or '')
       if not mod_list_state['pending_user_edit'] and mod_list_link.value != effective_mod_list:
         mod_list_link.value = effective_mod_list
-
-      default_mod_list = str(config.relay.default_mod_list_link or '').strip()
-      default_mod_list_hint.text = (
-        f'Engine default: {default_mod_list}'
-        if default_mod_list else
-        'Engine default: (not provided by current game)'
-      )
 
     ui.separator()
     ui.label('Modifier List Link').classes('text-subtitle1')
@@ -102,9 +96,8 @@ def build_game_settings_tab() -> Callable[[], None]:
         'URI used by !mods',
         value=str(config.relay.mod_list_link or ''),
         on_change=_on_mod_list_change,
-      ).classes('w-full')
-
-      default_mod_list_hint = ui.label('').classes('text-xs')
+      ).classes('max-w-full')
+      mod_list_link.style('width: 48ch;')
 
       def reset_mod_list_to_default():
         mod_list_link.value = str(config.relay.default_mod_list_link or '')
@@ -118,7 +111,8 @@ def build_game_settings_tab() -> Callable[[], None]:
     chaoscmd_link = ui.input(
       'URI used by !chaoscmd',
       value=str(config.relay.chaoscmd_link or ''),
-    ).classes('w-full')
+    ).classes('max-w-full')
+    chaoscmd_link.style('width: 48ch;')
 
     refresh_game_selector()
 
@@ -170,16 +164,88 @@ def build_game_settings_tab() -> Callable[[], None]:
 
     ui.separator()
     ui.label('Available Modifiers').classes('text-subtitle1')
-    mod_toggles = ui.column().classes('w-full gap-1')
+    filter_state = {
+      'enabled': False,
+      'selected_groups': set(),
+    }
+
+    def _group_names(mod_data) -> set[str]:
+      raw_groups = mod_data.get('groups', [])
+      if isinstance(raw_groups, str):
+        raw_groups = [raw_groups]
+      groups = set()
+      if isinstance(raw_groups, (list, tuple, set)):
+        for group in raw_groups:
+          group_name = str(group).strip()
+          if group_name:
+            groups.add(group_name)
+      return groups
+
+    def _normalized(name: str) -> str:
+      return str(name).strip().lower()
+
+    def _group_options() -> list[tuple[str, str]]:
+      by_normalized: dict[str, str] = {}
+      for mod_data in config.relay.modifier_data.values():
+        for group_name in _group_names(mod_data):
+          norm = _normalized(group_name)
+          if norm and norm not in by_normalized:
+            by_normalized[norm] = group_name
+      return sorted(by_normalized.items(), key=lambda item: item[1].lower())
+
+    def _matches_group_filter(mod_data) -> bool:
+      if not filter_state['enabled']:
+        return True
+      selected = filter_state['selected_groups']
+      if not selected:
+        return False
+      mod_groups = {_normalized(group_name) for group_name in _group_names(mod_data)}
+      return bool(mod_groups.intersection(selected))
+
+    with ui.row().classes('w-full items-start gap-8'):
+      with ui.column().classes('w-96 max-w-full'):
+        with ui.row().classes('gap-2'):
+          ui.button('Enable All', on_click=lambda: set_all_mods(True))
+          ui.button('Disable All', on_click=lambda: set_all_mods(False))
+        mod_toggles = ui.column().classes('w-full gap-1 overflow-y-auto border rounded p-2')
+        mod_toggles.style('height: 30rem;')
+
+      with ui.column().classes('w-80 max-w-full gap-2'):
+        group_filter_checkbox = ui.checkbox('Filter by group', value=False)
+        group_toggles = ui.column().classes('w-full gap-1 overflow-y-auto border rounded p-2')
+        group_toggles.style('height: 30rem;')
+
+    def render_group_toggles():
+      group_toggles.clear()
+      options = _group_options()
+      option_norms = {norm for norm, _label in options}
+      filter_state['selected_groups'] = {
+        name for name in filter_state['selected_groups'] if name in option_norms
+      }
+
+      with group_toggles:
+        if not options:
+          ui.label('No modifier groups available').classes('text-xs')
+          return
+        for norm, label in options:
+          checked = norm in filter_state['selected_groups']
+          ui.checkbox(
+            label,
+            value=checked,
+            on_change=lambda event, group_norm=norm: on_group_toggle(group_norm, bool(event.value)),
+          )
 
     def render_mod_toggles():
       mod_toggles.clear()
+      render_group_toggles()
       mods = sorted(
         config.relay.modifier_data.items(),
         key=lambda item: str(item[1].get('name', item[0])).lower(),
       )
       with mod_toggles:
         for key, mod_data in mods:
+          if not _matches_group_filter(mod_data):
+            continue
           def _on_toggle(event, mod_key=key):
             config.relay.enable_mod(mod_key, bool(event.value))
             sync_enabled_mods()
@@ -187,16 +253,25 @@ def build_game_settings_tab() -> Callable[[], None]:
 
           ui.checkbox(mod_data.get('name', key), value=bool(mod_data.get('active', True)), on_change=_on_toggle)
 
+    def on_group_toggle(group_norm: str, enabled: bool):
+      if enabled:
+        filter_state['selected_groups'].add(group_norm)
+      else:
+        filter_state['selected_groups'].discard(group_norm)
+      render_mod_toggles()
+
+    def on_filter_toggle(event):
+      filter_state['enabled'] = bool(event.value)
+      render_mod_toggles()
+
+    group_filter_checkbox.on('update:model-value', on_filter_toggle)
+
     def set_all_mods(value: bool):
       for key in list(config.relay.modifier_data.keys()):
         config.relay.enable_mod(key, value)
       sync_enabled_mods()
       config.relay.save_mod_info()
       render_mod_toggles()
-
-    with ui.row().classes('gap-2'):
-      ui.button('Enable All', on_click=lambda: set_all_mods(True))
-      ui.button('Disable All', on_click=lambda: set_all_mods(False))
 
     render_mod_toggles()
 
@@ -300,7 +375,7 @@ def build_game_settings_tab() -> Callable[[], None]:
       config.relay.reset_softmax()
       status_label.text = 'Modifier history reset'
 
-    with ui.row().classes('gap-2'):
+    with button_bar:
       ui.button('Save', on_click=save_settings)
       ui.button('Restore', on_click=restore_settings)
       ui.button('Reset Modifier History', on_click=reset_softmax)
