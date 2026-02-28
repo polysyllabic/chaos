@@ -143,9 +143,15 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
           row = ui.row().classes('w-full items-center gap-4')
           with row:
             label = ui.label('').classes('min-w-72')
-            progress = ui.linear_progress(value=0.0).classes('flex-1')
-            remaining = ui.label('0s').classes('min-w-16 text-right')
-        mod_rows.append({'row': row, 'label': label, 'progress': progress, 'remaining': remaining})
+            with ui.element('div').classes('relative flex-1 h-6 overflow-hidden rounded').style(
+              'border:1px solid rgba(255,255,255,0.25); background:rgba(20,20,20,0.35);'
+            ):
+              fill = ui.element('div').classes('absolute inset-y-0 left-0').style(
+                'width:0%; background:rgba(255,255,255,0.75); transition:width 0.2s linear;'
+              )
+              remaining = ui.label('0s').classes('absolute left-2 top-1/2 -translate-y-1/2 text-xs font-semibold')
+              remaining.style('color:#f7f7f7; text-shadow:0 1px 2px rgba(0,0,0,0.85); pointer-events:none;')
+        mod_rows.append({'row': row, 'label': label, 'fill': fill, 'remaining': remaining, 'fill_style': ''})
 
       while len(mod_rows) > count:
         item = mod_rows.pop()
@@ -158,8 +164,14 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
         item = mod_rows[idx]
         if item['label'].text != mod_name:
           item['label'].text = mod_name
-        if item['progress'].value != time_remaining:
-          item['progress'].value = time_remaining
+        fill_style = (
+          f'width:{time_remaining * 100:.1f}%; '
+          'background:rgba(255,255,255,0.75); '
+          'transition:width 0.2s linear;'
+        )
+        if item['fill_style'] != fill_style:
+          item['fill'].style(fill_style)
+          item['fill_style'] = fill_style
         remaining_text = f'{seconds_remaining}s'
         if item['remaining'].text != remaining_text:
           item['remaining'].text = remaining_text
