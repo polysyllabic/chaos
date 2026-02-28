@@ -34,7 +34,7 @@ def active_mods_overlay_html() -> str:
         height: 24px;
         border: 1px solid #000;
         border-radius: 6px;
-        background: rgba(128, 128, 128, 0.6);
+        background: rgba(128, 128, 128, 0.7);
         overflow: hidden;
       }
       .bar-fill {

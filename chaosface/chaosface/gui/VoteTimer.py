@@ -34,7 +34,7 @@ def vote_timer_overlay_html() -> str:
         height: 28px;
         border: 1px solid #000;
         border-radius: 8px;
-        background: rgba(128, 128, 128, 0.8);
+        background: rgba(128, 128, 128, 0.7);
         overflow: hidden;
       }
       .bar-fill {
