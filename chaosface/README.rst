@@ -12,7 +12,7 @@ This repository includes:
 UI Access Protection
 --------------------
 
-Chaosface now supports optional password protection for the web UI.
+Chaosface supports optional password protection for the web UI.
 
 First run behavior:
 

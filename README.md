@@ -221,16 +221,7 @@ translates an arbitrary controller's messages to the PS5 format. Instead, it pro
 to authenticate USB packets before sending them on to the PlayStation. In essence, it gives
 other devices the tools they need to pretend they are PS5 controllers. Supporting this would
 require a significant effort, and since there are already several other ways to achieve the
-same functionality with much less effort, I have no plans to add support for it at this time.
-
-## Running Without OBS
-
-Most of the instructions here assume that you also use streaming software such as OBS, which will
-require you to have a capture card as well. Note that is **is** possible to run Chaos without OBS,
-meaning that it should be possible to play Chaos while streaming directly from your PlayStation,
-or even without streaming at all, although you will not be able to use overlays to show the current
-status of votes or the modifiers in effect. (This has not been tested, but suggestions for what
-to try will be found below.)
+same functionality with much less work, I have no plans to add support for it at this time.
 
 **Important:** Currently, you must use the DualShock 4 Generation 2, model CUH-ZCT2U. Some
 3rd-party equivalents may also work, but this has not been carefully tested. Gen-1 DualShocks
@@ -239,316 +230,57 @@ signals.
 
 Supporting XBox and DualSense controllers to play PC games in on the to-do list for version 2.1.
 
+## Installation and Configuration
 
-## Installation
+To set up the required hardware and install the Twitch Controls Chaos software on the Pi, see
+the [installation guide](docs/installation.md).
 
-Currently this setup is only supported on a Raspberry Pi 4 with 32-bit Raspberry Pi OS, though other
-setups may work.
-
-### Configuring the Pi
-
-1. Flash Raspbian OS Lite (32-Bit) to your SD card. 
-
-This software tool is convenient to flash SD cards: [Raspberry Pi Imager](https://www.raspberrypi.org/software/)
-
-- Connect your SD card to your computer using an SD card reader
-- Select the SD card in the Raspberry Pi Imager
-- Under "Choose OS" select Raspberry Pi OS (other) -> Raspberry Pi OS Lite (32-bit). This is the version without
-  a desktop environment (which you don't need).
-- In advanced options:
-
-    - Set image customization options to "to always use":
-    - Check "Set hostname" and accept raspberrypi.local. (If you need this to be something else,
-      it's OK to change this. Just substitute the hostname you choose for 'raspberrypi.local'
-      wherever that occurs in the instructions.)
-    - Check Set username and password. The original version of Chaos was hard-coded to assume the
-      username was pi. Chaos unbound removes this restriction, but these instructions use the
-      default username as an example.
-    - If you want to be able to access your Pi without plugging in a keyboard and monitor, check
-      "Enable SSH" and choose your method of authentication. If you don't know how to set up
-      public-key authentication, you can stick with a password, but for security you should
-      change the password from the default. If you need more help setting up SSH,
-      [follow the instructions here](https://www.raspberrypi.com/documentation/computers/remote-access.html#setting-up-an-ssh-server).
-      Note that the SSH shell is not required for ordinary operation of Chaos. Both the engine and
-      the chatbot start automaticlly when the power is applied.
-    - If you cannot plug your Pi into your network with an ethernet cable, enable WAN. Note:
-      this may have a performance impact. Ethernet cable is recommended whenever possible.
-
-- Click on the "Write" button.  If writing fails, simply try it again.
-
-2. Install the SD card into your Pi. The slot for this is on the bottom side of the board.
-
-3. IF you did not configure SSH, connect a monitor and keyboard. This is only required during the
-setup process, or later if you need to update anything and have not set up an SSH shell. After the
-setup is complete, you can run Chaos without either a keyboard or monitor connected to the Pi.
-
-4. (*Highly recommended*) Connect the Raspberry Pi to your router with an ethernet cable. If you
-cannot use wired ethernet, or prefer not to, you will need to set up WiFi below.
-
-5. Apply power over the Pi's USB-C connector by plugging the cable into the PlayStation and turning
-it on. (You can use an external USB-C power supply as well, but it should supply at least 3A.)
-
-6. When your Pi boots, log in using the credentials you specified above. If you stuck with the
-system defaults, they will be the following:
-- Username: pi
-- Password: raspberry
-
-This will start a bash terminal session. If you are connecting over SSH, try rapberypi.local as
-the host address. If that does not work, you may need to find the local IP address that your
-router has assigned to the Pi. Go to your router's admin page and look for the list of connected
-devices. 
-
-Note: The password field will look like nothing is being typed, but it will be reading the password
-as you type it.
-
-7. Update your OS and system tools, and install the version-control system *git*, which is used to
-manage all the files you will need to run TCC. After you have logged in to the Pi for the first
-time, run the following command:
-
-```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install git -y
-```
-
-This will ensure that you are running the latest stable versions of all the necessary tools. The
-process may take a while. Be patient.
-
-9. Next, get TCC from the online repository. The following command will fetch the latest version
-and copy all the files you need to build TCC into the directory 'chaos':
-
-```bash
-git clone https://github.com/polysyllabic/chaos.git
-```
-
-10. To build TCC and install it, run the installation script with these commands:
-
-```bash
-cd chaos
-./install.sh
-```
-
-The script will ask you a number of questions. The most important one is whether you plan to
-run the chatbot/UI chaosface from the Raspberry Pi or from a different computer. If you run
-it from the Pi, the install process will set it up to run automatically each time you apply
-power to the Pi. If you choose to run it from a different computer, it will ask you what
-that computer's IP address is. If you don't know this at the moment, you can enter a random
-value and change the setting in the chaosconfig.toml file later. 
-
-You will also be asked if you want to develop TCC on this device. Answering yes will install
-additional packages to help developers (including doxygen), but unless you're planning to
-do development work, this just increases the time it takes to install everything.
-
-If you have installed a recent version of the OS (buster or later), a reboot will be required
-halfway through the installation process. You will be prompted to re-run the install script
-after you have rebooted. The installation will resume where it left off.
-
-At the end of the installation, you will have to reboot one more time. If you choose not to
-reboot when prompted, enter the following command when you are ready to reboot.
-
-```bash
-sudo reboot
-```
-
-After this final reboot, chaos should be installed and will run automatically each time you turn
-on the Raspberry Pi.
-
-### Updating an Existing Installation
-
-After the initial install, use the update scripts from the repository root:
-
-```bash
-./scripts/update_engine.sh
-./scripts/update_chaosface.sh
-./scripts/update_chaos.sh
-./scripts/update_services.sh
-```
-
-- `update_engine.sh` rebuilds/reinstalls the engine and refreshes the `chaos` systemd unit files.
-- `update_chaosface.sh` redeploys Chaosface to `/usr/local/chaos`.
-- `update_chaos.sh` runs both engine and Chaosface updates in sequence.
-- `update_services.sh` syncs `startchaos.sh` and service unit files without rebuilding engine or
-   redeploying Chaosface.
-
-Optional flags:
-
-- `./scripts/update_engine.sh --restart-service`
-- `./scripts/update_chaosface.sh --skip-deps --restart-service`
-- `./scripts/update_chaos.sh --skip-chaosface-deps --restart-services`
-- `./scripts/update_services.sh --restart-services`
-
-The --restart-service and --restart-services will stop the old version of the engine and/or
-chaosface and start the new one immediately after the update. If you omit this flag, you will need
-either to restart the services manually or reboot the Pi.
-
-The --skip-deps and --skip-chaosface-deps flags will skip checks for alterations in dependencies
-and will speed up updates when there are no changes to any of the 3rd-party libraries that these
-programs rely upon.
-
-### Configuring the Console
-
-Your console will need to be set up to prefer USB communication rather than bluetooth for your
-controllers. Open the system menu on your console.
-
-- On a PS5, navigate to Settings -> Accessories -> Controllers -> Communication Method -> Use USB Cable
-- On a PS4, Navigate to Settings -> Devices -> Controllers -> Communication Method -> Use USB Cable
-
-_Note:_ This seting on its own will mean that the console uses the cable when available but
-will still use bluetooth in other contexts, for example when the Chaos engine is down. To fully
-disable bluetooth, go into Settings -> Accessories -> General -> Advanced Settings and turn off
-bluetooth. This will be necessary if you're using an authenticator device, since you need to make
-sure that your controller only connects to the console through the authenticator.
-
-### Configuring the Chatbot
-*Note:* If you are installing chaosface on a separate computer, see the installation instructions
-in the [chaosface documentation](docs/chaosface.md). You should install and run chaosface from
-that computer before performing the next steps.
-
-Now that everything is installed, power up your Raspberry Pi and follow these steps:
-
-1. If you don't have one already, create a separate Twitch account for the bot.
-
-If you prefer not to create a secondary account for your bot, you can still run most features
-of Chaos by entering the information for the account you broadcast from. In this case, however,
-mod redemptions with channel points will not be available.
-
-2. On the same local network as the Raspberry Pi, open a browser and navigate to
-[raspberrypi.local](http://raspberrypi.local), assuming you did not change the Pi's hostname.
-If you did set the hostname during configuration, replace "raspberrypi.local" with whatever
-name you chose.
-
-If this address does not work, you may need to find your Pi's IP address and use it directly.
-You can discover this address by going to your router's admin page, finding the list of
-connected devices, and seeing if you can identify which one is the Pi. Alternatively, run
-the command `hostname -I` on your Pi to get your Pi's IP address. Input this address in your
-browser instead.
-
-3. Click on the "Settings" tab. Enter your channel name and bot-account name, or the
-name of your broadcaster channel if you do not have a secondary custom bot account.
-
-4. While logged in to your bot account, get an OAuth token. (See the
-[chaosface instructions](docs/chaosface.md) for details.)
-
-5. (Optional) if you want to use channel-point redemptions or bits to give users modifier
-credits, get an EvenSub OAuth token while logged in to your main streamer's account.
-(See the [chaosface instructions](docs/chaosface.md) for details.)
-
-4. Configure the overlay appearance to your liking.
-
-### Configuring OBS/SLOBS
-
-The Chaos interface generates three browser sources that you can add as overlays to show the
-current status of Chaos to your viewers:
-
-- Active Mods: Shows the mods currently in effect with progress bars indicating how much time
-remains for each mod.
-- Votes: Shows the mods currently available to be voted on, along with the number of votes each mod
-has currently received
-- Vote Timer: A progress bar showing the time left for the current voting cycle.
-
-To add these overlays to OBS or SLOBS, perform the following steps:
-
-1. Make a copy of the scene you normally use to stream PlayStation games. Name it something like
-"Twitch Controls Chaos".
-
-2. To this new scene, add each of the following as a browser source. The default URLs are as follows.
-- Active Mods: http://raspberrypi.local/ActiveMods/
-- Votes: http://raspberrypi.local/Votes/
-- Vote Timer: http://raspberrypi.local/VoteTimer/
-
-You should set these browser sources to refresh when not displayed so that they can easily be
-refreshed. Detailed setup instructions for OBS are available in the
-[stream setup](docs/streamSetup.md) guide.
-
-### Running TCC Without Overlays
-If you are streaming directly from a console and cannot display local browser-source overlays,
-you can still run TCC, but you will need to make sure that you turn on the chatbot settings that
-announceme in chat which mods are available to vote on and which mods are currently active
-each time a new voting cycle begins.
-
-Note that you do not even need to be streaming for the chatbot to work. Merely by virtue of
-having a Twitch account, you have a chat, which can work even when you're offline. So in theory,
-you could have a group of friends over to your house and just play the game on your TV while
-they joined your twitch chat on their phones and voted without you ever needing to stream
-the game.
+To set up the chatbot so that it can run in your channel, and to set up OBS so you can stream
+TCC, see the [Chaosface configuration file](docs/chaosface.md).
 
 ## Running the Game
 
-### Cabling
-
-The hardware chain differs depending on whether you are playing a PS4 game or a PS5 game.
-
-For all games:
-
-1. Connect the DualShock controller (the PS4 controller) through a USB cable to one of
-the USB-A ports on your Raspberry Pi. _Note:_ In the original version of TCC, you
-had to connect to the lower-left port, but this restriction has been removed from
-Chaos Unbound. 
-
-2. Connect the Raspberry Pi's ethernet port to your router, unless you're using WiFi.
-
-[Cabling the Raspbery Pi](https://github.com/polysyllabic/chaos/blob/unbound/docs/images/chaos_plugging.jpg)
-
-The next step depends on what type of game you are playing.
-
-For PS4 games (whether played on a PS4 or a PS5):
-
-3. Use a USB-C to USB-A cable to connect the Raspberry Pi's USB-C port to the console. The Pi will
-get its power from this connection, as well as using it to communicate with the console.
-
-For PC games:
-
-3. Connect the Pi's USB-C port to a USB port on your PC (either USB-A or USB-C will work).
-
-For PS5-only games:
-
-You need an authenticator device to convince your console that you're using a controller approved
-for the PS5.
-
-3. First connect the authenticator device to the PlayStation 5.
-
-Different devices require different cable types. Please read the instructions that came with your
-device.
-
-In theory you can use any USB port on the console, but in practice the USB-A ports are much more
-reliable. On a PS5 Pro, these are on the back of the console only.
-
-Also connect supplementary power. For the P5Mate, there is a port for this on the lower right side
-of the device. The Besavior controller comes with a special USB-A to USB-C cable that has an
-additional USB-C port on one side for supplementary power. Connect one end of this adapter to
-the USB-C port on the backppack device mounted on the under side of the Besavior controller, connect
-the other (USB-A) end to a regular USB-A to USB-C cable, and connect the USB-C end of that cable 
-to the Raspberry Pi's USB-C port. Supply supplementary power with another USB cable connected to
-an independent power source such as a power brick. It must be able to supply at least 3A.
-
-The full sequence of devices is DualShock -> Raspberry Pi -> Authenticator Device -> PlayStation 5
-
-*Note:* If you don't supply external power, the Pi may still boot up, but you are likely to
-experience brown-outs when the Pi runs under load. In this case, you may find the Pi hanging and
-rebooting at inconvenient times.
-
-### Startup
-
-1. Turn on your console and external power, if needed. Once power is applied, the Raspberry Pi
+1. Connect the hardware as described in the [installation guide](docs/installation.md) and
+turn on your console/PC and external power, if needed. Once power is applied, the Raspberry Pi
 will boot up. After the boot sequence and the Chaos engine is running, the system (either console
-or PC) should recognize the controller. Assuming you've turned off bluetooth, note that you will
-need to press the power button on the console itse.f.
+or PC) should recognize the controller. If you've turned off bluetooth on the console, note that
+you will need to press the power button on the console itself.
 
-2. If OBS was already running, refresh your browser sources. The overlays should be active.
+3. Open your Chaosface in browser. By default, this will be either `http://raspberrypi.local/`
+if TLS is not enabled, or `https://raspberrypi.local/` if TLS is enabled. If you've set a
+password, log in. You will then be directed to the streamer-interface page.
 
-3. Next, check that the controller is connected properly. Start up and load into your game so that
-you are controlling your character. After you press the "Share" button, the vote-timer progress bar
-should start moving. If the timer runs and you can control your character, then the engine is
-running correctly and communicating with the interface.
+This interface provides you, the streamer, with information on the vote timer, the currently
+active modifiers, and also an indicator of the state of the TCC engine. It deliberately does not
+tell you what modifiers are being voted on. This way (assuming you're not looking at the OBS
+overlays), what chat inflicts on you should come as a surprise. From this page you can also
+access tabs that let you configure how Chaos runs. 
 
-4. Finally, test the voting. Pull up your chat and try to vote while the engine is running. A vote
+When Chaos is paused, the status indicator flashes a large box to remind you to unpause when
+you are ready. It's meant to be noticeable in your peripheral vision, so you can position the
+browser page on a secondary monitor. It is highly recommended to use this interface and not
+the OBS scene that your viewers see to monitor TCC.
+
+4. If you have never selected a game to play, or if you want to switch games, go to the
+`Game Settings` tab of the interface and select the game you want to play from the
+available-games list. Click `confirm game` to have TCC load the new game. Note that there
+can be multiple configuration files for a single game to support variations that only exist
+on certain platforms. For example, the original version of _The Last of Us: Part II_ has
+a slightly different menu layout than the remastered version, and the PC version of the game
+has still further differences. Make sure you pick the right version.
+
+If you've loaded a game previously, TCC will try to load the same game automatically, so
+you only need to select a new game if you want to switch.
+
+5. If OBS was already running, refresh your browser sources. The overlays should be active.
+
+6. Test that the controller is connected properly. Start up and load into your game so that
+you are controlling your character. After you press the "Share" button, the vote-timer
+progress bar should start moving. If the timer runs and you can control your character, then
+the engine is running correctly and communicating with the interface.
+
+7. Finally, test the voting. Pull up your chat and try to vote while the engine is running. A vote
 should appear on your overlay. If all these tests are OK, you are ready to go!
-
-### Playing the Game
-
-1. The main interface page will contain several tabs that will let you alter specific settings. The
-default tab is designed to show you the current status of Chaos without revealing information about
-which mods are winning the voting. This way (assuming you're not looking at the OBS overlays), what
-chat inflicts on you should come as a surprise.
 
 ### Pausing
 
@@ -573,13 +305,14 @@ need access to this button for a particular game, send me the details and I'll s
 TCC was originally developed for *The Last of Us Part 2*. Detailed instructions on how to run that
 game will be found in the [README file](docs/TLOU2/README.md) for that game.
 
+
 ## Design
 
 The core of TCC involves the Chaos engine, written in C++ for speed. At the lowest level, the Chaos
 engine works by forwarding USB protocols using the Linux raw-gadget kernel module. For every USB
 request, the engine duplicates the request and passes it along. However, in the case of messages
 corresponding to controller buttons/joysticks, the data is passed to other processes that can meddle
-with the data. This forwarding infrastructure is done by through the a custom library (usb-sniffify)
+with the data. This forwarding infrastructure is done by through a custom library (usb-sniffify)
 that combines [raw-gadget](https://github.com/xairy/raw-gadget) and [libusb](https://libusb.info).
 
 The Chatbot is written primarily in Python, with some HTML and JavaScript for the sources.
@@ -609,8 +342,9 @@ The Chaos engine offers the following capabilities for reading and altering cont
 
 ### Supporting New Games
 Individual games are supported through configuration files. If you want to use TCC with a new game,
-you merely need to create an appropriate configuration file using the correct
-[configuration file syntax](docs/chaosConfigFiles.md).
+you merely need to create an appropriate configuration file. A complete description of the syntax
+for these configuration files, as well as notes on utilities to help in the process of supporting
+a new game, can be found [here](docs/chaosConfigFiles.md).
 
 When creating new games, or new mods for existing games, there are several utility programs that
 may be useful. They will be found in the `chaos/utils` directory. To see all the options available
@@ -723,8 +457,7 @@ and unreliable. I have no plans to support it.
 If you plug the DualShock + Pi into your PC instead of your console, you _can_ use TCC, but you
 must select the game configuration file designed for the PC, since the menu options differ
 slightly from the console version of the game. Playing this way will _not_ intercept signals
-coming from mouse and keyboard, so you still need to use a DualShock. Support for PC/XBox
-controllers is on my to-do list for version 2.1.
+coming from mouse and keyboard, so you still need to use a DualShock.
 
 If you're asking for a version that works _without_ a Raspberry Pi to handle the signal conversions,
 that would require a major effort. In essence, we'd need to create some sort of driver to intercept

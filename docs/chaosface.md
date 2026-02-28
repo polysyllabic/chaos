@@ -1,16 +1,10 @@
-***************
-Chaos Interface
-***************
-
-Overview
-========
+# Twitch Controls Chaos: Chaosface
 
 The Chaos interface, *Chaosface*, is one of two main parts of the Twitch Controls Chaos (TCC)
 system for allowing Twitch chat to alter various aspects of gameplay. Chaosface is a Python
 application that provides the connection between viewers in Twitch chat and the chaos engine
 that directly controls gameplay modifications (mods). This file provides reference documentation
-for the chaos interface. For a general overview and quick guide, see the general README file for
-Twitch Controls Chaos.
+for the chaos interface.
 
 Chaosface consists of three major parts:
 
@@ -21,16 +15,13 @@ Chaosface consists of three major parts:
 Chaosface can run along with the chaos engine on your Raspberry Pi, or you can host it on
 another computer.
 
-Installation and Setup
-======================
+## Installation
 
 The default installation of Chaosface runs on the Raspberry Pi along with the engine. This is
-the simplest setup and is recommended if you're uncomfortable with setting up networking
-See the main TCC documentation for those steps. This section explains the steps you need to take
-if you plan to run Chaosface on a separate computer.
-
-Installing Chaosface on Another Computer
-----------------------------------------
+the simplest setup and is recommended if you're uncomfortable with setting up networking. If
+you choose this route, Chaosface will be installed along with the other components of TCC. In
+that case, you can skip the rest of these installation instructions and proceed with
+initial configuration.
 
 To install Chaosface on a separate computer from the Chaos engine, you will need to know the
 IP address assigned to the Pi and to the computer that you're running Chaosface on. Note that
@@ -39,23 +30,17 @@ can mean that the IP address will change. To avoid having to reset IP addresses 
 it's recommended that you have your router assign static IP addresses to both the Pi and the
 computer that will host Chaosface.
 
-If you already have TCC installed on the Pi and only want to update the local Chaosface runtime
-in `/usr/local/chaos`, run `./scripts/update_chaosface.sh`.
-To update only the engine, run `./scripts/update_engine.sh`.
-To update both engine and Chaosface together, run `./scripts/update_chaos.sh`.
-To sync only startup/service files (`startchaos.sh`, `chaos.service`, `chaosface.service`),
-run `./scripts/update_services.sh`.
-Re-run `./install.sh` only when you want to reconfigure installation options (for example,
-switching between local and remote Chaosface, or changing the configured interface address).
+To install Chaosface on a computer other than the Pi, you must follow these steps:
 
-Setting up the computer for Chaosface:
+1. Python 3.10 or newer is required. If it's not yet installed on the computer that will run
+   Chaosface, install it first.
 
-1. Install Python 3.10 or newer on the computer that will run Chaosface.
+2. Download or clone the TCC repository onto the computer that will run Chaosface. If you've
+   downloaded the repository, unpack the archive to whatever directory you desire. To clone
+   the repository, you must have Git installed on this computer
 
-2. Download or clone this repository onto that computer.
-
-3. Run the dedicated Chaosface standalone installer. This is separate from the Raspberry-Pi
-   `install.sh` flow and is intended for a separate computer that hosts Chaosface.
+3. Run the standalone installer script to install Chaosface by itself. This is separate from
+   the Raspberry-Pi `install.sh` script, which you should _only_ run from the Pi.
 
    Linux / macOS:
    - Open a terminal in the repository root.
@@ -71,7 +56,14 @@ Setting up the computer for Chaosface:
    - Do not run the remote installer with `sudo` unless you also pass `--install-dir`; otherwise
      the default `~` resolves to `/root` and the runtime lands under `/root/chaosface-runtime`.
 
-4. Start Chaosface from the installed runtime directory:
+## Running Chaosface
+
+When hosted on the Pi, Chaosface starts automatically when the Pi boots up. If for some reason you
+need to restart Chaosface without rebooting the Pi, log in to the Pi and issue the following
+command: `sudo systemd restart chaosface`
+
+If you are running Chaosface from another computer, you must start it yourself. From the installed
+runtime directory:
 
    Linux / macOS:
    - `<install-dir>/run_chaosface.sh`
@@ -79,96 +71,161 @@ Setting up the computer for Chaosface:
    Windows:
    - `<install-dir>\run_chaosface.bat`
 
-5. Open a browser and navigate to the main page. If you're running Chaosface from the
-   same computer as the web browser, this will be `http://localhost/`
+## Initial Configuration
 
-6. In the `Connection Setup` tab of Chaosface, set the address for the Pi to the value you found
-   above. Do not change the talk/listen ports unless you know what you are doing.
+Once Chaosface is running, open a browser and navigate to the main page. If Chaosface is running
+on the Pi and you've accepted the default hostname, the address will be
+[raspberrypi.local](http://raspberrypi.local). If you're running Chaosface from the same computer
+as your web browser, the address will be `http://localhost/`. In other scenarios, substitute the
+appropriate host name.
 
-7. Make sure any firewall on your computer isn't blocking local network access to the talk and
-   listen ports (5555 and 5556). If you are running the interface on a Windows machine and it is
-   set to be on a private network, you should not have any issues. If your computer is set to
-   be on a public network, you will have to manually open the listen port (5556 by default) to
-   incoming connections. Note that you do *not* need to open these ports on your router unless you
-   are trying to run the interface and the engine from different local networks.
+The first time you navigate to this page, Chaosface will prompt you to set a password to access the
+user interface. You can choose to continue without one, but if you do that, anyone on your local
+network will be able to access the streamer's interface. (As long as your Internet connection is
+behind a router's firewall, however, no one outside should be able to access it.)
 
-Running for the First Time
---------------------------
+If you do set a password, you will have to enter it each time you start a new session. In addition
+to a password, you can also run Chaosface over TLS, or encrypted handling of traffic. (See below.)
 
-The first time you run Chaosface, you need to authorize it in your channel. You can run the bot
-through a dedicated bot account that you control or through your main streamer account. Note that
-whichever you choose, the bot will write messages in chat from that account.
+### When Chaosface Runs On a Separate Computer
 
-1. If you are going to run Chaosface from your streamer account, just follow the instructions
-   below while you are logged in to your main account rather than a bot account.
+If you're running Chaosface on a separate computer, enter address of the Raspberry Pi in the
+provided box. Do not change the talk/listen ports unless you know what you are doing.
 
-2. Start Chaosface. If you are using the default setup, this involves simply applying power to
-   the Raspberry Pi and waiting for it to boot up.
+If the default address (or whatever you chose) does not work, you may need to find your Pi's
+IP address and use it directly. You can discover this address by going to your router's admin
+page, finding the list of connected devices, and seeing if you can identify which one is the Pi.
+Alternatively, run the command `hostname -I` on your Pi to get your Pi's IP address. Input this
+address in your browser instead.
 
-3. Open a browser and navigate to Chaosface at `http://localhost:8080/`.
-   - If Chaosface is running on a different machine from your browser (for example, the Pi),
-     create a local SSH tunnel first. From a terminal, run the command
-     `ssh -L 8080:localhost:80 pi@raspberrypi.local` (substitue your address for the Pi if
-     you've changed it from the default).
-     then use `http://localhost:8080/` in your browser. This tunnelling is only necessary to
-     get OAuth tokens. Otherwise, you run chaosface without the ssh step.
+Make sure any firewall on your computer isn't blocking local network access to the talk and
+listen ports (5555 and 5556). If you are running the interface on a Windows machine and it is
+set to be on a private network, you should not have any issues. If your computer is set to
+be on a public network, you will have to manually open the listen port (5556 by default) to
+incoming connections. Note that you do *not* need to open these ports on your router unless you
+are trying to run the interface and the engine from different local networks.
 
-4. Go to the "Connection Setup" tab and enter your bot name and channel name.
+### Getting Twitch Authorization
 
-5. Next you need an OAuth token for Chaosface. The bot OAuth token lets Chaosface connect to your
-   channel and send and receive chat messages. Without it, the interface will not work. Note that
-   this token does not grant that account any special permissions. For example, if you want your
-   bot to be a mod, you must grant it that permission on Twitch.
-   
-    A. If you're using a bot account, sign in to Twitch with that account. Otherwise, stay logged
-       in to your main streaming account.
-    B. Click **Start bot OAuth login** in the Connection Setup tab. This opens Twitch auth in a
-       new tab and uses the fixed localhost callback URI.
-    C. After permission is granted, Chaosface stores the generated token from the callback page.
-    D. Click **Load generated tokens** and then **Save** in Connection Setup.
+The chatbot needs to log in to your chat in order to read and send messages. The security for this
+communication requires you to get OAuth tokens from Twitch. These tokens prove to Twitch that
+you've authorized the bot within your channel. Note that this token does not grant that account
+any special permissions. For example, if you want your bot to be a mod, you must grant it that
+permission on Twitch.
 
-6. An EventSub OAuth token is only required if you want to allow chat members to redeem channel
-   points or bits to acquire modifier credits. If you don't plan to use either feature, you can
-   leave the EventSub OAuth Token field blank. To get this token, you need to be logged in to your
-   main account and *not* your bot account. This is because you, as the streamer, must grant the
-   bot permissions to read EventSub events about channel-point redemptions and bit donations.
+If you don't have a bot account already, or if you prefer to run Chaosface as an additional bot,
+create a new Twitch account for the bot.
 
-    A. Log in to Twitch with your main account.
-    B. From the "Connection Setup" tab, click **Start EventSub OAuth login**.
-    C. An authorization dialog from Twitch will appear asking if you want to give permissions to
-       "TCC Chaos Interfaceface." Grant the permissions.
-    D. After permission is granted, Chaosface stores the generated token from the callback page.
-       Click **Load generated tokens** and then **Save**.
+When you get an OAuth tokens, Twitch requires a callback location to sent it. Chaosface has been
+configured to use `http://localhost:8080/` (NB: this is not a setting you can change), which
+gives you access to the token without needing a separate, secure server on the Internet to
+handle the callback. However, if Chaosface is not running on the same machine as your browser,
+and it won't be if you're running it form the Pi, you will need to take one extra step before
+getting these tokens.
 
-7. If you enable self-signed TLS in Connection Setup, use **Generate self-signed cert** to create
-   a certificate/key on the Chaosface host. The UI port field can be set directly; by default it
-   uses port 80 for HTTP and port 443 for TLS, and switching TLS mode updates that default.
-   The **Overlay HTTP port** field controls an additional non-TLS listener for OBS overlays when
-   TLS is enabled for the UI (default `80`; set `0` to disable).
-   Save settings and restart Chaosface to apply TLS changes. Note that when you first try to
-   access the UI with a self-signed certificate, the browser will complain that it is insecure
-   and you will need to manually override the security warning.
-8. Save the settings. If this is your first time entering credentials, the bot waits to connect
-   until after you have entered your credentials. After that, saving updated credentials will
-   automatically restart the chatbot to re-initialize the Twitch connection.
-   The Streamer Interface tab includes a **Bot Status** list (above the Quit button) that shows
-   recent connect/auth status and error messages from the chatbot, plus engine message
-   send/receive previews. The list auto-scrolls to the newest message.
+ From a terminal, run the command
+     `ssh -L 8080:localhost:80 pi@raspberrypi.local`
+     
+Substitue your username and/or address for the Pi if you've changed themn from the defaults.
+
+This command creates a local SSH tunnel so you automatically can pass the token you receive
+along to Chaosface. This tunnelling is only necessary to get OAuth tokens. Otherwise, you 
+can run Chaosface without the ssh step.
+
+Once the tunnel is established, open Chaosface and click on the "Settings" tab. Enter your
+channel name and bot-account name. Although the bot can use your main streaming account to
+chat, this is not recommended. If you do so, you will not be able to use channel points for
+modifier redemptions.
+
+Before doing the next step, make sure you are logged into Twitch with your _bot_ account.
+
+A. Click **Start bot OAuth login** in the Connection Setup tab. This opens Twitch auth in a
+new tab and uses the fixed localhost callback URI.
+
+B. After you grant permission, Chaosface stores the generated token from the callback page.
+
+C. Click **Load generated tokens** and then **Save** in Connection Setup.
+
+An EventSub OAuth token is only required if you want to allow chat members to redeem channel
+points or bits to acquire modifier credits. If you don't plan to use either feature, you can
+leave the EventSub OAuth Token field blank. To get this token, you need to be logged in to your
+main account and *not* your bot account. This is because you, as the streamer, must grant the
+bot permissions to read EventSub events about channel-point redemptions and bit donations.
+
+A. Log in to Twitch with your main account.
+B. From the "Connection Setup" tab, click **Start EventSub OAuth login**.
+C. An authorization dialog from Twitch will appear asking if you want to give permissions to
+the TCC Chaos Interfaceface. Grant the permissions.
+D. After permission is granted, Chaosface stores the generated token from the callback page.
+Click **Load generated tokens** and then **Save**.
+
+The bot will not try to connect to Twitch until you enter values for your channel name, bot name,
+and bot OAuth token. Once those are saved, the bot will attempt to log in to Twitch immediately
+after starting. Any time you update your credentials, the chatbot will restart to re-initialize
+the Twitch connection.
 
 If the OAuth tokens expire or are manually reset, you will need to repeat these steps.
 
-Configuring sources in OBS
---------------------------
+## HTTPS / TLS
+TLS lets you run Chaosface over an encrypted connection. It is not required, but if you
+run without TLS your browser will likely complain that data you enter is insecure.
+
+Chaosface supports three UI TLS modes from Connection Setup:
+
+* ``off``: HTTP only
+* ``self-signed``: HTTPS using an auto-generated self-signed certificate
+* ``custom``: HTTPS using a provided certificate and private key
+
+If you enable self-signed TLS in Connection Setup, use **Generate self-signed cert** to create
+a certificate/key on the Chaosface host. Chaosface auto-generates files at
+``configs/tls/selfsigned-cert.pem`` and ``configs/tls/selfsigned-key.pem`` if they do not already
+exist.  Note that when you first try to access the UI with a self-signed certificate, the browser
+will complain that it is insecure and you will need to manually override the security warning.
+
+You can configure the self-signed certificate hostname in Connection Setup.
+
+The UI port field can be set directly; by default it uses port 80 for HTTP and port 443 for TLS,
+and switching TLS mode updates that default.
+
+The **Overlay HTTP port** field controls an additional non-TLS listener for OBS overlays when
+TLS is enabled for the UI (default `80`; set `0` to disable).
+
+Custom certificate mode:
+
+* Provide paths to your PEM certificate and private key in Connection Setup.
+* Both files must exist and be readable by the ``chaosface`` process.
+
+Example file install (systemd deployment):
+
+.. code-block:: bash
+
+   sudo mkdir -p /usr/local/chaos/certs
+   sudo cp fullchain.pem /usr/local/chaos/certs/chaosface-cert.pem
+   sudo cp privkey.pem /usr/local/chaos/certs/chaosface-key.pem
+   sudo chown root:root /usr/local/chaos/certs/chaosface-*.pem
+   sudo chmod 600 /usr/local/chaos/certs/chaosface-key.pem
+   sudo chmod 644 /usr/local/chaos/certs/chaosface-cert.pem
+
+Changes to the password or TLS settings require you to save and restart Chaosface to take
+effect:
+
+  `sudo systemctl restart chaosface`
+
+
+## Configuring OBS Overlays
 The Chaos interface generates three browser sources that you can add as overlays to show the
 current status of Chaos to your viewers:
 
-* Active Mods: Shows the mods currently in effect with progress bars indicating how much time remains for each mod.
-* Votes: Shows the mods currently available to be voted on, along with the number of votes each mod has currently received.
+* Active Mods: Shows the mods currently in effect with progress bars indicating how much time
+  remains for each mod.
+* Votes: Shows the mods currently available to be voted on, along with the number of votes each
+  mod has currently received.
 * Vote Timer: A progress bar showing the time left for the current voting cycle.
 
 To add these overlays to OBS or SLOBS, perform the following steps:
 
-* Make a copy of the scene you normally use to stream PlayStation games. Name it something like "Twitch Controls Chaos".
+* Make a copy of the scene you normally use to stream PlayStation games. Name it something like
+  "Twitch Controls Chaos".
 
 * To this new scene, add each of the following as a browser source. The canonical paths are:
 
@@ -194,8 +251,6 @@ To add these overlays to OBS or SLOBS, perform the following steps:
   Legacy aliases (`/ActiveMods`, `/CurrentVotes`, `/VoteTimer`, and lowercase variants) are also
   supported for compatibility.
 
-If you are running Chaosface from a different computer, adapt the URL accordingly. 
-
 You should set these browser sources to refresh when not displayed so that they can easily be refreshed.
 
 The `SOURCE CONFIGURATION` tab lets you tune source layout and colors:
@@ -212,31 +267,12 @@ Note that with the original version of TCC, you had to adjust the colors of the 
 filters in OBS. If you are converting over from that old setup and aren't seeing the colors you expect,
 try deleting the old filters and setting new colors from Chaosface.
 
-Operation
-=========
+# Operation
 
-When Chaosface begins, it logs into your stream's chat and attempts to communicate with the Chaos
-engine to get the game information. Until both connections are made, you cannot start playing chaos.
+The following sections explain the basic concepts of the Chaos system and how it can be customized.
+To change settings from their default values, go to the "Game Settings" tab of the Chaos browser page.
 
-If the interface does not receive a response from the engine, it retries every 30 seconds
-until a response is received.
-
-You can monitor the operation of Chaos from your browser.
-  - If you're running Chaosface on the Pi: http://raspberrypi.local/.
-  - If you're running Chaosface on the same computer as the browser, go to http://localhost/
-
-The default tab on this page ("Streamer Interface") shows you what mods are currently active,
-the engine state (`not connected`, `timeout`, `waiting for game`, `bad config file`, `paused`,
-or `running`), and a few other diagnostic features. It *does not* show what mods are currently
-being voted on. This allows chat to surprise you with their choice of modifiers, assuming you're
-not peeking at the sources in OBS.
-
-The following sections explain the basic concepts of the Chaos system and how it can be
-customized. To change settings from their default values, go to the "Game Settings" tab of
-the Chaos browser page.
-
-Voting Cycle
-------------
+## Voting Cycle
 
 The voting cycle is the normal loop in which gameplay modifiers are chosen and applied. It runs
 continuously as long as Chaos is not paused. In each cycle, a set of modifiers is selected, chat
@@ -247,8 +283,7 @@ With the default settings, a new vote occurs once each minute, and the winning m
 for 3 minutes. This has the effect of keeping 3 modifiers always applied to your gameplay after the
 initial votes have populated the modifier list.
 
-Modifier Selections
-------------------
+## Modifier Selections
 
 When voting begins, a set of modifiers is chosen randomly among the available mods and presented
 in a list. The number of options per voting cycle is set with the "Vote options" parameter.
@@ -263,8 +298,7 @@ lower the setting, the less likely a previously used modifier is to be chosen. S
 100 has the effect of disabling softmax weighting, in which case mods will be selected with equal
 probability regardless of past use.
 
-Voting Period
--------------
+## Voting Period
 
 The voting period specifies when a voting cycle begins and how long votes last. Each user gets
 one vote per voting cycle. A second attempt to vote will be ignored.
@@ -304,8 +338,7 @@ or `!newvote` commands. If voting is disabled, modifiers can only be applied man
 if you wanted to apply chaos to a game where you need to manually apply modifiers only at times
 the interface cannot predict.
 
-Voting Methods
---------------
+## Voting Methods
 
 There are three different methods available for selecting a winning modifier:
 
@@ -327,9 +360,7 @@ chaos chooses a modifier for you at random. This feature is mostly intended for 
 use it for active play, note that you are removing the 'twitch controls' from the chaos by doing
 this.
 
-
-Applying Modifiers
-------------------
+## Applying Modifiers
 
 You can apply a specific modifier without waiting for it to win a vote with the command
 `!apply <mod name>`. To execute this command, everyone except the streamer needs a modifier credit.
@@ -340,8 +371,7 @@ individually:
 * Bit donation
 * Winning a raffle
 
-Channel-Point Redemptions
--------------------------
+## Channel-Point Redemptions
 
 To configure channel-points redemptions and bit donations, you must have stored a valid EventSub
 token for your channel. (See the setup instructions above.)
@@ -364,8 +394,7 @@ Note also that any cooldown you apply on the channel-point redemption applies on
 *getting* modifier credits. There is a separate cooldown period for the `!apply` command, which
 is in effect regardless of how you earn the credit.
 
-Bit Donations
--------------
+## Bit Donations
 
 Bit donations work similarly to channel-points redemptions. You must have stored a valid EventSub
 token for your channel. (See the setup instructions above.)
@@ -387,8 +416,7 @@ As with channel-point redemptions, credits are only applied automatically while 
 running and connected to Twitch. If you want to give credits for donations that come in at
 other times, you need to add the credits manually.
 
-Raffles
--------
+## Raffles
 
 A raffle gives you a way to distribute modifier credits to users without them needing to spend
 channel points or bits. To enable raffles, check the "Conduct raffles" box in the "Game
@@ -402,8 +430,7 @@ and instruct users to enter the raffle with the `!join` command.
 When the time expires, one winner will be selected at random from those who have joined and
 will receive a modifier credit.
 
-Commands
---------
+# Commands
 
 General Information Commands:
 * !chaos -- Get a general description of Twitch Controls Chaos
@@ -437,16 +464,14 @@ Raffle Commands:
 * !raffle (time) -- Start a raffle for a modifier credit (if time is omitted, default raffle time is used) Requires 'manage_raffles' permission
 * !chaosraffle -- An alias for !raffle
 
-Command Aliases
----------------
+## Command Aliases
 Command aliases allow you to rename commands to your liking. Some default aliases are listed above. You can manage these command
 names from the `Chatbot Commands` tab of the user interface. If you set an alias, it will be available as an alternate command.
 If you also set the checkbox `Use alias only` then the default command name will be disabled and only the alias will be accepted.
 You can use this feature if you already have a different bot that responds to these command names (e.g., !raffle) and want to keep
 that other bot running as before.
 
-Permissions
------------
+## Permissions
 Some commands require additional permissions beyond the ability to type messages in chat. The
 streamer automatically has admin permission and can use all commands. You can also give these 
 same permissions to trusted individual users through chat commands.
@@ -468,14 +493,3 @@ require the 'manage_permissions' permission to execute:
 * To add a permission to a group: !addperm <group> <permission>
 * To remove a member from a group: !delmember <group> <user>
 * To remove a permission from a group: !delperm <group> <permission>
-
-
-TODO List
-=========
-* Edit and load config files from the interface
-* Write counter data to files for OBS to display
-* Allow a re-start of bot and/or engine from the interface
-* Limit modifier selection by group
-* Manage command permissions through interface
-* Commands to configure game settings without UI
-* Assign permissions to moderators as a group

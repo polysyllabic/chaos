@@ -1,15 +1,9 @@
-- Engine Tasks
-    - Remember last game config file
-    - Send available games to chaosface
-    - Create config file for TLOU2 remaster
-    - Create config file for TLOU1 remake
-- Chaosface Tasks
-    - Receive available-games list
-    - Select-game interface
-    - Send new config files to engine
-    - Convert chaosface UI from flexx to niceui
-- Create config file documentation
-- Test raw_gadget on bookworm
-- Package chaosface with pyinstaller
-- Test complete installation chain
+The 2.0 feature list is complete. These are the to-do items for version 2.1
 
+- Add support for XBox and DualSense controllers (for PC games)
+- Allow mod choice to be restricted by group for voting candidates
+- Edit config files in the UI
+- Write counter data to files for OBS to display
+- Manage command permissions through interface
+- Commands to configure game settings without UI
+- Assign permissions to moderators as a group
