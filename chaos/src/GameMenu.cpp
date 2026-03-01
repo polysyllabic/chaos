@@ -80,7 +80,7 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, bo
     menu_stack.pop();
   }
   // navigation through the final leaf
-  item->selectItem(seq);  
+  item->selectItem(seq);
   item->setState(seq, new_val, restore);
 
   // A guard item may have changed state during this operation.

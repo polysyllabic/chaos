@@ -157,12 +157,50 @@ static bool testZeroResetCounterAction() {
   return ok;
 }
 
+static bool testSelectCounterDirection() {
+  MockMenu mock;
+  Controller controller;
+  Sequence seq(controller);
+  bool ok = true;
+
+  auto counter_item = std::make_shared<MenuItem>(
+      mock, "counter", 0, 0, 0, false,
+      true, false, false, false,
+      nullptr, nullptr, nullptr, CounterAction::NONE);
+  auto select_item = std::make_shared<MenuItem>(
+      mock, "select_item", 0, 0, 0, false,
+      false, true, false, false,
+      nullptr, nullptr, counter_item, CounterAction::NONE);
+  auto option_item = std::make_shared<MenuItem>(
+      mock, "option_item", 0, 0, 0, false,
+      true, false, false, false,
+      nullptr, nullptr, counter_item, CounterAction::NONE);
+
+  counter_item->setCounter(1);
+  select_item->setState(seq, 0, false);
+  ok &= check(counter_item->getCounter() == 2,
+              "select begin should increment sibling counter");
+  select_item->setState(seq, 0, true);
+  ok &= check(counter_item->getCounter() == 1,
+              "select restore should decrement sibling counter");
+
+  option_item->setState(seq, 0, false);
+  ok &= check(counter_item->getCounter() == 2,
+              "option begin should increment sibling counter");
+  option_item->setState(seq, 0, true);
+  ok &= check(counter_item->getCounter() == 1,
+              "option restore should decrement sibling counter");
+
+  return ok;
+}
+
 int main() {
   bool ok = true;
   ok &= testSelectUsesCorrectedOffset();
   ok &= testNavigateBackUsesCorrectedOffset();
   ok &= testGuardedVisibilitySync();
   ok &= testZeroResetCounterAction();
+  ok &= testSelectCounterDirection();
 
   if (!ok) {
     return 1;

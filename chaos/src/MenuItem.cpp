@@ -150,20 +150,22 @@ void MenuItem::navigateBack(Sequence& seq) {
 }
 
 void MenuItem::setState(Sequence& seq, unsigned int new_val, bool restore) {
-  PLOG_DEBUG << "Set state of " << name << " to " << new_val;
 
   if (is_option) {
+    PLOG_DEBUG << "Set state of " << name << " to " << new_val;
     setMenuOption(seq, new_val);
     current_state = new_val;
   }
   if (is_selectable) {
+    PLOG_DEBUG << "Select menu item " << name;
     menu_items.addToSequence(seq, "menu select");
   }
   if (confirm) {
+    PLOG_DEBUG << "Confirm " << name;
     menu_items.addToSequence(seq, "confirm");
   }
 
-  // Increment the counter, if set
+  // Increment sibling counter, if set
   if (sibling_counter) {
     if (restore) {
       sibling_counter->decrementCounter();
