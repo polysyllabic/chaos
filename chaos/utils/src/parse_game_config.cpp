@@ -128,7 +128,7 @@ public:
   }
 
   void setMenuState(std::shared_ptr<Chaos::MenuItem> item, unsigned int new_val) override {
-    game.getMenu().setState(item, new_val, true, controller);
+    game.getMenu().setState(item, new_val, false, controller);
   }
 
   void restoreMenuState(std::shared_ptr<Chaos::MenuItem> item) override {
