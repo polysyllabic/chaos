@@ -132,13 +132,13 @@ void MenuItem::selectItem(Sequence& seq) {
 void MenuItem::navigateBack(Sequence& seq) {
   // starting from the selected option, we reverse to navigate to top of the menu and
   // back out
-  short off = getOffset();
-  PLOG_DEBUG << "Navigate back offset " << off;
-  for (int i = 0; i < off; i++) {
-    menu_items.addToSequence(seq, "menu up");
-  }
-  for (int i = 0; i > off; i--) {
+  const short restore_offset = -getOffset();
+  PLOG_DEBUG << "Navigate back offset " << restore_offset;
+  for (int i = 0; i < restore_offset; i++) {
     menu_items.addToSequence(seq, "menu down");
+  }
+  for (int i = 0; i > restore_offset; i--) {
+    menu_items.addToSequence(seq, "menu up");
   }
   for (int i = 0; i < tab_group; i++) {
     menu_items.addToSequence(seq, "tab left");
