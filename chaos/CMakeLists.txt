@@ -198,7 +198,7 @@ add_executable(chaos_parse_game_config
   src/Sequence.cpp
   src/SequenceModifier.cpp
   src/SequenceTable.cpp
-  utils/parse_game_config.cpp)
+  utils/src/parse_game_config.cpp)
 
 target_compile_features(chaos_parse_game_config PRIVATE cxx_std_17)
 
@@ -246,12 +246,12 @@ add_executable(validate_mod
   src/Sequence.cpp
   src/SequenceModifier.cpp
   src/SequenceTable.cpp
-  utils/validate_mod.cpp)
+  utils/src/validate_mod.cpp)
 
 target_compile_features(validate_mod PRIVATE cxx_std_17)
 
 add_executable(gamepad_test
-  utils/gamepad_test.cpp)
+  utils/src/gamepad_test.cpp)
 
 target_compile_features(gamepad_test PRIVATE cxx_std_17)
 

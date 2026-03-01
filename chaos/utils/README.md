@@ -7,6 +7,8 @@ Each of these utilities is run from a shell script. For C++ utilities, those scr
 also run an incremental rebuild each time they execute to ensure that the latest version
 is being executed.
 
+Source files for utility apps are under `chaos/utils/src`.
+
 To build C++ utilities manually from the repository root, follow these steps:
 
   `cmake -S chaos -B chaos/build`
@@ -29,6 +31,9 @@ _Example:_
 
 _The option -g also lists mods by their group after the alphabetical list:_
 `make_modlist.sh -g chaos/examples/tlou2.toml chaos/examples/modlists/tlou2_mod_groups.txt`
+
+_Windows usage:_
+`make_modlist.bat <game-config.toml> <output.txt>`
 
 Note that this utility is written in Python, so you can run it on any computer that has Python
 installed.
