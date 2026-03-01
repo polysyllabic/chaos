@@ -267,7 +267,9 @@ available-games list. Click `confirm game` to have TCC load the new game. Note t
 can be multiple configuration files for a single game to support variations that only exist
 on certain platforms. For example, the original version of _The Last of Us: Part II_ has
 a slightly different menu layout than the remastered version, and the PC version of the game
-has still further differences. Make sure you pick the right version.
+has still further differences. Even for the same game, there are certain mods that can only
+run on specific platforms. For example, the 30fps mod is only available if you are playing
+the original version of TLOU2 on a PS5. Make sure you pick the right version.
 
 If you've loaded a game previously, TCC will try to load the same game automatically, so
 you only need to select a new game if you want to switch.
@@ -282,7 +284,7 @@ the engine is running correctly and communicating with the interface.
 7. Finally, test the voting. Pull up your chat and try to vote while the engine is running. A vote
 should appear on your overlay. If all these tests are OK, you are ready to go!
 
-### Pausing
+## Pausing and Resuming the Game
 
 Chaos initializes in a paused state. When Chaos is paused, modifiers do not run and all signals are
 passed through to the console unaltered. The vote timer is also suspended, but any votes cast during
@@ -300,7 +302,7 @@ never passed on to the controller. For most games, this should not create proble
 button is used for console-related functions that are independent of the game itself. If you
 need access to this button for a particular game, send me the details and I'll see what I can do.
 
-### Game-Specific Usage
+## Game-Specific Usage
 
 TCC was originally developed for *The Last of Us Part 2*. Detailed instructions on how to run that
 game will be found in the [README file](docs/TLOU2/README.md) for that game.
@@ -340,91 +342,33 @@ The Chaos engine offers the following capabilities for reading and altering cont
 - Injection - Generate arbitrary messages without any controller events
 - Direct Control - Send commands directly to the output
 
-### Supporting New Games
+## Supporting New Games
 Individual games are supported through configuration files. If you want to use TCC with a new game,
 you merely need to create an appropriate configuration file. A complete description of the syntax
 for these configuration files, as well as notes on utilities to help in the process of supporting
 a new game, can be found [here](docs/chaosConfigFiles.md).
 
-When creating new games, or new mods for existing games, there are several utility programs that
-may be useful. They will be found in the `chaos/utils` directory. To see all the options available
-with these utilities, run them with -h or --help as the parameter.
+When creating new configuration files or new modifiers for existing games, there are several
+utility programs that may be useful. They will be found in the `chaos/utils` directory.
 
-Each of these utilities is run from a shell script. For C++ utilities, those scripts ensure the
-build tree is configured and run an incremental rebuild each time before execution.
+- `make_modlist.sh` Generates a text list of all the mods available for chat to vote on for a
+  game. If you put this somewhere accessible on the web, the chatbot can provide a link to users
+  in response to the !chaoscmd command.
 
-To build C++ utilities manually from the repository root, follow these steps:
-
-  `cmake -S chaos -B chaos/build`
-  `cmake --build chaos/build --target chaos_parse_game_config validate_mod gamepad_test -j4`
-
-The examples below assume you're running them from the repository root.
-
-- `./scripts/make_modlist.sh` Generates a text list of all the mods available for chat to vote on for this
-  game. If you put this somewhere accessible on the web, the chatbot can provide a link to users in
-  response to the !chaoscmd command.
-
-_Basic usage:_
-`./scripts/make_modlist.sh <game-config.toml> <output.txt>`
-
-_Example:_
-`./scripts/make_modlist.sh chaos/examples/tlou2.toml chaos/examples/modlists/tlou2_mods.txt`
-
-_The option -g also lists mods by their group:_
-`./scripts/make_modlist.sh -g chaos/examples/tlou2.toml chaos/examples/modlists/tlou2_mod_groups.txt`
-
-- `parse_game_config` Attempts to load a game configuration file and reports any errors it
-  encountered. Running this provides a syntax check on the configuration file before you try to use
+- `parse_game_config.sh` Attempts to load a game configuration file and reports any errors it
+  encounters. Running this provides a syntax check on the configuration file before you try to use
   it for real.
 
-_Basic usage:_
-`./chaos/utils/parse_game_config.sh <game-config.toml>`
+- `validate_mod.sh` Runs a single modifier as the Chaos engine would, but without communication
+  with the chatbot, and by default issuing debugging messages that will tell you how the mod is
+  being processed. Running the game itself while testing the mod is optional.
 
-_Example:_
-`./chaos/utils/parse_game_config.sh chaos/examples/tlou2.toml`
+- `gamepad_test.sh` Monitors the same USB passthrough traffic path used by the engine. This will
+  give you a list of all the events that the engine would see passed between the controller and
+  the console.
 
-- `validate_mod` Runs a single modifier as the Chaos engine would, but without communication with the chatbot,
-and by default issuing debugging messages that will tell you how the mod is being processed. Running the
-game itself while testing the mod is optional.
-
-_Basic usage:_
-`./chaos/utils/validate_mod.sh -g <game-config.toml> -m "<modifier name>"`
-
-_Example:_
-`./chaos/utils/validate_mod.sh -g chaos/examples/tlou2.toml -m "Aimbot"`
-
-_Write logs to a file with -o:_
-`./chaos/utils/validate_mod.sh -g chaos/examples/tlou2.toml -m "Aimbot" -o /tmp/validate_mod.log`
-
-- `gamepad_test` Monitors the same USB passthrough traffic path used by the engine. At default
-verbosity (6), this includes handshake/control-transfer details. By default it runs in
-_translate mode_, where incoming data is translated into controller events and prints
-`<signal name>=<value>` for changed signals. In translate mode, accelerometer signals
-(`ACCX`, `ACCY`, `ACCZ`) are suppressed unless `--accel` is set, and small joystick
-drift on `LX`, `LY`, `RX`, `RY` is filtered with `--fuzz=<int>` (default `10`).
-
-_Basic usage (translate mode, default):_
-`./chaos/utils/gamepad_test.sh`
-
-_Write logs to a file with -o:_
-`./chaos/utils/gamepad_test.sh -o /tmp/gamepad_test.log`
-
-_Use raw packet mode (existing behavior):_
-`./chaos/utils/gamepad_test.sh --raw`
-
-_In raw mode, print repeated incoming packets too:_
-`./chaos/utils/gamepad_test.sh --raw --print-repeats`
-
-_In translate mode, include accelerometer and reduce joystick deadzone:_
-`./chaos/utils/gamepad_test.sh --accel --fuzz=4`
-
-_Show only handshake/control and transport logs (suppress ordinary data output):_
-`./chaos/utils/gamepad_test.sh --no-data`
-
-Note that while you can run `make_modlist` from any computer with Python, `parse_game_config` is a
-Linux commandline utility, and both `validate_mod` and `gamepad_test` must be run from the Pi
-itself, since they interact with the controller using hardware that exists on the Pi but not on
-ordinary PCs.
+Documentation explaining their use will be found in the [README](chaos/util/README.md) file in
+the same directory.
 
 ## Questions That People Might Frequently Ask (if anyone asked questions)
 
@@ -491,9 +435,7 @@ Before you do anything else, test that each USB cable in your setup is working. 
 cables break, but a surprisingly large number of cables are e-waste from the beginning.
 
   - Test each cable separately.
-  - If you're using long cables, try the shortest ones that will work for your setup. Note that
-    the USB ports are either USB 3.0 or 3.1, depending on the port. If you're using an old USB-A
-    cable that only supports USB 2.0, power and data rates will be reduced.
+  - If you're using long cables, try the shortest ones that will work for your setup.
   - For USB-C cables, make sure they provide a dual, power-and-data connection. Power-only cables
     will not work.
   - If you're using an adapter dongle (e.g., USB-A to USB-C), try reversing the device it's
@@ -544,8 +486,8 @@ supplies enough power to run the Pi directly. However, if you have adopted a cha
 setup, e.g., though a Besavior controller, it does _not_ have enough power to run both the Besavior
 and the Pi. It may deliver enough juice for you to boot the Pi, but it will likely fail once chaos
 and chaosface start actively running, which will increase the power draw. To fix this, you need to
-supply external power to the Pi. See the instructions for the Besavior controller above for one way
-to do this.
+supply external power to the Pi. See the instructions above for the two Besavior products for
+how to accomplish this.
 
 *Chaos stops working after you update your Pi*
 
@@ -588,7 +530,7 @@ aspects of the code for this version, but without Blegas's efforts, none of this
 Many other people in the community have contributed ideas. Chaos would not be nearly as colorful or
 effective without their contributions, so thanks to everyone that has made this project better!
 
-#### General
+### General
  - Aeathone [Twitch](https://www.twitch.tv/aeathone)
  - - Informs me of my terrible curly braces <3
  - - Suggested great design improvements to handling things like menuing
@@ -601,7 +543,7 @@ effective without their contributions, so thanks to everyone that has made this 
  - ners_14 [Twitch](https://www.twitch.tv/ners_14)
   - - Informed the idea of proportional voting from GTAV chaos
 
-#### Modifier Ideas
+### Modifier Ideas
  - [KillstreekDaGeek](https://www.twitch.tv/killstreekdageek) AKA Prototoxin187
  - - Stay Scoped
  - - Strafe Only

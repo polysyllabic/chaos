@@ -229,43 +229,111 @@ To add these overlays to OBS or SLOBS, perform the following steps:
 
 * To this new scene, add each of the following as a browser source. The canonical paths are:
 
-  - Active Mods: `/overlays/active-mods`
-  - Votes: `/overlays/current-votes`
-  - Vote Timer: `/overlays/vote-timer`
+  - Active Mods: `http://raspberrypi.local/overlays/active-mods`
+  - Votes: `http://raspberrypi.local/overlays/current-votes`
+  - Vote Timer: `http://raspberrypi.local/overlays/vote-timer`
 
-  URL scheme/port:
-  - If UI TLS is off: use `http://<host>:<ui_port>/...`
-  - If UI TLS is on: use either
-    - `https://<host>:<ui_port>/...` (TLS), or
-    - `http://<host>:<overlay_http_port>/...` (non-TLS overlay listener)
+If you are running Chaosface from a different host, replace `raspberrypi.local` with your
+hostname.
 
-  Recommended OBS browser-source dimensions (pixels):
-  - Active Mods (`/overlays/active-mods`): width `500`, height `160`
-  - Votes (`/overlays/current-votes`): width `500`, height `160`
-  - Vote Timer (`/overlays/vote-timer`): width `1920`, height `44`
+The same pages are also available at aliases (`<host>/ActiveMods`, `<host>/CurrentVotes`,
+`<host>/VoteTimer`, and lowercase variants).
 
-  These are the basic dimensions of the sources, but you can use obs to scale them however you want.
-  
-  If you are using a self-signed certificate, note that OBS will silently reject https pages with self-signed
-  certificates. In this case, you should use the http addresses for your sources.
-  Legacy aliases (`/ActiveMods`, `/CurrentVotes`, `/VoteTimer`, and lowercase variants) are also
-  supported for compatibility.
+If you have enabled TLS for your UI, these sources are available at the same names but on `https`.
+Note, however, that if you are using a self-signed certificate, OBS will silently reject https
+pages with self-signed certificates. To work around this, we also continue to serve OBS sources
+(but not the UI interface) on `http` even when TLS is enabled.
+
+Recommended OBS browser-source dimensions (pixels):
+- Active Mods (`/overlays/active-mods`): width `500`, height `160`
+- Votes (`/overlays/current-votes`): width `500`, height `160`
+- Vote Timer (`/overlays/vote-timer`): width `1920`, height `44`
+
+These are the basic dimensions of the sources, but you can use obs to scale them however you want.
 
 You should set these browser sources to refresh when not displayed so that they can easily be refreshed.
 
 The `SOURCE CONFIGURATION` tab lets you tune source layout and colors:
 
-* Current Votes: name/bar spacing, text color, bar color
-* Active Mods: name/bar spacing, text color, bar color
-* Vote Timer: bar color
+For both the current-votes and active mods sources, you can position the text (which includes the
+names of the relevant modifiers) to the left or right of the progress pars.
 
-Color fields accept standard CSS names, hex values, and `rgb(...)`/`rgba(...)` values. The picker
-control is icon-only and writes directly to the field. On save, color values are normalized and
-stored as hex.
+You can also set the text color and the bar color for all three sources.
+
+Color fields accept standard CSS names, hex values, and `rgb(...)`/`rgba(...)` values or you
+can use a color-picker control to find the color you want.
 
 Note that with the original version of TCC, you had to adjust the colors of the sources by applying
-filters in OBS. If you are converting over from that old setup and aren't seeing the colors you expect,
-try deleting the old filters and setting new colors from Chaosface.
+filters in OBS. If you are converting over from that old setup and aren't seeing the colors you
+expect, try deleting the old filters and setting new colors from Chaosface.
+
+## Chat Filters
+
+When you play TCC, your chat will be full of votes (1/2/3) as well as periodic commands asking
+for definitions of mods that are up for voting, and potentially other commands that might give
+you as the streamer a hint as to what is coming up. To preserve the surprise, and to reduce
+the volume of messages you have to look at, you can implement chat filters. This will allow
+you to avoid seeing these messages without changing the experience for your viewers.
+
+### BTTV filters
+
+If you use the BetterTTV browser extension, you can use its blacklist function to remove specific
+commands and votes from your chat.
+
+From your Twitch chat, click on the Chat Settings gear icon and scroll down to BetterTTV settings.
+Then scroll down to "Blacklist Keywords" and add a new keyword for each item to block.
+
+To block the votes, add each vote number as a separate keyword surrounded with angled brackets,
+e.g., `<1>`.
+
+The angled brackets mean that the entire message must be a single number. This will block messages
+consisting solely of a single number but allow messages like "You have died 3 times!" to come
+through. If you don't include those brackets, messages containing that number anywhere in them
+will be filtered.
+
+If you want to filter individual commands, you can do it the same way, e.g., `<!mods>`. To prevent
+yourself from seeing !mod commands, include that command _without_ the brackets, i.e., `!mod`,
+as a blacklisted keyword.
+
+To block seeing responses from your chatbot (such as a reply to the !mod messages), after you
+click "AddNew", click again on the "Message" type and select "Username" instead. Then fill
+in the keyword field with the name of your chatbot.
+
+Thanks to Twich streamer [RachyMonster](https://www.twitch.tv/rachymonster) for showing how
+to use this blacklist. 
+
+## FrankerFaceZ filters
+If you have the FrankerFaceZ extension, you can accomplish the same thing in a similar way.
+Open the FrankerFaceZ Control Center, go to Chat >> Filtering >> Block, and add the terms to
+filter. Unlike the BetterTTV filters, you can use regular expressions to filter messages.
+
+`^[1-3]$` will filter only messages that solely consist of a single number.
+
+Add your chatbot to the Users list.
+
+For all terms and users that you add, make sure to check the box "Remove matching messages from chat".
+
+### Chat Overlays
+
+BTTV and FrankerFaceZ filters only filter what you see in your normal chat window. If you
+display an overlay of your chat on your screen, you will need to set up filters for that
+separately.
+
+If you use the Streamlabs Chat Box to show the chat as an overlay on screen, check
+"Hide commands starting with '!'" and then add your bot name to the "MutedChatters" box.
+
+In "Custom Bad Words" add the following expression: `regex:^[1-3]`
+
+This will filter any messages that start with the number 1, 2, or 3 but will let messages
+like "You have died 3 times!" through.
+
+If you don't implement BTTV or FrankerFaceZ fitering and want to read filtered chat, note that you
+can pull up the source for the chatbox widget in its own browser tab and read it directly without
+looking at the OBS interface itself.
+
+StreamElements also provides a chat-box overlay, but it can only block individual users from
+chatting. So while you can stop messages from your bot from appearing here, it won't stop the votes
+from appearing or specific commands.
 
 # Operation
 
