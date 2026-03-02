@@ -167,6 +167,10 @@ public:
     game.getSignalTable().addToVector(config, key, vec);
   }
 
+  std::string getEventName(const Chaos::DeviceEvent& event) override {
+    return game.getEventName(event);
+  }
+
   void addGameCommands(const toml::table& config, const std::string& key,
                        std::vector<std::shared_ptr<Chaos::GameCommand>>& vec) override {
     game.addGameCommands(config, key, vec);
