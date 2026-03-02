@@ -103,172 +103,33 @@ find_package (Libusb1 REQUIRED)
 # on a development system with a more modern toolchain.
 set_required_build_settings_for_GCC8()
 
-add_executable(chaos include/config.hpp
-	include/ChaosEngine.hpp
-  include/Configuration.hpp
-  include/CooldownModifier.hpp
-  include/DelayModifier.hpp
-  include/DisableModifier.hpp
-  include/EngineInterface.hpp
-  include/enumerations.hpp
-	include/factory.hpp
-  include/FormulaModifier.hpp
-  include/Game.hpp
-  include/GameCommand.hpp
-  include/GameCondition.hpp
-  include/GameMenu.hpp
-  include/MenuInterface.hpp
-  include/MenuItem.hpp
-  include/MenuModifier.hpp
-	include/Modifier.hpp
-  include/ModifierTable.hpp
-  include/ParentModifier.hpp 
-  include/RemapModifier.hpp
-  include/RepeatModifier.hpp
-  include/ScalingModifier.hpp
-  include/Sequence.hpp
-  include/SequenceModifier.hpp
-  include/SequenceTable.hpp
-	src/ChaosEngine.cpp
-  src/Configuration.cpp
-  src/CooldownModifier.cpp
-  src/DelayModifier.cpp
-  src/DisableModifier.cpp
-  src/FormulaModifier.cpp
-  src/Game.cpp
-	src/GameCommand.cpp
-  src/GameCondition.cpp
-  src/GameMenu.cpp
-  src/MenuItem.cpp
-  src/MenuModifier.cpp
-  src/Modifier.cpp
-  src/ModifierTable.cpp
-  src/ParentModifier.cpp
-  src/RemapModifier.cpp
-  src/RepeatModifier.cpp
-  src/ScalingModifier.cpp
-  src/Sequence.cpp
-  src/SequenceModifier.cpp
-  src/SequenceTable.cpp
-	src/main.cpp)
-
-target_compile_features(chaos PRIVATE cxx_std_17)
-
-add_executable(chaos_parse_game_config
-  include/config.hpp
-  include/CooldownModifier.hpp
-  include/DelayModifier.hpp
-  include/DisableModifier.hpp
-  include/EngineInterface.hpp
-  include/enumerations.hpp
-  include/factory.hpp
-  include/FormulaModifier.hpp
-  include/Game.hpp
-  include/GameCommand.hpp
-  include/GameCondition.hpp
-  include/GameMenu.hpp
-  include/MenuInterface.hpp
-  include/MenuItem.hpp
-  include/MenuModifier.hpp
-  include/Modifier.hpp
-  include/ModifierTable.hpp
-  include/ParentModifier.hpp
-  include/RemapModifier.hpp
-  include/RepeatModifier.hpp
-  include/ScalingModifier.hpp
-  include/Sequence.hpp
-  include/SequenceModifier.hpp
-  include/SequenceTable.hpp
-  src/CooldownModifier.cpp
-  src/DelayModifier.cpp
-  src/DisableModifier.cpp
-  src/FormulaModifier.cpp
-  src/Game.cpp
-  src/GameCommand.cpp
-  src/GameCondition.cpp
-  src/GameMenu.cpp
-  src/MenuItem.cpp
-  src/MenuModifier.cpp
-  src/Modifier.cpp
-  src/ModifierTable.cpp
-  src/ParentModifier.cpp
-  src/RemapModifier.cpp
-  src/RepeatModifier.cpp
-  src/ScalingModifier.cpp
-  src/Sequence.cpp
-  src/SequenceModifier.cpp
-  src/SequenceTable.cpp
-  utils/src/parse_game_config.cpp)
-
-target_compile_features(chaos_parse_game_config PRIVATE cxx_std_17)
-
-add_executable(validate_mod
-  include/config.hpp
-  include/CooldownModifier.hpp
-  include/DelayModifier.hpp
-  include/DisableModifier.hpp
-  include/EngineInterface.hpp
-  include/enumerations.hpp
-  include/factory.hpp
-  include/FormulaModifier.hpp
-  include/Game.hpp
-  include/GameCommand.hpp
-  include/GameCondition.hpp
-  include/GameMenu.hpp
-  include/MenuInterface.hpp
-  include/MenuItem.hpp
-  include/MenuModifier.hpp
-  include/Modifier.hpp
-  include/ModifierTable.hpp
-  include/ParentModifier.hpp
-  include/RemapModifier.hpp
-  include/RepeatModifier.hpp
-  include/ScalingModifier.hpp
-  include/Sequence.hpp
-  include/SequenceModifier.hpp
-  include/SequenceTable.hpp
-  src/CooldownModifier.cpp
-  src/DelayModifier.cpp
-  src/DisableModifier.cpp
-  src/FormulaModifier.cpp
-  src/Game.cpp
-  src/GameCommand.cpp
-  src/GameCondition.cpp
-  src/GameMenu.cpp
-  src/MenuItem.cpp
-  src/MenuModifier.cpp
-  src/Modifier.cpp
-  src/ModifierTable.cpp
-  src/ParentModifier.cpp
-  src/RemapModifier.cpp
-  src/RepeatModifier.cpp
-  src/ScalingModifier.cpp
-  src/Sequence.cpp
-  src/SequenceModifier.cpp
-  src/SequenceTable.cpp
-  utils/src/validate_mod.cpp)
-
-target_compile_features(validate_mod PRIVATE cxx_std_17)
-
-add_executable(gamepad_test
-  utils/src/gamepad_test.cpp)
-
-target_compile_features(gamepad_test PRIVATE cxx_std_17)
-
 add_subdirectory(src/utils)
 add_subdirectory(src/communicator)
 add_subdirectory(src/controller)
-#add_subdirectory(src/menu)
-#add_subdirectory(src/mods)
-#add_subdirectory(src/engine)
+add_subdirectory(src/core)
+add_subdirectory(src/engine)
 
-target_include_directories (chaos PRIVATE include 
-	${tomlplusplus_SOURCE_DIR}/include
-	${plog_SOURCE_DIR}/include
-	${cppzmq_SOURCE_DIR}
-	${LIBUSB1_INCLUDE_DIRS}
+add_executable(chaos
+  src/main.cpp
+)
+target_compile_features(chaos PRIVATE cxx_std_17)
+target_include_directories (chaos PRIVATE
+  include
+  ${tomlplusplus_SOURCE_DIR}/include
+  ${plog_SOURCE_DIR}/include
+  ${cppzmq_SOURCE_DIR}
+  ${LIBUSB1_INCLUDE_DIRS}
+)
+target_link_libraries(chaos
+  PUBLIC
+    chaos_engine
+    chaos_core
 )
 
+add_executable(chaos_parse_game_config
+  utils/src/parse_game_config.cpp
+)
+target_compile_features(chaos_parse_game_config PRIVATE cxx_std_17)
 target_include_directories(chaos_parse_game_config PRIVATE
   include
   ${tomlplusplus_SOURCE_DIR}/include
@@ -276,7 +137,15 @@ target_include_directories(chaos_parse_game_config PRIVATE
   ${cppzmq_SOURCE_DIR}
   ${LIBUSB1_INCLUDE_DIRS}
 )
+target_link_libraries(chaos_parse_game_config
+  PUBLIC
+    chaos_core
+)
 
+add_executable(validate_mod
+  utils/src/validate_mod.cpp
+)
+target_compile_features(validate_mod PRIVATE cxx_std_17)
 target_include_directories(validate_mod PRIVATE
   include
   ${tomlplusplus_SOURCE_DIR}/include
@@ -284,7 +153,15 @@ target_include_directories(validate_mod PRIVATE
   ${cppzmq_SOURCE_DIR}
   ${LIBUSB1_INCLUDE_DIRS}
 )
+target_link_libraries(validate_mod
+  PUBLIC
+    chaos_core
+)
 
+add_executable(gamepad_test
+  utils/src/gamepad_test.cpp
+)
+target_compile_features(gamepad_test PRIVATE cxx_std_17)
 target_include_directories(gamepad_test PRIVATE
   include
   ${tomlplusplus_SOURCE_DIR}/include
@@ -292,26 +169,6 @@ target_include_directories(gamepad_test PRIVATE
   ${cppzmq_SOURCE_DIR}
   ${LIBUSB1_INCLUDE_DIRS}
 )
-
-target_link_libraries(chaos	PUBLIC chaos_communicator
-	    chaos_utils
-	    chaos_controller #chaos_engine chaos_menus chaos_mods
-			${LIBUSB_LIBRARIES})
-
-target_link_libraries(chaos_parse_game_config
-  PUBLIC
-    chaos_utils
-    chaos_controller
-    ${LIBUSB_LIBRARIES}
-)
-
-target_link_libraries(validate_mod
-  PUBLIC
-    chaos_utils
-    chaos_controller
-    ${LIBUSB_LIBRARIES}
-)
-
 target_link_libraries(gamepad_test
   PUBLIC
     chaos_utils

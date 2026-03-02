@@ -5,27 +5,18 @@ target_include_directories(test_socket PRIVATE chaos_communicator)
 target_link_libraries(test_socket chaos_communicator)
 
 add_executable(test_menu)
-target_sources(test_menu PRIVATE test_menu_sequences.cpp
-  ../src/GameMenu.cpp
-  ../src/MenuItem.cpp
-  ../src/Sequence.cpp
-  ../src/SequenceTable.cpp
-)
+target_sources(test_menu PRIVATE test_menu_sequences.cpp)
   
 target_include_directories(test_menu PRIVATE ../include
   ../src/controller
   ${tomlplusplus_SOURCE_DIR}/include
   ${plog_SOURCE_DIR}/include)
 
-target_link_libraries(test_menu PRIVATE chaos_controller)
+target_link_libraries(test_menu PRIVATE chaos_core)
 
 add_executable(test_remapping)
 target_sources(test_remapping PRIVATE
   test_remapping.cpp
-  ../src/Modifier.cpp
-  ../src/RemapModifier.cpp
-  ../src/Sequence.cpp
-  ../src/GameCondition.cpp
 )
 target_include_directories(test_remapping PRIVATE
   ../include
@@ -34,25 +25,11 @@ target_include_directories(test_remapping PRIVATE
   ${tomlplusplus_SOURCE_DIR}/include
   ${plog_SOURCE_DIR}/include
 )
-target_link_libraries(test_remapping PRIVATE chaos_controller chaos_utils)
+target_link_libraries(test_remapping PRIVATE chaos_core)
 
 add_executable(test_modifier_types)
 target_sources(test_modifier_types PRIVATE
   test_modifier_types.cpp
-  ../src/Modifier.cpp
-  ../src/CooldownModifier.cpp
-  ../src/DelayModifier.cpp
-  ../src/DisableModifier.cpp
-  ../src/FormulaModifier.cpp
-  ../src/MenuModifier.cpp
-  ../src/ParentModifier.cpp
-  ../src/RepeatModifier.cpp
-  ../src/ScalingModifier.cpp
-  ../src/SequenceModifier.cpp
-  ../src/GameCommand.cpp
-  ../src/GameCondition.cpp
-  ../src/Sequence.cpp
-  ../src/MenuItem.cpp
 )
 target_include_directories(test_modifier_types PRIVATE
   ../include
@@ -61,21 +38,11 @@ target_include_directories(test_modifier_types PRIVATE
   ${tomlplusplus_SOURCE_DIR}/include
   ${plog_SOURCE_DIR}/include
 )
-target_link_libraries(test_modifier_types PRIVATE chaos_controller chaos_utils)
+target_link_libraries(test_modifier_types PRIVATE chaos_core)
 
 add_executable(test_engine_lifecycle)
 target_sources(test_engine_lifecycle PRIVATE
   test_engine_lifecycle.cpp
-  ../src/ChaosEngine.cpp
-  ../src/Game.cpp
-  ../src/GameCommand.cpp
-  ../src/GameCondition.cpp
-  ../src/GameMenu.cpp
-  ../src/MenuItem.cpp
-  ../src/Modifier.cpp
-  ../src/ModifierTable.cpp
-  ../src/Sequence.cpp
-  ../src/SequenceTable.cpp
 )
 target_include_directories(test_engine_lifecycle PRIVATE
   ../include
@@ -87,9 +54,8 @@ target_include_directories(test_engine_lifecycle PRIVATE
   ${cppzmq_SOURCE_DIR}
 )
 target_link_libraries(test_engine_lifecycle PRIVATE
-  chaos_controller
-  chaos_communicator
-  chaos_utils
+  chaos_engine
+  chaos_core
 )
 
 # Hardware probe helper: prints VID/PID for the controller detected on any available USB port.
