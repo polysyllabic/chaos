@@ -975,6 +975,51 @@ filter = "below"
   return ok;
 }
 
+static bool testDisableFilterDirectionsOnThreeStateSelectWeapon() {
+  MockEngine engine;
+  auto mod_above = makeMod<DisableModifier>(
+      R"(
+name = "No Short Guns Style"
+type = "disable"
+applies_to = [ "GET_GUN" ]
+filter = "above"
+)",
+      engine);
+  auto mod_below = makeMod<DisableModifier>(
+      R"(
+name = "No Long Guns Style"
+type = "disable"
+applies_to = [ "GET_GUN" ]
+filter = "below"
+)",
+      engine);
+
+  auto get_gun = commandInput(engine, "GET_GUN");
+  bool ok = true;
+  ok &= check(get_gun != nullptr, "three-state get-gun input should exist");
+  if (!get_gun) {
+    return false;
+  }
+
+  DeviceEvent dx_pos = commandEvent(engine, "GET_GUN", 1);
+  ok &= check(mod_above->tweak(dx_pos), "disable-above three-state should accept positive event");
+  ok &= check(dx_pos.value == 0, "disable-above should block positive DX events");
+
+  DeviceEvent dx_neg_for_above = commandEvent(engine, "GET_GUN", -1);
+  ok &= check(mod_above->tweak(dx_neg_for_above), "disable-above three-state should accept negative event");
+  ok &= check(dx_neg_for_above.value == -1, "disable-above should preserve negative DX events");
+
+  DeviceEvent dx_neg = commandEvent(engine, "GET_GUN", -1);
+  ok &= check(mod_below->tweak(dx_neg), "disable-below three-state should accept negative event");
+  ok &= check(dx_neg.value == 0, "disable-below should block negative DX events");
+
+  DeviceEvent dx_pos_for_below = commandEvent(engine, "GET_GUN", 1);
+  ok &= check(mod_below->tweak(dx_pos_for_below), "disable-below three-state should accept positive event");
+  ok &= check(dx_pos_for_below.value == 1, "disable-below should preserve positive DX events");
+
+  return ok;
+}
+
 static bool testDisableBlocksAllConfiguredCommandsIncludingHybridAxis() {
   MockEngine engine;
   auto mod = makeMod<DisableModifier>(
@@ -1651,6 +1696,7 @@ int main() {
   ok &= testDisableRespectsPersistentCondition();
   ok &= testDisableFilterAboveBlocksOnlyPositiveValues();
   ok &= testDisableFilterBelowBlocksOnlyNegativeValues();
+  ok &= testDisableFilterDirectionsOnThreeStateSelectWeapon();
   ok &= testDisableBlocksAllConfiguredCommandsIncludingHybridAxis();
   ok &= testDisableNoAimingStyleBlocksHybridButtonAndAxis();
   ok &= testFormulaModifierOffsetsAndRestores();
