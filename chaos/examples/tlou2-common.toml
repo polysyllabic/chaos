@@ -1190,7 +1190,7 @@ type = "formula"
 groups = [ "Movement", "Inventory" ]
 applies_to = [ "select weapon", "select consumable" ]
 formula_type = "circle"
-period_length = 0.25
+period_length = 0.016
 amplitude = 1.0
 
 [[modifier]]
