@@ -81,6 +81,9 @@ short DisableModifier::getFilteredVal(DeviceEvent& event) {
   } else if (filter == DisableFilter::BELOW) {
    	rval = (event.value < 0) ? rval : event.value;
   }
+  if (rval != event.value) {
+    PLOG_VERBOSE << "filter applied " << engine->getEventName(event) << "(from " << (int) event.value << " to " << rval << ")";
+  }
   return rval;
 }
 
@@ -99,13 +102,13 @@ bool DisableModifier::tweak (DeviceEvent& event) {
       if (engine->eventMatches(event, cmd)) {
         new_val = getFilteredVal(event);
         cmd_name = cmd->getName();
+        // Already matched, no need to keep looping
         break;
       }
-      // Already matched, no need to keep looping
     }
   }
   if (new_val != event.value) {
-    PLOG_VERBOSE << "Blocking " << cmd_name << "(" << (int) event.type << "." << (int) event.id << ") value= " <<
+    PLOG_DEBUG << "Blocking " << cmd_name << "(" << (int) event.type << "." << (int) event.id << ") value= " <<
       event.value << " set to " << new_val;
   }
   event.value = new_val;

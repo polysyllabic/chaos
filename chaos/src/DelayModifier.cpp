@@ -50,7 +50,7 @@ void DelayModifier::update() {
   while ( !eventQueue.empty() ) {
     if( (timer.runningTime() - eventQueue.front().time) >= delayTime ) {
       // Reintroduce the event.
-      PLOG_DEBUG << "Defered event sent: " << eventQueue.front().event.type << "." << eventQueue.front().event.id;
+      PLOG_DEBUG << "Defered event sent: " << engine->getEventName(eventQueue.front().event);
       engine->fakePipelinedEvent(eventQueue.front().event, getptr());
       eventQueue.pop();
     }
@@ -65,14 +65,14 @@ void DelayModifier::update() {
 bool DelayModifier::tweak(DeviceEvent& event) {
   // Shortcut if we're working on all commands
   if (applies_to_all) {
-    PLOG_DEBUG << "Incoming event (" << event.type << "." << event.id << ") queued";
+    PLOG_DEBUG << "Incoming event " << engine->getEventName(event) << " queued";
     eventQueue.push ({this->timer.runningTime(), event});
     return false;
   }
   else {
     for (auto cmd : commands) {
       if (engine->eventMatches(event, cmd)) {
-        PLOG_DEBUG << "Incoming event (" << event.type << "." << event.id << ") queued";
+        PLOG_DEBUG << "Incoming event (" << engine->getEventName(event) << ") queued";
       	eventQueue.push ({this->timer.runningTime(), event});
 	      return false;
       }

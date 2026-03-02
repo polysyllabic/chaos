@@ -239,7 +239,10 @@ namespace Chaos {
       return game.makeSequence(config, key, required);
     }
 
- 
+    std::string getEventName(const DeviceEvent& event) {
+      return game.getEventName(event);
+    }
+
     /**
      * \brief Observer function for input from the interface
      * 

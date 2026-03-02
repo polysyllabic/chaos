@@ -49,7 +49,7 @@ namespace Chaos {
     virtual void setOn(std::shared_ptr<GameCommand> command) = 0 ;
     virtual void setValue(std::shared_ptr<GameCommand> command, short value) = 0 ;
     virtual void applyEvent(const DeviceEvent& event) = 0;
-
+    
     // Functions to get modifier data
     virtual std::shared_ptr<Modifier> getModifier(const std::string& name) = 0;
     virtual std::unordered_map<std::string, std::shared_ptr<Modifier>>& getModifierMap() = 0;
@@ -65,7 +65,8 @@ namespace Chaos {
     virtual std::shared_ptr<ControllerInput> getInput(const DeviceEvent& event) = 0;
     virtual void addControllerInputs(const toml::table& config, const std::string& key,
                                  std::vector<std::shared_ptr<ControllerInput>>& vec) = 0;
-
+    virtual std::string getEventName(const DeviceEvent&) = 0;
+    
     // Game Commands
     virtual void addGameCommands(const toml::table& config, const std::string& key,
                                  std::vector<std::shared_ptr<GameCommand>>& vec) = 0;

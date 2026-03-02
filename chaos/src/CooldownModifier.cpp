@@ -95,7 +95,7 @@ void CooldownModifier::update() {
     // if the while condition is true
     if (!cumulative || inCondition()) {
       cooldown_timer += deltaT;
-      PLOG_DEBUG << "timer_on period = " << cooldown_timer;
+      PLOG_VERBOSE << "timer_on period = " << cooldown_timer;
     }
     if (cooldown_timer > time_on) {
       PLOG_DEBUG << "Cooldown for " << getName() << " started";
@@ -105,6 +105,7 @@ void CooldownModifier::update() {
       // This was formerly done through fakePipelinedEvent(), but since remapping is now done
       // before we see this event, I don't think it needs to be pipelined.
       for (auto& cmd : commands) {
+        PLOG_DEBUG << "Disable " << cmd->getName();
         engine->setOff(cmd);
       }
     }
@@ -117,6 +118,7 @@ bool CooldownModifier::tweak(DeviceEvent& event) {
     // timer if true
     for (auto& sig : trigger) {
       if (sig->getIndex() == event.index() && inCondition()) {
+        PLOG_DEBUG << "Begin cooldown ALLOW period for " << sig->getName();
         state = CooldownState::ALLOW;
         break;
       }
@@ -129,6 +131,7 @@ bool CooldownModifier::tweak(DeviceEvent& event) {
       std::shared_ptr<ControllerInput> sig = cmd->getInput();
       PLOG_VERBOSE << "Checking " << cmd->getName() << ", maps to " << ((sig) ? sig->getName() : "NULL");
       if (sig && sig->matches(event)) {
+        PLOG_DEBUG << "Blocked " << cmd->getName();
         return false;
       }
     }

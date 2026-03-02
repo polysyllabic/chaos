@@ -24,6 +24,7 @@
 
 #include <signals.hpp>
 #include <DeviceEvent.hpp>
+#include "ControllerInput.hpp"
 
 namespace Chaos {
   class Controller;
@@ -60,6 +61,10 @@ namespace Chaos {
      * \param event The event coming from the controller.
      */
     std::shared_ptr<ControllerInput> getInput(const DeviceEvent& event);
+
+    std::string getEventName(const DeviceEvent& event) {
+      return getInput(event)->getName();
+    }
 
     /**
      * \brief Get the ControllerInput object

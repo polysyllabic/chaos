@@ -114,7 +114,7 @@ namespace Chaos {
      *
      * The type is ignored unless the input is a hybrid control (L2/R2), which sends both a button
      * and an axis signal. In this case, it is used to distinguish whether we want the button or
-     * the axis id for hybrid types. For the type, you can pass the appropriate #ButtonType
+     * the axis id for hybrid types. For the type, you can pass the appropriate ButtonType
      * enumeration.
      */
     uint8_t getID(uint8_t type) {

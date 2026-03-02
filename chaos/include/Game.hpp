@@ -153,6 +153,16 @@ namespace Chaos {
     ControllerInputTable& getSignalTable() { return signal_table; }
     
     /**
+     * \brief Get the name of a specific event
+     * 
+     * \param event Event from the controller that we're testing
+     * \return std::string Canonical name
+     */
+    std::string getEventName(const DeviceEvent& event) {
+      return signal_table.getEventName(event);
+    }
+
+    /**
      * \brief Tests if an event matches this signal
      * \param event The incoming event from the controller
      * \param to_match The input signal we're testing for
