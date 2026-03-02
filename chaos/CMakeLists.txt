@@ -115,6 +115,8 @@ add_executable(chaos
 target_compile_features(chaos PRIVATE cxx_std_17)
 target_include_directories (chaos PRIVATE
   include
+  src/core
+  src/engine
   ${tomlplusplus_SOURCE_DIR}/include
   ${plog_SOURCE_DIR}/include
   ${cppzmq_SOURCE_DIR}
@@ -132,6 +134,7 @@ add_executable(chaos_parse_game_config
 target_compile_features(chaos_parse_game_config PRIVATE cxx_std_17)
 target_include_directories(chaos_parse_game_config PRIVATE
   include
+  src/core
   ${tomlplusplus_SOURCE_DIR}/include
   ${plog_SOURCE_DIR}/include
   ${cppzmq_SOURCE_DIR}
@@ -148,6 +151,7 @@ add_executable(validate_mod
 target_compile_features(validate_mod PRIVATE cxx_std_17)
 target_include_directories(validate_mod PRIVATE
   include
+  src/core
   ${tomlplusplus_SOURCE_DIR}/include
   ${plog_SOURCE_DIR}/include
   ${cppzmq_SOURCE_DIR}

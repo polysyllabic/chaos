@@ -8,6 +8,8 @@ add_executable(test_menu)
 target_sources(test_menu PRIVATE test_menu_sequences.cpp)
   
 target_include_directories(test_menu PRIVATE ../include
+  ../src/core
+  ../src/engine
   ../src/controller
   ${tomlplusplus_SOURCE_DIR}/include
   ${plog_SOURCE_DIR}/include)
@@ -20,6 +22,8 @@ target_sources(test_remapping PRIVATE
 )
 target_include_directories(test_remapping PRIVATE
   ../include
+  ../src/core
+  ../src/engine
   ../src/controller
   ../src/utils
   ${tomlplusplus_SOURCE_DIR}/include
@@ -33,6 +37,8 @@ target_sources(test_modifier_types PRIVATE
 )
 target_include_directories(test_modifier_types PRIVATE
   ../include
+  ../src/core
+  ../src/engine
   ../src/controller
   ../src/utils
   ${tomlplusplus_SOURCE_DIR}/include
@@ -46,6 +52,8 @@ target_sources(test_engine_lifecycle PRIVATE
 )
 target_include_directories(test_engine_lifecycle PRIVATE
   ../include
+  ../src/core
+  ../src/engine
   ../src/controller
   ../src/communicator
   ../src/utils

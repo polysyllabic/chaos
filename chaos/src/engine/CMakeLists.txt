@@ -1,11 +1,13 @@
 add_library(chaos_engine OBJECT
-  ../ChaosEngine.cpp
-  ../Configuration.cpp
+  ChaosEngine.cpp
+  Configuration.cpp
 )
 
 target_compile_features(chaos_engine PRIVATE cxx_std_17)
 
 target_include_directories(chaos_engine
+  PUBLIC
+    ${PROJECT_SOURCE_DIR}/src/engine
   PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     ${tomlplusplus_SOURCE_DIR}/include
