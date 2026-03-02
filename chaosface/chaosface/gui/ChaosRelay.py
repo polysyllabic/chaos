@@ -536,7 +536,10 @@ class ChaosRelay:
 
   def reset_all(self):
     self.set_game_name(self.get_attribute('current_game'))
-    selected_game = self.get_attribute('selected_game') or self.get_attribute('current_game')
+    selected_game = self.get_attribute('selected_game')
+    selected_game_name = str(selected_game).strip() if selected_game is not None else ''
+    if not selected_game_name or selected_game_name.upper() == 'NONE':
+      selected_game = self.get_attribute('current_game')
     self.set_selected_game(selected_game)
     self.set_selected_game_history(self.get_attribute('selected_game_history'))
     self.set_available_games(self.get_attribute('available_games'))

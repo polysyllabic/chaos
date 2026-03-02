@@ -74,6 +74,16 @@ def test_remove_mod_request_and_active_slot_compacts_progress_slots():
   assert relay.active_mods == ['Mod B', 'Mod C', '']
   assert relay.mod_times == [0.7, 0.4, 0.0]
 
+def test_reset_all_uses_current_game_when_selected_game_is_none():
+  relay = ChaosRelay()
+  relay.chaos_config['current_game'] = 'The Last of Us 2'
+  relay.chaos_config['selected_game'] = 'NONE'
+
+  relay.reset_all()
+
+  assert relay.game_name == 'The Last of Us 2'
+  assert relay.selected_game == 'The Last of Us 2'
+
 
 def test_set_mod_enabled_updates_enabled_mod_list():
   relay = ChaosRelay()

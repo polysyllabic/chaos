@@ -631,6 +631,8 @@ class ChaosModel(EngineObserver):
     # Ask engine for available games. We'll request game details after a game is selected.
     self.request_available_games()
     remembered_selection = str(config.relay.selected_game or '').strip()
+    if not remembered_selection or remembered_selection.upper() == 'NONE':
+      remembered_selection = str(config.relay.game_name or '').strip()
     if remembered_selection and remembered_selection.upper() != 'NONE':
       self.request_game_selection(remembered_selection)
 
