@@ -272,12 +272,36 @@ static bool testRemoveDeferredUntilUpdateCompletes() {
   return ok;
 }
 
+static bool testInterfacePauseCommandPausesRunningEngine() {
+  bool ok = true;
+
+  TestController controller;
+  ChaosEngine engine(controller, "", "", false);
+  const std::string config_path = writeConfigFile();
+  ok &= check(engine.setGame(config_path), "test config should load");
+
+  engine.start();
+  unpauseEngine(controller);
+  ok &= check(waitFor([&]() { return !engine.isPaused(); }),
+              "engine should be running before interface pause command");
+
+  engine.newCommand("{\"pause\":1}");
+  ok &= check(waitFor([&]() { return engine.isPaused(); }),
+              "interface pause command should pause engine");
+
+  engine.stop();
+  engine.WaitForInternalThreadToExit();
+  std::remove(config_path.c_str());
+  return ok;
+}
+
 int main() {
   bool ok = true;
   ok &= testFirstUnpauseKeepsHybridTriggersReleased();
   ok &= testHybridTriggerCommandMatchesButtonAndAxisEvents();
   ok &= testDuplicateActivationDoesNotStack();
   ok &= testRemoveDeferredUntilUpdateCompletes();
+  ok &= testInterfacePauseCommandPausesRunningEngine();
   if (!ok) {
     return 1;
   }

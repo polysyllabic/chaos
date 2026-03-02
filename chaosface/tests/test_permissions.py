@@ -74,6 +74,27 @@ def test_remove_mod_request_and_active_slot_compacts_progress_slots():
   assert relay.active_mods == ['Mod B', 'Mod C', '']
   assert relay.mod_times == [0.7, 0.4, 0.0]
 
+
+def test_restore_active_mods_hydrates_names_progress_and_keys():
+  relay = ChaosRelay()
+  relay.initialize_game({
+    'game': 'Reconnect Test',
+    'errors': 0,
+    'nmods': 3,
+    'modtime': 180.0,
+    'mods': [
+      {'name': 'Mod A', 'desc': 'A', 'groups': ['Test']},
+      {'name': 'Mod B', 'desc': 'B', 'groups': ['Test']},
+      {'name': 'Mod C', 'desc': 'C', 'groups': ['Test']},
+    ],
+  })
+
+  relay.restore_active_mods(['Mod B', 'Mod C'], [0.6, 0.25])
+
+  assert relay.active_mods == ['Mod B', 'Mod C', '']
+  assert relay.mod_times == [0.6, 0.25, 0.0]
+  assert relay.active_keys == ['mod b', 'mod c', '']
+
 def test_reset_all_uses_current_game_when_selected_game_is_none():
   relay = ChaosRelay()
   relay.chaos_config['current_game'] = 'The Last of Us 2'

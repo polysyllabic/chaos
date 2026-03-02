@@ -1637,6 +1637,41 @@ class ChaosRelay:
     self.set_active_mods([name for name, _ in compacted[:slot_count]])
     self.set_mod_times([time_remaining for _, time_remaining in compacted[:slot_count]])
 
+  def restore_active_mods(self, names, progress):
+    slot_count = int(self.num_active_mods or 0)
+    if slot_count <= 0:
+      slot_count = max(len(list(names or [])), len(list(progress or [])))
+    if slot_count <= 0:
+      return
+
+    source_names = list(names or [])
+    source_progress = list(progress or [])
+    restored_names: list[str] = []
+    restored_progress: list[float] = []
+
+    for index in range(slot_count):
+      mod_name = str(source_names[index]).strip() if index < len(source_names) else ''
+      if index < len(source_progress):
+        try:
+          value = float(source_progress[index])
+        except (TypeError, ValueError):
+          value = 1.0 if mod_name else 0.0
+      else:
+        value = 1.0 if mod_name else 0.0
+      value = max(0.0, min(1.0, value))
+      restored_names.append(mod_name)
+      restored_progress.append(value)
+
+    name_to_key: Dict[str, str] = {}
+    for key, data in self.modifier_data.items():
+      label = str(data.get('name', '')).strip().lower()
+      if label and label not in name_to_key:
+        name_to_key[label] = key
+    self.active_keys = [name_to_key.get(str(name).strip().lower(), '') if str(name).strip() else '' for name in restored_names]
+
+    self.set_active_mods(restored_names)
+    self.set_mod_times(restored_progress)
+
   def reset_current_mods(self):
     self.set_mod_times([0.0] * self.num_active_mods)
     self.set_active_mods([''] * self.num_active_mods)

@@ -197,6 +197,26 @@ void ChaosEngine::newCommand(const std::string& command) {
     return;
   }
   std::string command_id = root.isMember("command_id") ? root["command_id"].asString() : "";
+
+  if (root.isMember("pause")) {
+    bool should_pause = root["pause"].asBool();
+    if (should_pause) {
+      bool changed_state = false;
+      if (!pause.load()) {
+        pause.store(true);
+        pausePrimer = false;
+        paused_for_interface_timeout.store(false);
+        changed_state = true;
+      }
+      if (changed_state) {
+        PLOG_INFO << "Game Paused by interface command";
+      }
+      if (interface_enabled) {
+        chaosInterface.sendMessage("{\"pause\":1,\"engine_status\":\"paused\"}");
+      }
+      reportGameStatus();
+    }
+  }
 		
   if (root.isMember("winner")) {
     std::string requested_winner = root["winner"].asString();
@@ -378,6 +398,13 @@ void ChaosEngine::reportGameStatus() {
   msg["modtime"] = t;
   msg["mods"] = game.getModList();
   msg["mod_list"] = current_game_mod_list_uri;
+  Json::Value active_mods(Json::arrayValue);
+  for (const auto& mod : modifiers) {
+    if (mod) {
+      active_mods.append(mod->getName());
+    }
+  }
+  msg["active_mods"] = active_mods;
   unlock();
   chaosInterface.sendMessage(Json::writeString(jsonWriterBuilder, msg));
 }

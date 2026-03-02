@@ -54,6 +54,8 @@ class ChaosModel(EngineObserver):
     self._command_result_lock = threading.Lock()
     self._command_result_condition = threading.Condition(self._command_result_lock)
     self._command_results: dict[str, dict[str, Any]] = {}
+    self._startup_sync_requested = False
+    self._startup_pause_requested = False
 
     #  Socket to talk to server
     logging.info("Connecting to chaos server")
@@ -105,6 +107,55 @@ class ChaosModel(EngineObserver):
   @staticmethod
   def _status_for_pause(paused: bool) -> str:
     return ChaosModel.ENGINE_STATUS_PAUSED if paused else ChaosModel.ENGINE_STATUS_RUNNING
+
+  @staticmethod
+  def _payload_status(payload: dict[str, Any]) -> str:
+    status = str(payload.get('engine_status', '')).strip().lower()
+    if status:
+      return status
+    if 'pause' in payload:
+      return ChaosModel.ENGINE_STATUS_PAUSED if bool(payload.get('pause')) else ChaosModel.ENGINE_STATUS_RUNNING
+    return ''
+
+  def _sync_after_handshake(self, payload: dict[str, Any]) -> None:
+    if not self._startup_sync_requested:
+      self._startup_sync_requested = True
+      self.request_game_info()
+
+    status = self._payload_status(payload)
+    if status != self.ENGINE_STATUS_RUNNING or self._startup_pause_requested:
+      return
+
+    sent = self.send_engine_command({'pause': True}, report_status=False)
+    if sent:
+      self._startup_pause_requested = True
+
+  @staticmethod
+  def _parse_active_mod_snapshot(payload: dict[str, Any]) -> tuple[list[str], list[float]]:
+    names: list[str] = []
+    progress: list[float] = []
+    raw_active = payload.get('active_mods')
+    if not isinstance(raw_active, list):
+      return names, progress
+
+    for entry in raw_active:
+      mod_name = ''
+      mod_progress = 1.0
+      if isinstance(entry, dict):
+        mod_name = str(entry.get('name', '')).strip()
+        raw_progress = entry.get('remaining', entry.get('progress', 1.0))
+        try:
+          mod_progress = float(raw_progress)
+        except (TypeError, ValueError):
+          mod_progress = 1.0
+      else:
+        mod_name = str(entry).strip()
+      if not mod_name:
+        continue
+      mod_progress = max(0.0, min(1.0, mod_progress))
+      names.append(mod_name)
+      progress.append(mod_progress)
+    return names, progress
 
   def _start_bot_setup_thread(self) -> None:
     with self._bot_setup_lock:
@@ -376,6 +427,7 @@ class ChaosModel(EngineObserver):
     self._engine_handshake_complete = True
     self._report_engine_message('Engine -> Chaosface', received)
     self._update_engine_status_from_payload(received)
+    self._sync_after_handshake(received)
 
     handled = False
 
@@ -440,6 +492,9 @@ class ChaosModel(EngineObserver):
             self._last_failed_selected_game = selected_game
         self._clear_pending_game_selection()
       ui_dispatch.call_soon(config.relay.initialize_game, received)
+      snapshot_names, snapshot_progress = self._parse_active_mod_snapshot(received)
+      if snapshot_names:
+        ui_dispatch.call_soon(config.relay.restore_active_mods, snapshot_names, snapshot_progress)
       self._pending_game_startup_setup = (game_errors <= 0)
       if game_errors > 0:
         self._mark_failed_game_selection(selected_game)
