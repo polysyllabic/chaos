@@ -89,12 +89,22 @@ def current_votes_overlay_html() -> str:
         const names = state.candidate_mods || [];
         const votes = state.votes || [];
         const totalVotes = Number(state.vote_total || 0);
-        const count = Math.max(names.length, votes.length);
-        document.getElementById('voteTotal').textContent = `Total Votes: ${totalVotes}`;
+        const votingDisabled = Boolean(state.voting_disabled);
+        const votingWaiting = Boolean(state.voting_waiting);
+        const displayNames = votingWaiting ? [] : names;
+        const displayVotes = votingWaiting ? [] : votes;
+        const count = Math.max(displayNames.length, displayVotes.length);
+        if (votingDisabled) {
+          document.getElementById('voteTotal').textContent = 'Voting Disabled';
+        } else if (votingWaiting) {
+          document.getElementById('voteTotal').textContent = 'Waiting for Voting to Open';
+        } else {
+          document.getElementById('voteTotal').textContent = `Total Votes: ${totalVotes}`;
+        }
         let html = '';
         for (let i = 0; i < count; i++) {
-          const name = names[i] || '';
-          const vote = Number(votes[i] || 0);
+          const name = displayNames[i] || '';
+          const vote = Number(displayVotes[i] || 0);
           const percent = totalVotes > 0 ? (vote / totalVotes) : (count > 0 ? 1 / count : 0);
           const pctText = `${Math.round(percent * 100)}%`;
           const labelHtml = `<div class="label" style="text-align:${textAlign}">${i + 1} ${name}</div>`;

@@ -17,9 +17,21 @@ def overlay_state_payload() -> Dict[str, Any]:
   active_mods = list(config.relay.active_mods or [])
   mod_times = list(config.relay.mod_times or [])
   vote_total = sum(votes)
+  voting_cycle = str(config.relay.voting_cycle or '').strip()
+  voting_disabled = (
+    str(config.relay.voting_type or '').strip().upper() == 'DISABLED'
+    or voting_cycle.upper() == 'DISABLED'
+  )
+  voting_waiting = (
+    (not voting_disabled)
+    and voting_cycle.lower() != 'continuous'
+    and (not bool(config.relay.vote_open))
+  )
   return {
     'vote_time': clamp01(config.relay.vote_time),
     'vote_total': vote_total,
+    'voting_disabled': voting_disabled,
+    'voting_waiting': voting_waiting,
     'votes': votes,
     'candidate_mods': candidate_mods,
     'active_mods': active_mods,
