@@ -714,7 +714,6 @@ class ChaosBot:
       await self.send_message('Another apply request is already pending. Try again in a moment.')
       return
     self._last_apply_time = time.monotonic()
-    await self.send_message('Applying modifier...')
 
   async def _cmd_enable_disable(self, author: str, args, enabled: bool):
     if not await self._require_permission(author, 'manage_modifiers'):

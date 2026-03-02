@@ -272,7 +272,25 @@ def test_apply_queues_without_immediate_credit_debit():
 
   assert ctx.requested_force_mod == ('mod a', 'viewer', True)
   assert ctx.balance_steps == []
-  assert messages == ['Applying modifier...']
+  assert messages == []
+
+
+def test_apply_still_reports_refusal_messages():
+  ctx = _ApplyContext()
+  ctx.attributes['msg_no_credits'] = 'You need a modifier credit to do that.'
+  bot = ChaosBot(ctx)
+  bot._channel_name = 'streamer'
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  ctx.get_balance = lambda _user: 0  # type: ignore[assignment]
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._cmd_apply('viewer', ['Mod A'], is_streamer=False))
+
+  assert ctx.requested_force_mod is None
+  assert messages == ['You need a modifier credit to do that.']
 
 
 def test_info_commands_are_silently_rate_limited():
