@@ -1,6 +1,7 @@
 """Command-level permission checks for ChaosBot."""
 
 import asyncio
+from unittest.mock import patch
 
 from chaosface.chatbot.ChaosBot import ChaosBot
 from chaosface.chatbot.context import RelayBotContext
@@ -11,7 +12,12 @@ class _StubContext:
   def __init__(self):
     self.user_permissions = {}
     self.removed_mod = ''
-    self.attributes = {'chaoscmd_link': ''}
+    self.attributes = {
+      'chaoscmd_link': '',
+      'info_cmd_cooldown': 10.0,
+      'msg_mod_list': 'A list of the available mods for this game can be found here: {}',
+      'mod_list_link': 'https://example.com/mods',
+    }
     self.permission_groups = {
       'admin': {'permissions': ['admin'], 'members': ['streamer']},
       'mods': {'permissions': ['manage_modifiers'], 'members': ['alice', 'bob']},
@@ -33,6 +39,24 @@ class _StubContext:
 
   def list_active_mods(self) -> str:
     return ''
+
+  def list_candidate_mods(self) -> str:
+    return 'Voting mods: mod a, mod b'
+
+  def get_mod_description(self, mod: str) -> str:
+    return f'Mod description for {mod}'
+
+  def about_tcc(self) -> str:
+    return 'Chaos is chat-controlled modifier voting.'
+
+  def explain_voting(self) -> str:
+    return 'Voting explanation.'
+
+  def explain_redemption(self) -> str:
+    return 'Apply explanation.'
+
+  def explain_credits(self) -> str:
+    return 'Credits explanation.'
 
   def list_permission_groups(self) -> str:
     return 'Permission groups: admin, mods'
@@ -249,3 +273,40 @@ def test_apply_queues_without_immediate_credit_debit():
   assert ctx.requested_force_mod == ('mod a', 'viewer', True)
   assert ctx.balance_steps == []
   assert messages == ['Applying modifier...']
+
+
+def test_info_commands_are_silently_rate_limited():
+  ctx = _StubContext()
+  ctx.attributes['chaoscmd_link'] = 'https://example.com/commands'
+  bot = ChaosBot(ctx)
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  with patch.object(bot, '_info_command_on_cooldown', side_effect=[False, True, False]):
+    asyncio.run(bot._handle_command('viewer', '!chaos'))
+    asyncio.run(bot._handle_command('viewer', '!mod stealth'))
+    asyncio.run(bot._handle_command('viewer', '!chaoscmd'))
+
+  assert messages == [
+    'Chaos is chat-controlled modifier voting.',
+    'A list of commands can be found here: https://example.com/commands',
+  ]
+
+
+def test_info_command_cooldown_applies_across_mods_variants():
+  ctx = _StubContext()
+  bot = ChaosBot(ctx)
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  with patch.object(bot, '_info_command_on_cooldown', side_effect=[False, True]):
+    asyncio.run(bot._handle_command('viewer', '!mods'))
+    asyncio.run(bot._handle_command('viewer', '!mods active'))
+
+  assert messages == ['A list of the available mods for this game can be found here: https://example.com/mods']

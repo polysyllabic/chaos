@@ -224,9 +224,25 @@ class ChaosBot:
     self._raffle_task: Optional[asyncio.Task] = None
     self._raffle_entries = set()
     self._last_apply_time = 0.0
+    self._last_info_command_time = 0.0
     self._on_connected = on_connected or (lambda value: None)
     self._on_vote = on_vote or (lambda index, user: None)
     self._on_status = on_status or (lambda message: None)
+
+  @staticmethod
+  def _is_info_only_command(cmd_key: str) -> bool:
+    return cmd_key in {'chaos', 'chaoscmd', 'mod', 'mods', 'mods_voting', 'mods_active'}
+
+  def _info_command_on_cooldown(self) -> bool:
+    cooldown = max(0.0, self._attr_float('info_cmd_cooldown', 10.0))
+    if cooldown <= 0:
+      self._last_info_command_time = time.monotonic()
+      return False
+    now = time.monotonic()
+    if (now - self._last_info_command_time) < cooldown:
+      return True
+    self._last_info_command_time = now
+    return False
 
   def _get_event_loop(self) -> Optional[asyncio.AbstractEventLoop]:
     return self._loop
@@ -444,6 +460,9 @@ class ChaosBot:
       return
     cmd_key, args = resolved
     is_streamer = author == self._channel_name
+
+    if self._is_info_only_command(cmd_key) and self._info_command_on_cooldown():
+      return
 
     if cmd_key == 'chaos':
       await self._cmd_chaos(args)

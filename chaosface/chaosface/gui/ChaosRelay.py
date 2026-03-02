@@ -107,7 +107,7 @@ chaos_defaults = {
   'ui_tls_selfsigned_hostname': 'raspberrypi.local',
   'owner': 'bot_owner',
   'channel': 'your_channel',
-  'info_cmd_cooldown': 5.0,
+  'info_cmd_cooldown': 10.0,
   'credit_name': 'credits',
   'msg_chaos_description': _chaos_description,
   'msg_how_to_vote': _chaos_how_to_vote,
