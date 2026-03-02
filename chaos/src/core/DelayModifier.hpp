@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <mutex>
 #include <queue>
 #include <toml++/toml.h>
 #include <timer.hpp>
@@ -58,6 +59,7 @@ namespace Chaos {
   class DelayModifier : public Modifier::Registrar<DelayModifier> {
   protected:
     std::queue<TimeAndEvent> eventQueue;
+    std::mutex queue_mutex;
     double delayTime;
     
   public:
@@ -67,8 +69,9 @@ namespace Chaos {
     static const std::string mod_type;
     const std::string& getModType() { return mod_type; }
 
+    void begin() override;
+    void finish() override;
     void update();
     bool tweak(DeviceEvent& event);
   };
 };
-

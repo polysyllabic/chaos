@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <algorithm>
+#include <optional>
 #include <stdexcept>
 
 #include "DelayModifier.hpp"
@@ -46,17 +47,39 @@ DelayModifier::DelayModifier(toml::table& config, EngineInterface* e) {
   PLOG_VERBOSE << " - delay: " << delayTime;
 }
 
+void DelayModifier::begin() {
+  std::lock_guard<std::mutex> lock(queue_mutex);
+  std::queue<TimeAndEvent> empty;
+  std::swap(eventQueue, empty);
+}
+
+void DelayModifier::finish() {
+  std::lock_guard<std::mutex> lock(queue_mutex);
+  std::queue<TimeAndEvent> empty;
+  std::swap(eventQueue, empty);
+}
+
 void DelayModifier::update() {
-  while ( !eventQueue.empty() ) {
-    if( (timer.runningTime() - eventQueue.front().time) >= delayTime ) {
-      // Reintroduce the event.
-      PLOG_DEBUG << "Defered event sent: " << engine->getEventName(eventQueue.front().event);
-      engine->fakePipelinedEvent(eventQueue.front().event, getptr());
+  while (true) {
+    std::optional<TimeAndEvent> delayed;
+    {
+      std::lock_guard<std::mutex> lock(queue_mutex);
+      if (eventQueue.empty()) {
+        break;
+      }
+      if ((timer.runningTime() - eventQueue.front().time) < delayTime) {
+        break;
+      }
+      delayed = eventQueue.front();
       eventQueue.pop();
     }
-    else {
+    if (!delayed) {
       break;
     }
+    // Reintroduce the event after dropping the queue lock; injected events can
+    // recursively touch this modifier.
+    PLOG_DEBUG << "Defered event sent: " << engine->getEventName(delayed->event);
+    engine->fakePipelinedEvent(delayed->event, getptr());
   }
 }
 
@@ -66,6 +89,7 @@ bool DelayModifier::tweak(DeviceEvent& event) {
   // Shortcut if we're working on all commands
   if (applies_to_all) {
     PLOG_DEBUG << "Incoming event " << engine->getEventName(event) << " queued";
+    std::lock_guard<std::mutex> lock(queue_mutex);
     eventQueue.push ({this->timer.runningTime(), event});
     return false;
   }
@@ -73,6 +97,7 @@ bool DelayModifier::tweak(DeviceEvent& event) {
     for (auto cmd : commands) {
       if (engine->eventMatches(event, cmd)) {
         PLOG_DEBUG << "Incoming event (" << engine->getEventName(event) << ") queued";
+        std::lock_guard<std::mutex> lock(queue_mutex);
       	eventQueue.push ({this->timer.runningTime(), event});
 	      return false;
       }

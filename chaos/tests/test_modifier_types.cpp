@@ -579,6 +579,197 @@ delay = 0.005
   return ok;
 }
 
+static bool testDelayModifierReplaysMultipleSequentialEvents() {
+  MockEngine engine;
+  auto mod = makeMod<DelayModifier>(
+      R"(
+name = "Delay Camera X Multiple"
+type = "delay"
+applies_to = [ "CAMERA_X" ]
+delay = 0.01
+)",
+      engine);
+  mod->_begin();
+
+  auto camera_x = commandInput(engine, "CAMERA_X");
+  bool ok = true;
+  ok &= check(camera_x != nullptr, "delay-multi test input should exist");
+  if (!camera_x) {
+    return false;
+  }
+
+  DeviceEvent first = commandEvent(engine, "CAMERA_X", 100);
+  DeviceEvent second = commandEvent(engine, "CAMERA_X", -80);
+  ok &= check(!mod->tweak(first), "first delayed event should be queued and blocked");
+  ok &= check(!mod->tweak(second), "second delayed event should be queued and blocked");
+
+  usleep(13000);
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.size() == 2,
+              "delay modifier should replay multiple queued events");
+  if (engine.pipelined_events.size() == 2) {
+    ok &= check(engine.pipelined_events[0].id == camera_x->getID() &&
+                    engine.pipelined_events[0].type == camera_x->getButtonType() &&
+                    engine.pipelined_events[0].value == 100,
+                "first replayed delayed event should preserve ordering");
+    ok &= check(engine.pipelined_events[1].id == camera_x->getID() &&
+                    engine.pipelined_events[1].type == camera_x->getButtonType() &&
+                    engine.pipelined_events[1].value == -80,
+                "second replayed delayed event should preserve ordering");
+  }
+  return ok;
+}
+
+static bool testDelayModifierClearsQueueAcrossLifecycle() {
+  MockEngine engine;
+  auto mod = makeMod<DelayModifier>(
+      R"(
+name = "Delay Queue Reset"
+type = "delay"
+applies_to = [ "CAMERA_X" ]
+delay = 0.005
+)",
+      engine);
+
+  auto camera_x = commandInput(engine, "CAMERA_X");
+  bool ok = true;
+  ok &= check(camera_x != nullptr, "delay-reset test input should exist");
+  if (!camera_x) {
+    return false;
+  }
+
+  mod->_begin();
+  DeviceEvent stale = commandEvent(engine, "CAMERA_X", 55);
+  ok &= check(!mod->tweak(stale), "stale delayed event should queue while mod is active");
+  mod->_finish();
+
+  engine.pipelined_events.clear();
+  mod->_begin();
+  DeviceEvent fresh = commandEvent(engine, "CAMERA_X", -33);
+  ok &= check(!mod->tweak(fresh), "fresh delayed event should queue after restart");
+
+  usleep(7000);
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.size() == 1,
+              "delay queue should be cleared between activations");
+  if (engine.pipelined_events.size() == 1) {
+    ok &= check(engine.pipelined_events[0].id == camera_x->getID() &&
+                    engine.pipelined_events[0].type == camera_x->getButtonType() &&
+                    engine.pipelined_events[0].value == -33,
+                "only the fresh delayed event should replay after restart");
+  }
+  return ok;
+}
+
+static bool testDelayModifierStressRapidDodgeEvents() {
+  MockEngine engine;
+  auto mod = makeMod<DelayModifier>(
+      R"(
+name = "Delay Dodge Stress"
+type = "delay"
+applies_to = [ "DODGE" ]
+delay = 0.002
+)",
+      engine);
+  mod->_begin();
+
+  auto dodge = commandInput(engine, "DODGE");
+  bool ok = true;
+  ok &= check(dodge != nullptr, "delay-dodge-stress input should exist");
+  if (!dodge) {
+    return false;
+  }
+
+  std::vector<short> expected_values;
+  expected_values.reserve(120);
+  for (int i = 0; i < 120; ++i) {
+    short value = static_cast<short>((i % 2) == 0 ? 1 : 0);
+    expected_values.push_back(value);
+    DeviceEvent evt = commandEvent(engine, "DODGE", value);
+    ok &= check(!mod->tweak(evt), "dodge stress event should be queued and blocked");
+    if ((i % 8) == 0) {
+      mod->_update(false);
+    }
+  }
+
+  for (int poll = 0; poll < 80 && engine.pipelined_events.size() < expected_values.size(); ++poll) {
+    usleep(1500);
+    mod->_update(false);
+  }
+
+  ok &= check(engine.pipelined_events.size() == expected_values.size(),
+              "dodge stress should replay all delayed events");
+  if (engine.pipelined_events.size() == expected_values.size()) {
+    for (size_t i = 0; i < expected_values.size(); ++i) {
+      const auto& ev = engine.pipelined_events[i];
+      ok &= check(ev.id == dodge->getID() && ev.type == dodge->getButtonType(),
+                  "dodge stress replay should preserve command binding");
+      ok &= check(ev.value == expected_values[i],
+                  "dodge stress replay should preserve ordering and value");
+    }
+  }
+  return ok;
+}
+
+static bool testDelayModifierStressInterleavedJoystickEvents() {
+  MockEngine engine;
+  auto mod = makeMod<DelayModifier>(
+      R"(
+name = "Delay Joystick Stress"
+type = "delay"
+applies_to = [ "CAMERA_X", "CAMERA_Y", "MOVE_X", "MOVE_Y" ]
+delay = 0.002
+)",
+      engine);
+  mod->_begin();
+
+  auto camera_x = commandInput(engine, "CAMERA_X");
+  auto camera_y = commandInput(engine, "CAMERA_Y");
+  auto move_x = commandInput(engine, "MOVE_X");
+  auto move_y = commandInput(engine, "MOVE_Y");
+  bool ok = true;
+  ok &= check(camera_x != nullptr && camera_y != nullptr && move_x != nullptr && move_y != nullptr,
+              "delay-joystick-stress inputs should exist");
+  if (!camera_x || !camera_y || !move_x || !move_y) {
+    return false;
+  }
+
+  std::vector<DeviceEvent> expected;
+  expected.reserve(160);
+  for (int i = 0; i < 40; ++i) {
+    const short base = static_cast<short>((i % 2 == 0) ? (20 + i) : -(20 + i));
+    expected.push_back(commandEvent(engine, "MOVE_X", base));
+    expected.push_back(commandEvent(engine, "MOVE_Y", static_cast<short>(-base)));
+    expected.push_back(commandEvent(engine, "CAMERA_X", static_cast<short>(base / 2)));
+    expected.push_back(commandEvent(engine, "CAMERA_Y", static_cast<short>(-base / 2)));
+  }
+
+  for (size_t i = 0; i < expected.size(); ++i) {
+    DeviceEvent evt = expected[i];
+    ok &= check(!mod->tweak(evt), "joystick stress event should be queued and blocked");
+    if ((i % 10) == 0) {
+      mod->_update(false);
+    }
+  }
+
+  for (int poll = 0; poll < 100 && engine.pipelined_events.size() < expected.size(); ++poll) {
+    usleep(1500);
+    mod->_update(false);
+  }
+
+  ok &= check(engine.pipelined_events.size() == expected.size(),
+              "joystick stress should replay all delayed joystick events");
+  if (engine.pipelined_events.size() == expected.size()) {
+    for (size_t i = 0; i < expected.size(); ++i) {
+      const auto& replay = engine.pipelined_events[i];
+      const auto& original = expected[i];
+      ok &= check(replay.id == original.id && replay.type == original.type && replay.value == original.value,
+                  "joystick stress replay should preserve event identity and ordering");
+    }
+  }
+  return ok;
+}
+
 static bool testDisableDefaultFilterBlocksConfiguredCommandOnly() {
   MockEngine engine;
   auto mod = makeMod<DisableModifier>(
@@ -1450,6 +1641,10 @@ int main() {
   ok &= testCooldownModifierRequiresWhileConditionWhenCumulative();
   ok &= testDelayModifierQueuesAndReplays();
   ok &= testDelayModifierAppliesToAllCommands();
+  ok &= testDelayModifierReplaysMultipleSequentialEvents();
+  ok &= testDelayModifierClearsQueueAcrossLifecycle();
+  ok &= testDelayModifierStressRapidDodgeEvents();
+  ok &= testDelayModifierStressInterleavedJoystickEvents();
   ok &= testDisableDefaultFilterBlocksConfiguredCommandOnly();
   ok &= testDisableRespectsWhileCondition();
   ok &= testDisableRespectsDistanceMovementCondition();
