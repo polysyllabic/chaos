@@ -1217,6 +1217,125 @@ period_length = 1.0
   return ok;
 }
 
+static bool testFormulaCircleAssignsSinThenCosByAxisOrder() {
+  MockEngine engine;
+  auto mod = makeMod<FormulaModifier>(
+      R"(
+name = "Formula Circle Ordered"
+type = "formula"
+applies_to = [ "CAMERA_X", "CAMERA_Y" ]
+formula_type = "circle"
+amplitude = 1.0
+period_length = 1000.0
+)",
+      engine);
+
+  auto camera_x = commandInput(engine, "CAMERA_X");
+  auto camera_y = commandInput(engine, "CAMERA_Y");
+  bool ok = true;
+  ok &= check(camera_x != nullptr && camera_y != nullptr, "formula-circle test inputs should exist");
+  if (!camera_x || !camera_y) {
+    return false;
+  }
+
+  mod->_begin();
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.size() == 2,
+              "formula-circle update should emit one event per configured command");
+  if (engine.pipelined_events.size() < 2) {
+    return false;
+  }
+
+  short x = 0;
+  short y = 0;
+  bool saw_x = false;
+  bool saw_y = false;
+  for (const auto& ev : engine.pipelined_events) {
+    if (ev.id == camera_x->getID()) {
+      x = ev.value;
+      saw_x = true;
+    } else if (ev.id == camera_y->getID()) {
+      y = ev.value;
+      saw_y = true;
+    }
+  }
+  ok &= check(saw_x && saw_y, "formula-circle should emit both configured axis events");
+
+  const short abs_x = static_cast<short>((x < 0) ? -x : x);
+  ok &= check(abs_x <= 2, "first circle axis should start near sin(t)=0");
+  ok &= check(y >= 120, "second circle axis should start near cos(t)=1");
+  return ok;
+}
+
+static bool testFormulaEightCurveAlternatesAcrossAxisPairs() {
+  MockEngine engine;
+  auto mod = makeMod<FormulaModifier>(
+      R"(
+name = "Formula Eight Pairing"
+type = "formula"
+applies_to = [ "CAMERA_X", "CAMERA_Y", "MOVE_X", "MOVE_Y" ]
+formula_type = "eight_curve"
+amplitude = 1.0
+period_length = 2.0
+)",
+      engine);
+
+  auto camera_x = commandInput(engine, "CAMERA_X");
+  auto camera_y = commandInput(engine, "CAMERA_Y");
+  auto move_x = commandInput(engine, "MOVE_X");
+  auto move_y = commandInput(engine, "MOVE_Y");
+  bool ok = true;
+  ok &= check(camera_x != nullptr && camera_y != nullptr && move_x != nullptr && move_y != nullptr,
+              "formula-eight-pair test inputs should exist");
+  if (!camera_x || !camera_y || !move_x || !move_y) {
+    return false;
+  }
+
+  mod->_begin();
+  usleep(250000);
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.size() == 4,
+              "formula-eight-pair update should emit one event per configured axis");
+  if (engine.pipelined_events.size() < 4) {
+    return false;
+  }
+
+  short cam_x = 0;
+  short cam_y = 0;
+  short mov_x = 0;
+  short mov_y = 0;
+  bool saw_cam_x = false;
+  bool saw_cam_y = false;
+  bool saw_mov_x = false;
+  bool saw_mov_y = false;
+  for (const auto& ev : engine.pipelined_events) {
+    if (ev.id == camera_x->getID()) {
+      cam_x = ev.value;
+      saw_cam_x = true;
+    } else if (ev.id == camera_y->getID()) {
+      cam_y = ev.value;
+      saw_cam_y = true;
+    } else if (ev.id == move_x->getID()) {
+      mov_x = ev.value;
+      saw_mov_x = true;
+    } else if (ev.id == move_y->getID()) {
+      mov_y = ev.value;
+      saw_mov_y = true;
+    }
+  }
+  ok &= check(saw_cam_x && saw_cam_y && saw_mov_x && saw_mov_y,
+              "formula-eight-pair should emit all configured axis events");
+
+  auto magnitude = [](short value) { return (value < 0) ? -value : value; };
+  ok &= check(magnitude(cam_x) <= magnitude(cam_y),
+              "first axis in each pair should use sin(t)*cos(t) component");
+  ok &= check(magnitude(mov_x) <= magnitude(mov_y),
+              "first axis in second pair should use sin(t)*cos(t) component");
+  ok &= check(cam_x == mov_x && cam_y == mov_y,
+              "eight_curve should apply components in parallel across multiple axis pairs");
+  return ok;
+}
+
 static bool testScalingModifierScalesAndClamps() {
   MockEngine engine;
   auto mod = makeMod<ScalingModifier>(
@@ -1731,6 +1850,8 @@ int main() {
   ok &= testFormulaModifierOffsetsAndRestores();
   ok &= testFormulaModifierJankyHonorsWhileCondition();
   ok &= testFormulaModifierSupportsEightCurveType();
+  ok &= testFormulaCircleAssignsSinThenCosByAxisOrder();
+  ok &= testFormulaEightCurveAlternatesAcrossAxisPairs();
   ok &= testScalingModifierScalesAndClamps();
   ok &= testScalingModifierSupportsNegativeAmplitudeAndOffset();
   ok &= testScalingModifierInvertsVerticalCameraAxis();

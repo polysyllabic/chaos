@@ -90,20 +90,18 @@ void FormulaModifier::update() {
   for (auto& cmd : commands) {
     
     if (inCondition()) {
+      const bool first_in_pair = ((i % 2) == 0);
       switch (formula_type) {
         case FormulaTypes::CIRCLE:
-          if (i % 2) {
-            command_offset[cmd] = (int) (amplitude * std::sin(t));
-          } else {
-            command_offset[cmd] = (int) (amplitude * std::cos(t));
-          }
+          // Apply paired components in-order so [A, B, A, B, ...] maps consistently.
+          command_offset[cmd] = first_in_pair
+              ? static_cast<int>(amplitude * std::sin(t))
+              : static_cast<int>(amplitude * std::cos(t));
           break;
         case FormulaTypes::EIGHT_CURVE:
-          if (i % 2) {
-            command_offset[cmd] = (int) (amplitude * std::sin(t)*std::cos(t));
-          } else {
-            command_offset[cmd] = (int) (amplitude * std::sin(t));
-          }
+          command_offset[cmd] = first_in_pair
+              ? static_cast<int>(amplitude * std::sin(t) * std::cos(t))
+              : static_cast<int>(amplitude * std::sin(t));
           break;
         case FormulaTypes::JANKY:
           command_offset[cmd] = (int) (amplitude * (std::cos(t+4.0*i) + std::cos(2.0*t)/2.0) *
