@@ -234,6 +234,25 @@ bool RemapModifier::remap(DeviceEvent& event) {
     modified.type = to_console->getButtonType();
     modified.value = event.value;
 
+    const bool from_button_to_hybrid =
+        from->getType() == ControllerSignalType::BUTTON &&
+        to_console->getType() == ControllerSignalType::HYBRID;
+    if (from_button_to_hybrid) {
+      // A regular button mapped to a trigger must also drive the trigger axis.
+      new_event.id = to_console->getHybridAxis();
+      new_event.type = TYPE_AXIS;
+      new_event.value = event.value ? JOYSTICK_MAX : JOYSTICK_MIN;
+      engine->applyEvent(new_event);
+    }
+
+    if (from->getType() == ControllerSignalType::HYBRID &&
+        (to_console->getType() == ControllerSignalType::BUTTON ||
+         to_console->getType() == ControllerSignalType::THREE_STATE) &&
+        event.type == TYPE_BUTTON) {
+      // For hybrid sources remapped to discrete outputs, only process the axis component.
+      return false;
+    }
+
     // Now handle cases that require additional actions
     if (event.value) {
     switch (from->getType()) {
@@ -248,23 +267,16 @@ bool RemapModifier::remap(DeviceEvent& event) {
         modified.value = remap.to_min ? JOYSTICK_MIN : JOYSTICK_MAX;
         break;
       case ControllerSignalType::HYBRID:
-        // From button to hybrid, we need to insert a new event for the axis
-   	    new_event.id = to_console->getHybridAxis();
-        new_event.type = TYPE_AXIS;
-   	    new_event.value = event.value ? JOYSTICK_MAX : JOYSTICK_MIN;
-        engine->applyEvent(new_event);
+        break;
       }
       break;
     case ControllerSignalType::HYBRID:
       switch (to_console->getType()) {
-      // Going from hybrid to button, we drop the axis component
       case ControllerSignalType::BUTTON:
-        if (event.type == TYPE_AXIS) {
- 	        return false;
-        }
+        modified.value = (event.value >= remap.threshold) ? 1 : 0;
         break;
       case ControllerSignalType::THREE_STATE:
-        modified.value = remap.to_min ? -1 : 1;
+        modified.value = (event.value >= remap.threshold) ? (remap.to_min ? -1 : 1) : 0;
       }
       break;
     case ControllerSignalType::THREE_STATE:

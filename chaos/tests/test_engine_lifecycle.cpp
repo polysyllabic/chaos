@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <unistd.h>
+#include <vector>
 
 #include <toml++/toml.h>
 
@@ -108,6 +109,10 @@ use_menu = false
 name = "MOVE_X"
 binding = "LX"
 
+[[command]]
+name = "FIRE"
+binding = "R2"
+
 [[modifier]]
 name = "RACE"
 type = "test_race"
@@ -168,6 +173,39 @@ static bool testFirstUnpauseKeepsHybridTriggersReleased() {
 
   engine.stop();
   engine.WaitForInternalThreadToExit();
+  std::remove(config_path.c_str());
+  return ok;
+}
+
+static bool testHybridTriggerCommandMatchesButtonAndAxisEvents() {
+  bool ok = true;
+
+  TestController controller;
+  ChaosEngine engine(controller, "", "", false);
+  const std::string config_path = writeConfigFile();
+  ok &= check(engine.setGame(config_path), "test config should load");
+
+  toml::table lookup = toml::parse("targets = [ \"FIRE\" ]");
+  std::vector<std::shared_ptr<GameCommand>> commands;
+  engine.addGameCommands(lookup, "targets", commands);
+  ok &= check(commands.size() == 1 && commands.front() != nullptr,
+              "test setup should resolve FIRE command");
+  if (commands.empty() || !commands.front()) {
+    std::remove(config_path.c_str());
+    return false;
+  }
+
+  DeviceEvent button_evt = {0, 1, TYPE_BUTTON, BUTTON_R2};
+  DeviceEvent axis_evt = {0, JOYSTICK_MAX, TYPE_AXIS, AXIS_R2};
+  DeviceEvent other_evt = {0, JOYSTICK_MAX, TYPE_AXIS, AXIS_LX};
+
+  ok &= check(engine.eventMatches(button_evt, commands.front()),
+              "R2 button event should match FIRE");
+  ok &= check(engine.eventMatches(axis_evt, commands.front()),
+              "R2 axis event should match FIRE");
+  ok &= check(!engine.eventMatches(other_evt, commands.front()),
+              "unrelated event should not match FIRE");
+
   std::remove(config_path.c_str());
   return ok;
 }
@@ -237,6 +275,7 @@ static bool testRemoveDeferredUntilUpdateCompletes() {
 int main() {
   bool ok = true;
   ok &= testFirstUnpauseKeepsHybridTriggersReleased();
+  ok &= testHybridTriggerCommandMatchesButtonAndAxisEvents();
   ok &= testDuplicateActivationDoesNotStack();
   ok &= testRemoveDeferredUntilUpdateCompletes();
   if (!ok) {

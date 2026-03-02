@@ -93,7 +93,7 @@ public:
       return false;
     }
     std::shared_ptr<Chaos::ControllerInput> signal = command->getInput();
-    return signal ? controller.matches(event, signal) : false;
+    return signal ? signal->matches(event) : false;
   }
 
   void setOff(std::shared_ptr<Chaos::GameCommand> command) override {

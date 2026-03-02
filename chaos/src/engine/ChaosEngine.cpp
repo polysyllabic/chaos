@@ -714,7 +714,7 @@ void ChaosEngine::sendInterfaceMessage(const std::string& msg) {
 
 bool ChaosEngine::eventMatches(const DeviceEvent& event, std::shared_ptr<GameCommand> command) { 
   std::shared_ptr<ControllerInput> signal = command->getInput();
-  return controller.matches(event, signal); 
+  return signal ? signal->matches(event) : false;
 }
 
 void ChaosEngine::setOff(std::shared_ptr<GameCommand> command) {

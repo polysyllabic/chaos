@@ -204,6 +204,104 @@ remap = [
   return ok;
 }
 
+static bool testButtonToHybridDrivesAxisOnPressAndRelease() {
+  MockEngine engine;
+  auto mod = makeRemap(
+      R"(
+name = "Button To Hybrid Trigger Remap"
+type = "remap"
+remap = [
+  { from = "L1", to = "L2" }
+]
+)",
+      engine);
+
+  auto from = engine.getInput("L1");
+  auto to = engine.getInput("L2");
+  bool ok = true;
+  ok &= check(from != nullptr, "L1 input should exist");
+  ok &= check(to != nullptr, "L2 input should exist");
+  if (!from || !to) {
+    return false;
+  }
+
+  DeviceEvent press = {0, 1, from->getButtonType(), from->getID()};
+  ok &= check(mod->remap(press), "L1 press should be accepted");
+  ok &= check(press.type == to->getButtonType() && press.id == to->getID() && press.value == 1,
+              "L1 press should map to L2 button press");
+  ok &= check(engine.applied_events.size() == 1,
+              "L1 press should inject one L2 axis event");
+  if (engine.applied_events.size() == 1) {
+    const auto& axis_press = engine.applied_events[0];
+    ok &= check(axis_press.type == TYPE_AXIS, "injected L2 press should be axis");
+    ok &= check(axis_press.id == to->getHybridAxis(), "injected L2 press should target AXIS_L2");
+    ok &= check(axis_press.value == JOYSTICK_MAX, "injected L2 press should use JOYSTICK_MAX");
+  }
+
+  DeviceEvent release = {0, 0, from->getButtonType(), from->getID()};
+  ok &= check(mod->remap(release), "L1 release should be accepted");
+  ok &= check(release.type == to->getButtonType() && release.id == to->getID() && release.value == 0,
+              "L1 release should map to L2 button release");
+  ok &= check(engine.applied_events.size() == 2,
+              "L1 release should inject one L2 axis reset");
+  if (engine.applied_events.size() == 2) {
+    const auto& axis_release = engine.applied_events[1];
+    ok &= check(axis_release.type == TYPE_AXIS, "injected L2 release should be axis");
+    ok &= check(axis_release.id == to->getHybridAxis(), "injected L2 release should target AXIS_L2");
+    ok &= check(axis_release.value == JOYSTICK_MIN, "injected L2 release should use JOYSTICK_MIN");
+  }
+
+  return ok;
+}
+
+static bool testHybridToButtonUsesAxisThreshold() {
+  MockEngine engine;
+  auto mod = makeRemap(
+      R"(
+name = "Hybrid To Button Threshold Test"
+type = "remap"
+remap = [
+  { from = "L2", to = "R1" }
+]
+)",
+      engine);
+
+  auto from = engine.getInput("L2");
+  auto to = engine.getInput("R1");
+  bool ok = true;
+  ok &= check(from != nullptr, "L2 input should exist");
+  ok &= check(to != nullptr, "R1 input should exist");
+  if (!from || !to) {
+    return false;
+  }
+
+  DeviceEvent l2_button_press = {0, 1, TYPE_BUTTON, from->getID()};
+  ok &= check(!mod->remap(l2_button_press),
+              "hybrid button component should be ignored for hybrid->button remaps");
+
+  DeviceEvent l2_axis_partial = {0, static_cast<short>(JOYSTICK_MAX - 1), TYPE_AXIS, from->getHybridAxis()};
+  ok &= check(mod->remap(l2_axis_partial), "partial L2 axis should be accepted");
+  ok &= check(l2_axis_partial.type == to->getButtonType() && l2_axis_partial.id == to->getID() &&
+                  l2_axis_partial.value == 0,
+              "partial L2 axis should remain below default threshold");
+
+  DeviceEvent l2_axis_full = {0, JOYSTICK_MAX, TYPE_AXIS, from->getHybridAxis()};
+  ok &= check(mod->remap(l2_axis_full), "full L2 axis should be accepted");
+  ok &= check(l2_axis_full.type == to->getButtonType() && l2_axis_full.id == to->getID() &&
+                  l2_axis_full.value == 1,
+              "full L2 axis should pass default threshold");
+
+  DeviceEvent l2_axis_release = {0, JOYSTICK_MIN, TYPE_AXIS, from->getHybridAxis()};
+  ok &= check(mod->remap(l2_axis_release), "released L2 axis should be accepted");
+  ok &= check(l2_axis_release.type == to->getButtonType() && l2_axis_release.id == to->getID() &&
+                  l2_axis_release.value == 0,
+              "released L2 axis should map to button release");
+
+  ok &= check(engine.applied_events.empty(),
+              "hybrid->button threshold mapping should not inject side events");
+  return ok;
+}
+
 static bool testInvertUsesRemappedValue() {
   MockEngine engine;
   auto mod = makeRemap(
@@ -448,6 +546,8 @@ static bool testControllerDefaultHybridAxesReleased() {
 int main() {
   bool ok = true;
   ok &= testAxisZeroClearsNegativeButton();
+  ok &= testButtonToHybridDrivesAxisOnPressAndRelease();
+  ok &= testHybridToButtonUsesAxisThreshold();
   ok &= testInvertUsesRemappedValue();
   ok &= testTouchpadStopClearsConfiguredAxes();
   ok &= testTouchpadStopClearsHybridAxisToJoystickMin();

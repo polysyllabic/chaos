@@ -391,6 +391,17 @@ static DeviceEvent commandEvent(MockEngine& engine, const std::string& command_n
   return {0, value, static_cast<uint8_t>(input->getButtonType()), input->getID()};
 }
 
+static DeviceEvent commandHybridAxisEvent(MockEngine& engine, const std::string& command_name, short value) {
+  auto input = commandInput(engine, command_name);
+  if (!input) {
+    throw std::runtime_error("Unknown command in test hybrid event setup: " + command_name);
+  }
+  if (input->getType() != ControllerSignalType::HYBRID) {
+    throw std::runtime_error("Command is not hybrid in test hybrid event setup: " + command_name);
+  }
+  return {0, value, TYPE_AXIS, input->getHybridAxis()};
+}
+
 static bool sawName(const std::vector<std::string>& calls, const std::string& name) {
   for (const auto& entry : calls) {
     if (entry == name) {
@@ -770,6 +781,77 @@ filter = "below"
   DeviceEvent neg = commandEvent(engine, "CAMERA_X", -900);
   ok &= check(mod->tweak(neg), "disable-below should accept negative event");
   ok &= check(neg.value == 0, "disable-below should block negative values");
+  return ok;
+}
+
+static bool testDisableBlocksAllConfiguredCommandsIncludingHybridAxis() {
+  MockEngine engine;
+  auto mod = makeMod<DisableModifier>(
+      R"(
+name = "Pacifist Style Disable"
+type = "disable"
+applies_to = [ "MELEE", "FIRE" ]
+)",
+      engine);
+
+  auto melee = commandInput(engine, "MELEE");
+  auto fire = commandInput(engine, "FIRE");
+  auto move_x = commandInput(engine, "MOVE_X");
+  bool ok = true;
+  ok &= check(melee != nullptr && fire != nullptr && move_x != nullptr,
+              "disable-multi test inputs should exist");
+  if (!melee || !fire || !move_x) {
+    return false;
+  }
+
+  DeviceEvent melee_evt = commandEvent(engine, "MELEE", 1);
+  ok &= check(mod->tweak(melee_evt), "disable-multi should accept MELEE event");
+  ok &= check(melee_evt.value == 0, "disable-multi should block first applies_to command");
+
+  DeviceEvent fire_axis_evt = commandHybridAxisEvent(engine, "FIRE", JOYSTICK_MAX);
+  ok &= check(mod->tweak(fire_axis_evt), "disable-multi should accept FIRE axis event");
+  ok &= check(fire_axis_evt.value == JOYSTICK_MIN,
+              "disable-multi should block hybrid-axis event for later applies_to command");
+
+  DeviceEvent unaffected = commandEvent(engine, "MOVE_X", 700);
+  ok &= check(mod->tweak(unaffected), "disable-multi should accept non-target event");
+  ok &= check(unaffected.value == 700, "disable-multi should leave non-target command unchanged");
+  return ok;
+}
+
+static bool testDisableNoAimingStyleBlocksHybridButtonAndAxis() {
+  MockEngine engine;
+  auto mod = makeMod<DisableModifier>(
+      R"(
+name = "No Aiming Style Disable"
+type = "disable"
+applies_to = [ "AIM" ]
+)",
+      engine);
+
+  auto aim = commandInput(engine, "AIM");
+  auto move_x = commandInput(engine, "MOVE_X");
+  bool ok = true;
+  ok &= check(aim != nullptr && move_x != nullptr,
+              "no-aiming disable test inputs should exist");
+  if (!aim || !move_x) {
+    return false;
+  }
+
+  DeviceEvent aim_button = commandEvent(engine, "AIM", 1);
+  ok &= check(mod->tweak(aim_button), "no-aiming disable should accept AIM button event");
+  ok &= check(aim_button.value == 0,
+              "no-aiming disable should block AIM button component");
+
+  DeviceEvent aim_axis = commandHybridAxisEvent(engine, "AIM", JOYSTICK_MAX);
+  ok &= check(mod->tweak(aim_axis), "no-aiming disable should accept AIM axis event");
+  ok &= check(aim_axis.value == JOYSTICK_MIN,
+              "no-aiming disable should block AIM axis component to JOYSTICK_MIN");
+
+  DeviceEvent unaffected = commandEvent(engine, "MOVE_X", 700);
+  ok &= check(mod->tweak(unaffected), "no-aiming disable should accept non-target event");
+  ok &= check(unaffected.value == 700,
+              "no-aiming disable should not alter non-target command values");
   return ok;
 }
 
@@ -1374,6 +1456,8 @@ int main() {
   ok &= testDisableRespectsPersistentCondition();
   ok &= testDisableFilterAboveBlocksOnlyPositiveValues();
   ok &= testDisableFilterBelowBlocksOnlyNegativeValues();
+  ok &= testDisableBlocksAllConfiguredCommandsIncludingHybridAxis();
+  ok &= testDisableNoAimingStyleBlocksHybridButtonAndAxis();
   ok &= testFormulaModifierOffsetsAndRestores();
   ok &= testFormulaModifierJankyHonorsWhileCondition();
   ok &= testFormulaModifierSupportsEightCurveType();
