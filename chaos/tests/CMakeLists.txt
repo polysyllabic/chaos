@@ -36,6 +36,33 @@ target_include_directories(test_remapping PRIVATE
 )
 target_link_libraries(test_remapping PRIVATE chaos_controller chaos_utils)
 
+add_executable(test_modifier_types)
+target_sources(test_modifier_types PRIVATE
+  test_modifier_types.cpp
+  ../src/Modifier.cpp
+  ../src/CooldownModifier.cpp
+  ../src/DelayModifier.cpp
+  ../src/DisableModifier.cpp
+  ../src/FormulaModifier.cpp
+  ../src/MenuModifier.cpp
+  ../src/ParentModifier.cpp
+  ../src/RepeatModifier.cpp
+  ../src/ScalingModifier.cpp
+  ../src/SequenceModifier.cpp
+  ../src/GameCommand.cpp
+  ../src/GameCondition.cpp
+  ../src/Sequence.cpp
+  ../src/MenuItem.cpp
+)
+target_include_directories(test_modifier_types PRIVATE
+  ../include
+  ../src/controller
+  ../src/utils
+  ${tomlplusplus_SOURCE_DIR}/include
+  ${plog_SOURCE_DIR}/include
+)
+target_link_libraries(test_modifier_types PRIVATE chaos_controller chaos_utils)
+
 add_executable(test_engine_lifecycle)
 target_sources(test_engine_lifecycle PRIVATE
   test_engine_lifecycle.cpp

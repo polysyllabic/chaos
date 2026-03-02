@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <cmath>
 #include <unistd.h>
@@ -84,6 +85,10 @@ public:
   void addControllerInputs(const toml::table& config, const std::string& key,
                            std::vector<std::shared_ptr<ControllerInput>>& vec) override {
     signal_table.addToVector(config, key, vec);
+  }
+  std::string getEventName(const DeviceEvent& event) override {
+    auto input = signal_table.getInput(event);
+    return input ? input->getName() : "UNKNOWN_EVENT";
   }
 
   void addGameCommands(const toml::table& config, const std::string& key,
@@ -316,6 +321,46 @@ remap = [
   return ok;
 }
 
+static bool testRandomRemapProducesPermutation() {
+  MockEngine engine;
+  auto mod = makeRemap(
+      R"(
+name = "Shape Shuffle Test"
+type = "remap"
+random_remap = [ "X", "SQUARE", "CIRCLE", "TRIANGLE" ]
+)",
+      engine);
+  mod->begin();
+
+  const std::vector<std::string> names = {"X", "SQUARE", "CIRCLE", "TRIANGLE"};
+  std::unordered_set<uint8_t> expected_ids;
+  std::unordered_set<uint8_t> seen_ids;
+
+  bool ok = true;
+  for (const auto& name : names) {
+    auto input = engine.getInput(name);
+    ok &= check(input != nullptr, "random_remap input should exist: " + name);
+    if (!input) {
+      return false;
+    }
+    expected_ids.insert(input->getID());
+  }
+
+  for (const auto& name : names) {
+    auto input = engine.getInput(name);
+    DeviceEvent event = {0, 1, static_cast<uint8_t>(input->getButtonType()), input->getID()};
+    ok &= check(mod->remap(event), "random_remap event should be accepted");
+    ok &= check(event.type == TYPE_BUTTON, "shape random_remap should stay in button class");
+    ok &= check(expected_ids.find(event.id) != expected_ids.end(),
+                "random_remap destination should be from configured set");
+    seen_ids.insert(event.id);
+  }
+
+  ok &= check(seen_ids.size() == names.size(),
+              "random_remap should produce a one-to-one mapping across configured inputs");
+  return ok;
+}
+
 static bool testTouchpadInactiveDelayInjection() {
   ControllerStateProbe probe;
   ControllerState::setTouchpadInactiveDelay(0.001);
@@ -406,6 +451,7 @@ int main() {
   ok &= testInvertUsesRemappedValue();
   ok &= testTouchpadStopClearsConfiguredAxes();
   ok &= testTouchpadStopClearsHybridAxisToJoystickMin();
+  ok &= testRandomRemapProducesPermutation();
   ok &= testTouchpadInactiveDelayInjection();
   ok &= testTouchpadInactiveDelayParsing();
   ok &= testControllerInputTypeAndHybridAxisState();
