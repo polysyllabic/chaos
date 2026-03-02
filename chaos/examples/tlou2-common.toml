@@ -1184,16 +1184,6 @@ period_length = 0.5
 amplitude = 0.5
 
 [[modifier]]
-name = "TLOU1 Run Glitch"
-description = "Is this an Any% speedrun of TLOU1? Rapid D-pad circular presses. Try moving while prone."
-type = "formula"
-groups = [ "Movement", "Inventory" ]
-applies_to = [ "select weapon", "select consumable" ]
-formula_type = "circle"
-period_length = 0.016
-amplitude = 1.0
-
-[[modifier]]
 name = "Random Movement"
 description = "Random joystick motion"
 type = "formula"
@@ -1316,6 +1306,27 @@ begin_sequence = [
   { event = "delay", delay = 3.0 },
   { event = "press", command = "reload/toss", delay = 0.2 }
 ]
+
+[[modifier]]
+name = "TLOU1 Run Glitch"
+description = "Is this an Any% speedrun of TLOU1? Rapid D-pad circular presses. Try moving while prone."
+type = "sequence"
+groups = [ "Movement", "Inventory" ]
+block_while_busy = [ "select weapon", "select consumable" ]
+repeat_sequence = [
+  { event = "press", command = "select consumable", value = -1},
+  { event = "press", command = "select weapon", value = 1},
+  { event = "press", command = "select consumable", value = 1},
+  { event = "press", command = "select weapon", value = -1}
+ ]
+ begin_sequence = [
+  { event = "release", command = "select weapon" },
+  { event = "release", command = "select consumable" },
+ ]
+ end_sequence = [
+  { event = "release", command = "select weapon" },
+  { event = "release", command = "select consumable" },
+ ]
 
 [[modifier]]
 name = "Only Prone Diving"
