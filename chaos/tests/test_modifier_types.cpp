@@ -1283,6 +1283,35 @@ offset = -30
   return ok;
 }
 
+static bool testScalingModifierInvertsVerticalCameraAxis() {
+  MockEngine engine;
+  auto mod = makeMod<ScalingModifier>(
+      R"(
+name = "Inverted"
+type = "scaling"
+applies_to = [ "CAMERA_Y" ]
+amplitude = -1
+)",
+      engine);
+
+  bool ok = true;
+  auto camera_y = commandInput(engine, "CAMERA_Y");
+  ok &= check(camera_y != nullptr, "vertical-camera scaling test input should exist");
+  if (!camera_y) {
+    return false;
+  }
+
+  DeviceEvent up = commandEvent(engine, "CAMERA_Y", -64);
+  ok &= check(mod->tweak(up), "vertical-camera scaling should accept negative axis event");
+  ok &= check(up.value == 64, "negative vertical camera input should invert to positive output");
+
+  DeviceEvent down = commandEvent(engine, "CAMERA_Y", 64);
+  ok &= check(mod->tweak(down), "vertical-camera scaling should accept positive axis event");
+  ok &= check(down.value == -64, "positive vertical camera input should invert to negative output");
+
+  return ok;
+}
+
 static bool testRepeatModifierForcesAndBlocksWhileOn() {
   MockEngine engine;
   auto mod = makeMod<RepeatModifier>(
@@ -1704,6 +1733,7 @@ int main() {
   ok &= testFormulaModifierSupportsEightCurveType();
   ok &= testScalingModifierScalesAndClamps();
   ok &= testScalingModifierSupportsNegativeAmplitudeAndOffset();
+  ok &= testScalingModifierInvertsVerticalCameraAxis();
   ok &= testRepeatModifierForcesAndBlocksWhileOn();
   ok &= testRepeatModifierDefaultCycleAndRepeatReset();
   ok &= testRepeatModifierSupportsMultipleForceOnValues();

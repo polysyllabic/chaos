@@ -110,12 +110,32 @@ name = "MOVE_X"
 binding = "LX"
 
 [[command]]
+name = "MOVE_Y"
+binding = "LY"
+
+[[command]]
+name = "CAMERA_Y"
+binding = "RY"
+
+[[command]]
 name = "FIRE"
 binding = "R2"
 
 [[modifier]]
 name = "RACE"
 type = "test_race"
+
+[[modifier]]
+name = "Inverted"
+type = "scaling"
+applies_to = [ "CAMERA_Y" ]
+amplitude = -1
+
+[[modifier]]
+name = "Moonwalk"
+type = "scaling"
+applies_to = [ "MOVE_Y" ]
+amplitude = -1
 )";
 
   char path_template[] = "/tmp/chaos_engine_lifecycle_XXXXXX.toml";
@@ -295,6 +315,61 @@ static bool testInterfacePauseCommandPausesRunningEngine() {
   return ok;
 }
 
+static bool testScalingInvertedAndMoonwalkAffectExpectedAxes() {
+  bool ok = true;
+
+  TestController controller;
+  ChaosEngine engine(controller, "", "", false);
+  const std::string config_path = writeConfigFile();
+  ok &= check(engine.setGame(config_path), "test config should load");
+
+  engine.start();
+  unpauseEngine(controller);
+  ok &= check(waitFor([&]() { return !engine.isPaused(); }),
+              "engine should be running before scaling tests");
+
+  engine.newCommand("{\"winner\":\"Inverted\"}");
+  ok &= check(waitFor([&]() { return activeCount(engine) == 1; }),
+              "Inverted should become active");
+
+  controller.inject({0, -64, TYPE_AXIS, AXIS_RY});
+  ok &= check(waitFor([&]() { return engine.getState(AXIS_RY, TYPE_AXIS) == 64; }),
+              "Inverted should flip negative RY values to positive");
+
+  controller.inject({0, 64, TYPE_AXIS, AXIS_RY});
+  ok &= check(waitFor([&]() { return engine.getState(AXIS_RY, TYPE_AXIS) == -64; }),
+              "Inverted should flip positive RY values to negative");
+
+  controller.inject({0, -40, TYPE_AXIS, AXIS_LY});
+  ok &= check(waitFor([&]() { return engine.getState(AXIS_LY, TYPE_AXIS) == -40; }),
+              "Inverted should not affect MOVE_Y axis");
+
+  engine.newCommand("{\"remove\":\"Inverted\"}");
+  ok &= check(waitFor([&]() { return activeCount(engine) == 0; }),
+              "Inverted should be removable");
+
+  engine.newCommand("{\"winner\":\"Moonwalk\"}");
+  ok &= check(waitFor([&]() { return activeCount(engine) == 1; }),
+              "Moonwalk should become active");
+
+  controller.inject({0, -70, TYPE_AXIS, AXIS_LY});
+  ok &= check(waitFor([&]() { return engine.getState(AXIS_LY, TYPE_AXIS) == 70; }),
+              "Moonwalk should flip negative LY values to positive");
+
+  controller.inject({0, 70, TYPE_AXIS, AXIS_LY});
+  ok &= check(waitFor([&]() { return engine.getState(AXIS_LY, TYPE_AXIS) == -70; }),
+              "Moonwalk should flip positive LY values to negative");
+
+  controller.inject({0, -36, TYPE_AXIS, AXIS_RY});
+  ok &= check(waitFor([&]() { return engine.getState(AXIS_RY, TYPE_AXIS) == -36; }),
+              "Moonwalk should not affect CAMERA_Y axis");
+
+  engine.stop();
+  engine.WaitForInternalThreadToExit();
+  std::remove(config_path.c_str());
+  return ok;
+}
+
 int main() {
   bool ok = true;
   ok &= testFirstUnpauseKeepsHybridTriggersReleased();
@@ -302,6 +377,7 @@ int main() {
   ok &= testDuplicateActivationDoesNotStack();
   ok &= testRemoveDeferredUntilUpdateCompletes();
   ok &= testInterfacePauseCommandPausesRunningEngine();
+  ok &= testScalingInvertedAndMoonwalkAffectExpectedAxes();
   if (!ok) {
     return 1;
   }

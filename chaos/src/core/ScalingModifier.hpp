@@ -37,9 +37,8 @@ namespace Chaos {
    */
   class ScalingModifier : public Modifier::Registrar<ScalingModifier> {
   private:
-    float amplitude;
-    float offset;
-    short sign_tweak;
+    double amplitude;
+    double offset;
     
   public:
     
@@ -52,4 +51,3 @@ namespace Chaos {
 
   };
 };
-

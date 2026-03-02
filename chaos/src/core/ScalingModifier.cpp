@@ -30,6 +30,18 @@ using namespace Chaos;
 
 const std::string ScalingModifier::mod_type = "scaling";
 
+namespace {
+double parseNumericValue(const toml::table& config, const std::string& key, double fallback) {
+  if (const auto fp_value = config[key].value<double>(); fp_value) {
+    return *fp_value;
+  }
+  if (const auto int_value = config[key].value<int64_t>(); int_value) {
+    return static_cast<double>(*int_value);
+  }
+  return fallback;
+}
+}
+
 ScalingModifier::ScalingModifier(toml::table& config, EngineInterface* e) {
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "applies_to", "begin_sequence", "finish_sequence",
@@ -40,9 +52,8 @@ ScalingModifier::ScalingModifier(toml::table& config, EngineInterface* e) {
     throw std::runtime_error("No commands defined in applies_to");
   }
 
-  amplitude = config["amplitude"].value_or(1.0);
-  offset = config["offset"].value_or(0.0);
-  // sign_tweak = (amplitude < 0.0) ? 1 : 0;
+  amplitude = parseNumericValue(config, "amplitude", 1.0);
+  offset = parseNumericValue(config, "offset", 0.0);
 }
 
 bool ScalingModifier::tweak(DeviceEvent& event) {
@@ -56,4 +67,3 @@ bool ScalingModifier::tweak(DeviceEvent& event) {
   }
   return true;
 }
-
