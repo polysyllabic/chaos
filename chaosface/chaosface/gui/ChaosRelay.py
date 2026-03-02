@@ -1586,20 +1586,33 @@ class ChaosRelay:
     target = str(mod_name).strip().lower()
     if not target:
       return
-    mods = list(self.active_mods)
-    times = list(self.mod_times)
+    mods = list(self.active_mods or [])
+    times = list(self.mod_times or [])
+    slot_count = max(int(self.num_active_mods or 0), len(mods), len(times))
+    if slot_count <= 0:
+      return
+
+    entries = []
+    for idx in range(slot_count):
+      name = str(mods[idx]) if idx < len(mods) else ''
+      time_remaining = float(times[idx]) if idx < len(times) else 0.0
+      entries.append((name, time_remaining))
+
     removed = False
-    for idx, name in enumerate(mods):
-      if str(name).strip().lower() == target:
-        mods[idx] = ''
-        if idx < len(times):
-          times[idx] = 0.0
+    retained = []
+    for name, time_remaining in entries:
+      if not removed and str(name).strip().lower() == target:
         removed = True
-        break
-    if removed:
-      self.set_active_mods(mods)
-      if times:
-        self.set_mod_times(times)
+        continue
+      retained.append((name, time_remaining))
+    if not removed:
+      return
+
+    compacted = [(name, time_remaining) for name, time_remaining in retained if str(name).strip()]
+    compacted.extend([('', 0.0)] * max(0, slot_count - len(compacted)))
+
+    self.set_active_mods([name for name, _ in compacted[:slot_count]])
+    self.set_mod_times([time_remaining for _, time_remaining in compacted[:slot_count]])
 
   def reset_current_mods(self):
     self.set_mod_times([0.0] * self.num_active_mods)

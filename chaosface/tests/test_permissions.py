@@ -60,18 +60,19 @@ def test_vote_request_flags_round_trip():
   assert relay.consume_end_vote_request() is False
 
 
-def test_remove_mod_request_and_active_slot_clear():
+def test_remove_mod_request_and_active_slot_compacts_progress_slots():
   relay = ChaosRelay()
-  relay.set_active_mods(['Mod A', 'Mod B'])
-  relay.set_mod_times([1.0, 0.7])
+  relay.set_num_active_mods(3)
+  relay.set_active_mods(['Mod A', 'Mod B', 'Mod C'])
+  relay.set_mod_times([1.0, 0.7, 0.4])
 
   relay.request_remove_mod('mod a')
   assert relay.consume_remove_mod_request() == 'mod a'
   assert relay.consume_remove_mod_request() == ''
 
   relay.remove_active_mod('mod a')
-  assert relay.active_mods[0] == ''
-  assert relay.mod_times[0] == 0.0
+  assert relay.active_mods == ['Mod B', 'Mod C', '']
+  assert relay.mod_times == [0.7, 0.4, 0.0]
 
 
 def test_set_mod_enabled_updates_enabled_mod_list():
