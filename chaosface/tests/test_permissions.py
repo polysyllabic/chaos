@@ -78,11 +78,33 @@ def test_reset_all_uses_current_game_when_selected_game_is_none():
   relay = ChaosRelay()
   relay.chaos_config['current_game'] = 'The Last of Us 2'
   relay.chaos_config['selected_game'] = 'NONE'
+  relay.set_vote_time(0.73)
 
   relay.reset_all()
 
   assert relay.game_name == 'The Last of Us 2'
   assert relay.selected_game == 'The Last of Us 2'
+  assert relay.vote_time == 0.0
+
+
+def test_initialize_game_resets_vote_timer_and_closes_vote():
+  relay = ChaosRelay()
+  relay.set_vote_open(True)
+  relay.set_vote_time(0.61)
+
+  relay.initialize_game({
+    'game': 'The Last of Us 2',
+    'errors': 0,
+    'nmods': 3,
+    'modtime': 180.0,
+    'mods': [
+      {'name': 'Mod A', 'desc': 'A', 'groups': ['Test']},
+      {'name': 'Mod B', 'desc': 'B', 'groups': ['Test']},
+    ],
+  })
+
+  assert relay.vote_open is False
+  assert relay.vote_time == 0.0
 
 
 def test_set_mod_enabled_updates_enabled_mod_list():

@@ -595,7 +595,7 @@ class ChaosRelay:
     self.set_ui_tls_selfsigned_hostname(self.get_attribute('ui_tls_selfsigned_hostname'))
 
     self.set_game_errors(0)
-    self.set_vote_time(0.5)
+    self.set_vote_time(0.0)
     self.set_vote_open(False)
     self.set_paused(True)
     self.set_paused_bright(True)
@@ -661,6 +661,8 @@ class ChaosRelay:
     self.reset_softmax()
     self.reset_current_mods()
     self.reset_voting()
+    self.set_vote_open(False)
+    self.set_vote_time(0.0)
     self.save_mod_info()
     self.set_new_game_data(True)
     self.valid_data = True
