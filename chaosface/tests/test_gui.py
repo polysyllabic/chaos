@@ -37,6 +37,8 @@ def test_overlay_html_builders_return_html():
   assert '<html>' in active_mods_overlay_html().lower()
   assert '<html>' in current_votes_overlay_html().lower()
   assert '<html>' in vote_timer_overlay_html().lower()
+  assert 'overlay_current_votes_text_align' in current_votes_overlay_html()
+  assert 'overlay_active_mods_text_align' in active_mods_overlay_html()
 
 
 def test_overlay_state_includes_text_side_settings():
@@ -69,6 +71,38 @@ def test_overlay_text_side_setters_normalize_invalid_values():
   finally:
     config.relay.set_overlay_current_votes_text_side(prior_votes_side)
     config.relay.set_overlay_active_mods_text_side(prior_mods_side)
+
+
+def test_overlay_state_includes_text_alignment_settings():
+  import chaosface.config.globals as config
+  from chaosface.gui.overlay_state import overlay_state_payload
+
+  prior_votes_align = getattr(config.relay, 'overlay_current_votes_text_align', 'left')
+  prior_mods_align = getattr(config.relay, 'overlay_active_mods_text_align', 'left')
+  try:
+    config.relay.set_overlay_current_votes_text_align('center')
+    config.relay.set_overlay_active_mods_text_align('right')
+    payload = overlay_state_payload()
+    assert payload['overlay_current_votes_text_align'] == 'center'
+    assert payload['overlay_active_mods_text_align'] == 'right'
+  finally:
+    config.relay.set_overlay_current_votes_text_align(prior_votes_align)
+    config.relay.set_overlay_active_mods_text_align(prior_mods_align)
+
+
+def test_overlay_text_alignment_setters_normalize_invalid_values():
+  import chaosface.config.globals as config
+
+  prior_votes_align = getattr(config.relay, 'overlay_current_votes_text_align', 'left')
+  prior_mods_align = getattr(config.relay, 'overlay_active_mods_text_align', 'left')
+  try:
+    config.relay.set_overlay_current_votes_text_align('invalid')
+    config.relay.set_overlay_active_mods_text_align('')
+    assert config.relay.overlay_current_votes_text_align == 'left'
+    assert config.relay.overlay_active_mods_text_align == 'left'
+  finally:
+    config.relay.set_overlay_current_votes_text_align(prior_votes_align)
+    config.relay.set_overlay_active_mods_text_align(prior_mods_align)
 
 
 def test_ui_dark_mode_setter_updates_config():

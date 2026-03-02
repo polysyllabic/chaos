@@ -83,6 +83,8 @@ def current_votes_overlay_html() -> str:
         const barColor = String(state.overlay_current_votes_bar_color || 'rgba(245, 245, 245, 0.8)');
         const gap = Math.max(0, Math.min(120, Number(state.overlay_current_votes_gap || 10)));
         const textSide = String(state.overlay_current_votes_text_side || 'right').toLowerCase() === 'left' ? 'left' : 'right';
+        const textAlignRaw = String(state.overlay_current_votes_text_align || 'left').toLowerCase();
+        const textAlign = (textAlignRaw === 'left' || textAlignRaw === 'center' || textAlignRaw === 'right') ? textAlignRaw : 'left';
         document.body.style.color = textColor;
         const names = state.candidate_mods || [];
         const votes = state.votes || [];
@@ -95,7 +97,7 @@ def current_votes_overlay_html() -> str:
           const vote = Number(votes[i] || 0);
           const percent = totalVotes > 0 ? (vote / totalVotes) : (count > 0 ? 1 / count : 0);
           const pctText = `${Math.round(percent * 100)}%`;
-          const labelHtml = `<div class="label">${i + 1} ${name}</div>`;
+          const labelHtml = `<div class="label" style="text-align:${textAlign}">${i + 1} ${name}</div>`;
           const barHtml = `<div class="bar-cell"><div class="bar"><div class="bar-fill" style="width:${percent * 100}%;background:${barColor}"></div><div class="bar-text">${pctText}</div></div></div>`;
           const rowHtml = (textSide === 'left') ? `${labelHtml}${barHtml}` : `${barHtml}${labelHtml}`;
           html += `

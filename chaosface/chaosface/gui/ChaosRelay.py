@@ -74,9 +74,11 @@ chaos_defaults = {
   'overlay_current_votes_text_color': '#ffffff',
   'overlay_current_votes_bar_color': 'rgba(245, 245, 245, 0.8)',
   'overlay_current_votes_text_side': 'right',
+  'overlay_current_votes_text_align': 'left',
   'overlay_active_mods_text_color': '#ffffff',
   'overlay_active_mods_bar_color': 'rgba(245, 245, 245, 0.75)',
   'overlay_active_mods_text_side': 'right',
+  'overlay_active_mods_text_align': 'left',
   'overlay_vote_timer_bar_color': 'rgba(240, 240, 240, 0.85)',
   'use_gui': True,
   'ui_rate': 20.0,
@@ -258,9 +260,11 @@ class ChaosRelay:
     self.overlay_current_votes_text_color = '#ffffff'
     self.overlay_current_votes_bar_color = 'rgba(245, 245, 245, 0.8)'
     self.overlay_current_votes_text_side = 'right'
+    self.overlay_current_votes_text_align = 'left'
     self.overlay_active_mods_text_color = '#ffffff'
     self.overlay_active_mods_bar_color = 'rgba(245, 245, 245, 0.75)'
     self.overlay_active_mods_text_side = 'right'
+    self.overlay_active_mods_text_align = 'left'
     self.overlay_vote_timer_bar_color = 'rgba(240, 240, 240, 0.85)'
     self.overlay_font = ''
     self.overlay_font_size = 24.0
@@ -564,9 +568,11 @@ class ChaosRelay:
     self.set_overlay_current_votes_text_color(self.get_attribute('overlay_current_votes_text_color'))
     self.set_overlay_current_votes_bar_color(self.get_attribute('overlay_current_votes_bar_color'))
     self.set_overlay_current_votes_text_side(self.get_attribute('overlay_current_votes_text_side'))
+    self.set_overlay_current_votes_text_align(self.get_attribute('overlay_current_votes_text_align'))
     self.set_overlay_active_mods_text_color(self.get_attribute('overlay_active_mods_text_color'))
     self.set_overlay_active_mods_bar_color(self.get_attribute('overlay_active_mods_bar_color'))
     self.set_overlay_active_mods_text_side(self.get_attribute('overlay_active_mods_text_side'))
+    self.set_overlay_active_mods_text_align(self.get_attribute('overlay_active_mods_text_align'))
     self.set_overlay_vote_timer_bar_color(self.get_attribute('overlay_vote_timer_bar_color'))
     self.set_pi_host(self.get_attribute('pi_host'))
     self.set_listen_port(self.get_attribute('listen_port'))
@@ -989,6 +995,12 @@ class ChaosRelay:
       side = 'right'
     self._set_value('overlay_current_votes_text_side', side, 'overlay_current_votes_text_side')
 
+  def set_overlay_current_votes_text_align(self, value):
+    align = str(value or '').strip().lower()
+    if align not in ('left', 'center', 'right'):
+      align = 'left'
+    self._set_value('overlay_current_votes_text_align', align, 'overlay_current_votes_text_align')
+
   def set_overlay_active_mods_text_color(self, value):
     color = self._normalize_overlay_color(value, '#ffffff')
     self._set_value('overlay_active_mods_text_color', color, 'overlay_active_mods_text_color')
@@ -1002,6 +1014,12 @@ class ChaosRelay:
     if side not in ('left', 'right'):
       side = 'right'
     self._set_value('overlay_active_mods_text_side', side, 'overlay_active_mods_text_side')
+
+  def set_overlay_active_mods_text_align(self, value):
+    align = str(value or '').strip().lower()
+    if align not in ('left', 'center', 'right'):
+      align = 'left'
+    self._set_value('overlay_active_mods_text_align', align, 'overlay_active_mods_text_align')
 
   def set_overlay_vote_timer_bar_color(self, value):
     color = self._normalize_overlay_color(value, 'rgba(240, 240, 240, 0.85)')

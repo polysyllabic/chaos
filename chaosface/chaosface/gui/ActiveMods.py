@@ -58,6 +58,8 @@ def active_mods_overlay_html() -> str:
         const barColor = String(state.overlay_active_mods_bar_color || 'rgba(245, 245, 245, 0.75)');
         const gap = Math.max(0, Math.min(120, Number(state.overlay_active_mods_gap || 10)));
         const textSide = String(state.overlay_active_mods_text_side || 'right').toLowerCase() === 'left' ? 'left' : 'right';
+        const textAlignRaw = String(state.overlay_active_mods_text_align || 'left').toLowerCase();
+        const textAlign = (textAlignRaw === 'left' || textAlignRaw === 'center' || textAlignRaw === 'right') ? textAlignRaw : 'left';
         document.body.style.color = textColor;
         const names = state.active_mods || [];
         const times = state.mod_times || [];
@@ -66,7 +68,7 @@ def active_mods_overlay_html() -> str:
         for (let i = 0; i < count; i++) {
           const modName = names[i] || '';
           const progress = Math.max(0, Math.min(1, Number(times[i] || 0)));
-          const labelHtml = `<div class="mod-label">${modName}</div>`;
+          const labelHtml = `<div class="mod-label" style="text-align:${textAlign}">${modName}</div>`;
           const barHtml = `<div class="bar-cell"><div class="bar"><div class="bar-fill" style="width:${progress * 100}%;background:${barColor}"></div></div></div>`;
           const rowHtml = (textSide === 'left') ? `${labelHtml}${barHtml}` : `${barHtml}${labelHtml}`;
           html += `
