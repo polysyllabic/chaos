@@ -136,8 +136,8 @@ void MenuItem::selectItem(Sequence& seq) {
       menu_items.addToSequence(seq, "menu up");
     }
 
-    // Submenus require a button press
-    if (! isOption()) {
+    // Enter submenus while navigating. Select/command items are activated in setState().
+    if (isMenu()) {
       menu_items.addToSequence(seq, "menu select");
     }
 

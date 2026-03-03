@@ -284,6 +284,26 @@ static bool testCounterDrivenSelectRestore() {
   return ok;
 }
 
+static bool testSelectItemDoesNotActivateSelectType() {
+  MockMenu mock;
+  Controller controller;
+  Sequence seq(controller);
+  bool ok = true;
+
+  auto select_item = std::make_shared<MenuItem>(
+      mock, "select_item", 3, 0, 0, false,
+      false, true, false, false,
+      nullptr, nullptr, nullptr, CounterAction::NONE);
+  mock.items["select_item"] = select_item;
+
+  select_item->selectItem(seq);
+  ok &= check(mock.step_counts["menu select"] == 0,
+              "selectItem should not activate select-type menu items");
+  ok &= check(mock.step_counts["menu down"] == 3,
+              "selectItem should still navigate to select-type item offset");
+  return ok;
+}
+
 int main() {
   bool ok = true;
   ok &= testSelectUsesCorrectedOffset();
@@ -291,6 +311,7 @@ int main() {
   ok &= testGuardedVisibilitySync();
   ok &= testZeroResetCounterAction();
   ok &= testSelectCounterDirection();
+  ok &= testSelectItemDoesNotActivateSelectType();
   ok &= testParentCursorRestoredOnSelect();
   ok &= testCounterDrivenSelectRestore();
 
