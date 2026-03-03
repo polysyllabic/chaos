@@ -35,7 +35,7 @@ CooldownModifier::CooldownModifier(toml::table& config, EngineInterface* e) {
   
   TOMLUtils::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
 							  "begin_sequence", "finish_sequence", "applies_to", "while", "while_operation",
-                "cumulative", "time_on", "time_off", "trigger", "unlisted"});
+                "start_type", "time_on", "time_off", "trigger", "unlisted"});
   initialize(config, e);
   if (commands.empty()) {
     throw std::runtime_error("No command associated with cooldown modifier.");
@@ -53,9 +53,29 @@ CooldownModifier::CooldownModifier(toml::table& config, EngineInterface* e) {
 
   engine->addGameCommands(config, "trigger", trigger);
 
-  cumulative = config["cumulative"].value_or(false);
+  if (config.contains("cumulative")) {
+    throw std::runtime_error(
+        "Cooldown key 'cumulative' is no longer supported. Use start_type = \"cumulative\".");
+  }
 
-  PLOG_VERBOSE << "Cooldown " << getName() << ": time_on = " << time_on << "; time_off = " << time_off << "; cumulative = " << cumulative;
+  start_type = CooldownStartType::TRIGGER;
+  std::optional<std::string> start_type_str = config["start_type"].value<std::string>();
+  if (start_type_str) {
+    if (*start_type_str == "trigger") {
+      start_type = CooldownStartType::TRIGGER;
+    } else if (*start_type_str == "cumulative") {
+      start_type = CooldownStartType::CUMULATIVE;
+    } else if (*start_type_str == "cancelable") {
+      start_type = CooldownStartType::CANCELABLE;
+    } else {
+      throw std::runtime_error("Unrecognized start_type: " + *start_type_str);
+    }
+  }
+
+  PLOG_VERBOSE << "Cooldown " << getName() << ": time_on = " << time_on << "; time_off = " << time_off
+               << "; start_type = "
+               << ((start_type == CooldownStartType::TRIGGER) ? "trigger"
+                   : ((start_type == CooldownStartType::CUMULATIVE) ? "cumulative" : "cancelable"));
   for (auto& t : trigger) {
     PLOG_VERBOSE << "Trigger on event " << t->getName();
   }
@@ -91,9 +111,18 @@ void CooldownModifier::update() {
       PLOG_DEBUG << "Cooldown for " << getName() << " expired";
     }
   } else if (state == CooldownState::ALLOW) {
-    // Increment cooldown timer until time_on exceeded. Cumulative cooldowns only increment
-    // if the while condition is true
-    if (!cumulative || inCondition()) {
+    const bool cond = inCondition();
+    if (start_type == CooldownStartType::CANCELABLE && !cond) {
+      // Cancelable cooldowns reset completely if the condition drops before block starts.
+      cooldown_timer = 0;
+      state = CooldownState::UNTRIGGERED;
+      PLOG_DEBUG << "Cooldown for " << getName() << " canceled before block started";
+      return;
+    }
+
+    // Trigger mode always advances once ALLOW begins.
+    // Cumulative and cancelable modes advance only while condition is true.
+    if (start_type == CooldownStartType::TRIGGER || cond) {
       cooldown_timer += deltaT;
       PLOG_VERBOSE << "timer_on period = " << cooldown_timer;
     }

@@ -38,6 +38,15 @@ namespace Chaos {
   enum class CooldownState { UNTRIGGERED, ALLOW, BLOCK };
 
   /**
+   * \brief Defines how the allow period starts and accumulates time.
+   *
+   * TRIGGER: Once allow begins, the timer advances regardless of while-condition changes.
+   * CUMULATIVE: Allow-time only advances while while-condition is true.
+   * CANCELABLE: Like cumulative, but if while-condition drops during allow, reset to untriggered.
+   */
+  enum class CooldownStartType { TRIGGER, CUMULATIVE, CANCELABLE };
+
+  /**
    * \brief Modifier that allows an action for a set period of time and then blocks it until a
    * cooldown period has expired.
    *
@@ -66,10 +75,9 @@ namespace Chaos {
     CooldownState state;
 
     /**
-     * If true, the allow-period only accumulates when the while-condition is true.
-     * If false, the cycle continues whether or not the while-condition continues to apply.
+     * Defines how the allow period behaves while in the ALLOW state.
      */
-    bool cumulative;
+    CooldownStartType start_type;
 
     /**
      * Time that the event is allowed before we block it
@@ -98,4 +106,3 @@ namespace Chaos {
     bool tweak(DeviceEvent& event);
   };
 };
-

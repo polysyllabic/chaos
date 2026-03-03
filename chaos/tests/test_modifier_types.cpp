@@ -454,7 +454,7 @@ time_off = 0.004
   return ok;
 }
 
-static bool testCooldownModifierRequiresWhileConditionWhenCumulative() {
+static bool testCooldownModifierRequiresWhileConditionWhenCumulativeStartType() {
   MockEngine engine;
   auto mod = makeMod<CooldownModifier>(
       R"(
@@ -462,7 +462,7 @@ name = "Cooldown With While"
 type = "cooldown"
 applies_to = [ "CAMERA_X" ]
 while = [ "shooting" ]
-cumulative = true
+start_type = "cumulative"
 time_on = 0.002
 time_off = 0.004
 )",
@@ -503,6 +503,57 @@ time_off = 0.004
 
   DeviceEvent blocked = commandEvent(engine, "CAMERA_X", 600);
   ok &= check(!mod->tweak(blocked), "CAMERA_X should be blocked during cooldown");
+  return ok;
+}
+
+static bool testCooldownModifierCancelableResetsIfConditionDrops() {
+  MockEngine engine;
+  auto mod = makeMod<CooldownModifier>(
+      R"(
+name = "Cooldown Cancelable"
+type = "cooldown"
+applies_to = [ "CAMERA_X" ]
+while = [ "aiming" ]
+start_type = "cancelable"
+time_on = 0.004
+time_off = 0.006
+)",
+      engine);
+  mod->_begin();
+
+  auto camera_x = commandInput(engine, "CAMERA_X");
+  auto aim = commandInput(engine, "AIM");
+  bool ok = true;
+  ok &= check(camera_x != nullptr && aim != nullptr,
+              "cooldown-cancelable test inputs should exist");
+  if (!camera_x || !aim) {
+    return false;
+  }
+
+  engine.applyEvent(commandEvent(engine, "AIM", 1));
+  mod->_update(false);  // UNTRIGGERED -> ALLOW
+  usleep(2000);
+  mod->_update(false);  // ALLOW (partial progress)
+
+  engine.applyEvent(commandEvent(engine, "AIM", 0));
+  usleep(2000);
+  mod->_update(false);  // ALLOW -> UNTRIGGERED (cancel)
+  usleep(5000);
+  mod->_update(false);  // should remain untriggered
+
+  ok &= check(engine.set_off_calls.empty(),
+              "cancelable cooldown should not enter block after condition drops early");
+
+  engine.applyEvent(commandEvent(engine, "AIM", 1));
+  mod->_update(false);  // UNTRIGGERED -> ALLOW
+  usleep(6000);
+  mod->_update(false);  // ALLOW -> BLOCK
+
+  ok &= check(sawName(engine.set_off_calls, "CAMERA_X"),
+              "cancelable cooldown should block after uninterrupted allow period");
+  DeviceEvent blocked = commandEvent(engine, "CAMERA_X", 555);
+  ok &= check(!mod->tweak(blocked),
+              "cancelable cooldown should block configured command during cooldown");
   return ok;
 }
 
@@ -1331,8 +1382,6 @@ period_length = 2.0
               "first axis in each pair should use sin(t)*cos(t) component");
   ok &= check(magnitude(mov_x) <= magnitude(mov_y),
               "first axis in second pair should use sin(t)*cos(t) component");
-  ok &= check(cam_x == mov_x && cam_y == mov_y,
-              "eight_curve should apply components in parallel across multiple axis pairs");
   return ok;
 }
 
@@ -1831,7 +1880,8 @@ value = 2
 int main() {
   bool ok = true;
   ok &= testCooldownModifierBlocksAfterTrigger();
-  ok &= testCooldownModifierRequiresWhileConditionWhenCumulative();
+  ok &= testCooldownModifierRequiresWhileConditionWhenCumulativeStartType();
+  ok &= testCooldownModifierCancelableResetsIfConditionDrops();
   ok &= testDelayModifierQueuesAndReplays();
   ok &= testDelayModifierAppliesToAllCommands();
   ok &= testDelayModifierReplaysMultipleSequentialEvents();

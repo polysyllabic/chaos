@@ -478,7 +478,7 @@ groups = [ "movement" ]
 applies_to = [ "dodge/sprint" ]
 while = [ "movement", "sprint" ]
 trigger = [ "dodge/sprint", "vertical movement", "horizontal movement" ]
-cumulative = true
+start_type = "cumulative"
 time_on = 2.0
 time_off = 4.0
 
@@ -489,6 +489,7 @@ type = "cooldown"
 groups = [ "combat" ]
 applies_to = [ "aiming" ]
 trigger = [ "aiming" ]
+start_type = "cancelable"
 time_on = 1.0
 time_off = 3.0
 
