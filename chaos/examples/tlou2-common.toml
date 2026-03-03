@@ -1237,11 +1237,9 @@ groups = [ "Combat" ]
 block_while_busy = [ "aiming", "shoot" ]
 while = [ "aiming" ]
 trigger = [ "shoot" ]
-start_delay = 0.2
 repeat_sequence = [
-  { event = "release", command = "shoot", delay = 1.0 },
-  { event = "hold", command = "shoot", delay = 0.2 },
-  { event = "release", command = "shoot" }
+  { event = "press", command = "shoot", delay = 0.2 },
+  { event = "press", command = "shoot" },
   ]
 
 [[modifier]]
