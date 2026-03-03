@@ -658,10 +658,22 @@ In addition to the standard keys for all modifiers, the following keys are
   `value`: If `random` is true, the number of child mods to select at random.
   (_Optional, default = 1_)
 
+  `select_from`: If `random` is true, an explicit list of modifiers that forms the random
+  candidate pool. (_Optional_)
+
+  `select_groups`: If `random` is true, a list of groups whose union forms the random candidate
+  pool. Parent modifiers are excluded from this group-generated pool. (_Optional_)
+
 Parent modifiers do not accept the `while` condition list.
 
 The random-selection process will exclude picking any parent modifiers that use random
 selection, so recursively selecting the oneself is prevented.
+
+If `random` is true and neither `select_from` nor `select_groups` is defined, random selection
+uses the unrestricted behavior above.
+
+`select_from` and `select_groups` are mutually exclusive. Also, listing any parent modifier in
+`select_from` is an error.
 
 The `children` key is optional if `random` is true, but if it is false you must have at least
 one modifier listed there.

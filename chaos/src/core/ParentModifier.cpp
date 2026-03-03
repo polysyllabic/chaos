@@ -27,6 +27,25 @@
 
 using namespace Chaos;
 
+namespace {
+std::vector<std::string> parseStringArray(const toml::table& config, const std::string& key) {
+  const toml::array* values = config.get(key)->as_array();
+  if (!values || !values->is_homogeneous(toml::node_type::string)) {
+    throw std::runtime_error("'" + key + "' must be an array of strings");
+  }
+
+  std::vector<std::string> parsed;
+  parsed.reserve(values->size());
+  for (const auto& elem : *values) {
+    std::optional<std::string> item = elem.value<std::string>();
+    if (item) {
+      parsed.push_back(*item);
+    }
+  }
+  return parsed;
+}
+}
+
 const std::string ParentModifier::mod_type = "parent";
 
 ParentModifier::ParentModifier(toml::table& config, EngineInterface* e) {
@@ -36,7 +55,7 @@ ParentModifier::ParentModifier(toml::table& config, EngineInterface* e) {
 
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "begin_sequence", "finish_sequence",
-      "children", "random", "value", "unlisted"});
+      "children", "random", "value", "select_from", "select_groups", "unlisted"});
   initialize(config, e);
  
   bool random_selection = config["random"].value_or(false);
@@ -49,23 +68,49 @@ ParentModifier::ParentModifier(toml::table& config, EngineInterface* e) {
     }
   }
 
+  if (config.contains("select_from") && config.contains("select_groups")) {
+    throw std::runtime_error("Use either 'select_from' or 'select_groups', not both.");
+  }
+
+  if (!random_selection && (config.contains("select_from") || config.contains("select_groups"))) {
+    throw std::runtime_error("'select_from' and 'select_groups' can only be used when 'random' is true");
+  }
+
+  if (config.contains("select_from")) {
+    const auto select_from = parseStringArray(config, "select_from");
+    std::unordered_set<std::string> seen_names;
+    for (const auto& mod_name : select_from) {
+      std::shared_ptr<Modifier> item = e->getModifier(mod_name);
+      if (!item) {
+        throw std::runtime_error("Unrecognized command: " + mod_name + " in select_from");
+      }
+      if (item->getModType() == mod_type) {
+        throw std::runtime_error("Parent modifier '" + mod_name + "' cannot be listed in select_from");
+      }
+      if (seen_names.insert(mod_name).second) {
+        random_select_from.push_back(item);
+      }
+    }
+  }
+
+  if (config.contains("select_groups")) {
+    const auto select_groups = parseStringArray(config, "select_groups");
+    for (const auto& group_name : select_groups) {
+      random_select_groups.insert(group_name);
+    }
+  }
+
   if (config.contains("children")) {
-    const toml::array* cmd_list = config.get("children")->as_array();
-    if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
-      throw std::runtime_error("'children' must be an array of modifier names");
-   	}
-	
-    for (auto& elem : *cmd_list) {
-      std::optional<std::string> cmd = elem.value<std::string>();
-      assert(cmd);
+    const auto child_list = parseStringArray(config, "children");
+    for (const auto& cmd : child_list) {
       // check that the string matches the name of a previously defined object
-   	  std::shared_ptr<Modifier> item =  e->getModifier(*cmd);
+      std::shared_ptr<Modifier> item = e->getModifier(cmd);
       if (item) {
         fixed_children.push_back(item);
-        PLOG_VERBOSE << "Added '" + *cmd + "' to fixed_children.";
+        PLOG_VERBOSE << "Added '" + cmd + "' to fixed_children.";
       } else {
-        throw std::runtime_error("Unrecognized command: " + *cmd + " in children");
-     	}
+        throw std::runtime_error("Unrecognized command: " + cmd + " in children");
+      }
     }
   }
   if (!random_selection && fixed_children.empty()) {
@@ -95,20 +140,57 @@ void ParentModifier::buildRandomList() {
   }
 
   std::vector<std::pair<std::string, std::shared_ptr<Modifier>>> eligible;
-  eligible.reserve(all_mods.size());
-  for (const auto& [m_name, mod] : all_mods) {
-    if (!mod) {
-      continue;
+  if (!random_select_from.empty()) {
+    eligible.reserve(random_select_from.size());
+    for (const auto& mod : random_select_from) {
+      if (!mod) {
+        continue;
+      }
+      eligible.emplace_back(mod->getName(), mod);
     }
-    // Exclude parent mods that do random child selection. (This excludes self.)
-    if (mod->getModType() == mod_type && !mod->allowAsChild()) {
-      continue;
+  } else {
+    eligible.reserve(all_mods.size());
+    for (const auto& [m_name, mod] : all_mods) {
+      if (!mod) {
+        continue;
+      }
+
+      if (!random_select_groups.empty()) {
+        // Group-limited random selection never includes parent modifiers.
+        if (mod->getModType() == mod_type) {
+          continue;
+        }
+        bool in_group = false;
+        const Json::Value groups = mod->getGroups();
+        for (const auto& group : groups) {
+          if (group.isString() &&
+              random_select_groups.find(group.asString()) != random_select_groups.end()) {
+            in_group = true;
+            break;
+          }
+        }
+        if (!in_group) {
+          continue;
+        }
+      } else {
+        // Exclude parent mods that do random child selection. (This excludes self.)
+        if (mod->getModType() == mod_type && !mod->allowAsChild()) {
+          continue;
+        }
+      }
+      eligible.emplace_back(m_name, mod);
     }
-    if (used_names.find(m_name) != used_names.end()) {
-      continue;
-    }
-    eligible.emplace_back(m_name, mod);
   }
+
+  std::vector<std::pair<std::string, std::shared_ptr<Modifier>>> filtered;
+  filtered.reserve(eligible.size());
+  for (const auto& [name, mod] : eligible) {
+    if (used_names.find(name) != used_names.end()) {
+      continue;
+    }
+    filtered.emplace_back(name, mod);
+  }
+  eligible.swap(filtered);
 
   if (eligible.empty()) {
     PLOG_WARNING << "No eligible modifiers available for random children in " << getName();

@@ -2035,6 +2035,181 @@ value = 2
   return ok;
 }
 
+static bool testParentModifierRandomSelectFromRestrictsPool() {
+  ProbeChildModifier::reset();
+  MockEngine engine;
+
+  auto child1 = makeMod<ProbeChildModifier>(
+      R"(
+name = "select_from_child1"
+type = "probe_child"
+)",
+      engine);
+  auto child2 = makeMod<ProbeChildModifier>(
+      R"(
+name = "select_from_child2"
+type = "probe_child"
+)",
+      engine);
+  auto child3 = makeMod<ProbeChildModifier>(
+      R"(
+name = "select_from_child3"
+type = "probe_child"
+)",
+      engine);
+
+  engine.modifier_map["select_from_child1"] = child1;
+  engine.modifier_map["select_from_child2"] = child2;
+  engine.modifier_map["select_from_child3"] = child3;
+
+  auto parent = makeMod<ParentModifier>(
+      R"(
+name = "select_from_parent"
+type = "parent"
+random = true
+value = 2
+select_from = [ "select_from_child1", "select_from_child2" ]
+)",
+      engine);
+
+  parent->begin();
+  bool ok = true;
+  ok &= check(ProbeChildModifier::begin_calls["select_from_child1"] == 1,
+              "select_from should include listed child1");
+  ok &= check(ProbeChildModifier::begin_calls["select_from_child2"] == 1,
+              "select_from should include listed child2");
+  ok &= check(ProbeChildModifier::begin_calls["select_from_child3"] == 0,
+              "select_from should exclude children not in the configured list");
+  return ok;
+}
+
+static bool testParentModifierRandomSelectFromRejectsParentEntries() {
+  ProbeChildModifier::reset();
+  MockEngine engine;
+
+  auto child = makeMod<ProbeChildModifier>(
+      R"(
+name = "parent_select_child"
+type = "probe_child"
+)",
+      engine);
+  engine.modifier_map["parent_select_child"] = child;
+
+  auto nested_parent = makeMod<ParentModifier>(
+      R"(
+name = "nested_parent"
+type = "parent"
+children = [ "parent_select_child" ]
+)",
+      engine);
+  engine.modifier_map["nested_parent"] = nested_parent;
+
+  bool threw = false;
+  try {
+    (void) makeMod<ParentModifier>(
+        R"(
+name = "invalid_select_from_parent"
+type = "parent"
+random = true
+select_from = [ "nested_parent" ]
+)",
+        engine);
+  } catch (const std::runtime_error&) {
+    threw = true;
+  }
+
+  return check(threw, "select_from should reject parent modifiers at parse time");
+}
+
+static bool testParentModifierRandomSelectGroupsRestrictsPool() {
+  ProbeChildModifier::reset();
+  MockEngine engine;
+
+  auto child1 = makeMod<ProbeChildModifier>(
+      R"(
+name = "select_groups_child1"
+type = "probe_child"
+groups = [ "group_a" ]
+)",
+      engine);
+  auto child2 = makeMod<ProbeChildModifier>(
+      R"(
+name = "select_groups_child2"
+type = "probe_child"
+groups = [ "group_b" ]
+)",
+      engine);
+  auto child3 = makeMod<ProbeChildModifier>(
+      R"(
+name = "select_groups_child3"
+type = "probe_child"
+groups = [ "group_c" ]
+)",
+      engine);
+
+  engine.modifier_map["select_groups_child1"] = child1;
+  engine.modifier_map["select_groups_child2"] = child2;
+  engine.modifier_map["select_groups_child3"] = child3;
+
+  auto parent = makeMod<ParentModifier>(
+      R"(
+name = "select_groups_parent"
+type = "parent"
+random = true
+value = 2
+select_groups = [ "group_a", "group_b" ]
+)",
+      engine);
+
+  parent->begin();
+  bool ok = true;
+  ok &= check(ProbeChildModifier::begin_calls["select_groups_child1"] == 1,
+              "select_groups should include child in group_a");
+  ok &= check(ProbeChildModifier::begin_calls["select_groups_child2"] == 1,
+              "select_groups should include child in group_b");
+  ok &= check(ProbeChildModifier::begin_calls["select_groups_child3"] == 0,
+              "select_groups should exclude children outside selected groups");
+  return ok;
+}
+
+static bool testParentModifierRandomSelectGroupsExcludesParents() {
+  ProbeChildModifier::reset();
+  MockEngine engine;
+
+  auto child = makeMod<ProbeChildModifier>(
+      R"(
+name = "groups_parent_child"
+type = "probe_child"
+)",
+      engine);
+  engine.modifier_map["groups_parent_child"] = child;
+
+  auto plain_parent = makeMod<ParentModifier>(
+      R"(
+name = "groups_plain_parent"
+type = "parent"
+children = [ "groups_parent_child" ]
+)",
+      engine);
+  engine.modifier_map["groups_plain_parent"] = plain_parent;
+
+  auto random_parent = makeMod<ParentModifier>(
+      R"(
+name = "groups_random_parent"
+type = "parent"
+random = true
+value = 1
+select_groups = [ "parent" ]
+)",
+      engine);
+
+  random_parent->begin();
+  bool ok = true;
+  ok &= check(ProbeChildModifier::begin_calls["groups_parent_child"] == 0,
+              "select_groups should not choose parent modifiers");
+  return ok;
+}
+
 int main() {
   bool ok = true;
   ok &= testCooldownModifierBlocksAfterTrigger();
@@ -2077,6 +2252,10 @@ int main() {
   ok &= testMenuModifierSupportsDefaultAndMultipleEntries();
   ok &= testParentModifierForwardsLifecycleAndTweak();
   ok &= testParentModifierRandomSelectionChoosesRequestedCount();
+  ok &= testParentModifierRandomSelectFromRestrictsPool();
+  ok &= testParentModifierRandomSelectFromRejectsParentEntries();
+  ok &= testParentModifierRandomSelectGroupsRestrictsPool();
+  ok &= testParentModifierRandomSelectGroupsExcludesParents();
 
   if (!ok) {
     return 1;

@@ -1995,6 +1995,7 @@ value = 5
 name = "Navigation Assistance"
 description = "Keeps pointing camera in direction of story progression"
 type = "parent"
+groups = [ "Movement", "View" ]
 children = [ "Enable Navigation Assistance", "Periodic Navigation Assistance"]
 
 [[modifier]]
@@ -2003,3 +2004,12 @@ description = "Random joystick motion. Also don't push things too far, or you ma
 type = "parent"
 groups = [ "Movement", "View" ]
 children = ["Random Movement", "Stumblebum"]
+
+[[modifier]]
+name = "Receive Blessing"
+description = "Give the streamer a random buff"
+type = "parent"
+groups = [ "Buff" ]
+random = true
+select_groups = [ "Buff" ]
+value = 1

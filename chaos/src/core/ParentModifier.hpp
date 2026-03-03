@@ -19,6 +19,7 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <unordered_set>
 #include <toml++/toml.h>
 
 #include "Modifier.hpp"
@@ -56,7 +57,17 @@ namespace Chaos {
      * \brief Number of random modifiers chosen
      * 
      */
-    short num_randos;
+    short num_randos{0};
+
+    /**
+     * Optional fixed candidate pool for random selection.
+     */
+    std::vector<std::shared_ptr<Modifier>> random_select_from;
+
+    /**
+     * Optional group filter for random selection.
+     */
+    std::unordered_set<std::string> random_select_groups;
 
     void buildRandomList();
   public:
