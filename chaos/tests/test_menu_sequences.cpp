@@ -2,6 +2,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <Controller.hpp>
 #include <GameMenu.hpp>
@@ -16,6 +17,7 @@ class MockMenu : public MenuInterface {
 public:
   std::unordered_map<std::string, std::shared_ptr<MenuItem>> items;
   std::unordered_map<std::string, int> step_counts;
+  std::vector<std::string> step_order;
   int offset_updates = 0;
 
   std::shared_ptr<MenuItem> getMenuItem(const std::string& name) override {
@@ -34,6 +36,7 @@ public:
   void addToSequence(Sequence& sequence, const std::string& name) override {
     (void) sequence;
     ++step_counts[name];
+    step_order.push_back(name);
   }
 };
 
@@ -304,6 +307,38 @@ static bool testSelectItemDoesNotActivateSelectType() {
   return ok;
 }
 
+static bool testSelectLeafNavigateBackOrder() {
+  MockMenu mock;
+  Controller controller;
+  Sequence seq(controller);
+  bool ok = true;
+
+  auto select_item = std::make_shared<MenuItem>(
+      mock, "select_item", 4, 0, 0, false,
+      false, true, false, false,
+      nullptr, nullptr, nullptr, CounterAction::NONE);
+  mock.items["select_item"] = select_item;
+
+  select_item->navigateBack(seq);
+  ok &= check(mock.step_counts["menu up"] == 4,
+              "navigateBack should emit expected number of upward steps for positive offsets");
+  ok &= check(mock.step_counts["menu down"] == 0,
+              "navigateBack should not emit downward steps for positive offsets");
+  ok &= check(mock.step_counts["menu exit"] == 1,
+              "navigateBack should emit one menu_exit");
+
+  ok &= check(mock.step_order.size() == 5,
+              "navigateBack should emit 4 navigation steps plus one exit");
+  if (mock.step_order.size() == 5) {
+    ok &= check(mock.step_order[0] == "menu up", "first navigateBack step should be menu_up");
+    ok &= check(mock.step_order[1] == "menu up", "second navigateBack step should be menu_up");
+    ok &= check(mock.step_order[2] == "menu up", "third navigateBack step should be menu_up");
+    ok &= check(mock.step_order[3] == "menu up", "fourth navigateBack step should be menu_up");
+    ok &= check(mock.step_order[4] == "menu exit", "navigateBack should exit after navigation steps");
+  }
+  return ok;
+}
+
 int main() {
   bool ok = true;
   ok &= testSelectUsesCorrectedOffset();
@@ -312,6 +347,7 @@ int main() {
   ok &= testZeroResetCounterAction();
   ok &= testSelectCounterDirection();
   ok &= testSelectItemDoesNotActivateSelectType();
+  ok &= testSelectLeafNavigateBackOrder();
   ok &= testParentCursorRestoredOnSelect();
   ok &= testCounterDrivenSelectRestore();
 

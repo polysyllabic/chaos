@@ -88,13 +88,7 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, bo
 
   PLOG_DEBUG << "Constructing reverse navigation";
   if (remember_last) {
-    if (item->hasSiblingCounter() && !item->isOption()) {
-      // Some select-style menus apply state while navigating. Leaving the cursor on the selected
-      // item avoids immediately undoing the selection when returning to the top.
-      addToSequence(seq, "menu exit");
-    } else {
-      item->navigateBack(seq);
-    }
+    item->navigateBack(seq);
     // Back out, leaving all the parent menus in their default state
     for (s = item->getParent(); s != nullptr; s = s->getParent()) {
       s->navigateBack(seq);
