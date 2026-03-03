@@ -99,12 +99,10 @@ void FormulaModifier::update() {
               : static_cast<int>(amplitude * std::cos(t));
           break;
         case FormulaTypes::EIGHT_CURVE:
-          command_offset[cmd] = first_in_pair
-              ? static_cast<int>(amplitude * std::sin(t) * std::cos(t))
-              : static_cast<int>(amplitude * std::sin(t));
+          command_offset[cmd] = static_cast<int>(amplitude * std::sin(4.0*(i+1)*(t+1.6)));
           break;
         case FormulaTypes::JANKY:
-          command_offset[cmd] = (int) (amplitude * (std::cos(t+4.0*i) + std::cos(2.0*t)/2.0) *
+          command_offset[cmd] = static_cast<int>(amplitude * (std::cos(t+4.0*i) + std::cos(2.0*t)/2.0) *
                                        std::sin((t+4.0*i)/5.0)/2.0);
       }
       event.id = cmd->getInput()->getID();

@@ -49,8 +49,8 @@ namespace Chaos {
    * 
    * - circle:      axis 1 = sin(t)
    *                axis 2 = cos(t)
-   * - eight_curve: axis 1 = sin(t)*cos(t)
-   *                axis 2 = sin(t)
+   * - eight_curve: axis 1 = sin(4(t+1.6))
+   *                axis 2 = sin(8(t+1.6))
    * - janky:       axis 1 = (cos(t) + cos(2t)/2) * sin(t/5)/2
    *                axis 2 = (cos(t+4) + cos(2t)/2) * sin((t+4)/5)/2
    * 
