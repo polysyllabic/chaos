@@ -1275,14 +1275,16 @@ name = "CTG Strat"
 description = "Self immolation resulting in death, at least 7/11 times"
 type = "sequence"
 groups = [ "Combat", "Inventory" ]
+block_while_busy = "ALL"
 begin_sequence = [
   { event = "sequence", command = "disable all" },
   { event = "hold", command = "vertical camera", value = 127 },
-  { event = "release", command = "horizontal camera"},
+  { event = "hold", command = "horizontal camera", value = 0},
   { event = "press", command = "select consumable" },
   { event = "press", command = "select consumable", delay = 3.0 },
   { event = "press", command = "reload/toss", delay = 0.5 },
-  { event = "release", command = "vertical camera"}
+  { event = "release", command = "vertical camera"},
+  { event = "release", command = "horizontal camera"},
   ]
   
 [[modifier]]
