@@ -1431,6 +1431,198 @@ period_length = 2.0
   return ok;
 }
 
+static bool testFormulaRandomOffsetAppliesConstantRangeWithoutDirection() {
+  MockEngine engine;
+  auto mod = makeMod<FormulaModifier>(
+      R"(
+name = "Formula Random Offset Flat"
+type = "formula"
+applies_to = [ "CAMERA_X", "MOVE_X" ]
+formula_type = "random_offset"
+range = [ 12 ]
+)",
+      engine);
+
+  auto camera_x = commandInput(engine, "CAMERA_X");
+  auto move_x = commandInput(engine, "MOVE_X");
+  bool ok = true;
+  ok &= check(camera_x != nullptr && move_x != nullptr, "random_offset flat test inputs should exist");
+  if (!camera_x || !move_x) {
+    return false;
+  }
+
+  mod->_begin();
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.size() == 2,
+              "random_offset should emit one event per configured command");
+  if (engine.pipelined_events.size() < 2) {
+    return false;
+  }
+
+  short first_cam = 0;
+  short first_move = 0;
+  bool saw_cam = false;
+  bool saw_move = false;
+  for (const auto& ev : engine.pipelined_events) {
+    if (ev.id == camera_x->getID()) {
+      first_cam = ev.value;
+      saw_cam = true;
+    } else if (ev.id == move_x->getID()) {
+      first_move = ev.value;
+      saw_move = true;
+    }
+  }
+  ok &= check(saw_cam && saw_move, "random_offset should emit both configured axis events");
+  ok &= check(first_cam == 12 && first_move == 12,
+              "random_offset without direction should apply the same fixed offset to all commands");
+
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.size() == 4,
+              "random_offset should continue emitting fixed offsets across updates");
+  if (engine.pipelined_events.size() < 4) {
+    return false;
+  }
+
+  short second_cam = 0;
+  short second_move = 0;
+  bool saw_second_cam = false;
+  bool saw_second_move = false;
+  for (size_t i = 2; i < engine.pipelined_events.size(); ++i) {
+    const auto& ev = engine.pipelined_events[i];
+    if (ev.id == camera_x->getID()) {
+      second_cam = ev.value;
+      saw_second_cam = true;
+    } else if (ev.id == move_x->getID()) {
+      second_move = ev.value;
+      saw_second_move = true;
+    }
+  }
+  ok &= check(saw_second_cam && saw_second_move,
+              "random_offset second update should emit both configured axis events");
+  ok &= check(second_cam == 12 && second_move == 12,
+              "random_offset should keep the same fixed offset for the full mod lifetime");
+  return ok;
+}
+
+static bool testFormulaRandomOffsetDirectionDecomposesPairs() {
+  MockEngine engine;
+  auto mod = makeMod<FormulaModifier>(
+      R"(
+name = "Formula Random Offset Direction"
+type = "formula"
+applies_to = [ "CAMERA_X", "CAMERA_Y", "MOVE_X", "MOVE_Y" ]
+formula_type = "random_offset"
+range = [ 20 ]
+direction = [ 90 ]
+)",
+      engine);
+
+  auto camera_x = commandInput(engine, "CAMERA_X");
+  auto camera_y = commandInput(engine, "CAMERA_Y");
+  auto move_x = commandInput(engine, "MOVE_X");
+  auto move_y = commandInput(engine, "MOVE_Y");
+  bool ok = true;
+  ok &= check(camera_x != nullptr && camera_y != nullptr && move_x != nullptr && move_y != nullptr,
+              "random_offset direction test inputs should exist");
+  if (!camera_x || !camera_y || !move_x || !move_y) {
+    return false;
+  }
+
+  mod->_begin();
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.size() == 4,
+              "random_offset direction should emit one event per configured command");
+  if (engine.pipelined_events.size() < 4) {
+    return false;
+  }
+
+  short cam_x = 0;
+  short cam_y = 0;
+  short mov_x = 0;
+  short mov_y = 0;
+  bool saw_cam_x = false;
+  bool saw_cam_y = false;
+  bool saw_mov_x = false;
+  bool saw_mov_y = false;
+  for (const auto& ev : engine.pipelined_events) {
+    if (ev.id == camera_x->getID()) {
+      cam_x = ev.value;
+      saw_cam_x = true;
+    } else if (ev.id == camera_y->getID()) {
+      cam_y = ev.value;
+      saw_cam_y = true;
+    } else if (ev.id == move_x->getID()) {
+      mov_x = ev.value;
+      saw_mov_x = true;
+    } else if (ev.id == move_y->getID()) {
+      mov_y = ev.value;
+      saw_mov_y = true;
+    }
+  }
+  ok &= check(saw_cam_x && saw_cam_y && saw_mov_x && saw_mov_y,
+              "random_offset direction should emit all configured axis events");
+
+  auto magnitude = [](short value) { return (value < 0) ? -value : value; };
+  ok &= check(magnitude(cam_x) <= 1 && magnitude(mov_x) <= 1,
+              "direction 90 should produce near-zero x components");
+  ok &= check(cam_y >= 19 && mov_y >= 19,
+              "direction 90 should route offset magnitude to y components");
+  return ok;
+}
+
+static bool testFormulaRandomOffsetHonorsWhileAndRetainsFixedOffset() {
+  MockEngine engine;
+  auto mod = makeMod<FormulaModifier>(
+      R"(
+name = "Formula Random Offset While"
+type = "formula"
+applies_to = [ "CAMERA_X" ]
+formula_type = "random_offset"
+range = [ 15 ]
+while = [ "aiming" ]
+)",
+      engine);
+
+  auto camera_x = commandInput(engine, "CAMERA_X");
+  auto aim = commandInput(engine, "AIM");
+  bool ok = true;
+  ok &= check(camera_x != nullptr && aim != nullptr, "random_offset while test inputs should exist");
+  if (!camera_x || !aim) {
+    return false;
+  }
+
+  mod->_begin();
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.empty(),
+              "random_offset should not emit events while while-condition is false");
+
+  engine.applyEvent(commandEvent(engine, "AIM", 1));
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.size() == 1,
+              "random_offset should emit when while-condition becomes true");
+  if (engine.pipelined_events.size() < 1) {
+    return false;
+  }
+  const short first_val = engine.pipelined_events[0].value;
+  ok &= check(first_val == 15, "random_offset should apply configured fixed range value");
+
+  engine.applyEvent(commandEvent(engine, "AIM", 0));
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.size() == 1,
+              "random_offset should stop emitting when while-condition becomes false");
+
+  engine.applyEvent(commandEvent(engine, "AIM", 1));
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.size() == 2,
+              "random_offset should emit again when while-condition becomes true again");
+  if (engine.pipelined_events.size() < 2) {
+    return false;
+  }
+  ok &= check(engine.pipelined_events[1].value == first_val,
+              "random_offset should retain the same fixed offset across while-condition toggles");
+  return ok;
+}
+
 static bool testScalingModifierScalesAndClamps() {
   MockEngine engine;
   auto mod = makeMod<ScalingModifier>(
@@ -2236,6 +2428,9 @@ int main() {
   ok &= testFormulaModifierSupportsEightCurveType();
   ok &= testFormulaCircleAssignsSinThenCosByAxisOrder();
   ok &= testFormulaEightCurveAlternatesAcrossAxisPairs();
+  ok &= testFormulaRandomOffsetAppliesConstantRangeWithoutDirection();
+  ok &= testFormulaRandomOffsetDirectionDecomposesPairs();
+  ok &= testFormulaRandomOffsetHonorsWhileAndRetainsFixedOffset();
   ok &= testScalingModifierScalesAndClamps();
   ok &= testScalingModifierSupportsNegativeAmplitudeAndOffset();
   ok &= testScalingModifierInvertsVerticalCameraAxis();

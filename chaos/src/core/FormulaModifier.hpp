@@ -28,15 +28,15 @@
 namespace Chaos {
 
   enum class FormulaTypes {
-    CIRCLE, EIGHT_CURVE, JANKY
+    CIRCLE, EIGHT_CURVE, JANKY, RANDOM_OFFSET
   };
 
   /**
    * \brief Modifier that alters the signal through a formula.
    *
    * Formula modifiers apply an offset to incoming signals according to a specified, time-dependent
-   * formula, chosen from a pre-defined set. Currently, we support circles, figure-8s, and a "janky"
-   * pattern that produces an irregular up and down pattern.
+   * formula, chosen from a pre-defined set. Currently, we support circles, figure-8s, a "janky"
+   * pattern that produces an irregular up and down pattern, and a fixed random-offset mode.
    * 
    * The modifier sets an amplitude, set by the user as a proportion of JOYSTICK_MAXIMUM (i.e.,
    * approximately half the full range of an axis), and then multiplies that value by the formula
@@ -53,6 +53,7 @@ namespace Chaos {
    *                axis 2 = sin(8(t+1.6))
    * - janky:       axis 1 = (cos(t) + cos(2t)/2) * sin(t/5)/2
    *                axis 2 = (cos(t+4) + cos(2t)/2) * sin((t+4)/5)/2
+   * - random_offset: axis 1..N use fixed offsets selected once at begin()
    * 
    * Commands altered by formula modifiers should be axes only.
    */
@@ -62,9 +63,15 @@ namespace Chaos {
     FormulaTypes formula_type;
     double amplitude;
     double period_length;
+    bool has_direction;
+    double range_min;
+    double range_max;
+    double direction_min;
+    double direction_max;
 
     std::unordered_map<std::shared_ptr<GameCommand>, int> command_value;
     std::unordered_map<std::shared_ptr<GameCommand>, int> command_offset;
+    std::unordered_map<std::shared_ptr<GameCommand>, int> command_fixed_offset;
 
   public:
     FormulaModifier(toml::table& config, EngineInterface* e);
@@ -78,4 +85,3 @@ namespace Chaos {
     bool tweak(DeviceEvent& event);
   };
 };
-

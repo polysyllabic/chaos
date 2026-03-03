@@ -813,14 +813,6 @@ groups = [ "Movement", "View" ]
 applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", "vertical camera"  ]
 amplitude = 0.4
 
-[[modifier]]
-name = "Controller Drift"
-description = "All that money you spent on a fancy controller? Useless. Add drift to left joystick."
-type = "scaling"
-groups = [ "Movement" ]
-applies_to = [ "horizontal movement", "vertical movement" ]
-offset = -30
-
 # == Cooldown Modifiers ==
 #
 [[modifier]]
@@ -1193,6 +1185,17 @@ groups = [ "Movement", "View" ]
 formula_type = "janky"
 amplitude = 0.6
 period_length = 5.0
+
+[[modifier]]
+name = "Controller Drift"
+description = "All that money you spent on a fancy controller? Useless. Add drift to left joystick."
+type = "formula"
+groups = [ "Movement" ]
+applies_to = [ "horizontal movement", "vertical movement" ]
+formula_type = "random_offset"
+range = [ 20, 50 ]
+direction = [ 0, 360 ]
+
 
 # === Sequence Modifier ===
 #

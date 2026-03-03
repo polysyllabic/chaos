@@ -554,8 +554,9 @@ filter = "above"
 ```
 
 ### Formula Modifier
-Formula modifiers apply an offset to incoming signals according to a specified, time-dependent
-formula. Currently, we don't have the ability to parse a general formula, so you must select
+Formula modifiers apply an offset to incoming signals according to a specified formula pattern.
+Most patterns are time-dependent, but `random_offset` is fixed for each mod activation.
+Currently, we don't have the ability to parse a general formula, so you must select
 from a set of pre-defined formula types.
 
 The `applies_to` key inticates which commands are affected. (_Required_) Applying a formula
@@ -572,13 +573,25 @@ The following additional keys are recognized by this modifier type:
     - `circle`: Offset changes in a circular pattern
     - `eight_curve`: Offset follows a figure-8 curve
     - `janky`: Offset follows an irregular pattern
+    - `random_offset`: Offset is computed once at mod start and remains fixed for the mod lifetime
 
-- `amplitude`: Proportion of the maximum signal by which to multiply the formula (_Optional. Default = 1_)
+- `amplitude`: Proportion of the maximum signal by which to multiply the formula
+  (_Optional. Default = 1_). Used by `circle`, `eight_curve`, and `janky`.
 
-- `period_length`: Time in seconds before the formula completes its cycle (_Optional. Default = 1_)
+- `period_length`: Time in seconds before the formula completes its cycle
+  (_Optional. Default = 1_). Used by `circle`, `eight_curve`, and `janky`.
 
-The basic output of the formulas will always be between =1 and 1 (`janky` has a narrower range) and this
-value is multiplied by the maximum signal derived from the amplitude. 
+- `range`: Used by `random_offset`. A list with one number (fixed value) or two numbers
+  (random value between lower and upper bounds). If omitted, the value is random between
+  `JOYSTICK_MIN` and `JOYSTICK_MAX`.
+
+- `direction`: Used by `random_offset`. A list with one angle (fixed) or two angles (random
+  between bounds). Angles are in degrees. If set, each offset value selected from `range` is
+  decomposed into pairs of values across `applies_to` as `r*cos(a), r*sin(a), ...`. If omitted,
+  the selected `range` value is applied equally to every command in `applies_to`.
+
+For `circle`, `eight_curve`, and `janky`, the basic output is between -1 and 1 (`janky` has a narrower range)
+and this value is multiplied by the maximum signal derived from the amplitude.
 
 The `janky` formula is used to generate a "drunken walk".
 
@@ -594,6 +607,16 @@ while =  [ "aiming" ]
 formula_type = "eight_curve"
 period_length = 0.5 
 amplitude = 0.5
+
+[[modifier]]
+name = "Random Drift"
+description = "Applies a fixed random camera drift for each activation"
+type = "formula"
+groups = [ "view" ]
+applies_to = [ "horizontal camera", "vertical camera" ]
+formula_type = "random_offset"
+range = [ 10, 40 ]
+direction = [ 0, 360 ]
 ```
 
 ### Menu Modifiers
