@@ -1238,8 +1238,11 @@ block_while_busy = [ "aiming", "shoot" ]
 while = [ "aiming" ]
 trigger = [ "shoot" ]
 repeat_sequence = [
-  { event = "press", command = "shoot", delay = 0.5 },
-  { event = "press", command = "shoot" },
+  # The ordinary press might be too short for the rifle
+  { event = "hold", command = "shoot", delay = 0.2 },
+  { event = "release", command = "shoot", delay = 0.8 },
+  { event = "hold", command = "shoot", delay = 0.2 },
+  { event = "release", command = "shoot"}
   ]
 
 [[modifier]]
