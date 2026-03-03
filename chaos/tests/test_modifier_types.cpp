@@ -671,6 +671,52 @@ delay = 0.01
   return ok;
 }
 
+static bool testDelayModifierDelaysHybridButtonAndAxis() {
+  MockEngine engine;
+  auto mod = makeMod<DelayModifier>(
+      R"(
+name = "Delay Aim Hybrid"
+type = "delay"
+applies_to = [ "AIM" ]
+delay = 0.01
+)",
+      engine);
+  mod->_begin();
+
+  auto aim = commandInput(engine, "AIM");
+  bool ok = true;
+  ok &= check(aim != nullptr && aim->getType() == ControllerSignalType::HYBRID,
+              "delay-hybrid test input should exist and be hybrid");
+  if (!aim || aim->getType() != ControllerSignalType::HYBRID) {
+    return false;
+  }
+
+  DeviceEvent aim_button_press = commandEvent(engine, "AIM", 1);
+  DeviceEvent aim_axis_press = commandHybridAxisEvent(engine, "AIM", JOYSTICK_MAX);
+  ok &= check(!mod->tweak(aim_button_press), "delay-hybrid should queue and block AIM button");
+  ok &= check(!mod->tweak(aim_axis_press), "delay-hybrid should queue and block AIM axis");
+
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.empty(),
+              "delay-hybrid should not replay before delay elapses");
+
+  usleep(13000);
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.size() == 2,
+              "delay-hybrid should replay both button and axis components");
+  if (engine.pipelined_events.size() == 2) {
+    ok &= check(engine.pipelined_events[0].type == TYPE_BUTTON &&
+                    engine.pipelined_events[0].id == aim->getID() &&
+                    engine.pipelined_events[0].value == 1,
+                "delay-hybrid should replay button component first");
+    ok &= check(engine.pipelined_events[1].type == TYPE_AXIS &&
+                    engine.pipelined_events[1].id == aim->getHybridAxis() &&
+                    engine.pipelined_events[1].value == JOYSTICK_MAX,
+                "delay-hybrid should replay axis component second");
+  }
+  return ok;
+}
+
 static bool testDelayModifierClearsQueueAcrossLifecycle() {
   MockEngine engine;
   auto mod = makeMod<DelayModifier>(
@@ -1997,6 +2043,7 @@ int main() {
   ok &= testDelayModifierQueuesAndReplays();
   ok &= testDelayModifierAppliesToAllCommands();
   ok &= testDelayModifierReplaysMultipleSequentialEvents();
+  ok &= testDelayModifierDelaysHybridButtonAndAxis();
   ok &= testDelayModifierClearsQueueAcrossLifecycle();
   ok &= testDelayModifierStressRapidDodgeEvents();
   ok &= testDelayModifierStressInterleavedJoystickEvents();

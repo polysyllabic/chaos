@@ -60,6 +60,7 @@ void DelayModifier::finish() {
 }
 
 void DelayModifier::update() {
+  const auto now = std::chrono::steady_clock::now();
   while (true) {
     std::optional<TimeAndEvent> delayed;
     {
@@ -67,7 +68,8 @@ void DelayModifier::update() {
       if (eventQueue.empty()) {
         break;
       }
-      if ((timer.runningTime() - eventQueue.front().time) < delayTime) {
+      const auto elapsed = std::chrono::duration<double>(now - eventQueue.front().time).count();
+      if (elapsed < delayTime) {
         break;
       }
       delayed = eventQueue.front();
@@ -86,11 +88,12 @@ void DelayModifier::update() {
 // Block the original command that's being delayed. We add it to a queue that is popped and sent
 // as a new event when the timer expires
 bool DelayModifier::tweak(DeviceEvent& event) {
+  const auto now = std::chrono::steady_clock::now();
   // Shortcut if we're working on all commands
   if (applies_to_all) {
     PLOG_DEBUG << "Incoming event " << engine->getEventName(event) << " queued";
     std::lock_guard<std::mutex> lock(queue_mutex);
-    eventQueue.push ({this->timer.runningTime(), event});
+    eventQueue.push ({now, event});
     return false;
   }
   else {
@@ -98,7 +101,7 @@ bool DelayModifier::tweak(DeviceEvent& event) {
       if (engine->eventMatches(event, cmd)) {
         PLOG_DEBUG << "Incoming event (" << engine->getEventName(event) << ") queued";
         std::lock_guard<std::mutex> lock(queue_mutex);
-      	eventQueue.push ({this->timer.runningTime(), event});
+      	eventQueue.push ({now, event});
 	      return false;
       }
     }

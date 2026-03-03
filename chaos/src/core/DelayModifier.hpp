@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <chrono>
 #include <mutex>
 #include <queue>
 #include <toml++/toml.h>
@@ -29,7 +30,7 @@
 namespace Chaos {
 
   typedef struct _TimeAndEvent{
-    double time;
+    std::chrono::steady_clock::time_point time;
     DeviceEvent event;
   } TimeAndEvent;
 
