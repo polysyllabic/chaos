@@ -235,6 +235,37 @@ static bool testHybridTriggerCommandMatchesButtonAndAxisEvents() {
   return ok;
 }
 
+static bool testSequencePressDefaultsHybridAxisToMax() {
+  bool ok = true;
+
+  TestController controller;
+  ChaosEngine engine(controller, "", "", false);
+  const std::string config_path = writeConfigFile();
+  ok &= check(engine.setGame(config_path), "test config should load");
+
+  toml::table sequence_config = toml::parse(R"(
+probe = [ { event = "press", command = "FIRE" } ]
+)");
+  auto seq = engine.createSequence(sequence_config, "probe", true);
+  ok &= check(seq != nullptr, "sequence parser should build sequence for FIRE press");
+  if (!seq) {
+    std::remove(config_path.c_str());
+    return false;
+  }
+
+  const auto& events = seq->getEvents();
+  ok &= check(events.size() == 4, "hybrid press should emit button+axis hold/release events");
+  if (events.size() == 4) {
+    ok &= check(events[1].type == TYPE_AXIS && events[1].id == AXIS_R2,
+                "hybrid press should emit AXIS_R2 hold event");
+    ok &= check(events[1].value == JOYSTICK_MAX,
+                "hybrid FIRE press default value should use JOYSTICK_MAX");
+  }
+
+  std::remove(config_path.c_str());
+  return ok;
+}
+
 static bool testDuplicateActivationDoesNotStack() {
   bool ok = true;
   RaceModifier::reset();
@@ -404,6 +435,7 @@ int main() {
   bool ok = true;
   ok &= testFirstUnpauseKeepsHybridTriggersReleased();
   ok &= testHybridTriggerCommandMatchesButtonAndAxisEvents();
+  ok &= testSequencePressDefaultsHybridAxisToMax();
   ok &= testDuplicateActivationDoesNotStack();
   ok &= testRemoveDeferredUntilUpdateCompletes();
   ok &= testInterfacePauseCommandPausesRunningEngine();

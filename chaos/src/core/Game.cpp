@@ -994,12 +994,20 @@ std::shared_ptr<Sequence> Game::makeSequence(toml::table& config,
 
       std::shared_ptr<ControllerInput> signal = command->getInput();
 
-	    // If this signal is a hybrid control, this gets the button max (axes still return axis max value)
-	    int max_val = (signal) ? signal->getMax(TYPE_BUTTON) : 0;
+	    int max_val = 0;
+      if (signal) {
+        // Hybrid defaults for hold/press should use full axis deflection (e.g., full trigger pull).
+        if (signal->getType() == ControllerSignalType::HYBRID &&
+            (*event == "press" || *event == "hold")) {
+          max_val = signal->getMax(TYPE_AXIS);
+        } else {
+          max_val = signal->getMax(TYPE_BUTTON);
+        }
+      }
       int value = (*definition)["value"].value_or(max_val);
       if (signal) {
-        // Sequence value defaults for hybrids use button semantics, but explicit values for hybrids
-        // are interpreted as axis values.
+        // For hybrid inputs, event values are interpreted on the axis range so a sequence can
+        // drive trigger depth explicitly.
         ButtonType clamp_type = (signal->getType() == ControllerSignalType::HYBRID)
             ? TYPE_AXIS
             : signal->getButtonType();
