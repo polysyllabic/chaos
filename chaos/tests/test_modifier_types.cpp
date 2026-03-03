@@ -1725,6 +1725,50 @@ static bool testSequenceParallelHandlesDelayBetweenEvents() {
   return ok;
 }
 
+static bool testSequenceModifierRetriggersImmediatelyWhenCycleDelayZero() {
+  MockEngine engine;
+  auto mod = makeMod<SequenceModifier>(
+      R"(
+name = "Sequence Retrigger Zero Delay"
+type = "sequence"
+trigger = [ "FIRE" ]
+block_while_busy = [ "CAMERA_X" ]
+start_delay = 0.0
+cycle_delay = 0.0
+repeat_sequence = [
+  { event = "press", command = "FIRE", delay = 0.002 },
+  { event = "press", command = "FIRE" }
+]
+)",
+      engine);
+  mod->_begin();
+
+  auto fire = commandInput(engine, "FIRE");
+  auto camera_x = commandInput(engine, "CAMERA_X");
+  bool ok = true;
+  ok &= check(fire != nullptr && camera_x != nullptr, "sequence-retrigger test inputs should exist");
+  if (!fire || !camera_x) {
+    return false;
+  }
+
+  DeviceEvent trigger_evt = commandEvent(engine, "FIRE", 1);
+  ok &= check(mod->tweak(trigger_evt), "first trigger should be accepted");
+  mod->_update(false); // STARTING -> IN_SEQUENCE
+  mod->_update(false); // begin sequence
+
+  usleep(12000);
+  mod->_update(false); // sequence completes and should re-arm immediately (cycle_delay=0)
+
+  DeviceEvent second_trigger = commandEvent(engine, "FIRE", 1);
+  ok &= check(mod->tweak(second_trigger), "second trigger should be accepted immediately after completion");
+  mod->_update(false); // STARTING -> IN_SEQUENCE again
+
+  DeviceEvent blocked = commandEvent(engine, "CAMERA_X", 321);
+  ok &= check(!mod->tweak(blocked),
+              "second trigger should start a new sequence cycle that blocks configured commands");
+  return ok;
+}
+
 static bool testMenuModifierAppliesAndRestoresMenuState() {
   MockEngine engine;
   auto menu_item = std::make_shared<MenuItem>(engine.menu_iface, "HUD", 0, 0, 0, false, true, true, false,
@@ -1937,6 +1981,7 @@ int main() {
   ok &= testSequenceModifierLockAllBlocksAllSignals();
   ok &= testSequenceModifierAutoStartsWithoutTrigger();
   ok &= testSequenceParallelHandlesDelayBetweenEvents();
+  ok &= testSequenceModifierRetriggersImmediatelyWhenCycleDelayZero();
   ok &= testMenuModifierAppliesAndRestoresMenuState();
   ok &= testMenuModifierSupportsDefaultAndMultipleEntries();
   ok &= testParentModifierForwardsLifecycleAndTweak();

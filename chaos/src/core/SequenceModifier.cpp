@@ -89,7 +89,9 @@ case SequenceState::IN_SEQUENCE:
     // commands are in train. 
     if (repeat_sequence->sendParallel(sequence_time)) {
       PLOG_DEBUG << "Sent complete sequence";
-      sequence_state = SequenceState::ENDING;
+      // If there is no cycle delay, re-arm immediately so the next trigger can fire without
+      // waiting for another update tick.
+      sequence_state = (repeat_delay <= 0.0) ? SequenceState::UNTRIGGERED : SequenceState::ENDING;
       sequence_time = 0;
     }
     break;
