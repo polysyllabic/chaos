@@ -1600,6 +1600,49 @@ block_while_busy = [ "MOVE_X" ]
   return ok;
 }
 
+static bool testRepeatModifierClipsOutOfRangeAxisForceValues() {
+  MockEngine engine;
+  auto mod = makeMod<RepeatModifier>(
+      R"(
+name = "Repeat Axis Clip"
+type = "repeat"
+applies_to = [ "MOVE_X" ]
+time_on = 0.001
+time_off = 0.001
+force_on = [ 128 ]
+force_off = [ -999 ]
+)",
+      engine);
+  mod->_begin();
+
+  bool ok = true;
+  usleep(2500);
+  mod->_update(false); // ON
+  ok &= check(!engine.set_value_calls.empty(),
+              "repeat axis clip should set configured force_on value");
+  if (!engine.set_value_calls.empty()) {
+    ok &= check(engine.set_value_calls[0].first == "MOVE_X" &&
+                    engine.set_value_calls[0].second == JOYSTICK_MAX,
+                "repeat should clip out-of-range positive axis force_on to JOYSTICK_MAX");
+  }
+
+  DeviceEvent forced = commandEvent(engine, "MOVE_X", 0);
+  ok &= check(mod->tweak(forced), "repeat axis clip tweak should accept target event");
+  ok &= check(forced.value == JOYSTICK_MAX,
+              "repeat tweak should enforce clipped force_on axis value");
+
+  usleep(2500);
+  mod->_update(false); // OFF
+  ok &= check(engine.set_value_calls.size() >= 2,
+              "repeat axis clip should set configured force_off value");
+  if (engine.set_value_calls.size() >= 2) {
+    ok &= check(engine.set_value_calls[1].first == "MOVE_X" &&
+                    engine.set_value_calls[1].second == JOYSTICK_MIN,
+                "repeat should clip out-of-range negative axis force_off to JOYSTICK_MIN");
+  }
+  return ok;
+}
+
 static bool testSequenceModifierTriggersAndBlocksDuringSequence() {
   MockEngine engine;
   auto mod = makeMod<SequenceModifier>(
@@ -1977,6 +2020,7 @@ int main() {
   ok &= testRepeatModifierForcesAndBlocksWhileOn();
   ok &= testRepeatModifierDefaultCycleAndRepeatReset();
   ok &= testRepeatModifierSupportsMultipleForceOnValues();
+  ok &= testRepeatModifierClipsOutOfRangeAxisForceValues();
   ok &= testSequenceModifierTriggersAndBlocksDuringSequence();
   ok &= testSequenceModifierLockAllBlocksAllSignals();
   ok &= testSequenceModifierAutoStartsWithoutTrigger();

@@ -136,6 +136,11 @@ name = "Moonwalk"
 type = "scaling"
 applies_to = [ "MOVE_Y" ]
 amplitude = -1
+
+[[modifier]]
+name = "SEQ_AXIS_CLIP"
+type = "sequence"
+begin_sequence = [ { event = "hold", command = "MOVE_Y", value = 128 } ]
 )";
 
   char path_template[] = "/tmp/chaos_engine_lifecycle_XXXXXX.toml";
@@ -370,6 +375,31 @@ static bool testScalingInvertedAndMoonwalkAffectExpectedAxes() {
   return ok;
 }
 
+static bool testSequenceBeginClipsOutOfRangeAxisValue() {
+  bool ok = true;
+
+  TestController controller;
+  ChaosEngine engine(controller, "", "", false);
+  const std::string config_path = writeConfigFile();
+  ok &= check(engine.setGame(config_path), "test config should load");
+
+  engine.start();
+  unpauseEngine(controller);
+  ok &= check(waitFor([&]() { return !engine.isPaused(); }),
+              "engine should be running before sequence clip test");
+
+  engine.newCommand("{\"winner\":\"SEQ_AXIS_CLIP\"}");
+  ok &= check(waitFor([&]() { return activeCount(engine) == 1; }),
+              "sequence axis-clip modifier should become active");
+  ok &= check(waitFor([&]() { return engine.getState(AXIS_LY, TYPE_AXIS) == JOYSTICK_MAX; }),
+              "begin_sequence axis value above range should clip to JOYSTICK_MAX");
+
+  engine.stop();
+  engine.WaitForInternalThreadToExit();
+  std::remove(config_path.c_str());
+  return ok;
+}
+
 int main() {
   bool ok = true;
   ok &= testFirstUnpauseKeepsHybridTriggersReleased();
@@ -378,6 +408,7 @@ int main() {
   ok &= testRemoveDeferredUntilUpdateCompletes();
   ok &= testInterfacePauseCommandPausesRunningEngine();
   ok &= testScalingInvertedAndMoonwalkAffectExpectedAxes();
+  ok &= testSequenceBeginClipsOutOfRangeAxisValue();
   if (!ok) {
     return 1;
   }

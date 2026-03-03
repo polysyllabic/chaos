@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "RepeatModifier.hpp"
+#include <cstdint>
 #include "TOMLUtils.hpp"
 #include "GameCommand.hpp"
 #include "ControllerInput.hpp"
@@ -41,15 +42,34 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
   num_cycles = config["repeat"].value_or(1);
   cycle_delay = config["cycle_delay"].value_or(0.0);
 
+  auto clipForceValue = [&](int raw_value, size_t idx, const char* key) -> short {
+    if (idx >= commands.size() || !commands[idx] || !commands[idx]->getInput()) {
+      return static_cast<short>(raw_value);
+    }
+    std::shared_ptr<ControllerInput> signal = commands[idx]->getInput();
+    ButtonType clamp_type =
+        (signal->getType() == ControllerSignalType::HYBRID) ? TYPE_AXIS : signal->getButtonType();
+    int min_allowed = signal->getMin(clamp_type);
+    int max_allowed = signal->getMax(clamp_type);
+    if (raw_value < min_allowed || raw_value > max_allowed) {
+      int clipped = (raw_value < min_allowed) ? min_allowed : max_allowed;
+      PLOG_WARNING << "Value " << raw_value << " for '" << key << "'[" << idx << "] in modifier "
+                   << getName() << " (command '" << commands[idx]->getName() << "') is outside ["
+                   << min_allowed << "," << max_allowed << "]. Clipping to " << clipped;
+      return static_cast<short>(clipped);
+    }
+    return static_cast<short>(raw_value);
+  };
+
   if (config.contains("force_on")) {
     const toml::array* val_list = config.get("force_on")->as_array();
     if (! val_list || ! val_list->is_homogeneous(toml::node_type::integer)) {
       throw std::runtime_error("force_on must be an array of integers");
     }
     for (auto& elem : * val_list) {
-      std::optional<int> val = elem.value<int>();
+      std::optional<int64_t> val = elem.value<int64_t>();
       assert(val);
-      force_on.push_back(*val);      
+      force_on.push_back(clipForceValue(static_cast<int>(*val), force_on.size(), "force_on"));      
     }
   }
   
@@ -59,9 +79,9 @@ RepeatModifier::RepeatModifier(toml::table& config, EngineInterface* e) {
       throw std::runtime_error("force_off must be an array of integers");
     }
     for (auto& elem : * val_list) {
-      std::optional<int> val = elem.value<int>();
+      std::optional<int64_t> val = elem.value<int64_t>();
       assert(val);
-      force_off.push_back(*val);
+      force_off.push_back(clipForceValue(static_cast<int>(*val), force_off.size(), "force_off"));
     }
   }
 

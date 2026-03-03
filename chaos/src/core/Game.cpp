@@ -997,6 +997,23 @@ std::shared_ptr<Sequence> Game::makeSequence(toml::table& config,
 	    // If this signal is a hybrid control, this gets the button max (axes still return axis max value)
 	    int max_val = (signal) ? signal->getMax(TYPE_BUTTON) : 0;
       int value = (*definition)["value"].value_or(max_val);
+      if (signal) {
+        // Sequence value defaults for hybrids use button semantics, but explicit values for hybrids
+        // are interpreted as axis values.
+        ButtonType clamp_type = (signal->getType() == ControllerSignalType::HYBRID)
+            ? TYPE_AXIS
+            : signal->getButtonType();
+        int min_allowed = signal->getMin(clamp_type);
+        int max_allowed = signal->getMax(clamp_type);
+        if (value < min_allowed || value > max_allowed) {
+          ++parse_warnings;
+          int clipped = (value < min_allowed) ? min_allowed : max_allowed;
+          PLOG_WARNING << "Sequence value " << value << " for event '" << *event << "' on command '"
+                       << command->getName() << "' is outside [" << min_allowed << ","
+                       << max_allowed << "]. Clipping to " << clipped;
+          value = clipped;
+        }
+      }
 
       if (*event == "hold") {
 	      if (repeat > 1) {
