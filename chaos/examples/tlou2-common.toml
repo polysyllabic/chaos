@@ -1238,6 +1238,7 @@ block_while_busy = [ "aiming", "shoot" ]
 while = [ "aiming" ]
 trigger = [ "shoot" ]
 repeat_sequence = [
+  # 2 seconds is necessary to let the rifle reload
   { event = "press", command = "shoot", delay = 2.0},
   { event = "press", command = "shoot"},
   { event = "release", command = "aiming"}
@@ -1250,7 +1251,7 @@ type = "sequence"
 groups = [ "Combat", "Inventory" ]
 block_while_busy = [ "aiming", "reload/toss" ]
 begin_sequence = [
-  { event="hold", command = "aiming", delay = 1.0 },
+  { event="hold", command = "aiming", delay = 2.0 },
   { event="press", command = "shoot", repeat = 6, delay = 0.25 },
   { event="release", command = "aiming" }
   ]
