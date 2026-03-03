@@ -1239,7 +1239,7 @@ while = [ "aiming" ]
 trigger = [ "shoot" ]
 repeat_sequence = [
   # The ordinary press might be too short for the rifle
-  { event = "hold", command = "shoot", delay = 0.25 },
+  { event = "hold", command = "shoot", delay = 0.5 },
   { event = "release", command = "shoot", delay = 0.8 },
   { event = "hold", command = "shoot", delay = 0.25 },
   { event = "release", command = "shoot"},
