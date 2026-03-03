@@ -986,13 +986,13 @@ finish_sequence = [ { event="release", command = "vertical movement"},
 
 [[modifier]]
 name = "Sir Robin"
-description = "When danger reared its ugly head, He bravely turned his tail and fled! (Force run backwards)"
+description = "When danger reared its ugly head, he bravely turned his tail and fled! (Force run backwards)"
 type = "repeat"
 groups = [ "Movement" ]
 applies_to = [ "dodge/sprint", "vertical movement" ]
 begin_sequence = [ { event="hold", command = "dodge/sprint"},
-      { event ="hold", command = "vertical movement", value = 128 } ]
-force_on = [1, 128]
+      { event ="hold", command = "vertical movement", value = 127 } ]
+force_on = [1, 127]
 block_while_busy = [ "vertical movement" ]
 time_on = 5.0
 time_off = 0.1
@@ -1238,7 +1238,7 @@ block_while_busy = [ "aiming", "shoot" ]
 while = [ "aiming" ]
 trigger = [ "shoot" ]
 repeat_sequence = [
-  { event = "press", command = "shoot", delay = 0.2 },
+  { event = "press", command = "shoot", delay = 0.5 },
   { event = "press", command = "shoot" },
   ]
 
