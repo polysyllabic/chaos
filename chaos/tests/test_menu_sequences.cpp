@@ -8,6 +8,7 @@
 #include <MenuInterface.hpp>
 #include <MenuItem.hpp>
 #include <Sequence.hpp>
+#include <SequenceTable.hpp>
 
 using namespace Chaos;
 
@@ -194,6 +195,95 @@ static bool testSelectCounterDirection() {
   return ok;
 }
 
+static bool testParentCursorRestoredOnSelect() {
+  MockMenu mock;
+  Controller controller;
+  Sequence seq(controller);
+  bool ok = true;
+
+  auto parent = std::make_shared<MenuItem>(
+      mock, "parent", 0, 0, 0, false,
+      false, true, true, false,
+      nullptr, nullptr, nullptr, CounterAction::NONE);
+  auto item_a = std::make_shared<MenuItem>(
+      mock, "item_a", 0, 0, 0, false,
+      false, true, false, false,
+      parent, nullptr, nullptr, CounterAction::NONE);
+  auto item_b = std::make_shared<MenuItem>(
+      mock, "item_b", 2, 0, 0, false,
+      false, true, false, false,
+      parent, nullptr, nullptr, CounterAction::NONE);
+
+  item_b->selectItem(seq);
+  mock.step_counts.clear();
+  item_a->selectItem(seq);
+
+  ok &= check(mock.step_counts["menu up"] == 2,
+              "selectItem should restore parent cursor to top before new navigation");
+  ok &= check(mock.step_counts["menu down"] == 0,
+              "selectItem should not move down when target offset is zero");
+  return ok;
+}
+
+static bool testCounterDrivenSelectRestore() {
+  GameMenu menu;
+  menu.setRememberLast(true);
+  menu.setDefinedSequences(std::make_shared<SequenceTable>());
+  Controller controller;
+  bool ok = true;
+
+  auto extras = std::make_shared<MenuItem>(
+      menu, "extras", 0, 0, 0, false,
+      false, true, true, false,
+      nullptr, nullptr, nullptr, CounterAction::NONE);
+  auto render = std::make_shared<MenuItem>(
+      menu, "render", 0, 0, 0, false,
+      false, true, true, false,
+      extras, nullptr, nullptr, CounterAction::NONE);
+  auto no_render = std::make_shared<MenuItem>(
+      menu, "no_render", 0, 0, 0, false,
+      false, true, false, false,
+      render, nullptr, render, CounterAction::NONE);
+  auto graphic = std::make_shared<MenuItem>(
+      menu, "graphic", 1, 0, 0, false,
+      false, true, false, false,
+      render, nullptr, render, CounterAction::NONE);
+  auto blorange = std::make_shared<MenuItem>(
+      menu, "blorange", 2, 0, 0, false,
+      false, true, false, false,
+      render, nullptr, render, CounterAction::NONE);
+
+  std::string extras_name = "extras";
+  std::string render_name = "render";
+  std::string no_render_name = "no_render";
+  std::string graphic_name = "graphic";
+  std::string blorange_name = "blorange";
+  menu.insertMenuItem(extras_name, extras);
+  menu.insertMenuItem(render_name, render);
+  menu.insertMenuItem(no_render_name, no_render);
+  menu.insertMenuItem(graphic_name, graphic);
+  menu.insertMenuItem(blorange_name, blorange);
+
+  menu.setState(graphic, 0, false, controller);
+  menu.setState(blorange, 0, false, controller);
+  ok &= check(render->getCounter() == 2, "select begin should increment shared counter");
+  ok &= check(render->getState() == 2, "submenu state should track the last selected filter");
+
+  menu.restoreState(graphic, controller);
+  ok &= check(render->getCounter() == 1,
+              "restoring one active filter should decrement but not clear shared counter");
+  ok &= check(render->getState() == 2,
+              "restoring one active filter should keep last-selected filter applied");
+
+  menu.restoreState(blorange, controller);
+  ok &= check(render->getCounter() == 0,
+              "restoring the last active filter should clear shared counter");
+  ok &= check(render->getState() == 0,
+              "restoring the last active filter should return submenu to initial selection");
+
+  return ok;
+}
+
 int main() {
   bool ok = true;
   ok &= testSelectUsesCorrectedOffset();
@@ -201,6 +291,8 @@ int main() {
   ok &= testGuardedVisibilitySync();
   ok &= testZeroResetCounterAction();
   ok &= testSelectCounterDirection();
+  ok &= testParentCursorRestoredOnSelect();
+  ok &= testCounterDrivenSelectRestore();
 
   if (!ok) {
     return 1;

@@ -93,6 +93,19 @@ void MenuItem::setCounter(int val) {
 
 void MenuItem::selectItem(Sequence& seq) {
     // navigate left or right through tab groups
+    if (parent && parent->getState() != 0) {
+      const short restore_offset = -parent->getState();
+      PLOG_DEBUG << "Restore cursor in parent " << parent->getName()
+                 << " by " << restore_offset;
+      for (int i = 0; i < restore_offset; i++) {
+        menu_items.addToSequence(seq, "menu down");
+      }
+      for (int i = 0; i > restore_offset; i--) {
+        menu_items.addToSequence(seq, "menu up");
+      }
+      parent->current_state = 0;
+    }
+
     int delta = getOffset();
     PLOG_DEBUG << name << " menu offset = " << getOffset();
     for (int i = 0; i < tab_group; i++) {
@@ -127,6 +140,10 @@ void MenuItem::selectItem(Sequence& seq) {
     if (! isOption()) {
       menu_items.addToSequence(seq, "menu select");
     }
+
+    if (parent) {
+      parent->current_state = getOffset();
+    }
 }
 
 void MenuItem::navigateBack(Sequence& seq) {
@@ -145,6 +162,9 @@ void MenuItem::navigateBack(Sequence& seq) {
   }
   for (int i = 0; i > tab_group; i++) {
     menu_items.addToSequence(seq, "tab right");
+  }
+  if (parent) {
+    parent->current_state = 0;
   }
   menu_items.addToSequence(seq, "menu exit");
 }

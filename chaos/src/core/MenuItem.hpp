@@ -327,5 +327,9 @@ namespace Chaos {
      */
     std::shared_ptr<MenuItem> getGuard() { return guard; }
 
+    bool hasSiblingCounter() const { return sibling_counter != nullptr; }
+
+    std::shared_ptr<MenuItem> getSiblingCounter() { return sibling_counter; }
+
   };
 };

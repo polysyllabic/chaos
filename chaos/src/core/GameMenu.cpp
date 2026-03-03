@@ -88,7 +88,13 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, bo
 
   PLOG_DEBUG << "Constructing reverse navigation";
   if (remember_last) {
-    item->navigateBack(seq);
+    if (item->hasSiblingCounter() && !item->isOption()) {
+      // Some select-style menus apply state while navigating. Leaving the cursor on the selected
+      // item avoids immediately undoing the selection when returning to the top.
+      addToSequence(seq, "menu exit");
+    } else {
+      item->navigateBack(seq);
+    }
     // Back out, leaving all the parent menus in their default state
     for (s = item->getParent(); s != nullptr; s = s->getParent()) {
       s->navigateBack(seq);
@@ -104,6 +110,33 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, bo
 
 void GameMenu::restoreState(std::shared_ptr<MenuItem> item, Controller& controller) {
   PLOG_DEBUG << "Creating restore menu sequence";
+  if (item->hasSiblingCounter() && !item->isOption()) {
+    std::shared_ptr<MenuItem> counter_item = item->getSiblingCounter();
+    assert(counter_item);
+    counter_item->decrementCounter();
+    PLOG_DEBUG << "Counter " << counter_item->getName()
+               << " now " << counter_item->getCounter();
+    if (counter_item->getCounter() > 0) {
+      return;
+    }
+
+    std::shared_ptr<MenuItem> initial_item{nullptr};
+    for (auto& [name, entry] : menu) {
+      if (entry->getParent() == counter_item &&
+          entry->getOffset() == counter_item->getDefault()) {
+        initial_item = entry;
+        break;
+      }
+    }
+    if (!initial_item) {
+      PLOG_WARNING << "No initial submenu item found for " << counter_item->getName()
+                   << " offset " << counter_item->getDefault();
+      return;
+    }
+    // Use restore=true so selecting the initial item does not re-increment the shared counter.
+    setState(initial_item, initial_item->getDefault(), true, controller);
+    return;
+  }
   setState(item, item->getDefault(), true, controller);
 }
 
