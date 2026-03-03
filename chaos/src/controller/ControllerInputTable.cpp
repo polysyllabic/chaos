@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <algorithm>
+#include <sstream>
 #include <TOMLUtils.hpp>
 
 #include "ControllerInputTable.hpp"
@@ -99,6 +100,39 @@ std::shared_ptr<ControllerInput> ControllerInputTable::getInput(const DeviceEven
     return iter->second;
   }
   return nullptr;
+}
+
+std::string ControllerInputTable::canonicalEventName(const DeviceEvent& event) {
+  if (event.isDelay()) {
+    return "DELAY";
+  }
+
+  for (const SignalSettings& settings : signal_settings) {
+    if (settings.type == ControllerSignalType::HYBRID) {
+      if ((event.type == TYPE_BUTTON && event.id == settings.id) ||
+          (event.type == TYPE_AXIS && event.id == settings.hybrid_id)) {
+        return settings.name;
+      }
+      continue;
+    }
+    ButtonType settings_button_type =
+      (settings.type == ControllerSignalType::BUTTON) ? TYPE_BUTTON : TYPE_AXIS;
+    if (event.type == settings_button_type && event.id == settings.id) {
+      return settings.name;
+    }
+  }
+
+  std::ostringstream oss;
+  oss << "UNKNOWN(" << static_cast<int>(event.type) << ":" << static_cast<int>(event.id) << ")";
+  return oss.str();
+}
+
+std::string ControllerInputTable::getEventName(const DeviceEvent& event) {
+  std::shared_ptr<ControllerInput> input = getInput(event);
+  if (input) {
+    return input->getName();
+  }
+  return canonicalEventName(event);
 }
 
 // Does the event ID match this command?

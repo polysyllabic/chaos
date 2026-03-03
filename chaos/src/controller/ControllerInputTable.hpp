@@ -62,9 +62,21 @@ namespace Chaos {
      */
     std::shared_ptr<ControllerInput> getInput(const DeviceEvent& event);
 
-    std::string getEventName(const DeviceEvent& event) {
-      return getInput(event)->getName();
-    }
+    /**
+     * \brief Get canonical signal name for a raw controller event.
+     *
+     * Returns "DELAY" for synthetic delay markers and "UNKNOWN(<type>:<id>)" for
+     * unrecognized event indices.
+     */
+    std::string getEventName(const DeviceEvent& event);
+
+    /**
+     * \brief Static canonical signal-name lookup by raw event type/id.
+     *
+     * This exists for contexts where a ControllerInputTable instance is not available
+     * (e.g. Sequence debug logging).
+     */
+    static std::string canonicalEventName(const DeviceEvent& event);
 
     /**
      * \brief Get the ControllerInput object

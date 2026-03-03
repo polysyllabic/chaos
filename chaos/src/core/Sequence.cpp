@@ -23,6 +23,7 @@
 #include "Sequence.hpp"
 #include "Controller.hpp"
 #include "ControllerInput.hpp"
+#include "ControllerInputTable.hpp"
 
 using namespace Chaos;
 
@@ -61,13 +62,13 @@ void Sequence::addHold(std::shared_ptr<ControllerInput> signal, short value, uns
     value = (signal->getType() == ControllerSignalType::BUTTON ||
 	     signal->getType() == ControllerSignalType::THREE_STATE) ? 1 : JOYSTICK_MAX;
   }
-  PLOG_DEBUG << "Adding hold: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
+  PLOG_DEBUG << "Adding hold: " << signal->getName()
     << ":" << value << " for " << hold_time << " microseconds";
   events.push_back({hold_time, value, (uint8_t) signal->getButtonType(), signal->getID()});
   if (signal->getType() == ControllerSignalType::HYBRID) {
     events.push_back( {hybrid_hold, hybrid_value, TYPE_AXIS, signal->getHybridAxis()} );
-    PLOG_DEBUG << "Adding hold: " << (int) TYPE_AXIS << ": " << (int) signal->getHybridAxis()
-      << ":" << hybrid_value << " for " << hybrid_hold << " microseconds";
+    PLOG_DEBUG << "Adding hold: " << signal->getName()
+      << "(axis):" << hybrid_value << " for " << hybrid_hold << " microseconds";
   }
 }
 
@@ -78,12 +79,12 @@ void Sequence::addRelease(std::shared_ptr<ControllerInput> signal, unsigned int 
     hybrid_release = release_time;
     release_time = 0;
   }
-  PLOG_DEBUG << "Adding release: " << (int) signal->getButtonType() << ": " << (int) signal->getID()
+  PLOG_DEBUG << "Adding release: " << signal->getName()
     << " for " << release_time << " microseconds";
   events.push_back({release_time, 0, (uint8_t) signal->getButtonType(), signal->getID()});
   if (signal->getType() == ControllerSignalType::HYBRID) {
-    PLOG_DEBUG << "Adding release: " << TYPE_AXIS << ": " << (int) signal->getHybridAxis()
-      << " for " << hybrid_release << " microseconds";
+    PLOG_DEBUG << "Adding release: " << signal->getName()
+      << "(axis) for " << hybrid_release << " microseconds";
     events.push_back( {hybrid_release, JOYSTICK_MIN, TYPE_AXIS, signal->getHybridAxis()} );
   }
 }
@@ -96,8 +97,8 @@ void Sequence::addDelay(unsigned int delay) {
 void Sequence::send() {
   PLOG_DEBUG << "Sending sequence";
   for (auto& event : events) {
-    PLOG_DEBUG << "Sending event for input (" << (int) event.type << ":" << (int) event.id
-	       << ") value=" << (int) event.value << "; sleeping for " << (int) event.time << " microseconds";
+    PLOG_DEBUG << "Sending event for input " << ControllerInputTable::canonicalEventName(event)
+	       << " value=" << (int) event.value << "; sleeping for " << (int) event.time << " microseconds";
     controller.applyEvent(event);
     if (event.time > 0) {
       usleep(event.time);
@@ -121,8 +122,8 @@ bool Sequence::sendParallel(double sequenceTime) {
         return false;
       }
       // send out events until we hit the next delay
-      PLOG_DEBUG << "Parallel step " << current_step << ": signal = ("
-        << (int) e.type << "." << (int) e.id << ") value = " << e.value << " next delay = " << e.time <<
+      PLOG_DEBUG << "Parallel step " << current_step << ": signal = "
+        << ControllerInputTable::canonicalEventName(e) << " value = " << e.value << " next delay = " << e.time <<
         "; elapsed usec=" << elapsed;
       controller.applyEvent(e);
       wait_until += e.time;
@@ -157,4 +158,3 @@ void Sequence::setReleaseTime(double time) {
   release_time = (unsigned int) (time * SEC_TO_MICROSEC);
   PLOG_DEBUG << "release_time = " << time << " = " << release_time << " usecs";
 }
-
