@@ -113,6 +113,8 @@ bool Sequence::sendParallel(double sequenceTime) {
       // pure delay (no attatched event to apply)
       wait_until += e.time;
       PLOG_DEBUG << "Delay of " << e.time << "usecs";
+      // Advance past the delay marker so subsequent calls can proceed to the next real event.
+      ++current_step;
     } else {
       // return until delay expires, then move to the next step
       if (elapsed < wait_until) {
@@ -155,5 +157,4 @@ void Sequence::setReleaseTime(double time) {
   release_time = (unsigned int) (time * SEC_TO_MICROSEC);
   PLOG_DEBUG << "release_time = " << time << " = " << release_time << " usecs";
 }
-
 

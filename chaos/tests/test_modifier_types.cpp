@@ -1700,6 +1700,31 @@ repeat_sequence = [ { event = "press", command = "FIRE" } ]
   return ok;
 }
 
+static bool testSequenceParallelHandlesDelayBetweenEvents() {
+  MockEngine engine;
+  auto listen = commandInput(engine, "LISTEN");
+  bool ok = true;
+  ok &= check(listen != nullptr, "sequence-delay test input should exist");
+  if (!listen) {
+    return false;
+  }
+
+  Sequence seq(engine.controller);
+  seq.addPress(listen, 1);
+  seq.addDelay(2000);
+  seq.addPress(listen, 1);
+
+  ok &= check(!seq.sendParallel(0.0),
+              "sequence with delay should remain pending at t=0");
+  ok &= check(!seq.sendParallel(0.001),
+              "sequence should remain pending before delay elapses");
+  ok &= check(seq.sendParallel(0.003),
+              "sequence should finish once delay has elapsed");
+  ok &= check(!seq.sendParallel(0.0),
+              "sequence should reset to start after completion");
+  return ok;
+}
+
 static bool testMenuModifierAppliesAndRestoresMenuState() {
   MockEngine engine;
   auto menu_item = std::make_shared<MenuItem>(engine.menu_iface, "HUD", 0, 0, 0, false, true, true, false,
@@ -1911,6 +1936,7 @@ int main() {
   ok &= testSequenceModifierTriggersAndBlocksDuringSequence();
   ok &= testSequenceModifierLockAllBlocksAllSignals();
   ok &= testSequenceModifierAutoStartsWithoutTrigger();
+  ok &= testSequenceParallelHandlesDelayBetweenEvents();
   ok &= testMenuModifierAppliesAndRestoresMenuState();
   ok &= testMenuModifierSupportsDefaultAndMultipleEntries();
   ok &= testParentModifierForwardsLifecycleAndTweak();
