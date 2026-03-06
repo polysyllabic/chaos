@@ -40,10 +40,10 @@ layout = [
       {name = "options", type="menu", offset = 0},
       #{name = "photo mode", type="menu", offset = 1},
       {name = "audio cues", type="menu", offset = 2, hidden = true, counter_action="reveal"},
-      {name = "extras", type="menu", offset = 2},
-      #{name = "tutorials", type="menu", offset = 3},
-      #{name = "save", type="menu", offset = 4},
-      #{name = "load", type="menu", offset = 5},
+      {name = "extras", type="menu", offset = 3},
+      #{name = "tutorials", type="menu", offset = 4},
+      #{name = "save", type="menu", offset = 5},
+      #{name = "load", type="menu", offset = 6},
       # When an encounter is in progress, 'restart 2' = restart checkpoint and 'restart' =
       # restart encounter. Outside of an encounter, 'restart 2' is hidden and 'restart' =
       # restart checkpoint.

@@ -136,6 +136,14 @@ namespace Chaos {
     void correctOffset(std::shared_ptr<MenuItem> changed);
 
     /**
+     * \brief Apply initial offset corrections for menu items that start hidden.
+     *
+     * \details This initializes effective offsets so they reflect the current hidden layout after
+     * all menu items are parsed.
+     */
+    void syncInitialHiddenVisibility();
+
+    /**
      * \brief Synchronize visibility of guarded items with current guard states.
      *
      * If hide_guarded is true, guarded items are hidden whenever their guard is off.

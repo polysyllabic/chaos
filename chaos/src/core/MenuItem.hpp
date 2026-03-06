@@ -237,6 +237,11 @@ namespace Chaos {
     short getOffset() { return offset + offset_correction; }
 
     /**
+     * \brief Get the configured offset before any hidden-item corrections
+     */
+    short getOffsetBase() const { return offset; }
+
+    /**
      * \brief Get the default state of the menu item
      * 
      * This lets us return the game settings to their earlier state when we tear down the mod.

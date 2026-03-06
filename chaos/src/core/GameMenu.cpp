@@ -137,16 +137,38 @@ void GameMenu::restoreState(std::shared_ptr<MenuItem> item, Controller& controll
 void GameMenu::correctOffset(std::shared_ptr<MenuItem> changed) {
   // direction of the correction depends on whether the changed item is now hidden or revealed, and
   // on whether the offset is positive or negative
-  int adjustment = (changed->isHidden() ? -1 : 1) * (changed->getOffset() < 0 ? -1 : 1);
-  PLOG_DEBUG << "Adjusting offset " << changed->getOffset() << " by " << adjustment;
+  short changed_offset = changed->getOffsetBase();
+  int adjustment = (changed->isHidden() ? -1 : 1) * (changed_offset < 0 ? -1 : 1);
+  PLOG_DEBUG << "Adjusting offset " << changed_offset << " by " << adjustment;
   for (auto& [name, entry] : menu) {
     // Process all other items sharing the same parent and tab group
     if (entry->getParent() == changed->getParent() && entry->getptr() != changed->getptr() &&
         entry->getTab() == changed->getTab()) {
-      if (abs(entry->getOffset()) > abs(changed->getOffset())) {
+      short entry_offset = entry->getOffsetBase();
+      if (changed_offset == 0) {
+        if (entry_offset == 0) {
+          continue;
+        }
+      } else if (changed_offset < 0) {
+        if (entry_offset >= changed_offset) {
+          continue;
+        }
+      } else {
+        if (entry_offset <= changed_offset) {
+          continue;
+        }
+      }
         entry->adjustOffset(adjustment);
         PLOG_DEBUG << " - adjustOffset: " << adjustment;
-      }
+    }
+  }
+}
+
+void GameMenu::syncInitialHiddenVisibility() {
+  for (auto& [name, entry] : menu) {
+    (void) name;
+    if (entry->isHidden()) {
+      correctOffset(entry);
     }
   }
 }

@@ -287,6 +287,79 @@ static bool testCounterDrivenSelectRestore() {
   return ok;
 }
 
+static bool testInitialHiddenAndRevealCounterUpdates() {
+  GameMenu menu;
+  Controller controller;
+  Sequence seq(controller);
+  bool ok = true;
+
+  auto audio_cues = std::make_shared<MenuItem>(
+      menu, "audio cues", 2, 0, 0, true,
+      false, true, true, false,
+      nullptr, nullptr, nullptr, CounterAction::REVEAL);
+  auto extras = std::make_shared<MenuItem>(
+      menu, "extras", 3, 0, 0, false,
+      false, true, true, false,
+      nullptr, nullptr, nullptr, CounterAction::NONE);
+  auto restart = std::make_shared<MenuItem>(
+      menu, "restart", -3, 0, 0, false,
+      false, true, false, true,
+      nullptr, nullptr, nullptr, CounterAction::NONE);
+  auto traversal = std::make_shared<MenuItem>(
+      menu, "traversal cues", 2, 0, 0, false,
+      false, true, false, false,
+      nullptr, nullptr, audio_cues, CounterAction::NONE);
+  auto combat = std::make_shared<MenuItem>(
+      menu, "combat cues", 3, 0, 0, false,
+      false, true, false, false,
+      nullptr, nullptr, audio_cues, CounterAction::NONE);
+
+  std::string audio_name = "audio cues";
+  std::string extras_name = "extras";
+  std::string restart_name = "restart";
+  std::string traversal_name = "traversal cues";
+  std::string combat_name = "combat cues";
+  menu.insertMenuItem(audio_name, audio_cues);
+  menu.insertMenuItem(extras_name, extras);
+  menu.insertMenuItem(restart_name, restart);
+  menu.insertMenuItem(traversal_name, traversal);
+  menu.insertMenuItem(combat_name, combat);
+
+  menu.syncInitialHiddenVisibility();
+
+  ok &= check(extras->getOffset() == 2,
+              "initially hidden items should shift positive offsets down");
+  ok &= check(restart->getOffset() == -3,
+              "negative offsets should not be changed by initially hidden positive-offset items");
+  ok &= check(audio_cues->isHidden(), "audio cues should start hidden");
+
+  traversal->setState(seq, 0, false);
+  ok &= check(!audio_cues->isHidden(),
+              "audio cues should be revealed after one counter-revealing option is selected");
+  ok &= check(audio_cues->getCounter() == 1, "audio cues counter should increment");
+  ok &= check(extras->getOffset() == 3,
+              "revealing audio cues should restore extras offset to 3");
+
+  combat->setState(seq, 0, false);
+  ok &= check(audio_cues->getCounter() == 2, "audio cues counter should increment again");
+  ok &= check(!audio_cues->isHidden(),
+              "audio cues should stay visible while any revealer is active");
+
+  traversal->setState(seq, 0, true);
+  ok &= check(audio_cues->getCounter() == 1,
+              "restoring one revealer should decrement but not fully hide");
+  ok &= check(!audio_cues->isHidden(),
+              "audio cues remains visible with remaining active revealer");
+
+  combat->setState(seq, 0, true);
+  ok &= check(audio_cues->getCounter() == 0, "restoring the last revealer should clear counter");
+  ok &= check(audio_cues->isHidden(), "audio cues should be hidden again when counter reaches zero");
+  ok &= check(extras->getOffset() == 2, "hiding audio cues again should shift extras back to 2");
+  ok &= check(restart->getOffset() == -3,
+              "restart should remain unaffected by audio cues hide/reveal");
+  return ok;
+}
+
 static bool testSelectItemDoesNotActivateSelectType() {
   MockMenu mock;
   Controller controller;
@@ -350,6 +423,7 @@ int main() {
   ok &= testSelectLeafNavigateBackOrder();
   ok &= testParentCursorRestoredOnSelect();
   ok &= testCounterDrivenSelectRestore();
+  ok &= testInitialHiddenAndRevealCounterUpdates();
 
   if (!ok) {
     return 1;

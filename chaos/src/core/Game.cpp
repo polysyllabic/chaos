@@ -484,6 +484,7 @@ void Game::makeMenu(toml::table& config) {
       PLOG_ERROR << "Each menu-item definition must be a table.";
     }
   }
+  menu.syncInitialHiddenVisibility();
   menu.syncGuardedVisibility();
 }
 
