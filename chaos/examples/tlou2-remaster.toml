@@ -20,7 +20,7 @@ config_file_ver = "1.0"
 # chaos_toml: Role of this file in the include chain.
 chaos_toml = "main"
 
-mod_list = "tlou-remaster_mods.txt"
+mod_list = "tlou2-remaster_mods.txt"
 
 # game: User-friendly name of the game this configuration file defines.
 game = "The Last of Us Part II Remastered (PS5)"
