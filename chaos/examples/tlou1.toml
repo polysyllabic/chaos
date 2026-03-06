@@ -1,0 +1,19 @@
+#---------------------------------------------------------------------------------------------------
+# Twitch Controls Chaos (TCC) game configuration file
+# Game: The Last of Us Part 1 (PS5)
+#
+# The settings defined here are those that are required to run a specific game through the Chaos
+# engine. The basic settings for the engine itself are controlled in the chaosconfig.toml file.
+# The syntax for this file is documented in chaosConfigFiles.md
+#
+# This file it the entry point for the PS5 version of TLOU1 (the remake, not the OG game). It
+# only defines the platform-specific configuraiton data for the game.
+#
+# Note that if you edit this file while the chaos engine is running, you must reload the game
+# so the chaos engine can re-read the updated file.
+#---------------------------------------------------------------------------------------------------
+config_file_ver = "1.0"
+chaos_toml = "main"
+mod_list = "tlou1_mods.txt"
+game = "The Last of Us Part I (PS5)"
+input_file = "tlou1-common.toml"
