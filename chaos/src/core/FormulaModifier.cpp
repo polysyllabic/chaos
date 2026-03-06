@@ -42,14 +42,14 @@ Interval parseInterval(const toml::table& config, const std::string& key) {
     throw std::runtime_error("'" + key + "' must contain one or two numbers");
   }
 
-  std::vector<double> parsed;
-  parsed.reserve(values->size());
+  std::vector<double> parsed(values->size());
+  size_t parsed_idx = 0;
   for (const auto& node : *values) {
     std::optional<double> val = node.value<double>();
     if (!val) {
       throw std::runtime_error("'" + key + "' must contain only numbers");
     }
-    parsed.push_back(*val);
+    parsed[parsed_idx++] = *val;
   }
 
   if (parsed.size() == 1) {
