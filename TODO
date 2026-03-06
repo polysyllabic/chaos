@@ -1,9 +1,10 @@
 The 2.0 feature list is complete. These are the to-do items for version 2.1
 
-- Add support for XBox and DualSense controllers (for PC games)
+- Add mouse-and-keyboard support (passthrough for PC games and emulation for console)
+- Add support for XBox and DualSense controllers (passthrough or emulation)
 - Allow mod choice to be restricted by group for voting candidates
 - Edit config files in the UI
-- Write counter data to files for OBS to display
+- Write counter/disgnostic output suitable for an OBS source
 - Manage command permissions through interface
 - Commands to configure game settings without UI
 - Assign permissions to moderators as a group
