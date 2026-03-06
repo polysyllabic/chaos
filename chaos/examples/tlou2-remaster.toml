@@ -131,7 +131,7 @@ layout = [
       #{name = "grab/strike prompts", type="option", parent="HUD", offset=-4, initial=0},
       #{name = "pickup prompts", type="option", parent="HUD", offset=-3, initial=1},
       #{name = "interact prompts", type="option", parent="HUD", offset=-2, initial=1},
-      #{name = "collectibel tracking", type="option", parent="HUD", offset=-1, initial=0},
+      #{name = "collectible tracking", type="option", parent="HUD", offset=-1, initial=0},
 
       # Options -> Subtitle Menu
       # subtitle states: 0 = off, 1 = story, 2 = story + combat
@@ -297,3 +297,11 @@ layout = [
       {name = "helium audio", type="option", parent="gameplay", offset = -2, initial = 0},
       {name = "xenon audio", type="option", parent="gameplay", offset = -1, initial = 0},
 ]
+
+[[modifier]]
+name = "Dither Punk"
+description = "Visual filter (pixelated like a black-and-white newspaper comic)"
+type = "menu"
+groups = [ "Display" ]
+menu_items = [{entry = "dither punk" }]
+

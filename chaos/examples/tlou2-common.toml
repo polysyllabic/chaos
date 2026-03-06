@@ -1445,203 +1445,203 @@ menu_items = [{entry = "subtitle size", value = 2 }]
 # Render Modes:
 [[modifier]]
 name = "Graphic"
-description = "Render Mode"
+description = "Visual filter (visual novel style)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "graphic" }]
 
 [[modifier]]
 name = "Headache"
-description = "Render Mode"
+description = "Visual filter (black and white and red all over)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "headache" }]
 
 [[modifier]]
 name = "Afterlife"
-description = "Render Mode"
+description = "Visual filter (bleak, muted colors)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "afterlife" }]
 
 [[modifier]]
 name = "8-Bit"
-description = "Render Mode"
+description = "Visual filter (simplified color blocks)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "eightbit" }]
 
 [[modifier]]
-name = "Water Color"
-description = "Render Mode"
+name = "Watercolor"
+description = "Visual filter (bright pastels)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "watercolor" }]
 
 [[modifier]]
 name = "Dungeon"
-description = "Render Mode"
+description = "Visual filter (like Graphic but with more attitude)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "dungeon" }]
 
 [[modifier]]
 name = "Void"
-description = "Render Mode"
+description = "Visual filter (now you can see that you're in the matrix)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "void" }]
 
 [[modifier]]
 name = "Pop Poster"
-description = "Stream Destroyer. This kills the bitrate"
+description = "Visual filter (Andy Warhol does not like your stream. Trashes the encoder)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "pop poster" }]
 
 [[modifier]]
 name = "1960"
-description = "Render Mode"
+description = "Visual filter (mostly black and white + some reds)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "1960" }]
 
 [[modifier]]
 name = "Cool"
-description = "Render Mode"
+description = "Visual filter (a light blueish tint)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "cool" }]
 
 [[modifier]]
 name = "Warm"
-description = "Render Mode"
+description = "Visual filter (a light orange tint)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "warm" }]
 
 [[modifier]]
 name = "Vibrant"
-description = "Render Mode"
+description = "Visual filter (crank up that saturation)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "vibrant" }]
 
 [[modifier]]
 name = "Noir"
-description = "Render Mode"
+description = "Visual filter (like watching a black-and-white movie on degraded film stock)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "noir" }]
 
 [[modifier]]
 name = "Blorange"
-description = "Render Mode"
+description = "Visual filter (the prettiest filter; fight me)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "blorange" }]
 
 [[modifier]]
 name = "Sepia"
-description = "Render Mode"
+description = "Visual filter (we're living in a Matthew Brady photograph)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "sepia" }]
 
 [[modifier]]
 name = "Vintage"
-description = "Render Mode"
+description = "Visual filter (a bit like an old color film)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "vintage" }]
 
 [[modifier]]
 name = "Beasts"
-description = "Render Mode"
+description = "Visual filter (it all looks purple)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "beasts" }]
 
 [[modifier]]
 name = "Terminated"
-description = "Render Mode"
+description = "Visual filter (a washed-out, blue-green tint)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "terminated" }]
 
 [[modifier]]
 name = "Gridlocked"
-description = "Render Mode"
+description = "Visual filter (like a brighter version of Sepia)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "gridlocked" }]
 
 [[modifier]]
 name = "Blacklight"
-description = "Render Mode"
+description = "Visual filter (a heavy blue tint)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "blacklight" }]
 
 [[modifier]]
 name = "Desert Fog"
-description = "Render Mode"
+description = "Visual filter (a heavy orange tint)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "desert fog" }]
 
 [[modifier]]
 name = "Blood"
-description = "Render Mode"
+description = "Visual filter (a deep red tint)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "blood" }]
 
 [[modifier]]
 name = "Inferno"
-description = "Render Mode"
+description = "Visual filter (like fire but blurry in the distance)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "inferno" }]
 
 [[modifier]]
 name = "Fire"
-description = "Render Mode"
+description = "Visual filter (a medium red tint)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "fire" }]
 
 [[modifier]]
 name = "Trinity"
-description = "Render Mode"
+description = "Visual filter (a medium green tint)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "trinity" }]
 
 [[modifier]]
 name = "Pusher"
-description = "Render Mode"
+description = "Visual filter (a yellow tint)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "pusher" }]
 
 [[modifier]]
 name = "Demons"
-description = "Render Mode"
+description = "Visual filter (a deep purple tint)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "demons" }]
 
 [[modifier]]
 name = "Drug Zone"
-description = "Render Mode"
+description = "Visual filter (a deep green tint)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "drugzone" }]
 
 [[modifier]]
 name = "Moonlight"
-description = "Render Mode"
+description = "Visual filter (like a day-for-night filter)"
 type = "menu"
 groups = [ "Display" ]
 menu_items = [{entry = "moonlight" }]

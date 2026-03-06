@@ -1386,7 +1386,7 @@ name = "Dither Punk"
 description = "Visual filter (pixelated like a black-and-white newspaper comic)"
 type = "menu"
 groups = [ "Display" ]
-menu_items = [{entry = "1960" }]
+menu_items = [{entry = "dither punk" }]
 
 [[modifier]]
 name = "Cool"
