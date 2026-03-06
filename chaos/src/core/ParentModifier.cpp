@@ -63,6 +63,14 @@ ParentModifier::ParentModifier(toml::table& config, EngineInterface* e) {
 
   if (random_selection) {
     num_randos = config["value"].value_or(1);
+    if (num_randos < 0) {
+      random_num_randos = true;
+      num_randos = static_cast<short>(-num_randos);
+      if (num_randos == 1) {
+        PLOG_WARNING << "value = -1 for random parent modifier '" << getName()
+                     << "': treating as 1";
+      }
+    }
     if (num_randos < 1) {
       throw std::runtime_error("For random modifiers 'value' must be greater than 0");
     }
@@ -197,9 +205,15 @@ void ParentModifier::buildRandomList() {
     return;
   }
 
-  const size_t target = std::min(static_cast<size_t>(num_randos), eligible.size());
-  if (target < static_cast<size_t>(num_randos)) {
-    PLOG_WARNING << "Requested " << num_randos << " random child modifiers for " << getName()
+  size_t target = static_cast<size_t>(num_randos);
+  if (random_num_randos) {
+    target = static_cast<size_t>(
+        std::floor(rng.uniform(1.0, static_cast<double>(num_randos) + 0.01)));
+  }
+  const size_t requested = static_cast<size_t>(num_randos);
+  target = std::min(target, eligible.size());
+  if (requested > eligible.size()) {
+    PLOG_WARNING << "Requested up to " << requested << " random child modifiers for " << getName()
                  << " but only " << eligible.size() << " are eligible";
   }
 

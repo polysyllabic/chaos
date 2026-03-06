@@ -60,6 +60,11 @@ namespace Chaos {
     short num_randos{0};
 
     /**
+     * \brief When true, choose a random number of children in [1, num_randos]
+     */
+    bool random_num_randos{false};
+
+    /**
      * Optional fixed candidate pool for random selection.
      */
     std::vector<std::shared_ptr<Modifier>> random_select_from;
