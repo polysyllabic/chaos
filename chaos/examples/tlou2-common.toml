@@ -1001,6 +1001,7 @@ applies_to = [ "aiming" ]
 time_on = 4.0
 time_off = 0.1
 force_on = [ 1 ]
+finish_sequence = [ { event = "release", command = "aiming"} ]
 
 # This is a child-only mod: part of the Navigation Assistance parent mod
 [[modifier]]
