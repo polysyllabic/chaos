@@ -21,6 +21,7 @@
 #include <deque>
 #include <array>
 #include <memory>
+#include <mutex>
 
 #include "DeviceEvent.hpp"
 #include "ControllerInjector.hpp"
@@ -60,6 +61,8 @@ namespace Chaos {
      *     [((int) event->type << 8) + (int) event->id ]
      */
     short controllerState[1024];
+
+    mutable std::mutex stateMutex;
 	
     ControllerInjector* controllerInjector = nullptr;
 
@@ -77,6 +80,7 @@ namespace Chaos {
      * handle the remapping of signals.
      */
     inline short getState(uint8_t id, uint8_t type) {
+      std::lock_guard<std::mutex> lock(stateMutex);
       return controllerState[((int) type << 8) + (int) id];
     }
 

@@ -108,6 +108,18 @@ case SequenceState::IN_SEQUENCE:
 
 bool SequenceModifier::tweak(DeviceEvent& event) {
 
+  if (in_sequence) {
+    if (lock_all) {
+      return false;
+    }
+    for (auto& cmd : block_while) {
+      if (engine->eventMatches(event, cmd)) {
+        PLOG_DEBUG << "blocking " << cmd->getName() << " while sequence is running";
+        return false;
+      }
+    }
+  }
+  
   if (sequence_state == SequenceState::UNTRIGGERED && !trigger.empty()) {
     // If any of the commands in the trigger come in, check for the condition, and if true,
     // start the sequence.

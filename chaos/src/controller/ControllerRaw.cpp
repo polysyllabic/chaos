@@ -180,5 +180,8 @@ void ControllerRaw::notification(unsigned char* buffer, int length) {
 
   // This is our only chance to intercept the data.
   // Take the mControllerState and replace the provided buffer:
-  controllerStateSnapshot->applyHackedState(buffer, controllerState);
+  {
+    std::lock_guard<std::mutex> lock(stateMutex);
+    controllerStateSnapshot->applyHackedState(buffer, controllerState);
+  }
 }

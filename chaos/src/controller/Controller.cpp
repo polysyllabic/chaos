@@ -28,6 +28,7 @@
 using namespace Chaos;
 
 Controller::Controller() {
+  std::lock_guard<std::mutex> lock(stateMutex);
   memset(controllerState, 0, sizeof(controllerState));
   // Hybrid trigger axes are centered at JOYSTICK_MIN when released.
   controllerState[((int) TYPE_AXIS << 8) + (int) AXIS_L2] = JOYSTICK_MIN;
@@ -39,6 +40,7 @@ short Controller::getState(std::shared_ptr<ControllerInput> signal) {
 }
 
 void Controller::storeState(const DeviceEvent& event) {
+  std::lock_guard<std::mutex> lock(stateMutex);
   int location = ((int) event.type << 8) + (int) event.id;
   if (location < 1024) {
     controllerState[location] = event.value;
