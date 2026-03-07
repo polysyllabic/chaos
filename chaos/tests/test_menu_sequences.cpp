@@ -52,6 +52,15 @@ public:
   }
 };
 
+class TrackingController : public Controller {
+public:
+  int flush_calls = 0;
+
+  void flushPendingInputEvents() override {
+    ++flush_calls;
+  }
+};
+
 static bool check(bool condition, const std::string& msg) {
   if (!condition) {
     std::cerr << "FAIL: " << msg << "\n";
@@ -455,6 +464,26 @@ static bool testConfirmSelectionSkipsReverseNavigation() {
   return ok;
 }
 
+static bool testSetStateFlushesPendingInputEvents() {
+  GameMenu menu;
+  menu.setRememberLast(true);
+  menu.setDefinedSequences(std::make_shared<SequenceTable>());
+  TrackingController controller;
+  bool ok = true;
+
+  auto item = std::make_shared<MenuItem>(
+      menu, "item", 0, 0, 0, false,
+      false, true, false, false,
+      nullptr, nullptr, nullptr, CounterAction::NONE);
+  std::string item_name = "item";
+  menu.insertMenuItem(item_name, item);
+
+  menu.setState(item, 0, false, controller);
+  ok &= check(controller.flush_calls == 1,
+              "setState should flush pending input events before menu navigation");
+  return ok;
+}
+
 int main() {
   bool ok = true;
   ok &= testSelectUsesCorrectedOffset();
@@ -468,6 +497,7 @@ int main() {
   ok &= testCounterDrivenSelectRestore();
   ok &= testInitialHiddenAndRevealCounterUpdates();
   ok &= testConfirmSelectionSkipsReverseNavigation();
+  ok &= testSetStateFlushesPendingInputEvents();
 
   if (!ok) {
     return 1;

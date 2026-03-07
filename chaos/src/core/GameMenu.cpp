@@ -59,6 +59,10 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, bo
   // Keep visibility/offset corrections in sync with the latest guard states.
   syncGuardedVisibility();
 
+  // Drop queued gameplay input before opening the menu so stale reports don't
+  // shift the cursor before we begin deterministic navigation.
+  controller.flushPendingInputEvents();
+
   defined_sequences->addToSequence(seq, "disable all");
   defined_sequences->addToSequence(seq, "open menu");
 

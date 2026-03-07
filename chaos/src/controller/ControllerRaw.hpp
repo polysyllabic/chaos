@@ -60,6 +60,8 @@ namespace Chaos {
     ~ControllerRaw() override;
 
 	  void initialize();
+
+    void flushPendingInputEvents() override;
 		
   };
 };

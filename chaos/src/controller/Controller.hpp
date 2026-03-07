@@ -137,6 +137,14 @@ namespace Chaos {
     
     void addInjector(ControllerInjector* injector);
 
+    /**
+     * \brief Drop any queued user-input events that have not been processed yet.
+     *
+     * Menu modifiers can call this before issuing menu navigation sequences so stale
+     * gameplay input does not shift menu selection unexpectedly.
+     */
+    virtual void flushPendingInputEvents() {}
+
     
   };
 

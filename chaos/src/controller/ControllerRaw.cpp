@@ -104,6 +104,16 @@ void ControllerRaw::initializeControllerStateIfPossible() {
   unlock();
 }
 
+void ControllerRaw::flushPendingInputEvents() {
+  lock();
+  const std::size_t pending = deviceEventQueue.size();
+  if (pending > 0) {
+    PLOG_DEBUG << "Flushing " << pending << " pending controller reports";
+  }
+  deviceEventQueue.clear();
+  unlock();
+}
+
 /* applyHardware() was a function for the GPIO interface. Does nothing now, so removed. 
 bool ControllerRaw::applyHardware(const DeviceEvent& event) {
 	//	State will already be stored, nothing to be done for raw
