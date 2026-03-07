@@ -339,7 +339,9 @@ void ChaosEngine::newCommand(const std::string& command) {
     bool selection_ok = true;
     std::string selection_message = "game_selected";
     lock();
-    duplicate_selection = (!current_game_config_path.empty() && resolved_config == current_game_config_path);
+    duplicate_selection = (game_ready.load() &&
+                           !current_game_config_path.empty() &&
+                           resolved_config == current_game_config_path);
     unlock();
     if (duplicate_selection) {
       selection_message = "duplicate_selection";

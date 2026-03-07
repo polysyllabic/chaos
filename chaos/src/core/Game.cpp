@@ -312,7 +312,14 @@ namespace {
   }
 }
 
-Game::Game(Controller& c) : controller{c}, signal_table{c} {
+Game::Game(Controller& c)
+    : parse_errors{0},
+      parse_warnings{0},
+      use_menu{false},
+      controller{c},
+      active_modifiers{1},
+      time_per_modifier{180.0},
+      signal_table{c} {
   sequences = std::make_shared<SequenceTable>();
 }
 

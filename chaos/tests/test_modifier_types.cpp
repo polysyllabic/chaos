@@ -23,6 +23,7 @@
 #include <FormulaModifier.hpp>
 #include <GameCommand.hpp>
 #include <GameCondition.hpp>
+#include <Game.hpp>
 #include <MenuInterface.hpp>
 #include <MenuItem.hpp>
 #include <MenuModifier.hpp>
@@ -415,6 +416,14 @@ static bool sawName(const std::vector<std::string>& calls, const std::string& na
     }
   }
   return false;
+}
+
+static bool testGameDefaultsToNoErrorsBeforeLoad() {
+  Controller controller;
+  Game game(controller);
+  bool ok = true;
+  ok &= check(game.getErrors() == 0, "new Game should start with zero parse errors before any load");
+  return ok;
 }
 
 static bool testCooldownModifierBlocksAfterTrigger() {
@@ -2847,6 +2856,7 @@ select_groups = [ "parent" ]
 
 int main() {
   bool ok = true;
+  ok &= testGameDefaultsToNoErrorsBeforeLoad();
   ok &= testCooldownModifierBlocksAfterTrigger();
   ok &= testCooldownModifierRequiresWhileConditionWhenCumulativeStartType();
   ok &= testCooldownModifierCancelableResetsIfConditionDrops();
