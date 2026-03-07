@@ -117,7 +117,7 @@ def current_votes_overlay_html() -> str:
         }
         document.getElementById('votes').innerHTML = html;
       }
-      setInterval(refresh, 250);
+      setInterval(refresh, 500);
       refresh();
     </script>
   </body>

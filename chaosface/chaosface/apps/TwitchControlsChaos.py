@@ -441,9 +441,24 @@ def ensure_runtime_started(*, bind_ui_loop: bool = True) -> None:
 
 
 def shutdown_runtime() -> None:
+  global _runtime_started
   config.relay.keep_going = False
   if config.relay.chatbot:
     config.relay.chatbot.shutdown()
+  model = _model
+  if model is not None:
+    try:
+      model.chaos_communicator.stop()
+    except Exception:
+      logging.exception('Failed to stop chaos communicator cleanly')
+    model_thread = getattr(model, 'thread', None)
+    if (
+      model_thread is not None
+      and model_thread.is_alive()
+      and threading.current_thread() is not model_thread
+    ):
+      model_thread.join(timeout=2.0)
+  _runtime_started = False
 
 
 def _start_runtime_on_app_startup() -> None:
@@ -484,6 +499,13 @@ def _overlay_state_response() -> Dict[str, Any]:
   return overlay_state_payload()
 
 
+def _overlay_state_json_response() -> JSONResponse:
+  return JSONResponse(
+    _overlay_state_response(),
+    headers={'Cache-Control': 'no-store'},
+  )
+
+
 def _active_mods_overlay_response() -> HTMLResponse:
   ensure_runtime_started(bind_ui_loop=False)
   return HTMLResponse(active_mods_overlay_html())
@@ -503,8 +525,8 @@ overlay_http_app = FastAPI()
 
 
 @overlay_http_app.get('/api/overlay/state')
-def overlay_http_state() -> Dict[str, Any]:
-  return _overlay_state_response()
+def overlay_http_state() -> JSONResponse:
+  return _overlay_state_json_response()
 
 
 @overlay_http_app.get('/ActiveMods', response_class=HTMLResponse)
@@ -754,8 +776,8 @@ async def chaos_interface() -> None:
 
 
 @app.get('/api/overlay/state')
-async def api_overlay_state() -> Dict[str, Any]:
-  return _overlay_state_response()
+async def api_overlay_state() -> JSONResponse:
+  return _overlay_state_json_response()
 
 
 @app.get('/api/oauth/start')

@@ -78,7 +78,7 @@ def active_mods_overlay_html() -> str:
         }
         modsRoot.innerHTML = html;
       }
-      setInterval(refresh, 250);
+      setInterval(refresh, 500);
       refresh();
     </script>
   </body>

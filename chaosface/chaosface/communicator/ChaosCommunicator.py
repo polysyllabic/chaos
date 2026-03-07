@@ -65,8 +65,8 @@ class ChaosCommunicator():
     self._bind_relay_callbacks()
         
     self.keep_running = True
-    self.thread = threading.Thread(target=self._listen_loop)
-    self._notify_thread = threading.Thread(target=self._notify_loop)
+    self.thread = threading.Thread(target=self._listen_loop, daemon=True, name='chaosface-listener')
+    self._notify_thread = threading.Thread(target=self._notify_loop, daemon=True, name='chaosface-notify')
     self.thread.start()
     self._notify_thread.start()
 
@@ -131,9 +131,9 @@ class ChaosCommunicator():
         self.socket_talk = None
     self._incoming_messages.put_nowait('')
     if self.thread and self.thread.is_alive():
-      self.thread.join()
+      self.thread.join(timeout=2.0)
     if self._notify_thread and self._notify_thread.is_alive():
-      self._notify_thread.join()
+      self._notify_thread.join(timeout=2.0)
 
   def _notify_loop(self):
     while self.keep_running or not self._incoming_messages.empty():
@@ -193,33 +193,67 @@ class ChaosCommunicator():
           continue
         self._incoming_messages.put(decoded)
   
+  def _poll_for_reply_locked(self, timeout_ms: int) -> bool:
+    if self.socket_talk is None:
+      return False
+    remaining = max(0, int(timeout_ms))
+    step_ms = 250
+    while remaining > 0 and self.keep_running:
+      wait_ms = min(step_ms, remaining)
+      if (self.socket_talk.poll(wait_ms) & zmq.POLLIN) != 0:
+        return True
+      remaining -= wait_ms
+    return False
+
   def send_message(self, message):
     with self._talk_lock:
-      if self.socket_talk is None:
+      if self.socket_talk is None or not self.keep_running:
         logging.error('Talk socket is not connected')
         return False
       logging.debug("Sending message: " + message)
-      self.socket_talk.send_string(message)
+      try:
+        self.socket_talk.send_string(message)
+      except zmq.error.ZMQError:
+        logging.exception('Failed to send message on talk socket')
+        return False
       # In case the server is dead, we don't wait infinitely for a response. If we get none, we
       # return False to indicate that we couldn't send the message
       retries_left = self.request_retries
-      while retries_left != 0:
+      while retries_left != 0 and self.keep_running:
         if self.socket_talk is None:
           logging.error('Talk socket was closed before a reply was received')
           return False
-        if (self.socket_talk.poll(self.request_timeout) & zmq.POLLIN) != 0:
-          self.socket_talk.recv()
+        if self._poll_for_reply_locked(self.request_timeout):
+          try:
+            self.socket_talk.recv()
+          except zmq.error.ZMQError:
+            logging.exception('Failed to receive acknowledgment from talk socket')
+            return False
           logging.debug('Message acknowledged')
           return True
         else:
           retries_left -= 1
+          if not self.keep_running:
+            break
           logging.debug('No response: renewing socket and resending')
-          self._reconnect_talker_locked()
+          try:
+            self._reconnect_talker_locked()
+          except Exception:
+            logging.exception('Failed to reconnect talk socket')
+            return False
           assert self.socket_talk is not None
-          self.socket_talk.send_string(message)
+          try:
+            self.socket_talk.send_string(message)
+          except zmq.error.ZMQError:
+            logging.exception('Failed to resend message after reconnect')
+            return False
       
       # restart socket for future attempts
-      self._reconnect_talker_locked()
+      if self.keep_running:
+        try:
+          self._reconnect_talker_locked()
+        except Exception:
+          logging.exception('Failed to reset talk socket after retries')
       return False
 
   def _reconnect_talker_locked(self):

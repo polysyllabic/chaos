@@ -57,7 +57,7 @@ def vote_timer_overlay_html() -> str:
         fill.style.width = `${progress * 100}%`;
         fill.style.background = String(state.overlay_vote_timer_bar_color || 'rgba(240, 240, 240, 0.85)');
       }
-      setInterval(refresh, 250);
+      setInterval(refresh, 500);
       refresh();
     </script>
   </body>
