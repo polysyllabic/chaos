@@ -948,6 +948,132 @@ while = [ "shooting" ]
   return ok;
 }
 
+static bool testDisableWhileTransitionClampsHeldAxes() {
+  MockEngine engine;
+  auto mod = makeMod<DisableModifier>(
+      R"(
+name = "Only Aim Movement Transition Clamp"
+type = "disable"
+applies_to = [ "MOVE_Y", "MOVE_X" ]
+while = [ "not_aiming" ]
+)",
+      engine);
+
+  auto move_y = commandInput(engine, "MOVE_Y");
+  auto move_x = commandInput(engine, "MOVE_X");
+  auto aim = commandInput(engine, "AIM");
+  bool ok = true;
+  ok &= check(move_y != nullptr && move_x != nullptr && aim != nullptr,
+              "disable transition-clamp test inputs should exist");
+  if (!move_y || !move_x || !aim) {
+    return false;
+  }
+
+  // Start in aiming mode so the disable condition is initially inactive.
+  engine.applyEvent(commandEvent(engine, "AIM", 1));
+  mod->_begin();
+
+  DeviceEvent moving_while_aiming = commandEvent(engine, "MOVE_Y", 900);
+  ok &= check(mod->tweak(moving_while_aiming), "MOVE_Y while aiming should pass through");
+  ok &= check(moving_while_aiming.value == 900, "disable should be inactive while aiming");
+  engine.applyEvent(moving_while_aiming);
+  ok &= check(engine.getState(move_y->getID(), move_y->getButtonType()) == 900,
+              "MOVE_Y should remain held while aiming");
+
+  // Releasing aim activates the disable condition while MOVE_Y is still held.
+  engine.applyEvent(commandEvent(engine, "AIM", 0));
+  mod->_update(false);
+  ok &= check(engine.getState(move_y->getID(), move_y->getButtonType()) == 0,
+              "condition activation should clamp held MOVE_Y to neutral");
+
+  DeviceEvent move_after_release = commandEvent(engine, "MOVE_Y", 900);
+  ok &= check(mod->tweak(move_after_release), "MOVE_Y after aiming release should be accepted");
+  ok &= check(move_after_release.value == 0,
+              "disable should continue to block MOVE_Y while not aiming");
+  return ok;
+}
+
+static bool testOnlyAimMovementWorksWithControllerMirrorRemap() {
+  MockEngine engine;
+  auto mirror = makeMod<RemapModifier>(
+      R"(
+name = "Mirror Aim Trigger"
+type = "remap"
+remap = [
+  { from = "R2", to = "L2" },
+  { from = "L2", to = "R2" }
+]
+)",
+      engine);
+  auto only_aim_movement = makeMod<DisableModifier>(
+      R"(
+name = "Only Aim Movement"
+type = "disable"
+applies_to = [ "MOVE_Y", "MOVE_X" ]
+while = [ "not_aiming" ]
+)",
+      engine);
+
+  auto move_y = commandInput(engine, "MOVE_Y");
+  auto aim = commandInput(engine, "AIM");
+  auto r2 = engine.getInput("R2");
+  bool ok = true;
+  ok &= check(move_y != nullptr && aim != nullptr && r2 != nullptr,
+              "mirror + only-aim test inputs should exist");
+  if (!move_y || !aim || !r2) {
+    return false;
+  }
+
+  mirror->_begin();
+  only_aim_movement->_begin();
+
+  auto run_pipeline = [&](DeviceEvent& event) {
+    bool valid = mirror->remap(event);
+    if (valid) {
+      valid = only_aim_movement->tweak(event);
+    }
+    if (valid) {
+      engine.applyEvent(event);
+    }
+    return valid;
+  };
+
+  DeviceEvent move_without_aim = commandEvent(engine, "MOVE_Y", 900);
+  ok &= check(run_pipeline(move_without_aim), "MOVE_Y without aim should pass through pipeline");
+  ok &= check(move_without_aim.value == 0,
+              "without aim, only-aim movement should block movement");
+
+  DeviceEvent r2_button_press = {0, 1, TYPE_BUTTON, r2->getID()};
+  ok &= check(run_pipeline(r2_button_press), "R2 button press should pass through pipeline");
+  ok &= check(r2_button_press.type == TYPE_BUTTON && r2_button_press.id == aim->getID(),
+              "R2 button should remap to AIM button");
+
+  DeviceEvent r2_axis_press = {0, JOYSTICK_MAX, TYPE_AXIS, r2->getHybridAxis()};
+  ok &= check(run_pipeline(r2_axis_press), "R2 axis press should pass through pipeline");
+  ok &= check(r2_axis_press.type == TYPE_AXIS && r2_axis_press.id == aim->getHybridAxis(),
+              "R2 axis should remap to AIM axis");
+
+  DeviceEvent move_with_aim = commandEvent(engine, "MOVE_Y", 900);
+  ok &= check(run_pipeline(move_with_aim), "MOVE_Y with mirrored aim should pass through pipeline");
+  ok &= check(move_with_aim.value == 900,
+              "with mirrored aim active, only-aim movement should allow movement");
+
+  DeviceEvent r2_button_release = {0, 0, TYPE_BUTTON, r2->getID()};
+  ok &= check(run_pipeline(r2_button_release), "R2 button release should pass through pipeline");
+
+  DeviceEvent r2_axis_release = {0, JOYSTICK_MIN, TYPE_AXIS, r2->getHybridAxis()};
+  ok &= check(run_pipeline(r2_axis_release), "R2 axis release should pass through pipeline");
+  ok &= check(engine.getState(aim->getID(), aim->getButtonType()) == 0,
+              "after mirrored trigger release, AIM button state should return to 0");
+
+  DeviceEvent move_after_release = commandEvent(engine, "MOVE_Y", 900);
+  ok &= check(run_pipeline(move_after_release), "MOVE_Y after mirrored aim release should pass pipeline");
+  ok &= check(move_after_release.value == 0,
+              "after mirrored aim release, only-aim movement should block movement again");
+
+  return ok;
+}
+
 static bool testDisableRespectsDistanceMovementCondition() {
   MockEngine engine;
   auto mod = makeMod<DisableModifier>(
@@ -2693,6 +2819,8 @@ int main() {
   ok &= testDelayModifierStressInterleavedJoystickEvents();
   ok &= testDisableDefaultFilterBlocksConfiguredCommandOnly();
   ok &= testDisableRespectsWhileCondition();
+  ok &= testDisableWhileTransitionClampsHeldAxes();
+  ok &= testOnlyAimMovementWorksWithControllerMirrorRemap();
   ok &= testDisableRespectsDistanceMovementCondition();
   ok &= testDisableRespectsPersistentCondition();
   ok &= testDisableFilterAboveBlocksOnlyPositiveValues();

@@ -42,8 +42,10 @@ namespace Chaos {
      * What type of filtering to apply to the signal
      */
     DisableFilter filter;
+    bool condition_active_last;
 
     short getFilteredVal(DeviceEvent& event);
+    void clampAppliedCommands();
 
   public:
     
@@ -59,6 +61,8 @@ namespace Chaos {
     const std::string& getModType() { return mod_type; }
 
     // virtual routines we need to override
+    void begin() override;
+    void update() override;
     bool tweak(DeviceEvent& event);
 
   };

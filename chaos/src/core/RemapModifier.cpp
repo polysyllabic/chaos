@@ -239,6 +239,14 @@ bool RemapModifier::remap(DeviceEvent& event) {
     modified.type = to_console->getButtonType();
     modified.value = event.value;
 
+    if (from->getType() == ControllerSignalType::HYBRID &&
+        to_console->getType() == ControllerSignalType::HYBRID &&
+        event.type == TYPE_AXIS) {
+      // Preserve the axis channel for trigger-to-trigger remaps.
+      modified.id = to_console->getHybridAxis();
+      modified.type = TYPE_AXIS;
+    }
+
     const bool from_button_to_hybrid =
         from->getType() == ControllerSignalType::BUTTON &&
         to_console->getType() == ControllerSignalType::HYBRID;

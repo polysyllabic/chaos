@@ -351,6 +351,50 @@ remap = [
   return ok;
 }
 
+static bool testHybridToHybridPreservesAxisChannel() {
+  MockEngine engine;
+  auto mod = makeRemap(
+      R"(
+name = "Hybrid To Hybrid Mirror"
+type = "remap"
+remap = [
+  { from = "R2", to = "L2" }
+]
+)",
+      engine);
+
+  auto from = engine.getInput("R2");
+  auto to = engine.getInput("L2");
+  bool ok = true;
+  ok &= check(from != nullptr, "R2 input should exist");
+  ok &= check(to != nullptr, "L2 input should exist");
+  if (!from || !to) {
+    return false;
+  }
+
+  DeviceEvent r2_button_press = {0, 1, TYPE_BUTTON, from->getID()};
+  ok &= check(mod->remap(r2_button_press), "R2 button press should be accepted");
+  ok &= check(r2_button_press.type == TYPE_BUTTON && r2_button_press.id == to->getID() &&
+                  r2_button_press.value == 1,
+              "R2 button press should map to L2 button press");
+
+  DeviceEvent r2_axis_press = {0, JOYSTICK_MAX, TYPE_AXIS, from->getHybridAxis()};
+  ok &= check(mod->remap(r2_axis_press), "R2 axis press should be accepted");
+  ok &= check(r2_axis_press.type == TYPE_AXIS && r2_axis_press.id == to->getHybridAxis() &&
+                  r2_axis_press.value == JOYSTICK_MAX,
+              "R2 axis press should map to L2 axis press");
+
+  DeviceEvent r2_axis_release = {0, JOYSTICK_MIN, TYPE_AXIS, from->getHybridAxis()};
+  ok &= check(mod->remap(r2_axis_release), "R2 axis release should be accepted");
+  ok &= check(r2_axis_release.type == TYPE_AXIS && r2_axis_release.id == to->getHybridAxis() &&
+                  r2_axis_release.value == JOYSTICK_MIN,
+              "R2 axis release should map to L2 axis release");
+
+  ok &= check(engine.applied_events.empty(),
+              "hybrid->hybrid mapping should not inject extra side events");
+  return ok;
+}
+
 static bool testInvertUsesRemappedValue() {
   MockEngine engine;
   auto mod = makeRemap(
@@ -598,6 +642,7 @@ int main() {
   ok &= testThreeStateSameDirectionCanBePressedAgain();
   ok &= testButtonToHybridDrivesAxisOnPressAndRelease();
   ok &= testHybridToButtonUsesAxisThreshold();
+  ok &= testHybridToHybridPreservesAxisChannel();
   ok &= testInvertUsesRemappedValue();
   ok &= testTouchpadStopClearsConfiguredAxes();
   ok &= testTouchpadStopClearsHybridAxisToJoystickMin();

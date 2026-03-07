@@ -71,6 +71,45 @@ DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
   case DisableFilter::BELOW:
     PLOG_VERBOSE << "Filter: BELOW";
   }
+
+  condition_active_last = false;
+}
+
+void DisableModifier::begin() {
+  condition_active_last = inCondition();
+  if (condition_active_last) {
+    clampAppliedCommands();
+  }
+}
+
+void DisableModifier::update() {
+  const bool condition_active = inCondition();
+  if (condition_active && !condition_active_last) {
+    clampAppliedCommands();
+  }
+  condition_active_last = condition_active;
+}
+
+void DisableModifier::clampAppliedCommands() {
+  if (applies_to_all) {
+    return;
+  }
+  for (auto& cmd : commands) {
+    if (!cmd) {
+      continue;
+    }
+    auto signal = cmd->getInput();
+    if (!signal) {
+      continue;
+    }
+
+    DeviceEvent current = {0, engine->getState(signal->getID(), signal->getButtonType()),
+                           static_cast<uint8_t>(signal->getButtonType()), signal->getID()};
+    const short filtered = getFilteredVal(current);
+    if (filtered != current.value) {
+      engine->setValue(cmd, filtered);
+    }
+  }
 }
 
 short DisableModifier::getFilteredVal(DeviceEvent& event) {
