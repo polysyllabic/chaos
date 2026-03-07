@@ -46,10 +46,12 @@ namespace Chaos {
 
   public:
     ChaosInterface();
+    ~ChaosInterface();
     void setupInterface(const std::string& listener_endpoint, const std::string& talker_endpoint);
     bool sendMessage(std::string message);
     void setObserver(CommandObserver* observer);
     bool isTalkerHealthy() const { return talker_healthy.load(); }
+    void setTalkerHealthyForTest(bool healthy) { talker_healthy.store(healthy); }
   };
 
 };

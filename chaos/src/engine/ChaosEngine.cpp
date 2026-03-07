@@ -649,9 +649,10 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
 
   // The share button resumes the chaos engine
   if (game.matchesID(input, ControllerSignal::SHARE)) {
+    bool interface_ready = (!interface_enabled) || chaosInterface.isTalkerHealthy();
+    bool can_unpause = game_ready.load() && interface_ready;
     if(input.value == 1 && pause.load() == true) { // on rising edge
-      bool interface_ready = (!interface_enabled) || chaosInterface.isTalkerHealthy();
-      if (game_ready.load() && interface_ready) {
+      if (can_unpause) {
         pausePrimer = true;
       } else {
         pausePrimer = false;
@@ -661,10 +662,13 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
           PLOG_WARNING << "Ignoring unpause command: chaosface interface is disconnected.";
         }
       }
-    } else if(input.value == 0 && pausePrimer == true) { // falling edge
+    } else if(input.value == 0 && pause.load() == true && (pausePrimer || can_unpause)) { // falling edge
+      // If the rising edge was missed while paused (e.g., startup/controller state races),
+      // still allow release to unpause when the engine is currently ready.
       pause.store(false);
       paused_for_interface_timeout.store(false);
       chaosInterface.sendMessage("{\"pause\":0,\"engine_status\":\"running\"}");
+      pausePrimer = false;
       PLOG_INFO << "Game Resumed";
     }
     output.value = 0;

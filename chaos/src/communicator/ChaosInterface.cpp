@@ -27,6 +27,13 @@ using namespace Chaos;
 
 ChaosInterface::ChaosInterface() {}
 
+ChaosInterface::~ChaosInterface() {
+  stop();
+  WaitForInternalThreadToExit();
+  listener.stop();
+  listener.WaitForInternalThreadToExit();
+}
+
 void ChaosInterface::setupInterface(const std::string& listener_endpoint, const std::string& talker_endpoint) {
 
   listener.setEndpoint(listener_endpoint);

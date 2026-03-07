@@ -262,6 +262,11 @@ namespace Chaos {
     bool isPaused() { return pause.load(); }
 
     /**
+     * \brief Test helper to override interface health state.
+     */
+    void setInterfaceHealthForTest(bool healthy) { chaosInterface.setTalkerHealthyForTest(healthy); }
+
+    /**
      * \brief Should the processing loop keep going
      * 
      * \return true as long as the engine should run

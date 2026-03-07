@@ -4,6 +4,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <functional>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -374,6 +375,10 @@ template <typename T>
 static std::shared_ptr<T> makeMod(const std::string& toml_text, MockEngine& engine) {
   toml::table config = toml::parse(toml_text);
   return std::make_shared<T>(config, &engine);
+}
+
+static std::string makeHeader(const std::string& name, const std::string& type) {
+  return "name = \"" + name + "\"\n" + "type = \"" + type + "\"\n";
 }
 
 static std::shared_ptr<ControllerInput> commandInput(MockEngine& engine, const std::string& command_name) {
@@ -2217,6 +2222,178 @@ menu_items = [ { entry = "HUD" }, { entry = "RETICLE", value = 2 } ]
   return ok;
 }
 
+static bool testMenuModifiersDoNotBlockLaterDisableModifier() {
+  MockEngine engine;
+  auto menu_a = std::make_shared<MenuItem>(engine.menu_iface, "FX_A", 0, 0, 0, false, true, true, false, false,
+                                           nullptr, nullptr, nullptr, CounterAction::NONE);
+  auto menu_b = std::make_shared<MenuItem>(engine.menu_iface, "FX_B", 0, 0, 0, false, true, true, false, false,
+                                           nullptr, nullptr, nullptr, CounterAction::NONE);
+  engine.menu_iface.items["FX_A"] = menu_a;
+  engine.menu_iface.items["FX_B"] = menu_b;
+
+  auto menu1 = makeMod<MenuModifier>(
+      R"(
+name = "Demons"
+type = "menu"
+menu_items = [ { entry = "FX_A", value = 1 } ]
+)",
+      engine);
+  auto menu2 = makeMod<MenuModifier>(
+      R"(
+name = "Desert Fog"
+type = "menu"
+menu_items = [ { entry = "FX_B", value = 2 } ]
+)",
+      engine);
+  auto disable = makeMod<DisableModifier>(
+      R"(
+name = "Disable Camera"
+type = "disable"
+applies_to = [ "CAMERA_Y" ]
+)",
+      engine);
+
+  menu1->_begin();
+  menu2->_begin();
+  disable->_begin();
+
+  DeviceEvent camera_evt = commandEvent(engine, "CAMERA_Y", 777);
+  bool ok = true;
+  bool valid = true;
+  std::vector<std::shared_ptr<Modifier>> chain{menu1, menu2, disable};
+  for (auto& mod : chain) {
+    valid = mod->remap(camera_evt);
+    if (!valid) {
+      break;
+    }
+  }
+  if (valid) {
+    for (auto& mod : chain) {
+      valid = mod->tweak(camera_evt);
+      if (!valid) {
+        break;
+      }
+    }
+  }
+
+  ok &= check(valid, "menu modifiers should not block normal gameplay events while idle");
+  ok &= check(camera_evt.value == 0, "disable modifier should still apply after active menu modifiers");
+  return ok;
+}
+
+static bool testAllDifferingModifierPairOrdersStayStableWhenIdle() {
+  struct ModifierFactory {
+    std::string label;
+    std::function<std::shared_ptr<Modifier>(MockEngine&, int)> create;
+  };
+
+  const std::vector<ModifierFactory> factories{
+      {"cooldown", [](MockEngine& engine, int idx) {
+         std::string toml = makeHeader("pair_cooldown_" + std::to_string(idx), "cooldown") +
+                            "applies_to = [ \"FIRE\" ]\n"
+                            "trigger = [ \"FIRE\" ]\n"
+                            "time_on = 0.01\n"
+                            "time_off = 0.01\n";
+         return makeMod<CooldownModifier>(toml, engine);
+       }},
+      {"delay", [](MockEngine& engine, int idx) {
+         std::string toml = makeHeader("pair_delay_" + std::to_string(idx), "delay") +
+                            "applies_to = [ \"FIRE\" ]\n"
+                            "delay = 0.01\n";
+         return makeMod<DelayModifier>(toml, engine);
+       }},
+      {"disable", [](MockEngine& engine, int idx) {
+         std::string toml = makeHeader("pair_disable_" + std::to_string(idx), "disable") +
+                            "applies_to = [ \"FIRE\" ]\n";
+         return makeMod<DisableModifier>(toml, engine);
+       }},
+      {"formula", [](MockEngine& engine, int idx) {
+         std::string toml = makeHeader("pair_formula_" + std::to_string(idx), "formula") +
+                            "applies_to = [ \"FIRE\" ]\n"
+                            "formula_type = \"janky\"\n"
+                            "amplitude = 0.2\n"
+                            "period_length = 1.0\n";
+         return makeMod<FormulaModifier>(toml, engine);
+       }},
+      {"menu", [](MockEngine& engine, int idx) {
+         std::string toml = makeHeader("pair_menu_" + std::to_string(idx), "menu") +
+                            "menu_items = [ { entry = \"PAIR_MENU\", value = 1 } ]\n";
+         return makeMod<MenuModifier>(toml, engine);
+       }},
+      {"remap", [](MockEngine& engine, int idx) {
+         std::string toml = makeHeader("pair_remap_" + std::to_string(idx), "remap") +
+                            "remap = [ { from = \"LX\", to = \"LY\" } ]\n";
+         return makeMod<RemapModifier>(toml, engine);
+       }},
+      {"random_remap", [](MockEngine& engine, int idx) {
+         std::string toml = makeHeader("pair_random_remap_" + std::to_string(idx), "remap") +
+                            "random_remap = [ \"X\", \"SQUARE\" ]\n";
+         return makeMod<RemapModifier>(toml, engine);
+       }},
+      {"repeat", [](MockEngine& engine, int idx) {
+         std::string toml = makeHeader("pair_repeat_" + std::to_string(idx), "repeat") +
+                            "applies_to = [ \"FIRE\" ]\n"
+                            "time_on = 0.01\n"
+                            "time_off = 0.01\n";
+         return makeMod<RepeatModifier>(toml, engine);
+       }},
+      {"scaling", [](MockEngine& engine, int idx) {
+         std::string toml = makeHeader("pair_scaling_" + std::to_string(idx), "scaling") +
+                            "applies_to = [ \"FIRE\" ]\n"
+                            "amplitude = 2.0\n";
+         return makeMod<ScalingModifier>(toml, engine);
+       }},
+      {"sequence", [](MockEngine& engine, int idx) {
+         std::string toml = makeHeader("pair_sequence_" + std::to_string(idx), "sequence") +
+                            "trigger = [ \"FIRE\" ]\n"
+                            "block_while_busy = [ \"MOVE_X\" ]\n"
+                            "repeat_sequence = [ { event = \"press\", command = \"FIRE\" } ]\n";
+         return makeMod<SequenceModifier>(toml, engine);
+       }},
+  };
+
+  bool ok = true;
+  int case_id = 0;
+  for (size_t i = 0; i < factories.size(); ++i) {
+    for (size_t j = 0; j < factories.size(); ++j) {
+      if (i == j) {
+        continue;
+      }
+      ++case_id;
+      MockEngine engine;
+      auto menu_item = std::make_shared<MenuItem>(engine.menu_iface, "PAIR_MENU", 0, 0, 0, false, true, true,
+                                                  false, false, nullptr, nullptr, nullptr, CounterAction::NONE);
+      engine.menu_iface.items["PAIR_MENU"] = menu_item;
+
+      auto first = factories[i].create(engine, case_id * 2);
+      auto second = factories[j].create(engine, case_id * 2 + 1);
+      first->_begin();
+      second->_begin();
+
+      DeviceEvent event = commandEvent(engine, "CAMERA_X", 321);
+      DeviceEvent original = event;
+      bool valid = true;
+
+      valid = first->remap(event);
+      if (valid) {
+        valid = second->remap(event);
+      }
+      if (valid) {
+        valid = first->tweak(event);
+      }
+      if (valid) {
+        valid = second->tweak(event);
+      }
+
+      const std::string pair_label = factories[i].label + " -> " + factories[j].label;
+      ok &= check(valid, "pair order should not block unrelated CAMERA_X event while idle: " + pair_label);
+      ok &= check(event.id == original.id && event.type == original.type && event.value == original.value,
+                  "pair order should not mutate unrelated CAMERA_X event while idle: " + pair_label);
+    }
+  }
+  return ok;
+}
+
 static bool testParentModifierForwardsLifecycleAndTweak() {
   ProbeChildModifier::reset();
   MockEngine engine;
@@ -2547,6 +2724,8 @@ int main() {
   ok &= testSequenceModifierRetriggersImmediatelyWhenCycleDelayZero();
   ok &= testMenuModifierAppliesAndRestoresMenuState();
   ok &= testMenuModifierSupportsDefaultAndMultipleEntries();
+  ok &= testMenuModifiersDoNotBlockLaterDisableModifier();
+  ok &= testAllDifferingModifierPairOrdersStayStableWhenIdle();
   ok &= testParentModifierForwardsLifecycleAndTweak();
   ok &= testParentModifierRandomSelectionChoosesRequestedCount();
   ok &= testParentModifierRandomSelectFromRestrictsPool();

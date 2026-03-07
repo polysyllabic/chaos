@@ -5,10 +5,12 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 #include <unistd.h>
 #include <vector>
 
 #include <toml++/toml.h>
+#include <zmq.hpp>
 
 #include <ChaosEngine.hpp>
 #include <Modifier.hpp>
@@ -21,6 +23,53 @@ using namespace Chaos;
 class TestController : public Controller {
 public:
   void inject(const DeviceEvent& event) { handleNewDeviceEvent(event); }
+};
+
+struct IpcEndpoint {
+  std::string endpoint;
+  std::string path;
+};
+
+class AckResponder {
+public:
+  explicit AckResponder(const std::string& endpoint)
+      : context(1), socket(context, zmq::socket_type::rep) {
+    socket.set(zmq::sockopt::linger, 0);
+    socket.set(zmq::sockopt::rcvtimeo, 50);
+    socket.bind(endpoint);
+    worker = std::thread([this]() { run(); });
+  }
+
+  ~AckResponder() { stop(); }
+
+  void stop() {
+    if (!running.exchange(false)) {
+      return;
+    }
+    if (worker.joinable()) {
+      worker.join();
+    }
+    socket.close();
+    context.close();
+  }
+
+private:
+  void run() {
+    while (running.load()) {
+      zmq::message_t message;
+      auto received = socket.recv(message, zmq::recv_flags::none);
+      if (!received) {
+        continue;
+      }
+      auto sent = socket.send(zmq::buffer("ACK", 3), zmq::send_flags::none);
+      (void) sent;
+    }
+  }
+
+  std::atomic<bool> running{true};
+  zmq::context_t context;
+  zmq::socket_t socket;
+  std::thread worker;
 };
 
 class RaceModifier : public Modifier::Registrar<RaceModifier> {
@@ -156,6 +205,20 @@ begin_sequence = [ { event = "hold", command = "MOVE_Y", value = 128 } ]
   return std::string(path_template);
 }
 
+static IpcEndpoint makeIpcEndpoint() {
+  char path_template[] = "/tmp/chaos_iface_XXXXXX.sock";
+  int fd = mkstemps(path_template, 5);
+  if (fd < 0) {
+    throw std::runtime_error("Failed to create temporary IPC endpoint path");
+  }
+  close(fd);
+  std::remove(path_template);
+  IpcEndpoint result;
+  result.path = path_template;
+  result.endpoint = "ipc://" + result.path;
+  return result;
+}
+
 static size_t activeCount(ChaosEngine& engine) {
   engine.lock();
   size_t count = engine.getActiveMods().size();
@@ -199,6 +262,70 @@ static bool testFirstUnpauseKeepsHybridTriggersReleased() {
   engine.stop();
   engine.WaitForInternalThreadToExit();
   std::remove(config_path.c_str());
+  return ok;
+}
+
+static bool testReleaseOnlyShareUnpausesWhenReady() {
+  bool ok = true;
+
+  TestController controller;
+  ChaosEngine engine(controller, "", "", false);
+  const std::string config_path = writeConfigFile();
+  ok &= check(engine.setGame(config_path), "test config should load");
+
+  engine.start();
+  controller.inject({0, 0, TYPE_BUTTON, BUTTON_SHARE});
+  ok &= check(waitFor([&]() { return !engine.isPaused(); }),
+              "release-only SHARE should unpause when engine is ready");
+
+  engine.stop();
+  engine.WaitForInternalThreadToExit();
+  std::remove(config_path.c_str());
+  return ok;
+}
+
+static bool testInterfaceReconnectRequiresManualResumeAndAcceptsReleaseOnlyShare() {
+  bool ok = true;
+
+  TestController controller;
+  IpcEndpoint listener = makeIpcEndpoint();
+  IpcEndpoint talker = makeIpcEndpoint();
+  AckResponder responder(talker.endpoint);
+  ChaosEngine engine(controller, listener.endpoint, talker.endpoint, true);
+  const std::string config_path = writeConfigFile();
+  ok &= check(engine.setGame(config_path), "test config should load");
+
+  engine.start();
+  unpauseEngine(controller);
+  ok &= check(waitFor([&]() { return !engine.isPaused(); }),
+              "engine should unpause before simulated interface timeout");
+  // Allow interface ACK traffic from the initial unpause to settle before forcing unhealthy.
+  usleep(50000);
+
+  engine.setInterfaceHealthForTest(false);
+  ok &= check(waitFor([&]() { return engine.isPaused(); }),
+              "engine should pause when interface becomes unhealthy");
+
+  unpauseEngine(controller);
+  usleep(30000);
+  ok &= check(engine.isPaused(),
+              "engine should ignore SHARE unpause while interface remains unhealthy");
+
+  engine.setInterfaceHealthForTest(true);
+  usleep(30000);
+  ok &= check(engine.isPaused(),
+              "engine should remain paused after interface recovers until manual resume");
+
+  controller.inject({0, 0, TYPE_BUTTON, BUTTON_SHARE});
+  ok &= check(waitFor([&]() { return !engine.isPaused(); }),
+              "release-only SHARE should resume after interface health recovers");
+
+  engine.stop();
+  engine.WaitForInternalThreadToExit();
+  responder.stop();
+  std::remove(config_path.c_str());
+  std::remove(listener.path.c_str());
+  std::remove(talker.path.c_str());
   return ok;
 }
 
@@ -434,6 +561,8 @@ static bool testSequenceBeginClipsOutOfRangeAxisValue() {
 int main() {
   bool ok = true;
   ok &= testFirstUnpauseKeepsHybridTriggersReleased();
+  ok &= testReleaseOnlyShareUnpausesWhenReady();
+  ok &= testInterfaceReconnectRequiresManualResumeAndAcceptsReleaseOnlyShare();
   ok &= testHybridTriggerCommandMatchesButtonAndAxisEvents();
   ok &= testSequencePressDefaultsHybridAxisToMax();
   ok &= testDuplicateActivationDoesNotStack();

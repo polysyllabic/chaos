@@ -41,7 +41,9 @@ void Modifier::initialize(toml::table& config, EngineInterface* e) {
   parent = nullptr;
   total_lifespan = 0;
   pause_time_accumulator = 0;
+  in_sequence = false;
   lock_while_busy = true;
+  lock_all = false;
   allow_as_child = true;
   name = config["name"].value_or("NAME NOT FOUND");
 

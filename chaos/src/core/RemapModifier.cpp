@@ -36,6 +36,11 @@ RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
       "random_remap", "unlisted"});
 
   initialize(config, e);
+  random = false;
+
+  if (!config.contains("remap") && !config.contains("random_remap")) {
+    throw std::runtime_error("A remap modifier must define either 'remap' or 'random_remap'.");
+  }
   
   engine->addControllerInputs(config, "disable_signals", signals);
 
