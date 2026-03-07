@@ -276,10 +276,12 @@ def _is_public_request_path(path: str, mode: str) -> bool:
 
 def _normalize_realtime_path(path: str) -> str:
   # Canonical endpoint used by NiceGUI's mounted Socket.IO app.
-  canonical = '/_nicegui_ws/socket.io'
+  canonical = '/_nicegui_ws/socket.io/'
 
+  if path == '/_nicegui_ws/socket.io':
+    return canonical
   if path.startswith('/_nicegui_ws/socket.io/'):
-    return path.replace('/_nicegui_ws/socket.io/', canonical, 1)
+    return path
   if path.startswith('/_nicegui/ws/socket.io'):
     return path.replace('/_nicegui/ws/socket.io', canonical, 1)
   if path.startswith('/_nicegui/socket.io'):
@@ -849,9 +851,8 @@ def twitch_controls_chaos(args):
     on_status=_on_bot_status,
   )
   ensure_runtime_started(bind_ui_loop=False)
-  # Keep UI transport deterministic while we stabilize session behavior on Pi.
-  # Combined with reconnect_timeout this avoids websocket upgrade edge-cases.
-  app.config.socket_io_js_transports = ['polling']
+  # Allow websocket with polling fallback for better compatibility across browsers/networks.
+  app.config.socket_io_js_transports = ['websocket', 'polling']
   logging.warning('Configured Socket.IO transports: %s', app.config.socket_io_js_transports)
   logging.warning('Configured NiceGUI reconnect_timeout: %.1fs', UI_RECONNECT_TIMEOUT_SECONDS)
 
