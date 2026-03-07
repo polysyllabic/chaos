@@ -175,7 +175,7 @@ layout = [
       # Options -> Accessibility Menu
       {name = "alternate controls", type="menu", parent="accessibility", offset=0},
       {name = "magnification", type="menu", parent="accessibility", offset = 1},
-      {name = "motion sickness", type="menu", parent="accessibility", offset = 2},
+      #{name = "motion sickness", type="menu", parent="accessibility", offset = 2},
       {name = "navigation", type="menu", parent="accessibility", offset = 3},
       {name = "tts and audio cues", type="menu", parent="accessibility", offset = -2},
       {name = "combat accessibility", type="menu", parent="accessibility", offset = -1},
@@ -210,8 +210,8 @@ layout = [
       #{name = "camera shake", type="option", parent="motion sickness", offset=0, initial=10},
       #{name = "motion blur", type="option", parent="motion sickness", offset=1, initial=10},      
       # For camera distance and field of view, -5 = 0, 0 = 5
-      {name = "camera distance", type="option", parent="motion sickness", offset=2, initial=5},
-      {name = "field of view", type="option", parent="motion sickness", offset=3, initial=5},
+      #{name = "camera distance", type="option", parent="motion sickness", offset=2, initial=5},
+      #{name = "field of view", type="option", parent="motion sickness", offset=3, initial=5},
       #{name = "dolly zoom", type="option", parent="motion sickness", offset=-3, initial=1},
       #{name = "full screen effects", type="option", parent="motion sickness", offset=-2, initial=1},
       #{name = "persistent center dot", type="option", parent="motion sickness", offset=-1, initial=0},

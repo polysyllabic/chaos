@@ -1281,10 +1281,9 @@ groups = [ "Combat", "Inventory" ]
 block_while_busy = "ALL"
 begin_sequence = [
   { event = "sequence", command = "disable all" },
-  { event = "hold", command = "vertical camera", value = 127 },
-  { event = "hold", command = "horizontal camera", value = 0},
+  { event = "hold", command = "vertical camera", value = 127, delay = 1.0 },
   { event = "press", command = "select consumable" },
-  { event = "press", command = "select consumable", delay = 3.0 },
+  { event = "press", command = "select consumable", delay = 2.0 },
   { event = "press", command = "reload/toss", delay = 0.5 },
   { event = "release", command = "vertical camera"},
   { event = "release", command = "horizontal camera"},
@@ -1659,14 +1658,6 @@ description = "Mirror World on Death. Can result in permanent Mirror World."
 type = "menu"
 groups = [ "View" ]
 menu_items = [{entry = "mirror on death", value = 1 }]
-
-[[modifier]]
-name = "Close POV"
-description = "Objects in mirror are closer than they appear."
-type = "menu"
-groups = [ "View" ]
-menu_items = [{entry = "camera distance", value = 0},
-            {entry = "field of view", value = 0}]
 
 [[modifier]]
 name = "Slow Motion"
