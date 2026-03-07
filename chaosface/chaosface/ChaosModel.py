@@ -500,6 +500,7 @@ class ChaosModel(EngineObserver):
       if snapshot_names:
         ui_dispatch.call_soon(config.relay.restore_active_mods, snapshot_names, snapshot_progress)
       self._pending_game_startup_setup = (game_errors <= 0)
+      config.relay.valid_data = (game_errors <= 0)
       if game_errors > 0:
         self._mark_failed_game_selection(selected_game)
       if 'engine_status' not in received and 'pause' not in received:

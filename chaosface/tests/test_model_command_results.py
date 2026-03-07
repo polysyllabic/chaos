@@ -1,5 +1,6 @@
 """Command-result gating tests for ChaosModel engine actions."""
 
+import json
 import threading
 import time
 
@@ -13,6 +14,23 @@ def _blank_model() -> ChaosModel:
   model._command_results = {}  # type: ignore[attr-defined]
   model._startup_sync_requested = False  # type: ignore[attr-defined]
   model._startup_pause_requested = False  # type: ignore[attr-defined]
+  return model
+
+
+def _blank_model_for_update_command() -> ChaosModel:
+  model = _blank_model()
+  model._select_game_lock = threading.Lock()  # type: ignore[attr-defined]
+  model._pending_selected_game = ''  # type: ignore[attr-defined]
+  model._pending_selected_inflight = False  # type: ignore[attr-defined]
+  model._pending_selected_sent_at = 0.0  # type: ignore[attr-defined]
+  model._pending_selected_retry_after = 0.0  # type: ignore[attr-defined]
+  model._last_reported_game = ''  # type: ignore[attr-defined]
+  model._last_failed_selected_game = ''  # type: ignore[attr-defined]
+  model._pending_game_startup_setup = False  # type: ignore[attr-defined]
+  model._manual_sync_requested = threading.Event()  # type: ignore[attr-defined]
+  model._engine_handshake_complete = False  # type: ignore[attr-defined]
+  model.request_game_info = lambda: None  # type: ignore[assignment]
+  model.send_engine_command = lambda payload, report_status=True: True  # type: ignore[assignment]
   return model
 
 
@@ -114,3 +132,40 @@ def test_parse_active_mod_snapshot_accepts_string_and_object_entries():
 
   assert names == ['Mod A', 'Mod B', 'Mod C']
   assert progress == [1.0, 0.42, 0.25]
+
+
+def test_missing_remembered_game_waits_for_manual_selection():
+  import chaosface.config.globals as config
+
+  model = _blank_model_for_update_command()
+
+  config.relay.reset_all()
+  config.relay.set_selected_game('Missing Game')
+  config.relay.valid_data = True
+
+  model.update_command(json.dumps({
+    'game': 'Missing Game',
+    'errors': 1,
+    'nmods': 3,
+    'modtime': 180.0,
+    'mods': None,
+    'engine_status': 'bad_config_file',
+  }))
+  assert config.relay.valid_data is False
+  model.update_command(json.dumps({
+    'available_games': [
+      {'game': 'Valid Game', 'file': '/usr/local/chaos/games/valid.toml'},
+    ],
+    'engine_status': 'waiting_for_game',
+  }))
+
+  assert config.relay.available_games == ['Valid Game']
+  assert config.relay.get_preferred_game(config.relay.available_games) == ''
+  assert model._pending_selected_game == ''
+  assert config.relay.engine_status == ChaosModel.ENGINE_STATUS_WAITING_FOR_GAME
+  assert config.relay.valid_data is False
+
+  config.relay.request_game_selection('Valid Game')
+  selection = config.relay.consume_game_selection_request()
+  model.request_game_selection(selection, force=True)
+  assert model._pending_selected_game == 'Valid Game'
