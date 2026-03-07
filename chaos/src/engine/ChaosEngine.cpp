@@ -744,6 +744,33 @@ void ChaosEngine::sendInterfaceMessage(const std::string& msg) {
   chaosInterface.sendMessage(msg);
 }
 
+void ChaosEngine::clearPendingInjectedEventsForMenu() {
+  std::vector<std::shared_ptr<Modifier>> mods_snapshot;
+  lock();
+  mods_snapshot.assign(modifiers.begin(), modifiers.end());
+  unlock();
+
+  std::size_t cleared = 0;
+  for (auto& mod : mods_snapshot) {
+    if (mod) {
+      cleared += mod->clearPendingInjectedEvents();
+    }
+  }
+  if (cleared > 0) {
+    PLOG_DEBUG << "Cleared " << cleared << " pending injected modifier event(s) before menu navigation";
+  }
+}
+
+void ChaosEngine::setMenuState(std::shared_ptr<MenuItem> item, unsigned int new_val) {
+  clearPendingInjectedEventsForMenu();
+  game.getMenu().setState(item, new_val, false, controller);
+}
+
+void ChaosEngine::restoreMenuState(std::shared_ptr<MenuItem> item) {
+  clearPendingInjectedEventsForMenu();
+  game.getMenu().restoreState(item, controller);
+}
+
 bool ChaosEngine::eventMatches(const DeviceEvent& event, std::shared_ptr<GameCommand> command) { 
   std::shared_ptr<ControllerInput> signal = command->getInput();
   return signal ? signal->matches(event) : false;

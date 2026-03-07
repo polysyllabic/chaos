@@ -823,6 +823,32 @@ delay = 0.005
   return ok;
 }
 
+static bool testDelayModifierClearPendingInjectedEvents() {
+  MockEngine engine;
+  auto mod = makeMod<DelayModifier>(
+      R"(
+name = "Delay Queue Manual Flush"
+type = "delay"
+applies_to = [ "CAMERA_X" ]
+delay = 0.005
+)",
+      engine);
+
+  bool ok = true;
+  mod->_begin();
+  DeviceEvent delayed = commandEvent(engine, "CAMERA_X", 99);
+  ok &= check(!mod->tweak(delayed), "manual flush test should queue delayed event");
+
+  std::size_t cleared = mod->clearPendingInjectedEvents();
+  ok &= check(cleared == 1, "clearPendingInjectedEvents should report one discarded delayed event");
+
+  usleep(7000);
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.empty(),
+              "cleared delayed events should not be replayed later");
+  return ok;
+}
+
 static bool testDelayModifierStressRapidDodgeEvents() {
   MockEngine engine;
   auto mod = makeMod<DelayModifier>(
@@ -2916,6 +2942,7 @@ int main() {
   ok &= testDelayModifierReplaysMultipleSequentialEvents();
   ok &= testDelayModifierDelaysHybridButtonAndAxis();
   ok &= testDelayModifierClearsQueueAcrossLifecycle();
+  ok &= testDelayModifierClearPendingInjectedEvents();
   ok &= testDelayModifierStressRapidDodgeEvents();
   ok &= testDelayModifierStressInterleavedJoystickEvents();
   ok &= testDisableDefaultFilterBlocksConfiguredCommandOnly();

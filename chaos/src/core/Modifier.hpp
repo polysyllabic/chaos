@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <cstddef>
 #include <string>
 #include <memory>
 #include <unordered_map>
@@ -353,6 +354,16 @@ namespace Chaos {
      * Child classes implement this function to handle type-specific initialization.
      */
     virtual void finish();
+
+    /**
+     * \brief Clear any pending internally queued events this modifier may inject later.
+     *
+     * Modifiers that queue deferred events (for example delay-style replay) can override this so
+     * menu operations can run without stale injected gameplay events being emitted.
+     *
+     * \return Number of queued events that were discarded.
+     */
+    virtual std::size_t clearPendingInjectedEvents() { return 0; }
 
     /**
      * \brief Remap incoming commands

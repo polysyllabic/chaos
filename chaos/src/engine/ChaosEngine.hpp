@@ -110,6 +110,7 @@ namespace Chaos {
     std::string currentEngineStatusLocked();
     std::string resolveGameConfig(const std::string& selection);
     std::string resolveModListUri(const std::string& configured_uri) const;
+    void clearPendingInjectedEventsForMenu();
 
     void removeMod(std::shared_ptr<Modifier> mod);
 
@@ -193,9 +194,7 @@ namespace Chaos {
      * 
      * The menu item must be settable (i.e., not a submenu)
     */
-    void setMenuState(std::shared_ptr<MenuItem> item, unsigned int new_val) {
-      game.getMenu().setState(item, new_val, false, controller);
-    }
+    void setMenuState(std::shared_ptr<MenuItem> item, unsigned int new_val) override;
 
     /**
      * \brief Restores a menu to its default state
@@ -203,9 +202,7 @@ namespace Chaos {
      *
      * The menu item must be settable (i.e., not a submenu)
      */
-    void restoreMenuState(std::shared_ptr<MenuItem> item) {
-      game.getMenu().restoreState(item, controller);
-    }
+    void restoreMenuState(std::shared_ptr<MenuItem> item) override;
 
     std::shared_ptr<ControllerInput> getInput(const std::string& name) {
       return game.getSignalTable().getInput(name);

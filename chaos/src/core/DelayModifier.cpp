@@ -48,15 +48,19 @@ DelayModifier::DelayModifier(toml::table& config, EngineInterface* e) {
 }
 
 void DelayModifier::begin() {
-  std::lock_guard<std::mutex> lock(queue_mutex);
-  std::queue<TimeAndEvent> empty;
-  std::swap(eventQueue, empty);
+  clearPendingInjectedEvents();
 }
 
 void DelayModifier::finish() {
+  clearPendingInjectedEvents();
+}
+
+std::size_t DelayModifier::clearPendingInjectedEvents() {
   std::lock_guard<std::mutex> lock(queue_mutex);
+  const std::size_t cleared = eventQueue.size();
   std::queue<TimeAndEvent> empty;
   std::swap(eventQueue, empty);
+  return cleared;
 }
 
 void DelayModifier::update() {

@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <cstddef>
 #include <chrono>
 #include <mutex>
 #include <queue>
@@ -74,5 +75,6 @@ namespace Chaos {
     void finish() override;
     void update();
     bool tweak(DeviceEvent& event);
+    std::size_t clearPendingInjectedEvents() override;
   };
 };
