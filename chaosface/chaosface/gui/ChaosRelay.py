@@ -651,12 +651,36 @@ class ChaosRelay:
     logging.debug('Initializing modifier data:')
     self.modifier_data = {}
     self.enabled_mods = []
-    for mod in gamedata['mods']:
-      mod_key = mod['name'].lower()
+    mods = gamedata.get('mods')
+    if mods is None:
+      logging.warning("Game data for '%s' does not include a mods list; treating as empty", self.game_name)
+      mods = []
+    elif not isinstance(mods, list):
+      logging.warning(
+        "Game data for '%s' has non-list mods payload (%s); treating as empty",
+        self.game_name,
+        type(mods).__name__,
+      )
+      mods = []
+
+    for mod in mods:
+      if not isinstance(mod, dict):
+        logging.warning("Skipping invalid modifier entry for '%s': %r", self.game_name, mod)
+        continue
+      mod_name = str(mod.get('name', '')).strip()
+      if not mod_name:
+        logging.warning("Skipping modifier entry with missing name for '%s': %r", self.game_name, mod)
+        continue
+      mod_key = mod_name.lower()
       self.modifier_data[mod_key] = {}
-      self.modifier_data[mod_key]['name'] = mod['name']
-      self.modifier_data[mod_key]['desc'] = mod['desc']
-      self.modifier_data[mod_key]['groups'] = mod['groups']
+      self.modifier_data[mod_key]['name'] = mod_name
+      self.modifier_data[mod_key]['desc'] = str(mod.get('desc', ''))
+      groups = mod.get('groups')
+      if groups is None:
+        groups = []
+      elif not isinstance(groups, list):
+        groups = [str(groups)]
+      self.modifier_data[mod_key]['groups'] = groups
       if mod_key in self.old_mod_data:
         self.modifier_data[mod_key]['active'] = self.old_mod_data[mod_key]['active']
       else:

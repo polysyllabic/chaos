@@ -107,7 +107,7 @@ int ModifierTable::buildModList(toml::table& config, EngineInterface* engine,
 }
 
 Json::Value ModifierTable::getModList() {
-  Json::Value mod;
+  Json::Value mod(Json::arrayValue);
   for (auto const& [key, val] : mod_map) {
     // Mods that are marked unlisted are not reported to the chatbot
     if (! val->isUnlisted()) {

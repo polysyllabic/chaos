@@ -128,6 +128,25 @@ def test_initialize_game_resets_vote_timer_and_closes_vote():
   assert relay.vote_time == 0.0
 
 
+def test_initialize_game_tolerates_null_mods_payload():
+  relay = ChaosRelay()
+  relay.set_vote_open(True)
+  relay.set_vote_time(0.61)
+
+  relay.initialize_game({
+    'game': 'The Last of Us 2',
+    'errors': 1,
+    'nmods': 3,
+    'modtime': 180.0,
+    'mods': None,
+  })
+
+  assert relay.modifier_data == {}
+  assert relay.enabled_mods == []
+  assert relay.vote_open is False
+  assert relay.vote_time == 0.0
+
+
 def test_set_mod_enabled_updates_enabled_mod_list():
   relay = ChaosRelay()
   relay.modifier_data = {
