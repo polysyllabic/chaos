@@ -225,22 +225,16 @@ if (DOXYGEN_FOUND)
 	set(DOXYGEN_OUT ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile)
 	set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc)
 	configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
-	
-	# Doxygen templates can retain obsolete configuration tags that newer Doxygen versions
-	# no longer understand. Remove them here so warnings do not reappear on every build.
-	file(READ ${DOXYGEN_OUT} DOXYGEN_OUT_CONTENTS)
-	set(_DoxygenObsoleteTags
-	  "OUTPUT_TEXT_DIRECTION"
-	  "LATEX_SOURCE_CODE"
-	  "RTF_SOURCE_CODE"
-	  "DOCBOOK_PROGRAMLISTING"
-	  "CLASS_DIAGRAMS"
+	# Normalize the generated configuration for the doxygen version installed on this system.
+	execute_process(
+	  COMMAND ${DOXYGEN_EXECUTABLE} -u ${DOXYGEN_OUT}
+	  OUTPUT_QUIET
+	  ERROR_QUIET
+	  RESULT_VARIABLE _DOXYGEN_UPDATE_RESULT
 	)
-	foreach(_obsolete_tag IN LISTS _DoxygenObsoleteTags)
-	  string(REGEX REPLACE "(?m)^[ \\t]*${_obsolete_tag}[ \\t]*=.*(\\r?\\n|$)" "" DOXYGEN_OUT_CONTENTS
-	                          "${DOXYGEN_OUT_CONTENTS}")
-	endforeach()
-	file(WRITE ${DOXYGEN_OUT} "${DOXYGEN_OUT_CONTENTS}")
+	if (NOT _DOXYGEN_UPDATE_RESULT EQUAL 0)
+	  message(WARNING "doxygen -u failed for ${DOXYGEN_OUT} (code=${_DOXYGEN_UPDATE_RESULT})")
+	endif()
 	message("Configuring Doxygen")
 
 	add_custom_target(doc ALL

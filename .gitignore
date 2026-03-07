@@ -55,3 +55,4 @@ chaos/doc/Doxyfile
 # virtual environments
 chaosface/venv/*
 chaosface/database.sqlite
+chaos/doc/Doxyfile.bak
