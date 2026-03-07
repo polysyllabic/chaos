@@ -1118,7 +1118,7 @@ remap = [
       {from = "LY", to = "RY"},
       {from = "RX", to = "LX"},
       {from = "RY", to = "LY"},
-      {from = "DX", to = "CIRCLE", to_neg = "SQUARE"},
+      {from = "DX", to = "SQUARE", to_neg = "CIRCLE"},
       {from = "DY", to = "TRIANGLE", to_neg = "X"},
       {from = "R1", to = "L1"},
       {from = "L1", to = "R1"},

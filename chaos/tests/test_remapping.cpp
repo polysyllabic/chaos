@@ -204,6 +204,55 @@ remap = [
   return ok;
 }
 
+static bool testThreeStateSameDirectionCanBePressedAgain() {
+  MockEngine engine;
+  auto mod = makeRemap(
+      R"(
+name = "ThreeState Repeat Direction Remap"
+type = "remap"
+remap = [
+  { from = "DX", to = "CIRCLE", to_neg = "SQUARE" }
+]
+)",
+      engine);
+
+  auto from = engine.getInput("DX");
+  auto to = engine.getInput("CIRCLE");
+  auto to_neg = engine.getInput("SQUARE");
+
+  bool ok = true;
+  ok &= check(from != nullptr && to != nullptr && to_neg != nullptr,
+              "three-state repeat-direction inputs should exist");
+  if (!from || !to || !to_neg) {
+    return false;
+  }
+
+  DeviceEvent first_press = {0, 1, from->getButtonType(), from->getID()};
+  ok &= check(mod->remap(first_press), "first positive DX should be accepted");
+  engine.applyEvent(first_press);
+  ok &= check(engine.getState(to->getID(), to->getButtonType()) == 1,
+              "first positive DX should press positive mapped button");
+  ok &= check(engine.getState(to_neg->getID(), to_neg->getButtonType()) == 0,
+              "first positive DX should keep negative mapped button released");
+
+  DeviceEvent neutral = {0, 0, from->getButtonType(), from->getID()};
+  ok &= check(mod->remap(neutral), "neutral DX should be accepted");
+  engine.applyEvent(neutral);
+  ok &= check(engine.getState(to->getID(), to->getButtonType()) == 0 &&
+                  engine.getState(to_neg->getID(), to_neg->getButtonType()) == 0,
+              "neutral DX should release both mapped buttons");
+
+  DeviceEvent second_press = {0, 1, from->getButtonType(), from->getID()};
+  ok &= check(mod->remap(second_press), "second positive DX should be accepted");
+  engine.applyEvent(second_press);
+  ok &= check(engine.getState(to->getID(), to->getButtonType()) == 1,
+              "second positive DX should press positive mapped button again");
+  ok &= check(engine.getState(to_neg->getID(), to_neg->getButtonType()) == 0,
+              "second positive DX should keep negative mapped button released");
+
+  return ok;
+}
+
 static bool testButtonToHybridDrivesAxisOnPressAndRelease() {
   MockEngine engine;
   auto mod = makeRemap(
@@ -546,6 +595,7 @@ static bool testControllerDefaultHybridAxesReleased() {
 int main() {
   bool ok = true;
   ok &= testAxisZeroClearsNegativeButton();
+  ok &= testThreeStateSameDirectionCanBePressedAgain();
   ok &= testButtonToHybridDrivesAxisOnPressAndRelease();
   ok &= testHybridToButtonUsesAxisThreshold();
   ok &= testInvertUsesRemappedValue();

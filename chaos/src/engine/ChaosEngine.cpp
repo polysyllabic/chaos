@@ -650,17 +650,16 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
   // The share button resumes the chaos engine
   if (game.matchesID(input, ControllerSignal::SHARE)) {
     bool interface_ready = (!interface_enabled) || chaosInterface.isTalkerHealthy();
-    bool can_unpause = game_ready.load() && interface_ready;
+    bool can_unpause = game_ready.load();
     if(input.value == 1 && pause.load() == true) { // on rising edge
       if (can_unpause) {
         pausePrimer = true;
+        if (!interface_ready) {
+          PLOG_WARNING << "Unpausing while chaosface interface is disconnected.";
+        }
       } else {
         pausePrimer = false;
-        if (!game_ready.load()) {
-          PLOG_WARNING << "Ignoring unpause command: no valid game configuration loaded.";
-        } else {
-          PLOG_WARNING << "Ignoring unpause command: chaosface interface is disconnected.";
-        }
+        PLOG_WARNING << "Ignoring unpause command: no valid game configuration loaded.";
       }
     } else if(input.value == 0 && pause.load() == true && (pausePrimer || can_unpause)) { // falling edge
       // If the rising edge was missed while paused (e.g., startup/controller state races),

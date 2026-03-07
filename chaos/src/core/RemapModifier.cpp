@@ -258,8 +258,9 @@ bool RemapModifier::remap(DeviceEvent& event) {
       return false;
     }
 
-    // Now handle cases that require additional actions
-    if (event.value) {
+    // Now handle cases that require additional actions. Three-state remaps
+    // must also process neutral (0) events to release previously pressed targets.
+    if (event.value || from->getType() == ControllerSignalType::THREE_STATE) {
     switch (from->getType()) {
     case ControllerSignalType::BUTTON:
       switch (to_console->getType()) {
