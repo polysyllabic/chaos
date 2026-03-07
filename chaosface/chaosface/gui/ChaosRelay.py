@@ -1425,12 +1425,59 @@ class ChaosRelay:
     else:
       logging.debug('Received an out of range vote (%s)', index + 1)
 
+  def _mod_key_for_name(self, mod_name: str) -> str:
+    normalized = str(mod_name or '').strip().lower()
+    if not normalized:
+      return ''
+    if normalized in self.modifier_data:
+      return normalized
+    for key, data in self.modifier_data.items():
+      label = str(data.get('name', '')).strip().lower()
+      if label == normalized:
+        return key
+    return ''
+
+  def _set_sorted_active_mod_state(self, names=None, progress=None):
+    source_names = list(self.active_mods if names is None else names)
+    source_progress = list(self.mod_times if progress is None else progress)
+    slot_count = max(int(self.num_active_mods or 0), len(source_names), len(source_progress))
+    if slot_count <= 0:
+      self.active_keys = []
+      self.set_active_mods([])
+      self.set_mod_times([])
+      return
+
+    entries = []
+    for index in range(slot_count):
+      mod_name = str(source_names[index]).strip() if index < len(source_names) else ''
+      if index < len(source_progress):
+        try:
+          value = float(source_progress[index])
+        except (TypeError, ValueError):
+          value = 1.0 if mod_name else 0.0
+      else:
+        value = 1.0 if mod_name else 0.0
+      value = max(0.0, min(1.0, value))
+      if not mod_name:
+        value = 0.0
+      entries.append((mod_name, value))
+
+    active_entries = [entry for entry in entries if entry[0]]
+    active_entries.sort(key=lambda entry: entry[1], reverse=True)
+    active_entries.extend([('', 0.0)] * max(0, slot_count - len(active_entries)))
+
+    sorted_names = [name for name, _ in active_entries[:slot_count]]
+    sorted_progress = [value for _, value in active_entries[:slot_count]]
+    self.active_keys = [self._mod_key_for_name(name) if name else '' for name in sorted_names]
+    self.set_active_mods(sorted_names)
+    self.set_mod_times(sorted_progress)
+
   def decrement_mod_times(self, d_time):
     time_remaining = list(self.mod_times)
     divisor = self.time_per_modifier if self.time_per_modifier > 0 else 1.0
     delta = float(d_time) / divisor
     time_remaining[:] = [t - delta for t in time_remaining]
-    self.set_mod_times(time_remaining)
+    self._set_sorted_active_mod_state(self.active_mods, time_remaining)
 
   def reset_softmax(self):
     logging.info('Resetting SoftMax!')
@@ -1611,17 +1658,19 @@ class ChaosRelay:
     self.update_softmax(mod_key)
     mods = list(self.active_mods)
     times = list(self.mod_times)
-    if not times:
-      times = [0.0] * self.num_active_mods
-    if len(mods) < len(times):
-      mods.extend([''] * (len(times) - len(mods)))
+    slot_count = max(int(self.num_active_mods or 0), len(mods), len(times))
+    if slot_count <= 0:
+      return
+    if len(times) < slot_count:
+      times.extend([0.0] * (slot_count - len(times)))
+    if len(mods) < slot_count:
+      mods.extend([''] * (slot_count - len(mods)))
 
     # Find the oldest mod
     finished_mod = times.index(min(times))
     mods[finished_mod] = self.modifier_data[mod_key]['name']
     times[finished_mod] = 1.0
-    self.set_mod_times(times)
-    self.set_active_mods(mods)
+    self._set_sorted_active_mod_state(mods, times)
 
     # Announce what's now active after replacement
     if self.announce_active:
@@ -1658,8 +1707,10 @@ class ChaosRelay:
     compacted = [(name, time_remaining) for name, time_remaining in retained if str(name).strip()]
     compacted.extend([('', 0.0)] * max(0, slot_count - len(compacted)))
 
-    self.set_active_mods([name for name, _ in compacted[:slot_count]])
-    self.set_mod_times([time_remaining for _, time_remaining in compacted[:slot_count]])
+    self._set_sorted_active_mod_state(
+      [name for name, _ in compacted[:slot_count]],
+      [time_remaining for _, time_remaining in compacted[:slot_count]],
+    )
 
   def restore_active_mods(self, names, progress):
     slot_count = int(self.num_active_mods or 0)
@@ -1686,19 +1737,10 @@ class ChaosRelay:
       restored_names.append(mod_name)
       restored_progress.append(value)
 
-    name_to_key: Dict[str, str] = {}
-    for key, data in self.modifier_data.items():
-      label = str(data.get('name', '')).strip().lower()
-      if label and label not in name_to_key:
-        name_to_key[label] = key
-    self.active_keys = [name_to_key.get(str(name).strip().lower(), '') if str(name).strip() else '' for name in restored_names]
-
-    self.set_active_mods(restored_names)
-    self.set_mod_times(restored_progress)
+    self._set_sorted_active_mod_state(restored_names, restored_progress)
 
   def reset_current_mods(self):
-    self.set_mod_times([0.0] * self.num_active_mods)
-    self.set_active_mods([''] * self.num_active_mods)
+    self._set_sorted_active_mod_state([''] * self.num_active_mods, [0.0] * self.num_active_mods)
 
   def reset_voting(self):
     self.set_votes([0] * self.vote_options)

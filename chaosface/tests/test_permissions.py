@@ -95,6 +95,51 @@ def test_restore_active_mods_hydrates_names_progress_and_keys():
   assert relay.mod_times == [0.6, 0.25, 0.0]
   assert relay.active_keys == ['mod b', 'mod c', '']
 
+
+def test_restore_active_mods_sorts_by_remaining_time_descending():
+  relay = ChaosRelay()
+  relay.initialize_game({
+    'game': 'Restore Sort Test',
+    'errors': 0,
+    'nmods': 3,
+    'modtime': 180.0,
+    'mods': [
+      {'name': 'Mod A', 'desc': 'A', 'groups': ['Test']},
+      {'name': 'Mod B', 'desc': 'B', 'groups': ['Test']},
+      {'name': 'Mod C', 'desc': 'C', 'groups': ['Test']},
+    ],
+  })
+
+  relay.restore_active_mods(['Mod B', 'Mod C', 'Mod A'], [0.1, 0.8, 0.4])
+
+  assert relay.active_mods == ['Mod C', 'Mod A', 'Mod B']
+  assert relay.mod_times == [0.8, 0.4, 0.1]
+  assert relay.active_keys == ['mod c', 'mod a', 'mod b']
+
+
+def test_replace_mod_places_newest_modifier_at_top():
+  relay = ChaosRelay()
+  relay.initialize_game({
+    'game': 'Replace Sort Test',
+    'errors': 0,
+    'nmods': 3,
+    'modtime': 180.0,
+    'mods': [
+      {'name': 'Mod A', 'desc': 'A', 'groups': ['Test']},
+      {'name': 'Mod B', 'desc': 'B', 'groups': ['Test']},
+      {'name': 'Mod C', 'desc': 'C', 'groups': ['Test']},
+      {'name': 'Mod D', 'desc': 'D', 'groups': ['Test']},
+    ],
+  })
+  relay.restore_active_mods(['Mod A', 'Mod B', 'Mod C'], [0.9, 0.5, 0.1])
+
+  relay.replace_mod('mod d')
+
+  assert relay.active_mods == ['Mod D', 'Mod A', 'Mod B']
+  assert relay.mod_times == [1.0, 0.9, 0.5]
+  assert relay.active_keys == ['mod d', 'mod a', 'mod b']
+
+
 def test_reset_all_uses_current_game_when_selected_game_is_none():
   relay = ChaosRelay()
   relay.chaos_config['current_game'] = 'The Last of Us 2'
