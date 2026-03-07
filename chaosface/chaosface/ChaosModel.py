@@ -56,6 +56,7 @@ class ChaosModel(EngineObserver):
     self._command_results: dict[str, dict[str, Any]] = {}
     self._startup_sync_requested = False
     self._startup_pause_requested = False
+    self._manual_sync_requested = threading.Event()
 
     #  Socket to talk to server
     logging.info("Connecting to chaos server")
@@ -324,6 +325,9 @@ class ChaosModel(EngineObserver):
   def request_available_games(self):
     logging.debug("Asking engine for available games")
     self.send_engine_command({'available_games': True})
+
+  def request_engine_sync(self) -> None:
+    self._manual_sync_requested.set()
 
   def request_game_selection(self, game_name: str, *, force: bool = False):
     selected = str(game_name).strip()
@@ -698,6 +702,11 @@ class ChaosModel(EngineObserver):
       delta_time = now - prior_time
       self.paused_flashing_timer += delta_time
       self.disconnected_flashing_timer += delta_time
+
+      if self._manual_sync_requested.is_set():
+        self._manual_sync_requested.clear()
+        self.request_available_games()
+        self.request_game_info()
 
       if config.relay.bot_reboot:
         config.relay.bot_reboot = False

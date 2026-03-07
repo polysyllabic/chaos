@@ -459,6 +459,9 @@ app.on_startup(_start_runtime_on_app_startup)
 def _log_ui_client_connect(client=None) -> None:
   client_id = getattr(client, 'id', 'unknown')
   logging.warning('UICLIENT connect id=%s', client_id)
+  model = _model
+  if model is not None:
+    model.request_engine_sync()
 
 
 def _log_ui_client_disconnect(client=None) -> None:
