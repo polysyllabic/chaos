@@ -2013,6 +2013,6 @@ value = 1
 name = "Real No HUD"
 description = "Turn off anything that might show your status: HUD/reticle/damage indicators, etc."
 type = "parent"
-group = [ "HUD" ]
-children = [ "No Reticle", "No Inventory Hud", "No Damage Indicators", "No Awareness Indicators",
- "No Hit Markers", "No Arc Throw Paths", "No Heath Hud" ]
+groups = [ "HUD" ]
+children = [ "No Reticle", "No Inventory HUD", "No Damage Indicators", "No Awareness Indicators",
+ "No Hit Markers", "No Arc Throw Paths", "No Health HUD" ]
