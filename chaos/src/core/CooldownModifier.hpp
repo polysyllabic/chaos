@@ -20,6 +20,7 @@
 #pragma once
 #include <queue>
 #include <memory>
+#include <unordered_map>
 #include <toml++/toml.h>
 #include <timer.hpp>
 
@@ -94,6 +95,17 @@ namespace Chaos {
      * conditions.
      */
     std::vector<std::shared_ptr<ControllerInput>> trigger;
+
+    /**
+     * Last seen values for blocked commands while in BLOCK state.
+     *
+     * This allows us to restore held controls when cooldown expires without requiring
+     * the user to release and re-press the control.
+     */
+    std::unordered_map<std::string, short> blocked_command_values;
+
+    void snapshotBlockedCommands();
+    void restoreBlockedCommands();
 
   public:
     CooldownModifier(toml::table& config, EngineInterface* e);

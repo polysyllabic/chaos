@@ -572,6 +572,56 @@ time_off = 0.006
   return ok;
 }
 
+static bool testCooldownRestoresHeldCommandOnExpiry() {
+  MockEngine engine;
+  auto mod = makeMod<CooldownModifier>(
+      R"(
+name = "Cooldown Restore Held Sprint"
+type = "cooldown"
+applies_to = [ "DODGE" ]
+while = [ "movement", "sprint" ]
+start_type = "cumulative"
+time_on = 0.002
+time_off = 0.004
+)",
+      engine);
+  mod->_begin();
+
+  auto dodge = commandInput(engine, "DODGE");
+  auto move_x = commandInput(engine, "MOVE_X");
+  auto move_y = commandInput(engine, "MOVE_Y");
+  bool ok = true;
+  ok &= check(dodge != nullptr && move_x != nullptr && move_y != nullptr,
+              "cooldown restore-held test inputs should exist");
+  if (!dodge || !move_x || !move_y) {
+    return false;
+  }
+
+  // Hold sprint + movement before cooldown starts.
+  engine.applyEvent(commandEvent(engine, "DODGE", 1));
+  engine.applyEvent(commandEvent(engine, "MOVE_X", JOYSTICK_MAX));
+  engine.applyEvent(commandEvent(engine, "MOVE_Y", 0));
+
+  mod->_update(false); // UNTRIGGERED -> ALLOW
+  usleep(6000);
+  mod->_update(false); // ALLOW -> BLOCK
+  if (!sawName(engine.set_off_calls, "DODGE")) {
+    usleep(6000);
+    mod->_update(false);
+  }
+  ok &= check(sawName(engine.set_off_calls, "DODGE"),
+              "cooldown should disable DODGE when block starts");
+  ok &= check(engine.getState(dodge->getID(), dodge->getButtonType()) == 0,
+              "DODGE should be forced off during cooldown block");
+
+  // No new sprint events arrive while user keeps holding the control.
+  usleep(7000);
+  mod->_update(false); // BLOCK -> UNTRIGGERED; should restore held value
+  ok &= check(engine.getState(dodge->getID(), dodge->getButtonType()) == 1,
+              "held DODGE should be restored when cooldown expires");
+  return ok;
+}
+
 static bool testDelayModifierQueuesAndReplays() {
   MockEngine engine;
   auto mod = makeMod<DelayModifier>(
@@ -2860,6 +2910,7 @@ int main() {
   ok &= testCooldownModifierBlocksAfterTrigger();
   ok &= testCooldownModifierRequiresWhileConditionWhenCumulativeStartType();
   ok &= testCooldownModifierCancelableResetsIfConditionDrops();
+  ok &= testCooldownRestoresHeldCommandOnExpiry();
   ok &= testDelayModifierQueuesAndReplays();
   ok &= testDelayModifierAppliesToAllCommands();
   ok &= testDelayModifierReplaysMultipleSequentialEvents();

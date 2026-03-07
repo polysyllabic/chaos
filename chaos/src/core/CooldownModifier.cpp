@@ -87,7 +87,39 @@ CooldownModifier::CooldownModifier(toml::table& config, EngineInterface* e) {
 void CooldownModifier::begin() {
   cooldown_timer = 0;
   state = CooldownState::UNTRIGGERED;
+  blocked_command_values.clear();
   PLOG_DEBUG << "Initialized " << getName();
+}
+
+void CooldownModifier::snapshotBlockedCommands() {
+  blocked_command_values.clear();
+  for (auto& cmd : commands) {
+    if (!cmd) {
+      continue;
+    }
+    auto signal = cmd->getInput();
+    if (!signal) {
+      continue;
+    }
+    blocked_command_values[cmd->getName()] = engine->getState(signal->getID(), signal->getButtonType());
+  }
+}
+
+void CooldownModifier::restoreBlockedCommands() {
+  if (blocked_command_values.empty()) {
+    return;
+  }
+  for (auto& cmd : commands) {
+    if (!cmd) {
+      continue;
+    }
+    auto it = blocked_command_values.find(cmd->getName());
+    if (it == blocked_command_values.end()) {
+      continue;
+    }
+    engine->setValue(cmd, it->second);
+  }
+  blocked_command_values.clear();
 }
 
 void CooldownModifier::update() {
@@ -108,6 +140,7 @@ void CooldownModifier::update() {
     if (cooldown_timer <= 0) {
       cooldown_timer = 0;
       state = CooldownState::UNTRIGGERED;
+      restoreBlockedCommands();
       PLOG_DEBUG << "Cooldown for " << getName() << " expired";
     }
   } else if (state == CooldownState::ALLOW) {
@@ -130,6 +163,7 @@ void CooldownModifier::update() {
       PLOG_DEBUG << "Cooldown for " << getName() << " started";
 	    cooldown_timer = time_off;
 	    state = CooldownState::BLOCK;
+      snapshotBlockedCommands();
       // Turn off all the commands we're blocking.
       // This was formerly done through fakePipelinedEvent(), but since remapping is now done
       // before we see this event, I don't think it needs to be pipelined.
@@ -160,6 +194,7 @@ bool CooldownModifier::tweak(DeviceEvent& event) {
       std::shared_ptr<ControllerInput> sig = cmd->getInput();
       PLOG_VERBOSE << "Checking " << cmd->getName() << ", maps to " << ((sig) ? sig->getName() : "NULL");
       if (sig && sig->matches(event)) {
+        blocked_command_values[cmd->getName()] = event.value;
         PLOG_DEBUG << "Blocked " << cmd->getName();
         return false;
       }
