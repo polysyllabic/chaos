@@ -287,8 +287,43 @@ bool RemapModifier::remap(DeviceEvent& event) {
       	break;
       case ControllerSignalType::BUTTON:
       case ControllerSignalType::HYBRID:
-        // if we're mapping a -1 dpad onto a button, it should change to 1
-        modified.value = 1;
+        auto positive_button = to_console;
+        auto negative_button = remap.to_negative;
+        modified.type = TYPE_BUTTON;
+
+        if (event.value > 0) {
+          modified.id = positive_button->getID();
+          modified.value = 1;
+          if (negative_button && negative_button != positive_button) {
+            new_event.id = negative_button->getID();
+            new_event.value = 0;
+            new_event.type = TYPE_BUTTON;
+            engine->applyEvent(new_event);
+          }
+        } else if (event.value < 0) {
+          if (!negative_button) {
+            PLOG_ERROR << getName() << " is missing remap for negative values of " << from->getName();
+            return true;
+          }
+          modified.id = negative_button->getID();
+          modified.value = 1;
+          if (negative_button != positive_button) {
+            new_event.id = positive_button->getID();
+            new_event.value = 0;
+            new_event.type = TYPE_BUTTON;
+            engine->applyEvent(new_event);
+          }
+        } else {
+          // Neutral three-state value should clear the active button.
+          modified.id = positive_button->getID();
+          modified.value = 0;
+          if (negative_button && negative_button != positive_button) {
+            new_event.id = negative_button->getID();
+            new_event.value = 0;
+            new_event.type = TYPE_BUTTON;
+            engine->applyEvent(new_event);
+          }
+        }
       }
       break;
     case ControllerSignalType::AXIS:
