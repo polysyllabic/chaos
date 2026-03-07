@@ -486,8 +486,11 @@ class ChaosBot:
       await self._cmd_mods(['active', *args])
       return
     if cmd_key == 'credits':
-      target = args[0].lstrip('@').lower() if args else author
-      await self.send_message(self._ctx.get_balance_message(target))
+      if not args and is_streamer:
+        await self.send_message(f'@{author} has unlimited modifier credits.')
+      else:
+        target = args[0].lstrip('@').lower() if args else author
+        await self.send_message(self._ctx.get_balance_message(target))
       return
     if cmd_key == 'addcredits':
       await self._cmd_add_credits(author, args)

@@ -683,6 +683,7 @@ class ChaosModel(EngineObserver):
     vote_open = False
     vote_target = 1.0
     was_voting_disabled = self._voting_disabled()
+    previous_voting_type = str(config.relay.voting_type)
     previous_cycle = str(config.relay.voting_cycle)
     delta_time = config.relay.sleep_time()
     prior_time = now - delta_time
@@ -783,12 +784,22 @@ class ChaosModel(EngineObserver):
         config.relay.reset_mods = False
 
       cycle = config.relay.voting_cycle
+      voting_type = str(config.relay.voting_type)
+      voting_type_changed = (voting_type != previous_voting_type)
       voting_disabled = self._voting_disabled()
       start_request = config.relay.consume_start_vote_request()
       end_requested = config.relay.consume_end_vote_request()
 
       if voting_disabled and not was_voting_disabled:
         ui_dispatch.call_soon(config.relay.reset_voting)
+      if (not voting_disabled) and voting_type_changed and vote_open:
+        # Changing vote type mid-vote cancels the current ballot and immediately
+        # re-arms scheduling under the new rules.
+        ui_dispatch.call_soon(config.relay.reset_voting)
+        vote_open = False
+        self.vote_time = 0.0
+        vote_started_at = now
+        next_vote_start_at = self._next_vote_start_for_cycle(cycle, now)
       if (not voting_disabled) and was_voting_disabled:
         # Re-arm scheduling when re-enabling voting after a disabled state.
         ui_dispatch.call_soon(config.relay.reset_voting)
@@ -857,6 +868,7 @@ class ChaosModel(EngineObserver):
       vote_ratio = (self.vote_time / vote_target) if vote_open and vote_target > 0 else 0.0
       ui_dispatch.call_soon(config.relay.set_vote_time, vote_ratio)
       was_voting_disabled = voting_disabled
+      previous_voting_type = voting_type
       previous_cycle = cycle
 
     # Exitiing loop: clean up

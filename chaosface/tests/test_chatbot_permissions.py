@@ -58,6 +58,9 @@ class _StubContext:
   def explain_credits(self) -> str:
     return 'Credits explanation.'
 
+  def get_balance_message(self, user: str) -> str:
+    return f'@{user} currently has 3 modifier credits.'
+
   def list_permission_groups(self) -> str:
     return 'Permission groups: admin, mods'
 
@@ -328,3 +331,33 @@ def test_info_command_cooldown_applies_across_mods_variants():
     asyncio.run(bot._handle_command('viewer', '!mods active'))
 
   assert messages == ['A list of the available mods for this game can be found here: https://example.com/mods']
+
+
+def test_credits_self_for_streamer_reports_unlimited():
+  ctx = _StubContext()
+  bot = ChaosBot(ctx)
+  bot._channel_name = 'streamer'
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._handle_command('streamer', '!credits'))
+
+  assert messages == ['@streamer has unlimited modifier credits.']
+
+
+def test_credits_with_argument_uses_balance_lookup_for_streamer():
+  ctx = _StubContext()
+  bot = ChaosBot(ctx)
+  bot._channel_name = 'streamer'
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._handle_command('streamer', '!credits viewer'))
+
+  assert messages == ['@viewer currently has 3 modifier credits.']
