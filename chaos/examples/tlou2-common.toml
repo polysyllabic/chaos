@@ -1222,8 +1222,8 @@ while = [ "fast movement" ]
 trigger = [ "vertical movement", "horizontal movement", "dodge/sprint" ]
 cycle_delay = 1.0
 repeat_sequence = [  
-  { event = "press", command = "dodge/sprint", delay = 0.1 },
-  { event = "press", command = "crouch/prone", delay = 0.8 },
+  { event = "hold", command = "dodge/sprint", delay = 0.1 },
+  { event = "hold", command = "crouch/prone", delay = 0.8 },
   { event = "release", command = "crouch/prone"},
   { event = "release", command = "dodge/sprint"}
   ]
@@ -1342,8 +1342,8 @@ block_while_busy = [ "dodge/sprint", "crouch/prone" ]
 while = [ "movement" ]
 trigger = [ "vertical movement", "horizontal movement" ]
 repeat_sequence = [  
-  { event = "press", command = "dodge/sprint", delay = 0.1 },
-  { event = "press", command = "crouch/prone", delay = 0.8 },
+  { event = "hold", command = "dodge/sprint", delay = 0.1 },
+  { event = "hold", command = "crouch/prone", delay = 0.8 },
   { event = "release", command = "crouch/prone"},
   { event = "release", command = "dodge/sprint"}
   ]
