@@ -1241,8 +1241,8 @@ block_while_busy = [ "aiming", "shoot" ]
 while = [ "aiming" ]
 trigger = [ "shoot" ]
 repeat_sequence = [
-  # 2 seconds is necessary to let the rifle reload
-  { event = "press", command = "shoot", delay = 2.0},
+  # 2 seconds is necessary to let the rifle reload if reload speed hasn't been upgraded
+  { event = "press", command = "shoot", delay = 1.0},
   { event = "press", command = "shoot"},
   { event = "release", command = "aiming"}
   ]
