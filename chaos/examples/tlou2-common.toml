@@ -161,58 +161,58 @@ binding = "DY"
 # Game Conditions
 [[condition]]
 name = "aiming"
-while = [ "aiming" ]
+command = [ "aiming" ]
 
 [[condition]]
 name = "not aiming"
-while = [ "aiming"]
+command = [ "aiming"]
 threshold_type = "below"
 
 [[condition]]
 name = "sprint"
-while = [ "dodge/sprint" ]
+command = [ "dodge/sprint" ]
 
 # The basic movement condition is %20 of full deflection. This means the user can get away with
 # very slow movement, and also prevents moderate joystick drift from triggering actions.
 [[condition]]
 name = "movement"
-while = [ "vertical movement", "horizontal movement" ]  
+command = [ "vertical movement", "horizontal movement" ]  
 threshold = 0.2
 threshold_type = "distance"
 
 # Fast movement triggers at 80% of full deflection
 [[condition]]
 name = "fast movement"
-while = [ "vertical movement", "horizontal movement" ]  
+command = [ "vertical movement", "horizontal movement" ]  
 threshold = 0.8
 threshold_type = "distance"
 
 # The equivalent of 'movement' for the camera joystick
 [[condition]]
 name = "camera"
-while = [ "horizontal camera", "vertical camera" ]  
+command = [ "horizontal camera", "vertical camera" ]  
 threshold = 0.2
 threshold_type = "distance"
 
 # Persistant trigger: set when user selects a weapon, cleared when user selects a consumable
 [[condition]]
 name = "gun selected"
-while = [ "select weapon" ]
+command = [ "select weapon" ]
 clear_on = [ "select consumable" ]
 
 # Persistant trigger: set when user selects a consumable, cleared when user selects a weapon
 [[condition]]
 name = "consumable selected"
-while = [ "select consumable" ]
+command = [ "select consumable" ]
 clear_on = [ "select weapon" ]
 
 [[condition]]
 name = "shooting"
-while = [ "aiming", "shoot"]
+command = [ "aiming", "shoot"]
 
 [[condition]]
 name = "melee"
-while = [ "melee" ]
+command = [ "melee" ]
 
 #--------------------------------------------------------------------------------------------------
 # Sequences
@@ -1193,7 +1193,7 @@ type = "formula"
 groups = [ "Movement" ]
 applies_to = [ "horizontal movement", "vertical movement" ]
 formula_type = "random_offset"
-range = [ 20, 50 ]
+range = [ 40, 75 ]
 direction = [ 0, 360 ]
 
 
@@ -1328,7 +1328,7 @@ repeat_sequence = [
   { event = "release", command = "select weapon" },
   { event = "release", command = "select consumable" },
  ]
- end_sequence = [
+ finish_sequence = [
   { event = "release", command = "select weapon" },
   { event = "release", command = "select consumable" },
  ]

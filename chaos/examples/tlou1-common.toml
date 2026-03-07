@@ -131,52 +131,52 @@ binding = "DY"
 # Game Conditions
 [[condition]]
 name = "aiming"
-while = [ "aiming" ]
+command = [ "aim" ]
 
 [[condition]]
 name = "not aiming"
-while = [ "aiming"]
+command = [ "aim"]
 threshold_type = "below"
 
 [[condition]]
 name = "sprint"
-while = [ "sprint" ]
+command = [ "sprint" ]
 
 [[condition]]
 name = "movement"
-while = [ "vertical movement", "horizontal movement" ]  
+command = [ "vertical movement", "horizontal movement" ]  
 threshold = 0.2
 threshold_type = "distance"
 
 [[condition]]
 name = "fast movement"
-while = [ "vertical movement", "horizontal movement" ]  
+command = [ "vertical movement", "horizontal movement" ]  
 threshold = 0.8
 threshold_type = "distance"
 
 [[condition]]
 name = "camera"
-while = [ "horizontal camera", "vertical camera" ]  
+command = [ "horizontal camera", "vertical camera" ]  
 threshold = 0.2
 threshold_type = "distance"
 
 [[condition]]
 name = "gun selected"
-while = [ "select weapon" ]
+command = [ "select weapon" ]
 clear_on = [ "select consumable" ]
 
 [[condition]]
 name = "consumable selected"
-while = [ "select consumable" ]
+command = [ "select consumable" ]
 clear_on = [ "select weapon" ]
 
 [[condition]]
 name = "shooting"
-while = [ "aiming", "shoot"]
+command = [ "aim", "shoot"]
 
 [[condition]]
 name = "melee"
-while = [ "melee" ]
+command = [ "melee" ]
 
 # Sequences
 [[sequence]]
@@ -186,7 +186,7 @@ sequence = [{ event="release", command = "interact" },            # TRIANGLE
             { event="release", command = "jump" },                # X
             { event="release", command = "melee" },               # SQUARE
             { event="release", command = "sprint" },              # L1
-            { event="release", command = "aiming" },              # L2
+            { event="release", command = "aim" },                 # L2
             { event="release", command = "swap/listen" },         # R1
             { event="release", command = "reload/toss" },         # R2
             { event="release", command = "look" },                # L3
@@ -534,8 +534,8 @@ name = "No Aiming"
 description = "At least reloading is still possible, along with throwables and melee"
 type = "disable"
 groups = [ "Combat" ]
-applies_to = [ "aiming" ]
-begin_sequence = [ { event = "release", command = "aiming" } ]
+applies_to = [ "aim" ]
+begin_sequence = [ { event = "release", command = "aim" } ]
 
 [[modifier]]
 name = "No Horizontal Aim"
@@ -755,7 +755,7 @@ name = "Snapshot"
 description = "You can only aim for 1 second at a time, so take that shot quickly."
 type = "cooldown"
 groups = [ "Combat" ]
-applies_to = [ "aiming" ]
+applies_to = [ "aim" ]
 while = [ "aiming" ]
 start_type = "cancelable"
 time_on = 1.0
@@ -896,10 +896,10 @@ finish_sequence = [ { event="release", command = "vertical movement"},
 
 [[modifier]]
 name = "Force Aiming"
-description = "The aiming button is held"
+description = "The aim button is held"
 type = "repeat"
 groups = [ "Combat" ]
-applies_to = [ "aiming" ]
+applies_to = [ "aim" ]
 time_on = 4.0
 time_off = 0.1
 force_on = [ 1 ]
@@ -1109,9 +1109,9 @@ groups = [ "Combat" ]
 block_while_busy = "ALL"
 begin_sequence = [
   { event = "press", command = "select weapon", delay = 1.0 },
-  { event = "hold", command = "aiming", delay = 1.0 },
+  { event = "hold", command = "aim", delay = 1.0 },
   { event = "press", command ="shoot" },
-  { event = "release", command = "aiming" }
+  { event = "release", command = "aim" }
   ]
 
 [[modifier]]
@@ -1119,14 +1119,14 @@ name = "Double Tap"
 description = "It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins."
 type = "sequence"
 groups = [ "Combat" ]
-block_while_busy = [ "aiming", "shoot" ]
+block_while_busy = [ "aim", "shoot" ]
 while = [ "aiming" ]
 trigger = [ "shoot" ]
 repeat_sequence = [
   # 2 seconds is necessary to let the rifle reload
   { event = "press", command = "shoot", delay = 2.0},
   { event = "press", command = "shoot"},
-  { event = "release", command = "aiming"}
+  { event = "release", command = "aim"}
   ]
 
 [[modifier]]
@@ -1134,11 +1134,11 @@ name = "Use Items"
 description = "Shoots or throws 6 of whatever item is currently equipped. No effect for medkits."
 type = "sequence"
 groups = [ "Combat", "Inventory" ]
-block_while_busy = [ "aiming", "reload/toss" ]
+block_while_busy = [ "aim", "reload/toss" ]
 begin_sequence = [
-  { event="hold", command = "aiming", delay = 2.0 },
+  { event="hold", command = "aim", delay = 2.0 },
   { event="press", command = "shoot", repeat = 6, delay = 0.25 },
-  { event="release", command = "aiming" }
+  { event="release", command = "aim" }
   ]
 
 [[modifier]]
@@ -1223,7 +1223,7 @@ repeat_sequence = [
   { event = "release", command = "select weapon" },
   { event = "release", command = "select consumable" },
  ]
- end_sequence = [
+ finish_sequence = [
   { event = "release", command = "select weapon" },
   { event = "release", command = "select consumable" },
  ]
@@ -1233,12 +1233,12 @@ name = "Rubbernecking"
 description = "Woah! What's behind you? Invokes a periodic, 180-degree quick turn."
 type = "sequence"
 groups = [ "Movement" ]
-block_while_busy = [ "jump", "aiming", "vertical movement", "horizontal movement" ]
+block_while_busy = [ "jump", "aim", "vertical movement", "horizontal movement" ]
 start_delay = 6.0
 cycle_delay = 0.1
 repeat_sequence = [
    { event = "release", command = "jump" },
-   { event = "release", command = "aiming" },
+   { event = "release", command = "aim" },
    { event = "release", command = "horizontal movement" },
    { event = "hold", command = "vertical movement", delay=0.1}, # default is JOYSTICK_MAX = 127, which we want
    { event = "hold", command = "jump", delay=0.1},
@@ -1818,7 +1818,7 @@ name = "Aim Delay"
 description = "Introduces a 1 second delay to aiming"
 type = "delay"
 groups = [ "Combat" ]
-applies_to = [ "aiming" ]  
+applies_to = [ "aim" ]  
 delay = 1.0
 
 [[modifier]]

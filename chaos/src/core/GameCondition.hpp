@@ -40,16 +40,16 @@ namespace Chaos {
    * A persistent condition is set to true when a particular condition arrives and remains true
    * until a different condition arrives that clears the condition.
    * 
-   * Transient conditions are defined with the `while` key and the condition will be true as long
+   * Transient conditions are defined with the `command` key and the condition will be true as long
    * as the current state of the controller exceeds the defined threshold value and false
-   * otherwise. More than one command can appear in the while parameter, but how multiple
+   * otherwise. More than one command can appear in the command list, but how multiple
    * commands are processed depends on the threshold type.
    * 
-   * Persistent events also use the `while` key to define the state that turns the condition true,
+   * Persistent events also use the `command` key to define the state that turns the condition true,
    * but once the condition is true, it remains so until the commands listed in `clear_on` are
    * true.
    * 
-   * Both transient and persistent must define the `while` key. The `clear_on` key is only valid
+   * Both transient and persistent must define the `command` key. The `clear_on` key is only valid
    * for persistent conditions. If it is missing, the condition will be treated as transient.
    * 
    * The syntax for defining conditions in the TOML file is described in chaosCoonfigFiles.md

@@ -700,20 +700,20 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
   PLOG_VERBOSE << "Initializing game condition " << *condition_name;
   
   TOMLUtils::checkValid(config, std::vector<std::string>{
-      "name", "while", "clear_on", "threshold", "threshold_type", "clear_threshold",
+      "name", "command", "clear_on", "threshold", "threshold_type", "clear_threshold",
       "clear_threshold_type"});
 
   std::shared_ptr<GameCondition> ret = std::make_shared<GameCondition>(*condition_name);
 
-  if (!config.contains("while")) {
+  if (!config.contains("command")) {
     ++parse_errors;
-    PLOG_ERROR << "A condition must contain a 'while' key";
+    PLOG_ERROR << "A condition must contain a 'command' key";
     return nullptr;
   }
-  const toml::array* cmd_list = config.get("while")->as_array();
+  const toml::array* cmd_list = config.get("command")->as_array();
   if (!cmd_list || !cmd_list->is_homogeneous(toml::node_type::string)) {
     ++parse_errors;
-    PLOG_ERROR << "'while' must be an array of strings";
+    PLOG_ERROR << "'command' must be an array of strings";
     return nullptr;
   }
 
@@ -724,17 +724,17 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
     std::shared_ptr<GameCommand> item = getCommand(*cmd);
     if (item) {
       ret->addWhile(item);
-      PLOG_VERBOSE << "Added '" + *cmd + "' to the while vector.";
+      PLOG_VERBOSE << "Added '" + *cmd + "' to the condition command list.";
     } else {
       ++parse_errors;
-      PLOG_ERROR << "Unrecognized command '" << *cmd << "' in while list";
+      PLOG_ERROR << "Unrecognized command '" << *cmd << "' in condition command list";
       return nullptr;
     }
   }
-  // If no valid commands were in the while list, reject the whole condition
+  // If no valid commands were in the condition command list, reject the whole condition
   if (ret->getNumWhile() == 0) {
     ++parse_errors;
-    PLOG_ERROR << "No commands in while list";
+    PLOG_ERROR << "No commands in condition list";
     return nullptr;
   }
   
@@ -755,7 +755,7 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
         PLOG_VERBOSE << "Added '" + *cmd + "' to the clear_on vector.";
       } else {
         ++parse_errors;
-        PLOG_ERROR << "Unrecognized command '" << *cmd << "' in while list";
+        PLOG_ERROR << "Unrecognized command '" << *cmd << "' in clear_on list";
         return nullptr;
       }
     }
@@ -786,7 +786,7 @@ std::shared_ptr<GameCondition> Game::makeCondition(toml::table& config) {
   if ((threshold_type == ThresholdType::DISTANCE ||
        threshold_type == ThresholdType::DISTANCE_BELOW) && ret->getNumWhile() != 2) {
     ++parse_errors;
-    PLOG_ERROR << "Length of 'while' list must be exactly 2 for DISTANCE/DISTANCE_BELOW thresholds";
+    PLOG_ERROR << "Length of 'command' list must be exactly 2 for DISTANCE/DISTANCE_BELOW thresholds";
     return nullptr;
     }
 
