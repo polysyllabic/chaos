@@ -1631,8 +1631,8 @@ static bool testRemapModifierRespectsToNegForThreeStateFromDPad() {
 name = "Remap to_neg ThreeState"
 type = "remap"
 remap = [
-      {from = "GET_GUN", to = "CROUCH", to_neg = "MELEE"},
-      {from = "GET_CONSUMABLE", to = "GRAB", to_neg = "JUMP"}
+      {from = "DX", to = "CIRCLE", to_neg = "SQUARE"},
+      {from = "DY", to = "TRIANGLE", to_neg = "X"}
 ]
 )",
       engine);
@@ -1653,22 +1653,22 @@ remap = [
   mod->_begin();
 
   DeviceEvent dx_right = commandEvent(engine, "GET_GUN", 1);
-  ok &= check(mod->tweak(dx_right), "DX positive event should pass through");
+  ok &= check(mod->remap(dx_right), "DX positive event should pass through");
   ok &= check(dx_right.id == circle->getID() && dx_right.value == 1,
               "positive DX should remap to configured 'to'");
 
   DeviceEvent dx_left = commandEvent(engine, "GET_GUN", -1);
-  ok &= check(mod->tweak(dx_left), "DX negative event should pass through");
+  ok &= check(mod->remap(dx_left), "DX negative event should pass through");
   ok &= check(dx_left.id == square->getID() && dx_left.value == 1,
               "negative DX should remap to configured 'to_neg'");
 
   DeviceEvent dy_up = commandEvent(engine, "GET_CONSUMABLE", 1);
-  ok &= check(mod->tweak(dy_up), "DY positive event should pass through");
+  ok &= check(mod->remap(dy_up), "DY positive event should pass through");
   ok &= check(dy_up.id == triangle->getID() && dy_up.value == 1,
               "positive DY should remap to configured 'to'");
 
   DeviceEvent dy_down = commandEvent(engine, "GET_CONSUMABLE", -1);
-  ok &= check(mod->tweak(dy_down), "DY negative event should pass through");
+  ok &= check(mod->remap(dy_down), "DY negative event should pass through");
   ok &= check(dy_down.id == cross->getID() && dy_down.value == 1,
               "negative DY should remap to configured 'to_neg'");
 
@@ -1682,7 +1682,7 @@ static bool testRemapModifierClearsPreviousThreeStateDirection() {
 name = "Remap three-state release"
 type = "remap"
 remap = [
-      {from = "GET_GUN", to = "CROUCH", to_neg = "MELEE"}
+      {from = "DX", to = "CIRCLE", to_neg = "SQUARE"}
 ]
 )",
       engine);
@@ -1699,14 +1699,14 @@ remap = [
   mod->_begin();
 
   DeviceEvent left = commandEvent(engine, "GET_GUN", -1);
-  ok &= check(mod->tweak(left), "negative three-state event should pass through");
+  ok &= check(mod->remap(left), "negative three-state event should pass through");
   engine.applyEvent(left);
   ok &= check(engine.getState(square->getID(), square->getButtonType()) == 1 &&
               engine.getState(circle->getID(), circle->getButtonType()) == 0,
               "negative three-state remap should press negative target");
 
   DeviceEvent right = commandEvent(engine, "GET_GUN", 1);
-  ok &= check(mod->tweak(right), "positive three-state event should pass through");
+  ok &= check(mod->remap(right), "positive three-state event should pass through");
   engine.applyEvent(right);
   ok &= check(engine.getState(circle->getID(), circle->getButtonType()) == 1,
               "positive three-state remap should press positive target");
@@ -1714,7 +1714,7 @@ remap = [
               "positive three-state remap should release negative target");
 
   DeviceEvent neutral = commandEvent(engine, "GET_GUN", 0);
-  ok &= check(mod->tweak(neutral), "neutral three-state event should pass through");
+  ok &= check(mod->remap(neutral), "neutral three-state event should pass through");
   engine.applyEvent(neutral);
   ok &= check(engine.getState(square->getID(), square->getButtonType()) == 0 &&
               engine.getState(circle->getID(), circle->getButtonType()) == 0,
