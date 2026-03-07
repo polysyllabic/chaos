@@ -73,21 +73,19 @@ DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
   }
 
   condition_active_last = false;
+  blocked_command_values.clear();
 }
 
 void DisableModifier::begin() {
   condition_active_last = inCondition();
+  blocked_command_values.clear();
   if (condition_active_last) {
     clampAppliedCommands();
   }
 }
 
 void DisableModifier::update() {
-  const bool condition_active = inCondition();
-  if (condition_active && !condition_active_last) {
-    clampAppliedCommands();
-  }
-  condition_active_last = condition_active;
+  syncConditionState();
 }
 
 void DisableModifier::clampAppliedCommands() {
@@ -112,6 +110,33 @@ void DisableModifier::clampAppliedCommands() {
   }
 }
 
+void DisableModifier::restoreBlockedCommands() {
+  if (applies_to_all || blocked_command_values.empty()) {
+    return;
+  }
+  for (auto& cmd : commands) {
+    if (!cmd) {
+      continue;
+    }
+    auto it = blocked_command_values.find(cmd->getName());
+    if (it == blocked_command_values.end()) {
+      continue;
+    }
+    engine->setValue(cmd, it->second);
+  }
+  blocked_command_values.clear();
+}
+
+void DisableModifier::syncConditionState() {
+  const bool condition_active = inCondition();
+  if (condition_active && !condition_active_last) {
+    clampAppliedCommands();
+  } else if (!condition_active && condition_active_last) {
+    restoreBlockedCommands();
+  }
+  condition_active_last = condition_active;
+}
+
 short DisableModifier::getFilteredVal(DeviceEvent& event) {
   short rval = (event.type == TYPE_AXIS && ControllerInput::getType(event) == ControllerSignalType::HYBRID)
         ? JOYSTICK_MIN : 0;
@@ -127,10 +152,12 @@ short DisableModifier::getFilteredVal(DeviceEvent& event) {
 }
 
 bool DisableModifier::tweak (DeviceEvent& event) {
+  syncConditionState();
+
   short new_val = event.value;
   std::string cmd_name;
   // If the condition test returns false do not block
-  if (!inCondition()) {
+  if (!condition_active_last) {
     return true;
   }
   // Traverse the list of affected commands
@@ -139,6 +166,7 @@ bool DisableModifier::tweak (DeviceEvent& event) {
   } else {
     for (auto& cmd : commands) {
       if (engine->eventMatches(event, cmd)) {
+        blocked_command_values[cmd->getName()] = event.value;
         new_val = getFilteredVal(event);
         cmd_name = cmd->getName();
         // Already matched, no need to keep looping

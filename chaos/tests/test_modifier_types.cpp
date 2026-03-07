@@ -993,6 +993,46 @@ while = [ "not_aiming" ]
   return ok;
 }
 
+static bool testDisableWhileTransitionRestoresHeldAxesWhenConditionClears() {
+  MockEngine engine;
+  auto mod = makeMod<DisableModifier>(
+      R"(
+name = "Only Aim Movement Immediate Restore"
+type = "disable"
+applies_to = [ "MOVE_Y", "MOVE_X" ]
+while = [ "not_aiming" ]
+)",
+      engine);
+
+  auto move_y = commandInput(engine, "MOVE_Y");
+  auto aim = commandInput(engine, "AIM");
+  bool ok = true;
+  ok &= check(move_y != nullptr && aim != nullptr,
+              "disable transition-restore test inputs should exist");
+  if (!move_y || !aim) {
+    return false;
+  }
+
+  mod->_begin();
+
+  // While not aiming, movement input is blocked.
+  DeviceEvent blocked_move = commandEvent(engine, "MOVE_Y", 900);
+  ok &= check(mod->tweak(blocked_move), "MOVE_Y while not aiming should pass through tweak");
+  ok &= check(blocked_move.value == 0, "MOVE_Y should be blocked while not aiming");
+  engine.applyEvent(blocked_move);
+  ok &= check(engine.getState(move_y->getID(), move_y->getButtonType()) == 0,
+              "blocked MOVE_Y should keep controller movement neutral");
+
+  // Pressing aim should immediately restore held movement without requiring stick recenter.
+  DeviceEvent aim_press = commandEvent(engine, "AIM", 1);
+  ok &= check(mod->tweak(aim_press), "AIM press should pass through tweak");
+  engine.applyEvent(aim_press);
+
+  ok &= check(engine.getState(move_y->getID(), move_y->getButtonType()) == 900,
+              "AIM press should immediately restore held MOVE_Y value");
+  return ok;
+}
+
 static bool testOnlyAimMovementWorksWithControllerMirrorRemap() {
   MockEngine engine;
   auto mirror = makeMod<RemapModifier>(
@@ -2820,6 +2860,7 @@ int main() {
   ok &= testDisableDefaultFilterBlocksConfiguredCommandOnly();
   ok &= testDisableRespectsWhileCondition();
   ok &= testDisableWhileTransitionClampsHeldAxes();
+  ok &= testDisableWhileTransitionRestoresHeldAxesWhenConditionClears();
   ok &= testOnlyAimMovementWorksWithControllerMirrorRemap();
   ok &= testDisableRespectsDistanceMovementCondition();
   ok &= testDisableRespectsPersistentCondition();

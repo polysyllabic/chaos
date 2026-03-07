@@ -19,6 +19,7 @@
  */
 #pragma once
 #include <string>
+#include <unordered_map>
 #include <toml++/toml.h>
 
 #include "Modifier.hpp"
@@ -43,9 +44,12 @@ namespace Chaos {
      */
     DisableFilter filter;
     bool condition_active_last;
+    std::unordered_map<std::string, short> blocked_command_values;
 
     short getFilteredVal(DeviceEvent& event);
     void clampAppliedCommands();
+    void restoreBlockedCommands();
+    void syncConditionState();
 
   public:
     
