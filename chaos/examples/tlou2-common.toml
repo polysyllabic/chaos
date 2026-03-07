@@ -1193,7 +1193,7 @@ type = "formula"
 groups = [ "Movement" ]
 applies_to = [ "horizontal movement", "vertical movement" ]
 formula_type = "random_offset"
-range = [ 40, 75 ]
+range = [ 30, 60 ]
 direction = [ 0, 360 ]
 
 
