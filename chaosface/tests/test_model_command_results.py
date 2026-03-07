@@ -34,6 +34,21 @@ def _blank_model_for_update_command() -> ChaosModel:
   return model
 
 
+def _blank_model_for_loop() -> ChaosModel:
+  class _NoopCommunicator:
+    def stop(self):
+      return None
+
+  model = _blank_model_for_update_command()
+  model.request_available_games = lambda: None  # type: ignore[assignment]
+  model.request_game_selection = lambda *_args, **_kwargs: None  # type: ignore[assignment]
+  model._drive_pending_game_selection = lambda: None  # type: ignore[assignment]
+  model.restart_bot = lambda: None  # type: ignore[assignment]
+  model.chaos_communicator = _NoopCommunicator()  # type: ignore[attr-defined]
+  model.bot = None  # type: ignore[attr-defined]
+  return model
+
+
 def test_send_engine_command_checked_reports_failed_result():
   model = _blank_model()
 
@@ -169,3 +184,46 @@ def test_missing_remembered_game_waits_for_manual_selection():
   selection = config.relay.consume_game_selection_request()
   model.request_game_selection(selection, force=True)
   assert model._pending_selected_game == 'Valid Game'
+
+
+def test_reenable_voting_from_disabled_starts_vote_and_candidates():
+  import chaosface.config.globals as config
+  from chaosface.gui import ui_dispatch
+
+  model = _blank_model_for_loop()
+
+  config.relay.reset_all()
+  config.relay.initialize_game({
+    'game': 'Voting Transition Test',
+    'errors': 0,
+    'nmods': 3,
+    'modtime': 180.0,
+    'mods': [
+      {'name': 'Mod A', 'desc': 'A', 'groups': ['Test']},
+      {'name': 'Mod B', 'desc': 'B', 'groups': ['Test']},
+      {'name': 'Mod C', 'desc': 'C', 'groups': ['Test']},
+      {'name': 'Mod D', 'desc': 'D', 'groups': ['Test']},
+    ],
+  })
+  config.relay.set_connected(True)
+  config.relay.set_paused(False)
+  config.relay.set_ui_rate(50.0)
+  config.relay.set_voting_type('Proportional')
+  config.relay.set_voting_cycle('DISABLED')
+  config.relay.keep_going = True
+  ui_dispatch._ui_loop = None
+
+  loop_thread = threading.Thread(target=model._loop, daemon=True)
+  loop_thread.start()
+  try:
+    time.sleep(0.12)
+    config.relay.set_voting_cycle('Continuous')
+    time.sleep(0.30)
+  finally:
+    config.relay.keep_going = False
+    loop_thread.join(timeout=2.0)
+
+  assert not loop_thread.is_alive()
+  assert config.relay.vote_open is True
+  assert config.relay.vote_time > 0.0
+  assert any(str(name).strip() for name in config.relay.candidate_mods)
