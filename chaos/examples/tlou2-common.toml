@@ -286,7 +286,7 @@ sequence = [ { event="press", command = "menu right/left", value = -1} ]
 # issued to answer a yes/no prompt in the affirmative.
 [[sequence]]
 name = "confirm"
-sequence = [ { event="press", command = "menu right/left", value = -1},
+sequence = [ { event="press", command = "menu right/left", value = -1, delay = 0.25},
              { event="press", command = "select"} ]
 
 # Tab left through sub-menus on the same basic parent menu screen. We don't use this in TLOU 2,
