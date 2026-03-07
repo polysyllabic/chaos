@@ -34,6 +34,12 @@
 using namespace Chaos;
 
 namespace {
+  struct ScopedMenuNavigation {
+    std::atomic<bool>& flag;
+    explicit ScopedMenuNavigation(std::atomic<bool>& f) : flag(f) { flag.store(true); }
+    ~ScopedMenuNavigation() { flag.store(false); }
+  };
+
   bool looksLikeAbsoluteUri(const std::string& value) {
     std::string trimmed = value;
     trimmed.erase(trimmed.begin(),
@@ -636,6 +642,10 @@ void ChaosEngine::removeMod(std::shared_ptr<Modifier> to_remove) {
 bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
   output = input;	
   bool valid = true;
+
+  if (menu_navigation_active.load()) {
+    return false;
+  }
   
   lock();
   // The options button pauses the chaos engine
@@ -704,10 +714,14 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
 // and feed the fake event through the rest of the modifiers, in order.
 void ChaosEngine::fakePipelinedEvent(DeviceEvent& event, std::shared_ptr<Modifier> sourceMod) {
   bool valid = true;
+
+  if (menu_navigation_active.load()) {
+    return;
+  }
 		
   if (!pause.load()) {
     lock();
-    if (pause.load()) {
+    if (pause.load() || menu_navigation_active.load()) {
       unlock();
       return;
     }
@@ -735,7 +749,7 @@ void ChaosEngine::fakePipelinedEvent(DeviceEvent& event, std::shared_ptr<Modifie
     unlock();
   }
   // unless canceled, send the event out
-  if (valid) {
+  if (valid && !menu_navigation_active.load()) {
     controller.applyEvent(event);
   }
 }
@@ -763,11 +777,13 @@ void ChaosEngine::clearPendingInjectedEventsForMenu() {
 
 void ChaosEngine::setMenuState(std::shared_ptr<MenuItem> item, unsigned int new_val) {
   clearPendingInjectedEventsForMenu();
+  ScopedMenuNavigation navigation_guard(menu_navigation_active);
   game.getMenu().setState(item, new_val, false, controller);
 }
 
 void ChaosEngine::restoreMenuState(std::shared_ptr<MenuItem> item) {
   clearPendingInjectedEventsForMenu();
+  ScopedMenuNavigation navigation_guard(menu_navigation_active);
   game.getMenu().restoreState(item, controller);
 }
 

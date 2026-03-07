@@ -78,6 +78,7 @@ namespace Chaos {
     std::atomic<bool> game_ready{false};
     std::atomic<bool> awaiting_game_selection{false};
     std::atomic<bool> paused_for_interface_timeout{false};
+    std::atomic<bool> menu_navigation_active{false};
     bool pausePrimer = false;
     bool pausedPrior = false;
     int primary_mods = 0;
