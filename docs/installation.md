@@ -258,16 +258,14 @@ the following scripts are available:
 
 Optional flags:
 
-- `./scripts/update_engine.sh --restart-service`
-- `./scripts/update_chaosface.sh --skip-deps --restart-service`
-- `./scripts/update_chaos.sh --skip-chaosface-deps --restart-services`
-- `./scripts/update_services.sh --restart-services`
+- `./scripts/update_engine.sh --restart`
+- `./scripts/update_chaosface.sh --skip-deps --restart`
+- `./scripts/update_chaos.sh --skip-deps --restart`
+- `./scripts/update_services.sh --restart`
 
-The --restart-service and --restart-services will stop the old version of the engine and/or
-chaosface and start the new one immediately after the update. If you omit this flag, you will need
-either to restart the services manually or reboot the Pi.
+The --restart flag will stop the old version of the engine and/or chaosface and start the new one
+immediately after the update. If you omit this flag, you will need either to restart the services
+manually or to reboot the Pi.
 
-The --skip-deps and --skip-chaosface-deps flags will skip checks for alterations in dependencies
-and will speed up updates when there are no changes to any of the 3rd-party libraries that these
-programs rely upon.
-
+The --skip-deps flag will skip checks for alterations in dependencies and will speed up updates
+when there are no changes to any of the 3rd-party libraries that these programs rely upon.

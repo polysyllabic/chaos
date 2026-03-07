@@ -13,12 +13,12 @@ restart_service=0
 
 for arg in "$@"; do
   case "${arg}" in
-    --restart-service)
+    --restart)
       restart_service=1
       ;;
     *)
       echo "Unknown option: ${arg}"
-      echo "Usage: $0 [--restart-service]"
+      echo "Usage: $0 [--restart]"
       exit 2
       ;;
   esac

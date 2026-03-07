@@ -45,12 +45,12 @@ for arg in "$@"; do
     --skip-deps)
       install_deps=0
       ;;
-    --restart-service)
+    --restart)
       restart_service=1
       ;;
     *)
       echo "Unknown option: ${arg}"
-      echo "Usage: $0 [--skip-deps] [--restart-service]"
+      echo "Usage: $0 [--skip-deps] [--restart]"
       exit 2
       ;;
   esac

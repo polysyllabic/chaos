@@ -18,12 +18,12 @@ for arg in "$@"; do
     --dry-run)
       dry_run=1
       ;;
-    --restart-service)
+    --restart)
       restart_service=1
       ;;
     *)
       echo "Unknown option: ${arg}"
-      echo "Usage: $0 [--dry-run] [--restart-service]"
+      echo "Usage: $0 [--dry-run] [--restart]"
       exit 2
       ;;
   esac

@@ -6,19 +6,19 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 restart_services=0
-skip_chaosface_deps=0
+skip_deps=0
 
 for arg in "$@"; do
   case "${arg}" in
-    --restart-services)
+    --restart)
       restart_services=1
       ;;
-    --skip-chaosface-deps)
-      skip_chaosface_deps=1
+    --skip-deps)
+      skip_deps=1
       ;;
     *)
       echo "Unknown option: ${arg}"
-      echo "Usage: $0 [--restart-services] [--skip-chaosface-deps]"
+      echo "Usage: $0 [--restart] [--skip-deps]"
       exit 2
       ;;
   esac
@@ -28,10 +28,10 @@ engine_args=()
 chaosface_args=()
 
 if (( restart_services )); then
-  engine_args+=(--restart-service)
-  chaosface_args+=(--restart-service)
+  engine_args+=(--restart)
+  chaosface_args+=(--restart)
 fi
-if (( skip_chaosface_deps )); then
+if (( skip_deps )); then
   chaosface_args+=(--skip-deps)
 fi
 
