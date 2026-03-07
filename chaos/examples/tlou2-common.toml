@@ -668,14 +668,14 @@ name = "Only Strafing"
 description = "Forwards/back movement is disabled. Only side-to-side motion is allowed."
 type = "disable"
 groups = [ "Movement" ]
-applies_to = [ "horizontal movement" ]
+applies_to = [ "vertical movement" ]
 
 [[modifier]]
 name = "No Strafing"
 description = "Side-to-side movement is disabled. Only forward/back motion is allowed."
 type = "disable"
 groups = [ "Movement" ]
-applies_to = [ "vertical movement" ]
+applies_to = [ "horizontal movement" ]
 
 [[modifier]]
 name = "Only Aim Movement"
@@ -2008,3 +2008,11 @@ groups = [ "Buff" ]
 random = true
 select_groups = [ "Buff" ]
 value = 1
+
+[[modifier]]
+name = "Real No HUD"
+description = "Turn off anything that might show your status: HUD/reticle/damage indicators, etc."
+type = "parent"
+group = [ "HUD" ]
+children = [ "No Reticle", "No Inventory Hud", "No Damage Indicators", "No Awareness Indicators",
+ "No Hit Markers", "No Arc Throw Paths", "No Heath Hud" ]
