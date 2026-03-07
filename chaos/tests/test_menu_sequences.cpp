@@ -40,6 +40,18 @@ public:
   }
 };
 
+class RecordingGameMenu : public GameMenu {
+public:
+  std::unordered_map<std::string, int> step_counts;
+  std::vector<std::string> step_order;
+
+  void addToSequence(Sequence& sequence, const std::string& name) override {
+    (void) sequence;
+    ++step_counts[name];
+    step_order.push_back(name);
+  }
+};
+
 static bool check(bool condition, const std::string& msg) {
   if (!condition) {
     std::cerr << "FAIL: " << msg << "\n";
@@ -230,7 +242,8 @@ static bool testParentCursorRestoredOnSelect() {
 
 static bool testCounterDrivenSelectRestore() {
   GameMenu menu;
-  menu.setRememberLast(true);
+  // This test asserts submenu cursor state, so do not auto-reset cursor on exit.
+  menu.setRememberLast(false);
   menu.setDefinedSequences(std::make_shared<SequenceTable>());
   Controller controller;
   bool ok = true;
@@ -289,6 +302,7 @@ static bool testCounterDrivenSelectRestore() {
 
 static bool testInitialHiddenAndRevealCounterUpdates() {
   GameMenu menu;
+  menu.setDefinedSequences(std::make_shared<SequenceTable>());
   Controller controller;
   Sequence seq(controller);
   bool ok = true;
@@ -412,6 +426,35 @@ static bool testSelectLeafNavigateBackOrder() {
   return ok;
 }
 
+static bool testConfirmSelectionSkipsReverseNavigation() {
+  RecordingGameMenu menu;
+  menu.setRememberLast(true);
+  menu.setDefinedSequences(std::make_shared<SequenceTable>());
+  Controller controller;
+  bool ok = true;
+
+  auto restart = std::make_shared<MenuItem>(
+      menu, "restart", -2, 0, 0, false,
+      false, true, false, true,
+      nullptr, nullptr, nullptr, CounterAction::NONE);
+  std::string restart_name = "restart";
+  menu.insertMenuItem(restart_name, restart);
+
+  menu.setState(restart, 0, false, controller);
+
+  ok &= check(menu.step_counts["menu up"] == 2,
+              "confirm selection should only navigate to target offset");
+  ok &= check(menu.step_counts["menu select"] == 1,
+              "confirm selection should activate the menu item exactly once");
+  ok &= check(menu.step_counts["confirm"] == 1,
+              "confirm selection should emit one confirm action");
+  ok &= check(menu.step_counts["menu exit"] == 0,
+              "confirm selection should not emit reverse menu_exit navigation");
+  ok &= check(!menu.step_order.empty() && menu.step_order.back() == "confirm",
+              "confirm should be the final menu action for confirm items");
+  return ok;
+}
+
 int main() {
   bool ok = true;
   ok &= testSelectUsesCorrectedOffset();
@@ -424,6 +467,7 @@ int main() {
   ok &= testParentCursorRestoredOnSelect();
   ok &= testCounterDrivenSelectRestore();
   ok &= testInitialHiddenAndRevealCounterUpdates();
+  ok &= testConfirmSelectionSkipsReverseNavigation();
 
   if (!ok) {
     return 1;

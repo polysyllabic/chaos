@@ -282,6 +282,8 @@ namespace Chaos {
 
     bool isMenu() { return is_menu; }
 
+    bool requiresConfirm() const { return confirm; }
+
     void setHidden(bool hide);
     void setGuardHidden(bool hide);
     bool isHidden() { return (hidden || guard_hidden); }

@@ -86,6 +86,13 @@ void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, bo
   // A guard item may have changed state during this operation.
   syncGuardedVisibility();
 
+  const bool closes_menu_after_select = item->requiresConfirm();
+  if (closes_menu_after_select) {
+    PLOG_DEBUG << "Skipping reverse navigation for confirm item " << item->getName();
+    seq.send();
+    return;
+  }
+
   PLOG_DEBUG << "Constructing reverse navigation";
   if (remember_last) {
     item->navigateBack(seq);

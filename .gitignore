@@ -1,5 +1,6 @@
 .DS_Store
 build
+chaos/build-asan/
 
 __pycache__
 
