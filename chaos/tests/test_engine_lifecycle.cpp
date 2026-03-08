@@ -284,7 +284,7 @@ static bool testReleaseOnlyShareUnpausesWhenReady() {
   return ok;
 }
 
-static bool testInterfaceReconnectRequiresManualResumeAndAcceptsReleaseOnlyShare() {
+static bool testInterfaceReconnectResumePaths() {
   bool ok = true;
 
   TestController controller;
@@ -306,11 +306,6 @@ static bool testInterfaceReconnectRequiresManualResumeAndAcceptsReleaseOnlyShare
   ok &= check(waitFor([&]() { return engine.isPaused(); }),
               "engine should pause when interface becomes unhealthy");
 
-  unpauseEngine(controller);
-  usleep(30000);
-  ok &= check(engine.isPaused(),
-              "engine should ignore SHARE unpause while interface remains unhealthy");
-
   engine.setInterfaceHealthForTest(true);
   usleep(30000);
   ok &= check(engine.isPaused(),
@@ -319,6 +314,45 @@ static bool testInterfaceReconnectRequiresManualResumeAndAcceptsReleaseOnlyShare
   controller.inject({0, 0, TYPE_BUTTON, BUTTON_SHARE});
   ok &= check(waitFor([&]() { return !engine.isPaused(); }),
               "release-only SHARE should resume after interface health recovers");
+
+  engine.stop();
+  engine.WaitForInternalThreadToExit();
+  responder.stop();
+  std::remove(config_path.c_str());
+  std::remove(listener.path.c_str());
+  std::remove(talker.path.c_str());
+  return ok;
+}
+
+static bool testInterfaceReconnectQueuesResumeIntentDuringOutage() {
+  bool ok = true;
+
+  TestController controller;
+  IpcEndpoint listener = makeIpcEndpoint();
+  IpcEndpoint talker = makeIpcEndpoint();
+  AckResponder responder(talker.endpoint);
+  ChaosEngine engine(controller, listener.endpoint, talker.endpoint, true);
+  const std::string config_path = writeConfigFile();
+  ok &= check(engine.setGame(config_path), "test config should load");
+
+  engine.start();
+  unpauseEngine(controller);
+  ok &= check(waitFor([&]() { return !engine.isPaused(); }),
+              "engine should unpause before simulated interface timeout");
+  usleep(50000);
+
+  engine.setInterfaceHealthForTest(false);
+  ok &= check(waitFor([&]() { return engine.isPaused(); }),
+              "engine should pause when interface becomes unhealthy");
+
+  unpauseEngine(controller);
+  usleep(30000);
+  ok &= check(engine.isPaused(),
+              "engine should ignore SHARE unpause while interface remains unhealthy");
+
+  engine.setInterfaceHealthForTest(true);
+  ok &= check(waitFor([&]() { return !engine.isPaused(); }),
+              "queued SHARE release during outage should resume once interface health recovers");
 
   engine.stop();
   engine.WaitForInternalThreadToExit();
@@ -562,7 +596,8 @@ int main() {
   bool ok = true;
   ok &= testFirstUnpauseKeepsHybridTriggersReleased();
   ok &= testReleaseOnlyShareUnpausesWhenReady();
-  ok &= testInterfaceReconnectRequiresManualResumeAndAcceptsReleaseOnlyShare();
+  ok &= testInterfaceReconnectResumePaths();
+  ok &= testInterfaceReconnectQueuesResumeIntentDuringOutage();
   ok &= testHybridTriggerCommandMatchesButtonAndAxisEvents();
   ok &= testSequencePressDefaultsHybridAxisToMax();
   ok &= testDuplicateActivationDoesNotStack();

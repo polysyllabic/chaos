@@ -154,6 +154,7 @@ bool ChaosEngine::setGame(const std::string& name) {
   pause.store(true);
   pausePrimer = false;
   paused_for_interface_timeout.store(false);
+  resume_after_interface_reconnect_requested.store(false);
 
   std::vector<std::shared_ptr<Modifier>> mods_to_finish;
   lock();
@@ -212,6 +213,7 @@ void ChaosEngine::newCommand(const std::string& command) {
         pause.store(true);
         pausePrimer = false;
         paused_for_interface_timeout.store(false);
+        resume_after_interface_reconnect_requested.store(false);
         changed_state = true;
       }
       if (changed_state) {
@@ -501,8 +503,16 @@ void ChaosEngine::doAction() {
     }
   } else if (paused_for_interface_timeout.load()) {
     paused_for_interface_timeout.store(false);
-    PLOG_INFO << "Chaosface communication restored; engine remains paused awaiting manual resume.";
-    chaosInterface.sendMessage("{\"pause\":1,\"engine_status\":\"paused\"}");
+    const bool has_queued_resume = resume_after_interface_reconnect_requested.exchange(false);
+    if (has_queued_resume && game_ready.load()) {
+      pause.store(false);
+      pausePrimer = false;
+      PLOG_INFO << "Chaosface communication restored; applying queued SHARE resume request.";
+      chaosInterface.sendMessage("{\"pause\":0,\"engine_status\":\"running\"}");
+    } else {
+      PLOG_INFO << "Chaosface communication restored; engine remains paused awaiting manual resume.";
+      chaosInterface.sendMessage("{\"pause\":1,\"engine_status\":\"paused\"}");
+    }
     reportGameStatus();
   }
 		
@@ -653,6 +663,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
     if(input.value == 1 && pause.load() == false) { // on rising edge
       pause.store(true);
       paused_for_interface_timeout.store(false);
+      resume_after_interface_reconnect_requested.store(false);
       chaosInterface.sendMessage("{\"pause\":1,\"engine_status\":\"paused\"}");
       pausePrimer = false;
       PLOG_INFO << "Game Paused";
@@ -664,23 +675,33 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
     bool interface_ready = (!interface_enabled) || chaosInterface.isTalkerHealthy();
     bool can_unpause = game_ready.load();
     if(input.value == 1 && pause.load() == true) { // on rising edge
-      if (can_unpause) {
+      if (can_unpause && interface_ready) {
         pausePrimer = true;
-        if (!interface_ready) {
-          PLOG_WARNING << "Unpausing while chaosface interface is disconnected.";
-        }
       } else {
         pausePrimer = false;
-        PLOG_WARNING << "Ignoring unpause command: no valid game configuration loaded.";
+        if (!can_unpause) {
+          PLOG_WARNING << "Ignoring unpause command: no valid game configuration loaded.";
+        }
       }
-    } else if(input.value == 0 && pause.load() == true && (pausePrimer || can_unpause)) { // falling edge
-      // If the rising edge was missed while paused (e.g., startup/controller state races),
-      // still allow release to unpause when the engine is currently ready.
-      pause.store(false);
-      paused_for_interface_timeout.store(false);
-      chaosInterface.sendMessage("{\"pause\":0,\"engine_status\":\"running\"}");
-      pausePrimer = false;
-      PLOG_INFO << "Game Resumed";
+    } else if(input.value == 0 && pause.load() == true) { // falling edge
+      if (can_unpause && interface_ready) {
+        // If the rising edge was missed while paused (e.g., startup/controller state races),
+        // still allow release to unpause when the engine is currently ready.
+        pause.store(false);
+        paused_for_interface_timeout.store(false);
+        resume_after_interface_reconnect_requested.store(false);
+        chaosInterface.sendMessage("{\"pause\":0,\"engine_status\":\"running\"}");
+        pausePrimer = false;
+        PLOG_INFO << "Game Resumed";
+      } else if (can_unpause && paused_for_interface_timeout.load()) {
+        // Queue a manual resume request if SHARE was released during interface recovery.
+        // This prevents requiring a second SHARE press if health flips ready moments later.
+        resume_after_interface_reconnect_requested.store(true);
+        pausePrimer = false;
+        PLOG_INFO << "Queued SHARE resume request while waiting for chaosface reconnect.";
+      } else {
+        pausePrimer = false;
+      }
     }
     output.value = 0;
   }
@@ -705,6 +726,9 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
       }
     }
     unlock();
+  }
+  if (menu_navigation_active.load()) {
+    return false;
   }
   return valid;
 }
@@ -793,16 +817,32 @@ bool ChaosEngine::eventMatches(const DeviceEvent& event, std::shared_ptr<GameCom
 }
 
 void ChaosEngine::setOff(std::shared_ptr<GameCommand> command) {
+  if (menu_navigation_active.load()) {
+    return;
+  }
   std::shared_ptr<ControllerInput> signal = command->getInput();
   controller.setOff(signal);
 }
     
 void ChaosEngine::setOn(std::shared_ptr<GameCommand> command) {
+  if (menu_navigation_active.load()) {
+    return;
+  }
   std::shared_ptr<ControllerInput> signal = command->getInput();
   controller.setOn(signal);
 }
 
 void ChaosEngine::setValue(std::shared_ptr<GameCommand> command, short value) {
+  if (menu_navigation_active.load()) {
+    return;
+  }
   std::shared_ptr<ControllerInput> signal = command->getInput();
   controller.setValue(signal, value);
+}
+
+void ChaosEngine::applyEvent(const DeviceEvent& event) {
+  if (menu_navigation_active.load()) {
+    return;
+  }
+  controller.applyEvent(event);
 }

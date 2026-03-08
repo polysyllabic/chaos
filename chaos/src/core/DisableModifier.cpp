@@ -127,8 +127,8 @@ void DisableModifier::restoreBlockedCommands() {
   blocked_command_values.clear();
 }
 
-void DisableModifier::syncConditionState() {
-  const bool condition_active = inCondition();
+void DisableModifier::syncConditionState(const DeviceEvent* event) {
+  const bool condition_active = event ? inCondition(*event) : inCondition();
   if (condition_active && !condition_active_last) {
     clampAppliedCommands();
   } else if (!condition_active && condition_active_last) {
@@ -152,7 +152,7 @@ short DisableModifier::getFilteredVal(DeviceEvent& event) {
 }
 
 bool DisableModifier::tweak (DeviceEvent& event) {
-  syncConditionState();
+  syncConditionState(&event);
 
   short new_val = event.value;
   std::string cmd_name;

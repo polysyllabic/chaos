@@ -49,7 +49,7 @@ namespace Chaos {
     short getFilteredVal(DeviceEvent& event);
     void clampAppliedCommands();
     void restoreBlockedCommands();
-    void syncConditionState();
+    void syncConditionState(const DeviceEvent* event = nullptr);
 
   public:
     

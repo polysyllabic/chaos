@@ -426,6 +426,11 @@ namespace Chaos {
      * is equivalent to "always do this action."
      */
     bool inCondition();
+
+    /**
+     * \brief Evaluate modifier conditions assuming the provided event is applied.
+     */
+    bool inCondition(const DeviceEvent& event);
     
     /**
      * \brief Is this mod allowed as a child modifier

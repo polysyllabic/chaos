@@ -78,6 +78,7 @@ namespace Chaos {
     std::atomic<bool> game_ready{false};
     std::atomic<bool> awaiting_game_selection{false};
     std::atomic<bool> paused_for_interface_timeout{false};
+    std::atomic<bool> resume_after_interface_reconnect_requested{false};
     std::atomic<bool> menu_navigation_active{false};
     bool pausePrimer = false;
     bool pausedPrior = false;
@@ -174,7 +175,7 @@ namespace Chaos {
 
     void setValue(std::shared_ptr<GameCommand> command, short value);
 
-    void applyEvent(const DeviceEvent& event) { controller.applyEvent(event); }
+    void applyEvent(const DeviceEvent& event) override;
 
     std::shared_ptr<Modifier> getModifier(const std::string& name) {
       return game.getModifier(name);

@@ -30,6 +30,29 @@
 
 using namespace Chaos;
 
+namespace {
+bool eventMatchesSignal(const DeviceEvent& event, const std::shared_ptr<ControllerInput>& signal) {
+  if (!signal) {
+    return false;
+  }
+  if (event.type == signal->getButtonType() && event.id == signal->getID()) {
+    return true;
+  }
+  return (
+    signal->getType() == ControllerSignalType::HYBRID &&
+    event.type == TYPE_AXIS &&
+    event.id == signal->getHybridAxis()
+  );
+}
+
+short signalStateWithEvent(const std::shared_ptr<ControllerInput>& signal, short thresh, const DeviceEvent& event) {
+  if (eventMatchesSignal(event, signal)) {
+    return event.value;
+  }
+  return signal->getState(thresh != 1);
+}
+}
+
 GameCondition::GameCondition(const std::string& condition_name) :
   name{condition_name} {}
 
@@ -130,6 +153,21 @@ bool GameCondition::testCondition(std::vector<std::shared_ptr<ControllerInput>> 
 
 }
 
+bool GameCondition::testConditionWithEvent(std::vector<std::shared_ptr<ControllerInput>> conditions, short thresh,
+                                           ThresholdType type, const DeviceEvent& event) {
+  if (type == ThresholdType::DISTANCE || type == ThresholdType::DISTANCE_BELOW) {
+    assert(conditions.size() == 2);
+    short x = signalStateWithEvent(conditions[0], thresh, event);
+    short y = signalStateWithEvent(conditions[1], thresh, event);
+    return distanceComparison(x, y, thresh, type);
+  }
+
+  return std::all_of(conditions.begin(), conditions.end(),
+                     [&](std::shared_ptr<ControllerInput> c) {
+                       return thresholdComparison(signalStateWithEvent(c, thresh, event), thresh, type);
+                     });
+}
+
 bool GameCondition::inCondition() {
   bool rval;
   if (persistent_state) {
@@ -145,5 +183,18 @@ bool GameCondition::inCondition() {
   if (rval && !isTransient()) {
     persistent_state = true;
   }
+  return rval;
+}
+
+bool GameCondition::inCondition(const DeviceEvent& event) {
+  bool rval;
+  if (persistent_state) {
+    rval = testConditionWithEvent(clear_on, clear_threshold, clear_threshold_type, event);
+    if (rval) {
+      return false;
+    }
+    return true;
+  }
+  rval = testConditionWithEvent(while_conditions, threshold, threshold_type, event);
   return rval;
 }

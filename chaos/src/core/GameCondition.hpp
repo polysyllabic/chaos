@@ -81,6 +81,8 @@ namespace Chaos {
     ThresholdType clear_threshold_type = ThresholdType::ABOVE;
 
     bool testCondition(std::vector<std::shared_ptr<ControllerInput>> conditions, short thresh, ThresholdType type);
+    bool testConditionWithEvent(std::vector<std::shared_ptr<ControllerInput>> conditions, short thresh,
+                                ThresholdType type, const DeviceEvent& event);
 
     /**
      * \brief Test if the value passes the threshold for this threshold type
@@ -163,6 +165,15 @@ namespace Chaos {
      * \brief Tests if the condition's parameters have all been met.
      */
     bool inCondition();
+
+    /**
+     * \brief Predict condition state after applying an incoming event.
+     *
+     * This evaluates the same while/clear_on logic as inCondition(), but substitutes
+     * the provided event value for matching signals instead of polling only current
+     * controller state.
+     */
+    bool inCondition(const DeviceEvent& event);
     
     /**
      * \brief Check if this condition is transient or persistent

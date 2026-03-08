@@ -41,6 +41,7 @@ namespace Chaos {
 
     std::queue<std::string> outgoingQueue;
     std::atomic<bool> talker_healthy{true};
+    std::atomic<int> talker_health_override{-1};
 
     void doAction();
 
@@ -50,8 +51,8 @@ namespace Chaos {
     void setupInterface(const std::string& listener_endpoint, const std::string& talker_endpoint);
     bool sendMessage(std::string message);
     void setObserver(CommandObserver* observer);
-    bool isTalkerHealthy() const { return talker_healthy.load(); }
-    void setTalkerHealthyForTest(bool healthy) { talker_healthy.store(healthy); }
+    bool isTalkerHealthy() const;
+    void setTalkerHealthyForTest(bool healthy);
   };
 
 };

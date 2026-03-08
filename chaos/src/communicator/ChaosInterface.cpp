@@ -39,6 +39,7 @@ void ChaosInterface::setupInterface(const std::string& listener_endpoint, const 
   listener.setEndpoint(listener_endpoint);
   talker.setEndpoint(talker_endpoint);
   talker_healthy.store(true);
+  talker_health_override.store(-1);
   listener.start();
   start();
 }
@@ -78,4 +79,17 @@ bool ChaosInterface::sendMessage(std::string message) {
 
 void ChaosInterface::setObserver(CommandObserver* observer) {
   listener.setObserver(observer);
+}
+
+bool ChaosInterface::isTalkerHealthy() const {
+  const int override = talker_health_override.load();
+  if (override >= 0) {
+    return override != 0;
+  }
+  return talker_healthy.load();
+}
+
+void ChaosInterface::setTalkerHealthyForTest(bool healthy) {
+  talker_health_override.store(healthy ? 1 : 0);
+  talker_healthy.store(healthy);
 }

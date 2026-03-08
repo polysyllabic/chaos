@@ -171,6 +171,28 @@ bool Modifier::inCondition() {
   }
 }
 
+bool Modifier::inCondition(const DeviceEvent& event) {
+  if (conditions.empty()) {
+    return true;
+  }
+  if (condition_operation == ConditionCheck::ALL) {
+    return std::all_of(conditions.begin(), conditions.end(),
+                       [&event](std::shared_ptr<GameCondition> c) {
+                         return c->isTransient() ? c->inCondition(event) : c->inCondition();
+                       });
+  } else if (condition_operation == ConditionCheck::ANY) {
+    return std::any_of(conditions.begin(), conditions.end(),
+                       [&event](std::shared_ptr<GameCondition> c) {
+                         return c->isTransient() ? c->inCondition(event) : c->inCondition();
+                       });
+  } else {
+    return std::none_of(conditions.begin(), conditions.end(),
+                        [&event](std::shared_ptr<GameCondition> c) {
+                          return c->isTransient() ? c->inCondition(event) : c->inCondition();
+                        });
+  }
+}
+
 Json::Value Modifier::toJsonObject() {
   Json::Value result;
   result["name"] = getName();
