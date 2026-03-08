@@ -275,3 +275,61 @@ def test_change_voting_type_mid_vote_cancels_and_restarts_vote():
     loop_thread.join(timeout=2.0)
 
   assert not loop_thread.is_alive()
+
+
+def test_continuous_vote_end_has_closed_gap_before_new_round():
+  import chaosface.config.globals as config
+  from chaosface.gui import ui_dispatch
+
+  model = _blank_model_for_loop()
+  model.replace_mod = lambda *_args, **_kwargs: True  # type: ignore[assignment]
+
+  config.relay.reset_all()
+  config.relay.initialize_game({
+    'game': 'Continuous Gap Test',
+    'errors': 0,
+    'nmods': 3,
+    'modtime': 180.0,
+    'mods': [
+      {'name': 'Mod A', 'desc': 'A', 'groups': ['Test']},
+      {'name': 'Mod B', 'desc': 'B', 'groups': ['Test']},
+      {'name': 'Mod C', 'desc': 'C', 'groups': ['Test']},
+      {'name': 'Mod D', 'desc': 'D', 'groups': ['Test']},
+    ],
+  })
+  config.relay.set_connected(True)
+  config.relay.set_paused(False)
+  config.relay.set_ui_rate(20.0)
+  config.relay.set_voting_type('Proportional')
+  config.relay.set_voting_cycle('Continuous')
+  config.relay.keep_going = True
+  ui_dispatch._ui_loop = None
+
+  loop_thread = threading.Thread(target=model._loop, daemon=True)
+  loop_thread.start()
+  try:
+    open_deadline = time.time() + 0.6
+    while time.time() < open_deadline and not config.relay.vote_open:
+      time.sleep(0.01)
+    assert config.relay.vote_open is True
+
+    config.relay.request_end_vote()
+
+    closed_seen = False
+    close_deadline = time.time() + 0.6
+    while time.time() < close_deadline:
+      if not config.relay.vote_open:
+        closed_seen = True
+        break
+      time.sleep(0.005)
+    assert closed_seen is True
+
+    reopen_deadline = time.time() + 0.6
+    while time.time() < reopen_deadline and not config.relay.vote_open:
+      time.sleep(0.01)
+    assert config.relay.vote_open is True
+  finally:
+    config.relay.keep_going = False
+    loop_thread.join(timeout=2.0)
+
+  assert not loop_thread.is_alive()

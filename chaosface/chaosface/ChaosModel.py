@@ -839,7 +839,9 @@ class ChaosModel(EngineObserver):
           vote_open = False
           self.vote_time = 0.0
           if cycle == 'Continuous':
-            open_vote(self._default_vote_length(cycle))
+            # Re-open on the next loop pass so vote_open=False is observable.
+            # This ensures queued boundary votes are flushed before a new round starts.
+            next_vote_start_at = now + max(config.relay.sleep_time(), 0.001)
           else:
             ui_dispatch.call_soon(config.relay.reset_voting)
             next_vote_start_at = self._next_vote_start_for_cycle(cycle, now)

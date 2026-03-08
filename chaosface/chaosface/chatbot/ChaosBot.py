@@ -67,6 +67,10 @@ class ChaosBotContext(Protocol):
     ...
 
   @property
+  def vote_round(self) -> int:
+    ...
+
+  @property
   def redemption_cooldown(self) -> float:
     ...
 
@@ -206,7 +210,7 @@ class ChaosBot:
     self,
     context: ChaosBotContext,
     on_connected: Optional[Callable[[bool], None]] = None,
-    on_vote: Optional[Callable[[int, str], None]] = None,
+    on_vote: Optional[Callable[[int, str, int], None]] = None,
     on_status: Optional[Callable[[str], None]] = None,
   ):
     self._ctx = context
@@ -226,7 +230,7 @@ class ChaosBot:
     self._last_apply_time = 0.0
     self._last_info_command_time = 0.0
     self._on_connected = on_connected or (lambda value: None)
-    self._on_vote = on_vote or (lambda index, user: None)
+    self._on_vote = on_vote or (lambda index, user, vote_round: None)
     self._on_status = on_status or (lambda message: None)
 
   @staticmethod
@@ -428,7 +432,7 @@ class ChaosBot:
       vote_num = int(message) - 1
       if vote_num < 0:
         return
-      self._emit_vote(vote_num, user_name)
+      self._emit_vote(vote_num, user_name, int(self._ctx.vote_round))
 
   def _emit_connected(self, value: bool):
     try:
@@ -436,9 +440,9 @@ class ChaosBot:
     except Exception:
       logging.exception('Connected callback failed')
 
-  def _emit_vote(self, index: int, user: str):
+  def _emit_vote(self, index: int, user: str, vote_round: int):
     try:
-      self._on_vote(index, user)
+      self._on_vote(index, user, vote_round)
     except Exception:
       logging.exception('Vote callback failed')
 

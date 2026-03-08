@@ -12,6 +12,11 @@ class _StubContext:
   def __init__(self):
     self.user_permissions = {}
     self.removed_mod = ''
+    self.connected = True
+    self.voting_type = 'Proportional'
+    self.voting_cycle = 'Continuous'
+    self.vote_open = True
+    self.vote_round = 0
     self.attributes = {
       'chaoscmd_link': '',
       'info_cmd_cooldown': 10.0,
@@ -259,6 +264,24 @@ def test_delgroup_works_with_real_relay_context():
 
   assert messages == ["Deleted permission group 'mods'."]
   assert 'mods' not in relay.permission_groups
+
+
+def test_chat_vote_emits_current_vote_round():
+  class _User:
+    name = 'Alice'
+
+  class _Message:
+    text = '2'
+    user = _User()
+
+  ctx = _StubContext()
+  ctx.vote_round = 17
+  votes = []
+  bot = ChaosBot(ctx, on_vote=lambda index, user, vote_round: votes.append((index, user, vote_round)))
+
+  asyncio.run(bot._on_chat_message(_Message()))
+
+  assert votes == [(1, 'alice', 17)]
 
 
 def test_apply_queues_without_immediate_credit_debit():

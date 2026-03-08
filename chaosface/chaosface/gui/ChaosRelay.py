@@ -189,6 +189,7 @@ class ChaosRelay:
     self.engine_commands = queue.Queue()
     self.insert_cooldown = 0.0
     self.vote_open = False
+    self.vote_round = 0
     self.start_vote_requested = False
     self.start_vote_duration = 0.0
     self.end_vote_requested = False
@@ -1410,7 +1411,26 @@ class ChaosRelay:
     self.save_credit_info()
     return int(balance)
 
-  def tally_vote(self, index: int, user: str):
+  def tally_vote(self, index: int, user: str, vote_round: Optional[int] = None):
+    if not self.vote_open:
+      logging.debug('Ignoring vote from %s because voting is closed', user)
+      return
+
+    if vote_round is not None:
+      try:
+        vote_round = int(vote_round)
+      except (TypeError, ValueError):
+        logging.debug('Ignoring vote from %s with invalid vote round %r', user, vote_round)
+        return
+      if vote_round != self.vote_round:
+        logging.debug(
+          'Ignoring stale vote from %s for vote round %s (current round: %s)',
+          user,
+          vote_round,
+          self.vote_round,
+        )
+        return
+
     if 0 <= index < self.vote_options:
       if user not in self.voted_users:
         self.voted_users.append(user)
@@ -1565,6 +1585,7 @@ class ChaosRelay:
 
     self.set_candidate_mods(candidates)
     # Reset votes and user-voted list, since there is a new voting pool
+    self.vote_round += 1
     self.set_votes([0] * self.vote_options)
     self.voted_users = []
 
@@ -1743,6 +1764,7 @@ class ChaosRelay:
     self._set_sorted_active_mod_state([''] * self.num_active_mods, [0.0] * self.num_active_mods)
 
   def reset_voting(self):
+    self.vote_round += 1
     self.set_votes([0] * self.vote_options)
     self.set_candidate_mods([''] * self.vote_options)
     self.voted_users = []

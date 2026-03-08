@@ -60,6 +60,41 @@ def test_vote_request_flags_round_trip():
   assert relay.consume_end_vote_request() is False
 
 
+def test_tally_vote_rejects_stale_rounds_and_closed_votes():
+  relay = ChaosRelay()
+  relay.initialize_game({
+    'game': 'Vote Round Guard Test',
+    'errors': 0,
+    'nmods': 3,
+    'modtime': 180.0,
+    'mods': [
+      {'name': 'Mod A', 'desc': 'A', 'groups': ['Test']},
+      {'name': 'Mod B', 'desc': 'B', 'groups': ['Test']},
+      {'name': 'Mod C', 'desc': 'C', 'groups': ['Test']},
+      {'name': 'Mod D', 'desc': 'D', 'groups': ['Test']},
+    ],
+  })
+
+  relay.set_vote_open(True)
+  relay.get_new_voting_pool()
+  first_round = relay.vote_round
+
+  relay.tally_vote(0, 'alice', first_round)
+  assert relay.votes[0] == 1
+
+  relay.get_new_voting_pool()
+  assert relay.vote_round > first_round
+  assert sum(relay.votes) == 0
+  assert relay.voted_users == []
+
+  relay.tally_vote(0, 'alice', first_round)
+  assert sum(relay.votes) == 0
+
+  relay.set_vote_open(False)
+  relay.tally_vote(0, 'bob', relay.vote_round)
+  assert sum(relay.votes) == 0
+
+
 def test_remove_mod_request_and_active_slot_compacts_progress_slots():
   relay = ChaosRelay()
   relay.set_num_active_mods(3)

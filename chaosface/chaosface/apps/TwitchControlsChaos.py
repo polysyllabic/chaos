@@ -412,8 +412,8 @@ def _on_bot_connected(connected: bool):
   ui_dispatch.call_soon(config.relay.set_connected, connected)
 
 
-def _on_bot_vote(vote_num: int, user: str):
-  ui_dispatch.call_soon(config.relay.tally_vote, vote_num, user)
+def _on_bot_vote(vote_num: int, user: str, vote_round: int):
+  ui_dispatch.call_soon(config.relay.tally_vote, vote_num, user, vote_round)
 
 
 def _on_bot_status(message: str):

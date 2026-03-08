@@ -51,6 +51,10 @@ class RelayBotContext(ChaosBotContext):
     return self._relay.vote_open
 
   @property
+  def vote_round(self) -> int:
+    return int(self._relay.vote_round)
+
+  @property
   def redemption_cooldown(self) -> float:
     return self._relay.redemption_cooldown
 
