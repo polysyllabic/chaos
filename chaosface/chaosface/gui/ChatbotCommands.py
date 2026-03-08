@@ -35,6 +35,8 @@ def build_chatbot_commands_tab() -> None:
   aliases = sanitize_alias_map(config.relay.chatbot_command_aliases)
   alias_only = sanitize_alias_only_map(config.relay.chatbot_alias_only)
   initial_dark_mode = bool(getattr(config.relay, 'ui_dark_mode', False))
+  initial_streamer_text_scale = float(getattr(config.relay, 'ui_streamer_text_scale', 2.0) or 2.0)
+  initial_streamer_text_scale = max(0.5, min(4.0, initial_streamer_text_scale))
 
   with ui.card().classes('w-full chatbot-commands'):
     with ui.row().classes('w-full items-start justify-between'):
@@ -56,6 +58,14 @@ def build_chatbot_commands_tab() -> None:
       on_change=lambda event: _apply_dark_mode(bool(getattr(event, 'value', False))),
     )
     _apply_dark_mode(initial_dark_mode)
+    streamer_text_scale = ui.number(
+      'Streamer tab mod text size (x)',
+      value=initial_streamer_text_scale,
+      step=0.1,
+      min=0.5,
+      max=4.0,
+    ).props('stack-label').classes('w-64')
+    ui.label('Applies only to modifier name/time text on Streamer Interface (not OBS sources).').classes('text-caption')
 
     ui.separator()
     ui.label('Chatbot Commands').classes('text-subtitle1')
@@ -128,7 +138,15 @@ def build_chatbot_commands_tab() -> None:
       current_aliases = sanitize_alias_map(config.relay.chatbot_command_aliases)
       current_alias_only = sanitize_alias_only_map(config.relay.chatbot_alias_only)
       current_dark_mode = bool(getattr(config.relay, 'ui_dark_mode', False))
+      current_streamer_text_scale = float(getattr(config.relay, 'ui_streamer_text_scale', 2.0) or 2.0)
+      current_streamer_text_scale = max(0.5, min(4.0, current_streamer_text_scale))
       new_dark_mode = bool(dark_mode_toggle.value)
+      try:
+        new_streamer_text_scale = float(streamer_text_scale.value)
+      except (TypeError, ValueError):
+        new_streamer_text_scale = current_streamer_text_scale
+      new_streamer_text_scale = max(0.5, min(4.0, new_streamer_text_scale))
+      streamer_text_scale.value = new_streamer_text_scale
       need_save = False
 
       if current_aliases != new_aliases:
@@ -139,6 +157,9 @@ def build_chatbot_commands_tab() -> None:
         need_save = True
       if current_dark_mode != new_dark_mode:
         config.relay.set_ui_dark_mode(new_dark_mode)
+        need_save = True
+      if abs(current_streamer_text_scale - new_streamer_text_scale) > 1e-9:
+        config.relay.set_ui_streamer_text_scale(new_streamer_text_scale)
         need_save = True
 
       if need_save:
@@ -151,12 +172,15 @@ def build_chatbot_commands_tab() -> None:
       restored_aliases = sanitize_alias_map(config.relay.chatbot_command_aliases)
       restored_alias_only = sanitize_alias_only_map(config.relay.chatbot_alias_only)
       restored_dark_mode = bool(getattr(config.relay, 'ui_dark_mode', False))
+      restored_streamer_text_scale = float(getattr(config.relay, 'ui_streamer_text_scale', 2.0) or 2.0)
+      restored_streamer_text_scale = max(0.5, min(4.0, restored_streamer_text_scale))
       for spec in CHATBOT_COMMANDS:
         widgets = rows[spec.key]
         widgets['alias'].value = str(restored_aliases.get(spec.key, '') or '')
         widgets['alias_only'].value = bool(restored_alias_only.get(spec.key, False))
       dark_mode_toggle.value = restored_dark_mode
       _apply_dark_mode(restored_dark_mode)
+      streamer_text_scale.value = restored_streamer_text_scale
       status_label.text = 'Restored saved interface settings'
 
     with button_bar:

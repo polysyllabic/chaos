@@ -122,14 +122,9 @@ class ChaosModel(EngineObserver):
     if not self._startup_sync_requested:
       self._startup_sync_requested = True
       self.request_game_info()
-
-    status = self._payload_status(payload)
-    if status != self.ENGINE_STATUS_RUNNING or self._startup_pause_requested:
-      return
-
-    sent = self.send_engine_command({'pause': True}, report_status=False)
-    if sent:
-      self._startup_pause_requested = True
+    # Keep handshake sync non-intrusive: do not force a pause command when
+    # reconnecting to a running engine, which can race with manual SHARE resume.
+    del payload
 
   @staticmethod
   def _parse_active_mod_snapshot(payload: dict[str, Any]) -> tuple[list[str], list[float]]:

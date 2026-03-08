@@ -104,7 +104,7 @@ def test_send_engine_command_checked_waits_for_async_result():
   assert message == 'modifiers_reset_requested'
 
 
-def test_sync_after_handshake_requests_game_and_pauses_when_running():
+def test_sync_after_handshake_requests_game_without_forcing_pause():
   model = _blank_model()
   sent_payloads = []
   requested_game_info = []
@@ -116,7 +116,7 @@ def test_sync_after_handshake_requests_game_and_pauses_when_running():
   model._sync_after_handshake({'engine_status': 'running'})
 
   assert requested_game_info == [True]
-  assert sent_payloads == [({'pause': True}, False)]
+  assert sent_payloads == []
 
 
 def test_sync_after_handshake_skips_pause_when_already_paused():

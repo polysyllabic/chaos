@@ -173,3 +173,21 @@ def test_ui_dark_mode_setter_updates_config():
     assert bool(config.relay.get_attribute('ui_dark_mode')) is False
   finally:
     config.relay.set_ui_dark_mode(prior_dark_mode)
+
+
+def test_ui_streamer_text_scale_setter_updates_config():
+  import chaosface.config.globals as config
+
+  prior_scale = float(getattr(config.relay, 'ui_streamer_text_scale', 2.0))
+  try:
+    config.relay.set_ui_streamer_text_scale(2.5)
+    assert abs(float(config.relay.ui_streamer_text_scale) - 2.5) < 1e-9
+    assert abs(float(config.relay.get_attribute('ui_streamer_text_scale')) - 2.5) < 1e-9
+
+    config.relay.set_ui_streamer_text_scale(0.1)
+    assert abs(float(config.relay.ui_streamer_text_scale) - 0.5) < 1e-9
+
+    config.relay.set_ui_streamer_text_scale(12.0)
+    assert abs(float(config.relay.ui_streamer_text_scale) - 4.0) < 1e-9
+  finally:
+    config.relay.set_ui_streamer_text_scale(prior_scale)

@@ -111,6 +111,16 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
       engine_status = str(config.relay.engine_status or 'unknown').strip().lower()
       paused_bright = bool(config.relay.paused_bright)
       vote_progress = clamp01(config.relay.vote_time)
+      streamer_text_scale = safe_float(
+        getattr(config.relay, 'ui_streamer_text_scale', 2.0),
+        2.0,
+        0.5,
+      )
+      streamer_text_scale = min(4.0, streamer_text_scale)
+      mod_name_size_rem = 1.0 * streamer_text_scale
+      mod_time_size_rem = 0.75 * streamer_text_scale
+      vote_timer_bar_color = str(config.relay.overlay_vote_timer_bar_color or 'rgba(240, 240, 240, 0.85)')
+      active_mods_bar_color = str(config.relay.overlay_active_mods_bar_color or 'rgba(245, 245, 245, 0.75)')
       configured_vote_seconds = safe_float(
         config.relay.get_attribute('vote_time'),
         config.relay.time_per_vote(),
@@ -142,7 +152,7 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
       nonlocal vote_fill_style
       new_vote_fill_style = (
         f'width:{vote_progress * 100:.1f}%; '
-        'background:rgba(255,255,255,0.75); '
+        f'background:{vote_timer_bar_color}; '
         'transition:width 0.2s linear;'
       )
       if vote_fill_style != new_vote_fill_style:
@@ -167,9 +177,17 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
               fill = ui.element('div').classes('absolute inset-y-0 left-0').style(
                 'width:0%; background:rgba(255,255,255,0.75); transition:width 0.2s linear;'
               )
-              remaining = ui.label('0s').classes('absolute left-2 top-1/2 -translate-y-1/2 text-xs font-semibold')
+              remaining = ui.label('0s').classes('absolute left-2 top-1/2 -translate-y-1/2 font-semibold')
               remaining.style('color:#f7f7f7; text-shadow:0 1px 2px rgba(0,0,0,0.85); pointer-events:none;')
-        mod_rows.append({'row': row, 'label': label, 'fill': fill, 'remaining': remaining, 'fill_style': ''})
+        mod_rows.append({
+          'row': row,
+          'label': label,
+          'fill': fill,
+          'remaining': remaining,
+          'fill_style': '',
+          'label_style': '',
+          'remaining_style': '',
+        })
 
       while len(mod_rows) > count:
         item = mod_rows.pop()
@@ -180,11 +198,22 @@ def build_streamer_tab(*, shutdown_runtime: Callable[[], None]) -> Callable[[], 
         time_remaining = clamp01(mod_times[idx] if idx < len(mod_times) else 0.0)
         seconds_remaining = int(round(max(0.0, time_remaining * max(1.0, float(config.relay.time_per_modifier)))))
         item = mod_rows[idx]
+        label_style = f'font-size:{mod_name_size_rem:.2f}rem; line-height:1.15; font-weight:600;'
+        if item['label_style'] != label_style:
+          item['label'].style(label_style)
+          item['label_style'] = label_style
         if item['label'].text != mod_name:
           item['label'].text = mod_name
+        remaining_style = (
+          f'font-size:{mod_time_size_rem:.2f}rem; '
+          'color:#f7f7f7; text-shadow:0 1px 2px rgba(0,0,0,0.85); pointer-events:none;'
+        )
+        if item['remaining_style'] != remaining_style:
+          item['remaining'].style(remaining_style)
+          item['remaining_style'] = remaining_style
         fill_style = (
           f'width:{time_remaining * 100:.1f}%; '
-          'background:rgba(255,255,255,0.75); '
+          f'background:{active_mods_bar_color}; '
           'transition:width 0.2s linear;'
         )
         if item['fill_style'] != fill_style:
