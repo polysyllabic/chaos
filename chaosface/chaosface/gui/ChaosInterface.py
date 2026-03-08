@@ -8,6 +8,7 @@ from typing import Callable, Optional
 
 from nicegui import ui
 
+import chaosface.config.globals as config
 from .ChatbotCommands import build_chatbot_commands_tab
 from .ConnectionSetup import build_connection_tab
 from .GameSettings import build_game_settings_tab
@@ -18,6 +19,7 @@ from chaosface.version import get_version
 
 def build_chaos_interface(*, ensure_runtime_started: Callable[[], None], shutdown_runtime: Callable[[], None]) -> None:
   ensure_runtime_started()
+  ui.dark_mode(value=bool(getattr(config.relay, 'ui_dark_mode', False)))
   ui.label(f'Twitch Controls Chaos ({get_version()})').classes('text-h4')
   tabs = ui.tabs().props('align=left').classes('w-full')
   with tabs:
