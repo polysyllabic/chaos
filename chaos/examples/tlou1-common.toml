@@ -594,14 +594,14 @@ name = "Only Strafing"
 description = "Forwards/back movement is disabled. Only side-to-side motion is allowed."
 type = "disable"
 groups = [ "Movement" ]
-applies_to = [ "horizontal movement" ]
+applies_to = [ "vertical movement" ]
 
 [[modifier]]
 name = "No Strafing"
 description = "Side-to-side movement is disabled. Only forward/back motion is allowed."
 type = "disable"
 groups = [ "Movement" ]
-applies_to = [ "vertical movement" ]
+applies_to = [ "horizontal movement" ]
 
 [[modifier]]
 name = "Only Aim Movement"
@@ -1119,14 +1119,14 @@ name = "Double Tap"
 description = "It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins."
 type = "sequence"
 groups = [ "Combat" ]
-block_while_busy = [ "aim", "shoot" ]
+block_while_busy = [ "aiming", "shoot" ]
 while = [ "aiming" ]
 trigger = [ "shoot" ]
 repeat_sequence = [
-  # 2 seconds is necessary to let the rifle reload
-  { event = "press", command = "shoot", delay = 2.0},
+  # 2 seconds is necessary to let the rifle reload if reload speed hasn't been upgraded
+  { event = "press", command = "shoot", delay = 1.5},
   { event = "press", command = "shoot"},
-  { event = "release", command = "aim"}
+  { event = "release", command = "aiming"}
   ]
 
 [[modifier]]

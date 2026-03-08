@@ -1061,7 +1061,7 @@ type = "remap"
 disable_signals = [ "RX", "RY" ]
 remap = [
       {from = "RX", to = "CIRCLE", to_neg = "SQUARE", threshold=0.5},
-      {from = "RY", to = "TRIANGLE", to_neg = "X", threshold=0.5},
+      {from = "RY", to = "X", to_neg = "TRIANGLE", threshold=0.5},
       {from = "SQUARE", to = "RX", to_min = true},
       {from = "CIRCLE", to = "RX"},
       {from = "TRIANGLE", to = "RY", to_min = true},
@@ -1243,7 +1243,7 @@ while = [ "aiming" ]
 trigger = [ "shoot" ]
 repeat_sequence = [
   # 2 seconds is necessary to let the rifle reload if reload speed hasn't been upgraded
-  { event = "press", command = "shoot", delay = 1.0},
+  { event = "press", command = "shoot", delay = 1.5},
   { event = "press", command = "shoot"},
   { event = "release", command = "aiming"}
   ]
@@ -1426,7 +1426,7 @@ name = "No Health HUD"
 description = "The health and weapon HUD is disabled."
 type = "menu"
 groups = [ "HUD" ]
-menu_items = [{entry = "health bar", value = 0 }]
+menu_items = [{entry = "health and weapon", value = 0 }]
 
 [[modifier]]
 name = "Show Pickups"
