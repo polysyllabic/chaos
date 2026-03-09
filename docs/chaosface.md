@@ -519,6 +519,9 @@ Voting Commands (these commands all require manage_voting permission):
 * !startvote (time) -- Manually open a new vote. If time omitted, default vote time is used
 * !newvote (time) -- Alias for !startvote
 * !endvote -- End an open vote immediately and choose a winner
+* !votemethod <method> -- Set winner selection method. Legal methods are proportional, majority, authoritarian (resets any open vote)
+* !votetime <time> -- Set default vote length, in seconds (resets any open vote)
+* !votecycle <type> -- Set voting cycle type. Legal types are continuous, interval, random, triggered, disabled (resets any open vote unless voting is disabled)
 
 Modifier Credit Commands:
 * !credits (user) -- Reports the number of modifier credits that the user (message author if user name omitted) currently has
@@ -531,6 +534,7 @@ Raffle Commands:
 * !joinchaos -- An alias for !join
 * !raffle (time) -- Start a raffle for a modifier credit (if time is omitted, default raffle time is used) Requires 'manage_raffles' permission
 * !chaosraffle -- An alias for !raffle
+* !raffletime <time> -- Set default raffle duration, in seconds. Requires 'manage_raffles' permission
 
 ## Command Aliases
 Command aliases allow you to rename commands to your liking. Some default aliases are listed above. You can manage these command
@@ -549,7 +553,7 @@ The defined permissions are the following:
 * manage_raffles: Start raffles
 * manage_credits: Set users' modifier-credit balances to arbitrary values
 * manage_modifiers: Update modifiers directly
-* manage_voting: Start/end votes manually
+* manage_voting: Start/end votes manually and configure vote settings
 * manage_permissions: Create permission groups and add/remove users and permissions from them
 
 To give these extra permissions, you must first create a permission group, and then assign both

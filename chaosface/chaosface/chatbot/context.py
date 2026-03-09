@@ -147,6 +147,21 @@ class RelayBotContext(ChaosBotContext):
   def set_mod_enabled(self, mod: str, enabled: bool) -> str:
     return self._relay.set_mod_enabled(mod, enabled)
 
+  def set_voting_type(self, value: str) -> None:
+    self._relay.set_voting_type(value)
+
+  def set_voting_cycle(self, value: str) -> None:
+    self._relay.set_voting_cycle(value)
+
+  def set_vote_duration(self, value: float) -> None:
+    self._relay.set_vote_duration(value)
+
+  def set_raffle_time(self, value: float) -> None:
+    self._relay.set_raffle_time(value)
+
+  def set_need_save(self, value: bool) -> None:
+    self._relay.set_need_save(value)
+
   def request_start_vote(self, duration=None) -> None:
     self._relay.request_start_vote(duration)
 

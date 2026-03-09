@@ -680,6 +680,7 @@ class ChaosModel(EngineObserver):
     was_voting_disabled = self._voting_disabled()
     previous_voting_type = str(config.relay.voting_type)
     previous_cycle = str(config.relay.voting_cycle)
+    previous_vote_length = self._configured_vote_length()
     delta_time = config.relay.sleep_time()
     prior_time = now - delta_time
     last_engine_request = 0.0
@@ -781,20 +782,24 @@ class ChaosModel(EngineObserver):
       cycle = config.relay.voting_cycle
       voting_type = str(config.relay.voting_type)
       voting_type_changed = (voting_type != previous_voting_type)
+      cycle_changed = (cycle != previous_cycle)
+      configured_vote_length = self._configured_vote_length()
+      vote_length_changed = abs(configured_vote_length - previous_vote_length) > 1e-6
       voting_disabled = self._voting_disabled()
       start_request = config.relay.consume_start_vote_request()
       end_requested = config.relay.consume_end_vote_request()
 
       if voting_disabled and not was_voting_disabled:
         ui_dispatch.call_soon(config.relay.reset_voting)
-      if (not voting_disabled) and voting_type_changed and vote_open:
-        # Changing vote type mid-vote cancels the current ballot and immediately
-        # re-arms scheduling under the new rules.
+      if (not voting_disabled) and vote_open and (voting_type_changed or cycle_changed or vote_length_changed):
+        # Any vote-rule change mid-vote cancels the current ballot and immediately
+        # starts a fresh ballot under the updated settings.
         ui_dispatch.call_soon(config.relay.reset_voting)
         vote_open = False
         self.vote_time = 0.0
         vote_started_at = now
         next_vote_start_at = self._next_vote_start_for_cycle(cycle, now)
+        start_request = 0.0
       if (not voting_disabled) and was_voting_disabled:
         # Re-arm scheduling when re-enabling voting after a disabled state.
         ui_dispatch.call_soon(config.relay.reset_voting)
@@ -803,7 +808,7 @@ class ChaosModel(EngineObserver):
         vote_started_at = now
         next_vote_start_at = self._next_vote_start_for_cycle(cycle, now)
 
-      if (not voting_disabled) and cycle != previous_cycle and cycle != 'Triggered' and not vote_open:
+      if (not voting_disabled) and cycle_changed and cycle != 'Triggered' and not vote_open:
         # If cycle mode changed (e.g., Triggered->Continuous), compute a fresh start time.
         next_vote_start_at = self._next_vote_start_for_cycle(cycle, now)
 
@@ -867,6 +872,7 @@ class ChaosModel(EngineObserver):
       was_voting_disabled = voting_disabled
       previous_voting_type = voting_type
       previous_cycle = cycle
+      previous_vote_length = configured_vote_length
 
     # Exitiing loop: clean up
     self.chaos_communicator.stop()

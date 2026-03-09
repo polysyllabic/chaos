@@ -403,7 +403,7 @@ def build_game_settings_tab() -> Callable[[], None]:
       current_vote_time = relay_config_float('vote_time', 60.0, 1.0, 3600.0)
       new_vote_time = safe_float(vote_time.value, current_vote_time, 1.0, 3600.0)
       if current_vote_time != new_vote_time:
-        config.relay.chaos_config['vote_time'] = new_vote_time
+        config.relay.set_vote_duration(new_vote_time)
         need_save = True
       current_vote_delay = relay_config_float('vote_delay', 0.0, 0.0, 3600.0)
       new_vote_delay = safe_float(vote_delay.value, current_vote_delay, 0.0, 3600.0)

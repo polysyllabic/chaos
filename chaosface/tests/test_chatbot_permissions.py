@@ -23,6 +23,8 @@ class _StubContext:
       'msg_mod_list': 'A list of the available mods for this game can be found here: {}',
       'mod_list_link': 'https://example.com/mods',
     }
+    self.start_vote_requests = []
+    self.need_save = False
     self.permission_groups = {
       'admin': {'permissions': ['admin'], 'members': ['streamer']},
       'mods': {'permissions': ['manage_modifiers'], 'members': ['alice', 'bob']},
@@ -39,8 +41,26 @@ class _StubContext:
   def request_remove_mod(self, mod_key: str) -> None:
     self.removed_mod = mod_key
 
+  def request_start_vote(self, duration=None) -> None:
+    self.start_vote_requests.append(duration)
+
   def get_attribute(self, key: str):
     return self.attributes.get(key, '')
+
+  def set_voting_type(self, value: str) -> None:
+    self.voting_type = str(value)
+
+  def set_voting_cycle(self, value: str) -> None:
+    self.voting_cycle = str(value)
+
+  def set_vote_duration(self, value: float) -> None:
+    self.attributes['vote_time'] = float(value)
+
+  def set_raffle_time(self, value: float) -> None:
+    self.attributes['raffle_time'] = float(value)
+
+  def set_need_save(self, value: bool) -> None:
+    self.need_save = bool(value)
 
   def list_active_mods(self) -> str:
     return ''
@@ -317,6 +337,94 @@ def test_apply_still_reports_refusal_messages():
 
   assert ctx.requested_force_mod is None
   assert messages == ['You need a modifier credit to do that.']
+
+
+def test_votemethod_requires_manage_voting():
+  ctx = _StubContext()
+  bot = ChaosBot(ctx)
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._handle_command('viewer', '!votemethod majority'))
+
+  assert messages == ["You need 'manage_voting' permission to use this command."]
+
+
+def test_votemethod_updates_and_resets_open_vote():
+  ctx = _StubContext()
+  ctx.user_permissions['manager'] = {'manage_voting'}
+  ctx.vote_open = True
+  bot = ChaosBot(ctx)
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._handle_command('manager', '!votemethod majority'))
+
+  assert ctx.voting_type == 'Majority'
+  assert ctx.start_vote_requests == [None]
+  assert ctx.need_save is True
+  assert messages == ['Vote method set to Majority. Current vote reset.']
+
+
+def test_votetime_updates_and_resets_open_vote():
+  ctx = _StubContext()
+  ctx.user_permissions['manager'] = {'manage_voting'}
+  ctx.vote_open = True
+  bot = ChaosBot(ctx)
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._handle_command('manager', '!votetime 45'))
+
+  assert ctx.attributes['vote_time'] == 45.0
+  assert ctx.start_vote_requests == [45]
+  assert ctx.need_save is True
+  assert messages == ['Vote time set to 45 seconds. Current vote reset.']
+
+
+def test_votecycle_updates_cycle():
+  ctx = _StubContext()
+  ctx.user_permissions['manager'] = {'manage_voting'}
+  ctx.vote_open = True
+  bot = ChaosBot(ctx)
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._handle_command('manager', '!votecycle random'))
+
+  assert ctx.voting_cycle == 'Random'
+  assert ctx.start_vote_requests == [None]
+  assert ctx.need_save is True
+  assert messages == ['Vote cycle set to random. Current vote reset.']
+
+
+def test_raffletime_updates_default_raffle_duration():
+  ctx = _StubContext()
+  ctx.user_permissions['rafflemgr'] = {'manage_raffles'}
+  bot = ChaosBot(ctx)
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._handle_command('rafflemgr', '!raffletime 120'))
+
+  assert ctx.attributes['raffle_time'] == 120.0
+  assert ctx.need_save is True
+  assert messages == ['Default raffle time set to 120 seconds.']
 
 
 def test_info_commands_are_silently_rate_limited():

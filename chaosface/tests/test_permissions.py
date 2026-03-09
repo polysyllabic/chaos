@@ -267,3 +267,14 @@ def test_raffle_time_has_30_second_minimum():
   relay = ChaosRelay()
   relay.set_raffle_time(5)
   assert relay.raffle_time == 30.0
+
+
+def test_set_vote_duration_updates_vote_time_config_used_by_ui():
+  relay = ChaosRelay()
+  relay.chaos_config['vote_time'] = 60.0
+  relay.set_vote_time(0.33)
+
+  relay.set_vote_duration(42)
+
+  assert float(relay.get_attribute('vote_time')) == 42.0
+  assert relay.vote_time == 0.33

@@ -163,6 +163,21 @@ class ChaosBotContext(Protocol):
   def set_mod_enabled(self, mod: str, enabled: bool) -> str:
     ...
 
+  def set_voting_type(self, value: str) -> None:
+    ...
+
+  def set_voting_cycle(self, value: str) -> None:
+    ...
+
+  def set_vote_duration(self, value: float) -> None:
+    ...
+
+  def set_raffle_time(self, value: float) -> None:
+    ...
+
+  def set_need_save(self, value: bool) -> None:
+    ...
+
   def request_start_vote(self, duration: Optional[float] = None) -> None:
     ...
 
@@ -531,8 +546,20 @@ class ChaosBot:
     if cmd_key == 'endvote':
       await self._cmd_end_vote(author)
       return
+    if cmd_key == 'votemethod':
+      await self._cmd_vote_method(author, args)
+      return
+    if cmd_key == 'votetime':
+      await self._cmd_vote_time(author, args)
+      return
+    if cmd_key == 'votecycle':
+      await self._cmd_vote_cycle(author, args)
+      return
     if cmd_key == 'remove':
       await self._cmd_remove(author, args)
+      return
+    if cmd_key == 'raffletime':
+      await self._cmd_raffle_time(author, args)
       return
     if cmd_key == 'addgroup':
       await self._cmd_add_group(author, args)
@@ -646,6 +673,84 @@ class ChaosBot:
       return
     self._ctx.request_end_vote()
     await self.send_message('Ending the current vote.')
+
+  async def _cmd_vote_method(self, author: str, args):
+    if not await self._require_permission(author, 'manage_voting'):
+      return
+    if len(args) < 1:
+      await self.send_message('Usage: !votemethod <proportional|majority|authoritarian>')
+      return
+
+    method_map = {
+      'proportional': 'Proportional',
+      'majority': 'Majority',
+      'authoritarian': 'Authoritarian',
+    }
+    method_name = method_map.get(str(args[0]).strip().lower())
+    if not method_name:
+      await self.send_message('Vote method must be one of: proportional, majority, authoritarian')
+      return
+
+    had_open_vote = bool(self._ctx.vote_open)
+    self._ctx.set_voting_type(method_name)
+    self._ctx.set_need_save(True)
+    if had_open_vote:
+      self._ctx.request_start_vote()
+      await self.send_message(f'Vote method set to {method_name}. Current vote reset.')
+    else:
+      await self.send_message(f'Vote method set to {method_name}.')
+
+  async def _cmd_vote_time(self, author: str, args):
+    if not await self._require_permission(author, 'manage_voting'):
+      return
+    if len(args) < 1:
+      await self.send_message('Usage: !votetime <time>')
+      return
+    try:
+      vote_time = int(args[0])
+    except ValueError:
+      await self.send_message('Vote time must be a positive integer')
+      return
+    if vote_time < 1:
+      await self.send_message('Vote time must be a positive integer')
+      return
+
+    had_open_vote = bool(self._ctx.vote_open)
+    self._ctx.set_vote_duration(float(vote_time))
+    self._ctx.set_need_save(True)
+    if had_open_vote:
+      self._ctx.request_start_vote(vote_time)
+      await self.send_message(f'Vote time set to {vote_time} seconds. Current vote reset.')
+    else:
+      await self.send_message(f'Vote time set to {vote_time} seconds.')
+
+  async def _cmd_vote_cycle(self, author: str, args):
+    if not await self._require_permission(author, 'manage_voting'):
+      return
+    if len(args) < 1:
+      await self.send_message('Usage: !votecycle <continuous|interval|random|triggered|disabled>')
+      return
+
+    cycle_map = {
+      'continuous': 'Continuous',
+      'interval': 'Interval',
+      'random': 'Random',
+      'triggered': 'Triggered',
+      'disabled': 'DISABLED',
+    }
+    cycle_name = cycle_map.get(str(args[0]).strip().lower())
+    if not cycle_name:
+      await self.send_message('Vote cycle must be one of: continuous, interval, random, triggered, disabled')
+      return
+
+    had_open_vote = bool(self._ctx.vote_open)
+    self._ctx.set_voting_cycle(cycle_name)
+    self._ctx.set_need_save(True)
+    if had_open_vote and cycle_name != 'DISABLED' and self._ctx.voting_type != 'DISABLED':
+      self._ctx.request_start_vote()
+      await self.send_message(f'Vote cycle set to {str(args[0]).strip().lower()}. Current vote reset.')
+      return
+    await self.send_message(f'Vote cycle set to {str(args[0]).strip().lower()}.')
 
   async def _cmd_set_credits(self, author: str, args):
     if not await self._require_permission(author, 'manage_credits'):
@@ -764,6 +869,25 @@ class ChaosBot:
       await self.send_message('Raffle time must be at least 30 seconds')
       return
     self._raffle_task = asyncio.create_task(self._raffle_timer_loop(raffle_length))
+
+  async def _cmd_raffle_time(self, author: str, args):
+    if not await self._require_permission(author, 'manage_raffles'):
+      return
+    if len(args) < 1:
+      await self.send_message('Usage: !raffletime <time>')
+      return
+    try:
+      raffle_time = int(args[0])
+    except ValueError:
+      await self.send_message('Raffle time must be an integer')
+      return
+    if raffle_time < 30:
+      await self.send_message('Raffle time must be at least 30 seconds')
+      return
+
+    self._ctx.set_raffle_time(float(raffle_time))
+    self._ctx.set_need_save(True)
+    await self.send_message(f'Default raffle time set to {raffle_time} seconds.')
 
   async def _cmd_add_group(self, author: str, args):
     if not await self._require_permission(author, 'manage_permissions'):
