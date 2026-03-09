@@ -10,21 +10,21 @@ Optional parameters shown in parentheses: `(time)`
 Vote for modifiers with a number only (1, 2, 3)
 
 General Information Commands:
-* `!chaos` -- Get a general description of Twitch Controls Chaos
-* `!chaos apply` -- Get an explanation of how to apply modifier credits
-* `!chaos credits` -- Get an explanation of how to earn modifier credits
-* `!chaos voting` -- Get an explanation of the voting method
-* `!chaoscmd` -- Get a list of available commands for Twitch Controls Chaos
+* `!chaos` -- Get a general description of Twitch Controls Chaos.
+* `!chaos apply` -- Get an explanation of how to apply modifier credits.
+* `!chaos credits` -- Get an explanation of how to earn modifier credits.
+* `!chaos voting` -- Get an explanation of the current voting method.
+* `!chaoscmd` -- Get a list of available commands for Twitch Controls Chaos.
 
 Modifier Commands:
-* `!apply <mod name>` -- Apply a modifier (requires modifier credit and subject to cooldown)
-* `!remove <mod name>` -- Manually remove a modifier immediately (requires admin permission)
+* `!apply <mod name>` -- Apply a modifier (requires modifier credit and subject to cooldown).
+* `!remove <mod name>` -- Manually remove a modifier immediately (requires admin permission).
 * `!mod <mod name>` -- Describe the function of a specific modifier. Not case sensitive.
-* `!mods` -- Link to list of all available modifiers
-* `!mods active` -- List currently active modifiers
-* `!active` -- Alias for !mods active
-* `!mods voting` -- List modifiers currently up for a vote
-* `!candidates` -- Alias for !mods voting
+* `!mods` -- Link to list of all available modifiers.
+* `!mods active` -- List currently active modifiers.
+* `!active` -- Alias for `!mods active`.
+* `!mods voting` -- List modifiers currently up for a vote.
+* `!candidates` -- Alias for `!mods voting`.
 
 Modifier Management Commands (require manage_modifiers permission):
 * `!enable <mod name>` -- Enable a modifier for voting/selection
@@ -33,27 +33,27 @@ Modifier Management Commands (require manage_modifiers permission):
 * `!applycooldown <time>` -- Set the cooldown time for using `apply` (doesn't affect admin use)
 
 Voting Commands (require manage_voting permission; all times in seconds):
-* `!startvote (time)` -- Manually open a new vote. If time omitted, default vote time is used
-* `!newvote (time)` -- Alias for !startvote
-* `!endvote` -- End an open vote immediately and choose a winner
-* `!votemethod <method>` -- Set method by which winners are chosen. Legal methods are `proportional`, `majority`, `authoritarian` (resets any open vote)
-* `!votetime <time>` -- Set length of time that a vote can remain open (resets any open vote)
-* `!votedelay <time>` -- Sets delay between end of previous vote and start of next vote (resets any open vote)
-* `!votecycle <type>` -- Sets the type of voting cycle used. Legal types are `continuous`, `interval`, `random`, `triggered`, `disabled` (resets any open vote)
+* `!startvote (time)` -- Manually open a new vote. If time omitted, default vote time is used.
+* `!newvote (time)` -- Alias for `!startvote`.
+* `!endvote` -- End an open vote immediately and choose a winner.
+* `!votemethod <method>` -- Set method by which winners are chosen. Legal methods are `proportional`, `majority`, `authoritarian` (resets any open vote).
+* `!votetime <time>` -- Set length of time that a vote can remain open (resets any open vote).
+* `!votedelay <time>` -- Sets delay between end of previous vote and start of next vote (resets any open vote).
+* `!votecycle <type>` -- Sets the type of voting cycle used. Legal types are `continuous`, `interval`, `random`, `triggered`, `disabled` (resets any open vote).
 
 Modifier Credit Commands:
-* `!credits (user)` -- Reports the number of modifier credits that the user currently has. If 
+* `!credits (user)` -- Reports the number of modifier credits that the user currently has. If user omitted, reports credits for self.
 * `!addcredits <user> (amount)` -- Add credits to user's balance. If amount omitted, add 1. Requires 'manage_credits' permission.
 * `!setcredits <user> <amount>` -- Sets user's balance to the specified amount. Requires 'manage_credits' permission.
 * `!givecredits <user> (amount)` -- Give some of your modifier credits to the specified user. If amount omitted, transfers 1 credit.
-* `!givecredit <user> (amount)` -- Alias for !givecredits
+* `!givecredit <user> (amount)` -- Alias for `!givecredits`.
 
 Raffle Commands:
-* `!join` -- Enters the user into an open raffle
-* `!joinchaos` -- An alias for !join
-* `!raffle (time)` -- Start a raffle for a modifier credit (if time is omitted, default raffle time is used) Requires 'manage_raffles' permission
-* `!chaosraffle` -- An alias for !raffle
-* `!raffletime <time>` -- Set default time that a raffle is open. Requires 'manage_raggles' permission
+* `!join` -- Enters the user into an open raffle.
+* `!joinchaos` -- An alias for `!join`.
+* `!raffle (time)` -- Start a raffle for a modifier credit (if time is omitted, default raffle time is used) Requires 'manage_raffles' permission.
+* `!chaosraffle` -- An alias for `!raffle`.
+* `!raffletime <time>` -- Set default time that a raffle is open. Requires 'manage_raggles' permission.
 
 Manage Permissions (require manage_permissions permission):
 * `!addgroup <group>` Create a new permission group.
