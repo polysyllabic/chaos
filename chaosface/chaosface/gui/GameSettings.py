@@ -240,20 +240,22 @@ def build_game_settings_tab() -> Callable[[], None]:
           control_classes='w-28',
           label_style=settings_label_style,
         )
-        points_reward_title = labeled_control(
-          'Points reward title',
-          lambda: ui.input(value=str(config.relay.points_reward_title)),
-          row_classes=settings_row_classes,
-          control_classes='w-44',
-          label_style=settings_label_style,
-        )
-        raffle_time = labeled_control(
-          'Default raffle time (sec)',
-          lambda: ui.number(value=float(config.relay.raffle_time), min=30, max=3600, step=1),
-          row_classes=settings_row_classes,
-          control_classes='w-24',
-          label_style=settings_label_style,
-        )
+
+    with ui.row().classes('w-full items-center gap-8 no-wrap'):
+      points_reward_title = labeled_control(
+        'Points reward title',
+        lambda: ui.input(value=str(config.relay.points_reward_title)),
+        row_classes='items-center gap-2 no-wrap',
+        control_classes='w-44',
+        label_style=settings_label_style,
+      )
+      raffle_time = labeled_control(
+        'Default raffle time (sec)',
+        lambda: ui.number(value=float(config.relay.raffle_time), min=30, max=3600, step=1),
+        row_classes='items-center gap-2 no-wrap',
+        control_classes='w-24',
+        label_style=settings_label_style,
+      )
 
     ui.separator()
     filter_state = {
