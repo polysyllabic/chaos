@@ -410,7 +410,7 @@ def build_game_settings_tab() -> Callable[[], None]:
       current_vote_delay = relay_config_float('vote_delay', 0.0, 0.0, 3600.0)
       new_vote_delay = safe_float(vote_delay.value, current_vote_delay, 0.0, 3600.0)
       if current_vote_delay != new_vote_delay:
-        config.relay.chaos_config['vote_delay'] = new_vote_delay
+        config.relay.set_vote_delay(new_vote_delay)
         need_save = True
       set_if_changed(config.relay.announce_candidates, bool(announce_candidates.value), config.relay.set_announce_candidates)
       set_if_changed(config.relay.announce_winner, bool(announce_winner.value), config.relay.set_announce_winner)

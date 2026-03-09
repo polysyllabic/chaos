@@ -278,3 +278,10 @@ def test_set_vote_duration_updates_vote_time_config_used_by_ui():
 
   assert float(relay.get_attribute('vote_time')) == 42.0
   assert relay.vote_time == 0.33
+
+
+def test_set_vote_delay_updates_vote_delay_config_used_by_ui():
+  relay = ChaosRelay()
+  relay.chaos_config['vote_delay'] = 0.0
+  relay.set_vote_delay(17.5)
+  assert float(relay.get_attribute('vote_delay')) == 17.5

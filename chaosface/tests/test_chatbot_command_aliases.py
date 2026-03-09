@@ -24,6 +24,7 @@ def test_resolves_existing_default_aliases():
   assert resolve_chatbot_command(['applycooldown', '120'], aliases, alias_only) == ('applycooldown', ['120'])
   assert resolve_chatbot_command(['votemethod', 'majority'], aliases, alias_only) == ('votemethod', ['majority'])
   assert resolve_chatbot_command(['votetime', '60'], aliases, alias_only) == ('votetime', ['60'])
+  assert resolve_chatbot_command(['votedelay', '15'], aliases, alias_only) == ('votedelay', ['15'])
   assert resolve_chatbot_command(['votecycle', 'interval'], aliases, alias_only) == ('votecycle', ['interval'])
   assert resolve_chatbot_command(['raffletime', '120'], aliases, alias_only) == ('raffletime', ['120'])
   assert resolve_chatbot_command(['permgroups'], aliases, alias_only) == ('permgroups', [])

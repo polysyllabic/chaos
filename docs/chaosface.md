@@ -527,6 +527,7 @@ Voting Commands (these commands all require manage_voting permission):
 * !endvote -- End an open vote immediately and choose a winner
 * !votemethod <method> -- Set winner selection method. Legal methods are proportional, majority, authoritarian (resets any open vote)
 * !votetime <time> -- Set default vote length, in seconds (resets any open vote)
+* !votedelay <time> -- Set delay between votes, in seconds (resets any open vote)
 * !votecycle <type> -- Set voting cycle type. Legal types are continuous, interval, random, triggered, disabled (resets any open vote unless voting is disabled)
 
 Modifier Credit Commands:

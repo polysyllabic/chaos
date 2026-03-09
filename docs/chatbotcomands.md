@@ -37,8 +37,9 @@ Voting Commands (require manage_voting permission; all times in seconds):
 * `!newvote (time)` -- Alias for !startvote
 * `!endvote` -- End an open vote immediately and choose a winner
 * `!votemethod <method>` -- Set method by which winners are chosen. Legal methods are `proportional`, `majority`, `authoritarian` (resets any open vote)
-* `!votetime <time>` -- Set length of time that a vote can remain open (resets any open vote).
-* `!votecycle <type>` -- Sets the type of voting cycle used. Legal types are `continuous`, `interval`, `random`, `triggered`, `disabled` (resets any open vote).
+* `!votetime <time>` -- Set length of time that a vote can remain open (resets any open vote)
+* `!votedelay <time>` -- Sets delay between end of previous vote and start of next vote (resets any open vote)
+* `!votecycle <type>` -- Sets the type of voting cycle used. Legal types are `continuous`, `interval`, `random`, `triggered`, `disabled` (resets any open vote)
 
 Modifier Credit Commands:
 * `!credits (user)` -- Reports the number of modifier credits that the user currently has. If 

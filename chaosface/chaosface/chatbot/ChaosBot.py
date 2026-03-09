@@ -172,6 +172,9 @@ class ChaosBotContext(Protocol):
   def set_vote_duration(self, value: float) -> None:
     ...
 
+  def set_vote_delay(self, value: float) -> None:
+    ...
+
   def set_raffle_time(self, value: float) -> None:
     ...
 
@@ -558,6 +561,9 @@ class ChaosBot:
     if cmd_key == 'votetime':
       await self._cmd_vote_time(author, args)
       return
+    if cmd_key == 'votedelay':
+      await self._cmd_vote_delay(author, args)
+      return
     if cmd_key == 'votecycle':
       await self._cmd_vote_cycle(author, args)
       return
@@ -729,6 +735,30 @@ class ChaosBot:
       await self.send_message(f'Vote time set to {vote_time} seconds. Current vote reset.')
     else:
       await self.send_message(f'Vote time set to {vote_time} seconds.')
+
+  async def _cmd_vote_delay(self, author: str, args):
+    if not await self._require_permission(author, 'manage_voting'):
+      return
+    if len(args) < 1:
+      await self.send_message('Usage: !votedelay <time>')
+      return
+    try:
+      vote_delay = int(args[0])
+    except ValueError:
+      await self.send_message('Vote delay must be a non-negative integer')
+      return
+    if vote_delay < 0:
+      await self.send_message('Vote delay must be a non-negative integer')
+      return
+
+    had_open_vote = bool(self._ctx.vote_open)
+    self._ctx.set_vote_delay(float(vote_delay))
+    self._ctx.set_need_save(True)
+    if had_open_vote and self._ctx.voting_type != 'DISABLED' and self._ctx.voting_cycle != 'DISABLED':
+      self._ctx.request_start_vote()
+      await self.send_message(f'Vote delay set to {vote_delay} seconds. Current vote reset.')
+      return
+    await self.send_message(f'Vote delay set to {vote_delay} seconds.')
 
   async def _cmd_vote_cycle(self, author: str, args):
     if not await self._require_permission(author, 'manage_voting'):

@@ -47,6 +47,7 @@ CHATBOT_COMMANDS: List[ChatbotCommandSpec] = [
   ChatbotCommandSpec('endvote', 'End Vote', ('endvote',)),
   ChatbotCommandSpec('votemethod', 'Set Vote Method', ('votemethod',)),
   ChatbotCommandSpec('votetime', 'Set Vote Time', ('votetime',)),
+  ChatbotCommandSpec('votedelay', 'Set Vote Delay', ('votedelay',)),
   ChatbotCommandSpec('votecycle', 'Set Vote Cycle', ('votecycle',)),
   ChatbotCommandSpec('remove', 'Remove Modifier', ('remove',)),
   ChatbotCommandSpec('addgroup', 'Add Permission Group', ('addgroup',)),

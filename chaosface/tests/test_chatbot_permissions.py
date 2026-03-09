@@ -56,6 +56,9 @@ class _StubContext:
   def set_vote_duration(self, value: float) -> None:
     self.attributes['vote_time'] = float(value)
 
+  def set_vote_delay(self, value: float) -> None:
+    self.attributes['vote_delay'] = float(value)
+
   def set_raffle_time(self, value: float) -> None:
     self.attributes['raffle_time'] = float(value)
 
@@ -446,6 +449,25 @@ def test_votetime_updates_and_resets_open_vote():
   assert ctx.start_vote_requests == [45]
   assert ctx.need_save is True
   assert messages == ['Vote time set to 45 seconds. Current vote reset.']
+
+
+def test_votedelay_updates_and_resets_open_vote():
+  ctx = _StubContext()
+  ctx.user_permissions['manager'] = {'manage_voting'}
+  ctx.vote_open = True
+  bot = ChaosBot(ctx)
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._handle_command('manager', '!votedelay 15'))
+
+  assert ctx.attributes['vote_delay'] == 15.0
+  assert ctx.start_vote_requests == [None]
+  assert ctx.need_save is True
+  assert messages == ['Vote delay set to 15 seconds. Current vote reset.']
 
 
 def test_votecycle_updates_cycle():

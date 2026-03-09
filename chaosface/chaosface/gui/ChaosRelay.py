@@ -833,6 +833,11 @@ class ChaosRelay:
     with self._lock:
       self.chaos_config['vote_time'] = duration
 
+  def set_vote_delay(self, value):
+    delay = max(0.0, float(value))
+    with self._lock:
+      self.chaos_config['vote_delay'] = delay
+
   def set_vote_open(self, value):
     self._set_value('vote_open', bool(value))
 

@@ -156,6 +156,9 @@ class RelayBotContext(ChaosBotContext):
   def set_vote_duration(self, value: float) -> None:
     self._relay.set_vote_duration(value)
 
+  def set_vote_delay(self, value: float) -> None:
+    self._relay.set_vote_delay(value)
+
   def set_raffle_time(self, value: float) -> None:
     self._relay.set_raffle_time(value)
 
