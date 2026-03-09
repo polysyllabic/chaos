@@ -962,7 +962,7 @@ type = "remap"
 disable_signals = [ "RX", "RY" ]
 remap = [
       {from = "RX", to = "CIRCLE", to_neg = "SQUARE", threshold=0.5},
-      {from = "RY", to = "TRIANGLE", to_neg = "X", threshold=0.5},
+      {from = "RY", to = "X", to_neg = "TRIANGLE", threshold=0.5},
       {from = "SQUARE", to = "RX", to_min = true},
       {from = "CIRCLE", to = "RX"},
       {from = "TRIANGLE", to = "RY", to_min = true},
@@ -1085,7 +1085,7 @@ type = "formula"
 applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", "vertical camera"  ]
 groups = [ "Movement", "View" ]
 formula_type = "janky"
-amplitude = 0.6
+amplitude = 0.3
 period_length = 5.0
 
 [[modifier]]

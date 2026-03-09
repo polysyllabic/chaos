@@ -720,7 +720,7 @@ type = "formula"
 applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", "vertical camera"  ]
 groups = [ "movement", "view" ]
 formula_type = "janky"
-amplitude = 0.6
+amplitude = 0.3
 period_length = 5.0
 
 [[modifier]]
