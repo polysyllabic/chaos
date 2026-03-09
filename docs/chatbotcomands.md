@@ -10,9 +10,9 @@ General Information Commands:
 * !chaoscmd -- Get a list of available commands for Twitch Controls Chaos
 
 Modifier Commands:
-* !apply <mod name> -- Apply a modifier (requires modifier credit and subject to cooldown)
-* !remove <mod name> -- Manually remove a modifier immediately (requires admin permission)
-* !mod <mod name> -- Describe the function of a specific modifier. Not case sensitive.
+* !apply `<mod name>` -- Apply a modifier (requires modifier credit and subject to cooldown)
+* !remove `<mod name>` -- Manually remove a modifier immediately (requires admin permission)
+* !mod `<mod name>` -- Describe the function of a specific modifier. Not case sensitive.
 * !mods -- Link to list of all available modifiers
 * !mods active -- List currently active modifiers
 * !active -- Alias for !mods active
@@ -20,8 +20,8 @@ Modifier Commands:
 * !candidates -- Alias for !mods voting
 
 Modifier Management Commands (require manage_modifiers permission):
-* !enable <mod name> -- Enable a modifier for voting/selection
-* !disable <mod name> -- Disable a modifier for voting/selection
+* !enable `<mod name>` -- Enable a modifier for voting/selection
+* !disable `<mod name>` -- Disable a modifier for voting/selection
 * !resetmods -- Request an immediate reset of active modifiers
 
 Voting Commands (require manage_voting permission):
@@ -31,10 +31,10 @@ Voting Commands (require manage_voting permission):
 
 Modifier Credit Commands:
 * !credits (user) -- Reports the number of modifier credits that the user currently has
-* !addcredits <user> (amount) -- Add credits to user's balance. If amount omitted, add 1. Requires 'manage_credits' permission.
-* !setcredits <user> <amount> -- Sets user's balance to the specified amount. Requires 'manage_credits' permission.
-* !givecredits <user> (amount) -- Give some of your modifier credits to the specified user. If amount omitted, transfers 1 credit.
-* !givecredit <user> (amount) -- Alias for !givecredits
+* !addcredits `<user>` (amount) -- Add credits to user's balance. If amount omitted, add 1. Requires 'manage_credits' permission.
+* !setcredits `<user>` `<amount>` -- Sets user's balance to the specified amount. Requires 'manage_credits' permission.
+* !givecredits `<user>` (amount) -- Give some of your modifier credits to the specified user. If amount omitted, transfers 1 credit.
+* !givecredit `<user>` (amount) -- Alias for !givecredits
 
 Raffle Commands:
 * !join -- Enters the user into an open raffle
@@ -43,14 +43,14 @@ Raffle Commands:
 * !chaosraffle -- An alias for !raffle
 
 Manage Permissions (require manage_permissions permission):
-* !addgroup <group> Create a new permission group.
-* !addmember <group> <user> Add a user to a permission group.
-* !addperm <group> <permission> Add a permission to a group.
-* !delgroup <group> Remove an existing permission group.
-* !delmember <group> <user> Remove a user from a group.
-* !delperm <group> <permission> Remove a permission from a group.
+* !addgroup `<group>` Create a new permission group.
+* !addmember `<group>` `<user>` Add a user to a permission group.
+* !addperm `<group>` `<permission>` Add a permission to a group.
+* !delgroup `<group>` Remove an existing permission group.
+* !delmember `<group>` `<user>` Remove a user from a group.
+* !delperm `<group>` `<permission>` Remove a permission from a group.
 * !permgroups List all permission groups.
-* !permgroup <group> List permissions and users in this group.
+* !permgroup `<group>` List permissions and users in this group.
 
 Permissions
 -----------
