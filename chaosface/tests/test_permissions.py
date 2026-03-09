@@ -110,6 +110,26 @@ def test_remove_mod_request_and_active_slot_compacts_progress_slots():
   assert relay.mod_times == [0.7, 0.4, 0.0]
 
 
+def test_decrement_mod_times_removes_all_expired_mods_from_display_state():
+  relay = ChaosRelay()
+  relay.set_num_active_mods(3)
+  relay.set_time_per_modifier(100.0)
+  relay.set_active_mods(['Mod A', 'Mod B', ''])
+  relay.set_mod_times([0.35, 0.03, 0.0])
+
+  # Expire the oldest remaining mod after a prior manual removal case.
+  relay.decrement_mod_times(5.0)
+
+  assert relay.active_mods == ['Mod A', '', '']
+  assert relay.mod_times == [0.30, 0.0, 0.0]
+
+  # Expire the last active mod; display state should fully clear.
+  relay.decrement_mod_times(40.0)
+
+  assert relay.active_mods == ['', '', '']
+  assert relay.mod_times == [0.0, 0.0, 0.0]
+
+
 def test_restore_active_mods_hydrates_names_progress_and_keys():
   relay = ChaosRelay()
   relay.initialize_game({

@@ -1499,6 +1499,9 @@ class ChaosRelay:
       else:
         value = 1.0 if mod_name else 0.0
       value = max(0.0, min(1.0, value))
+      # Treat zero-progress entries as expired so they are removed from active displays.
+      if mod_name and value <= 0.0:
+        mod_name = ''
       if not mod_name:
         value = 0.0
       entries.append((mod_name, value))
