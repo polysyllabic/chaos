@@ -356,15 +356,31 @@ initial votes have populated the modifier list.
 When voting begins, a set of modifiers is chosen randomly among the available mods and presented
 in a list. The number of options per voting cycle is set with the "Vote options" parameter.
 
-By default, the chaos bot uses a softmax algorithm to weight the probability that a mod should
-be selected based on the frequency with which it has been used. In other words, the more often a
-mod has been chosen in the past, the less likely it is to appear again. This feature helps reduce
-the likelihood of the same mods being applied over and over.
+The chaos bot uses an algorithm to weight the probability that a mod should be selected based on
+the frequency with which it has already been used. In other words, the more often a mod has been
+chosen in the past, the less likely it is to appear again. This feature helps reduce the likelihood
+of the same mods being applied over and over until other mods have had a chance.
 
-You can adjust the selection weighting by altering the "Chance of repeat modifier" setting. The
-lower the setting, the less likely a previously used modifier is to be chosen. Setting this value to
-100 has the effect of disabling softmax weighting, in which case mods will be selected with equal
-probability regardless of past use.
+You can adjust the selection weighting by altering the "Repeat penalty" setting. The
+lower the setting, the less likely a previously used modifier is to be chosen. This factor
+can be read as a percent. In essence, each time a modifier is used, its future chances of
+appearing will be reduced by this percent over the previous chances.
+
+In a practical sense, this means
+
+- At 33 (default), each use cuts a mod’s future candidate-list chance to about one third of what it was before.
+- At 66, each use cuts it to about two thirds.
+- At 100, weighting is disabled and all mods will have an equal chance of selection regardless of their past use
+
+For example, with about 150 inactive modifiers and 3 voting choices, an unused modifier will appear
+in the candidate list about 2% of the time. At the default setting of 33, each time a modifier is
+used, its future appearance rate is cut to about one third of its previous value, so one use drops
+it to about 0.67%, two uses to about 0.22%, and three uses to about 0.073%.
+
+These proportions apply separately to each mod, so it's the frequency of use relative to other
+mods, rather than the absolute number of times that a mod has been used, that will alter its
+chances of appearing in the list. In other words, over time, as more and more different mods
+are used, the odds of a previously used mod will tend to even out.
 
 ## Voting Period
 

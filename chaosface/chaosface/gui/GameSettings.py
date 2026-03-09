@@ -159,7 +159,7 @@ def build_game_settings_tab() -> Callable[[], None]:
           label_style=settings_label_style,
         )
         softmax_factor = labeled_control(
-          'Softmax factor',
+          'Repeat penalty',
           lambda: ui.number(value=int(config.relay.softmax_factor), min=1, max=100, step=1),
           row_classes=settings_row_classes,
           control_classes='w-20',
