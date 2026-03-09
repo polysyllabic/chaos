@@ -54,14 +54,14 @@ Raffle Commands:
 * `!raffletime <time>` -- Set default time that a raffle is open. Requires 'manage_raggles' permission
 
 Manage Permissions (require manage_permissions permission):
-* !addgroup `<group>` Create a new permission group.
-* !addmember `<group>` `<user>` Add a user to a permission group.
-* !addperm `<group>` `<permission>` Add a permission to a group.
-* !delgroup `<group>` Remove an existing permission group.
-* !delmember `<group>` `<user>` Remove a user from a group.
-* !delperm `<group>` `<permission>` Remove a permission from a group.
-* !permgroups List all permission groups.
-* !permgroup `<group>` List permissions and users in this group.
+* `!addgroup <group>` Create a new permission group.
+* `!addmember <group> <user>` Add a user to a permission group.
+* `!addperm <group> <permission>` Add a permission to a group.
+* `!delgroup <group>` Remove an existing permission group.
+* `!delmember <group> <user>` Remove a user from a group.
+* `!delperm <group> <permission>` Remove a permission from a group.
+* `!permgroups` List all permission groups.
+* `!permgroup `<group>` List permissions and users in this group.
 
 Permissions
 -----------
