@@ -21,6 +21,7 @@ def test_resolves_existing_default_aliases():
   aliases = sanitize_alias_map({})
   alias_only = sanitize_alias_only_map({})
   assert resolve_chatbot_command(['chaoscmd'], aliases, alias_only) == ('chaoscmd', [])
+  assert resolve_chatbot_command(['applycooldown', '120'], aliases, alias_only) == ('applycooldown', ['120'])
   assert resolve_chatbot_command(['votemethod', 'majority'], aliases, alias_only) == ('votemethod', ['majority'])
   assert resolve_chatbot_command(['votetime', '60'], aliases, alias_only) == ('votetime', ['60'])
   assert resolve_chatbot_command(['votecycle', 'interval'], aliases, alias_only) == ('votecycle', ['interval'])

@@ -39,6 +39,7 @@ CHATBOT_COMMANDS: List[ChatbotCommandSpec] = [
   ChatbotCommandSpec('enable', 'Enable Modifier', ('enable',)),
   ChatbotCommandSpec('disable', 'Disable Modifier', ('disable',)),
   ChatbotCommandSpec('resetmods', 'Reset Modifiers', ('resetmods',)),
+  ChatbotCommandSpec('applycooldown', 'Set Apply Cooldown', ('applycooldown',)),
   ChatbotCommandSpec('raffle', 'Start Raffle', ('raffle',), default_alias='chaosraffle'),
   ChatbotCommandSpec('raffletime', 'Set Raffle Time', ('raffletime',)),
   ChatbotCommandSpec('join', 'Join Raffle', ('join',), default_alias='joinchaos'),

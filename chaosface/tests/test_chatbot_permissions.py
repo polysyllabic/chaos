@@ -59,6 +59,9 @@ class _StubContext:
   def set_raffle_time(self, value: float) -> None:
     self.attributes['raffle_time'] = float(value)
 
+  def set_redemption_cooldown(self, value: int) -> None:
+    self.attributes['redemption_cooldown'] = int(value)
+
   def set_need_save(self, value: bool) -> None:
     self.need_save = bool(value)
 
@@ -118,7 +121,7 @@ class _ApplyContext(_StubContext):
 
   @property
   def redemption_cooldown(self) -> float:
-    return 0.0
+    return float(self.attributes.get('redemption_cooldown', 0.0))
 
   def get_balance(self, user: str) -> int:
     return 1
@@ -337,6 +340,60 @@ def test_apply_still_reports_refusal_messages():
 
   assert ctx.requested_force_mod is None
   assert messages == ['You need a modifier credit to do that.']
+
+
+def test_applycooldown_requires_manage_modifiers():
+  ctx = _StubContext()
+  bot = ChaosBot(ctx)
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._handle_command('viewer', '!applycooldown 90'))
+
+  assert messages == ["You need 'manage_modifiers' permission to use this command."]
+
+
+def test_applycooldown_updates_apply_cooldown_value():
+  ctx = _StubContext()
+  ctx.user_permissions['manager'] = {'manage_modifiers'}
+  bot = ChaosBot(ctx)
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._handle_command('manager', '!applycooldown 90'))
+
+  assert ctx.attributes['redemption_cooldown'] == 90
+  assert ctx.need_save is True
+  assert messages == ['Apply cooldown set to 90 seconds.']
+
+
+def test_admin_apply_does_not_trigger_global_apply_cooldown():
+  ctx = _ApplyContext()
+  ctx.attributes['redemption_cooldown'] = 600
+  ctx.user_permissions['adminmod'] = {'admin'}
+  bot = ChaosBot(ctx)
+  bot._channel_name = 'streamer'
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._cmd_apply('adminmod', ['Mod A'], is_streamer=False))
+  assert ctx.requested_force_mod == ('mod a', 'adminmod', False)
+  assert bot._last_apply_time == 0.0
+
+  ctx.requested_force_mod = None
+  asyncio.run(bot._cmd_apply('viewer', ['Mod A'], is_streamer=False))
+  assert ctx.requested_force_mod == ('mod a', 'viewer', True)
+  assert bot._last_apply_time > 0.0
+  assert messages == []
 
 
 def test_votemethod_requires_manage_voting():

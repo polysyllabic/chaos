@@ -175,6 +175,9 @@ class ChaosBotContext(Protocol):
   def set_raffle_time(self, value: float) -> None:
     ...
 
+  def set_redemption_cooldown(self, value: int) -> None:
+    ...
+
   def set_need_save(self, value: bool) -> None:
     ...
 
@@ -533,6 +536,9 @@ class ChaosBot:
       if await self._require_permission(author, 'manage_modifiers'):
         self._ctx.reset_mods = True
       return
+    if cmd_key == 'applycooldown':
+      await self._cmd_apply_cooldown(author, args)
+      return
     if cmd_key == 'raffle':
       await self._cmd_raffle(author, args)
       return
@@ -799,7 +805,8 @@ class ChaosBot:
     if not args:
       await self.send_message('Usage: !apply <mod name>')
       return
-    if not is_streamer:
+    is_admin = is_streamer or self._ctx.has_permission(author, 'admin')
+    if not is_admin:
       elapsed = time.monotonic() - self._last_apply_time
       if elapsed < self._ctx.redemption_cooldown:
         await self.send_message(self._attr_str('msg_in_cooldown'))
@@ -820,12 +827,32 @@ class ChaosBot:
     queued = self._ctx.request_force_mod(
       request.lower(),
       requested_by=author,
-      consume_credit=(not is_streamer),
+      consume_credit=(not is_admin),
     )
     if not queued:
       await self.send_message('Another apply request is already pending. Try again in a moment.')
       return
-    self._last_apply_time = time.monotonic()
+    if not is_admin:
+      self._last_apply_time = time.monotonic()
+
+  async def _cmd_apply_cooldown(self, author: str, args):
+    if not await self._require_permission(author, 'manage_modifiers'):
+      return
+    if len(args) < 1:
+      await self.send_message('Usage: !applycooldown <time>')
+      return
+    try:
+      cooldown = int(args[0])
+    except ValueError:
+      await self.send_message('Apply cooldown must be a non-negative integer')
+      return
+    if cooldown < 0:
+      await self.send_message('Apply cooldown must be a non-negative integer')
+      return
+
+    self._ctx.set_redemption_cooldown(cooldown)
+    self._ctx.set_need_save(True)
+    await self.send_message(f'Apply cooldown set to {cooldown} seconds.')
 
   async def _cmd_enable_disable(self, author: str, args, enabled: bool):
     if not await self._require_permission(author, 'manage_modifiers'):

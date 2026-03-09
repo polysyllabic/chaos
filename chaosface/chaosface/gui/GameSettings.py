@@ -227,7 +227,7 @@ def build_game_settings_tab() -> Callable[[], None]:
         raffles = ui.checkbox('Conduct raffles', value=bool(config.relay.raffles))
         multiple_credits = ui.checkbox('Allow multiple credits per cheer', value=bool(config.relay.multiple_credits))
         redemption_cooldown = labeled_control(
-          'Redemption cooldown (sec)',
+          'Apply cooldown (sec)',
           lambda: ui.number(value=float(config.relay.redemption_cooldown), min=0, max=86400, step=1),
           row_classes=settings_row_classes,
           control_classes='w-28',

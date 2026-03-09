@@ -515,6 +515,12 @@ Modifier Commands:
 * !mods active -- List currently active modifiers
 * !mods voting -- List modifiers currently up for a vote
 
+Modifier Management Commands (require manage_modifiers permission):
+* !enable <mod name> -- Enable a modifier for voting/selection
+* !disable <mod name> -- Disable a modifier for voting/selection
+* !resetmods -- Request an immediate reset of active modifiers
+* !applycooldown <time> -- Set the apply command cooldown, in seconds (does not affect admin use)
+
 Voting Commands (these commands all require manage_voting permission):
 * !startvote (time) -- Manually open a new vote. If time omitted, default vote time is used
 * !newvote (time) -- Alias for !startvote

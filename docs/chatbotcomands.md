@@ -30,6 +30,7 @@ Modifier Management Commands (require manage_modifiers permission):
 * `!enable <mod name>` -- Enable a modifier for voting/selection
 * `!disable <mod name>` -- Disable a modifier for voting/selection
 * `!resetmods` -- Request an immediate reset of active modifiers
+* `!applycooldown <time>` -- Set the cooldown time for using `apply` (doesn't affect admin use)
 
 Voting Commands (require manage_voting permission; all times in seconds):
 * `!startvote (time)` -- Manually open a new vote. If time omitted, default vote time is used

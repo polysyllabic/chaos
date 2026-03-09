@@ -159,6 +159,9 @@ class RelayBotContext(ChaosBotContext):
   def set_raffle_time(self, value: float) -> None:
     self._relay.set_raffle_time(value)
 
+  def set_redemption_cooldown(self, value: int) -> None:
+    self._relay.set_redemption_cooldown(value)
+
   def set_need_save(self, value: bool) -> None:
     self._relay.set_need_save(value)
 
