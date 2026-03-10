@@ -31,6 +31,21 @@ using namespace Chaos;
 
 const std::string CooldownModifier::mod_type = "cooldown";
 
+namespace {
+short normalizeBlockedCommandValue(const std::shared_ptr<ControllerInput>& signal,
+                                   const DeviceEvent& event) {
+  if (!signal || signal->getType() != ControllerSignalType::HYBRID) {
+    return event.value;
+  }
+  // Hybrid commands are restored via setValue(), where non-zero means "pressed".
+  // Normalize axis/button events to logical 0/1 so release axis values don't become presses.
+  if (event.type == TYPE_AXIS) {
+    return (event.value > JOYSTICK_MIN) ? 1 : 0;
+  }
+  return (event.value != 0) ? 1 : 0;
+}
+}  // namespace
+
 CooldownModifier::CooldownModifier(toml::table& config, EngineInterface* e) {
   
   TOMLUtils::checkValid(config, std::vector<std::string>{"name", "description", "type", "groups",
@@ -91,33 +106,18 @@ void CooldownModifier::begin() {
   PLOG_DEBUG << "Initialized " << getName();
 }
 
-void CooldownModifier::snapshotBlockedCommands() {
-  blocked_command_values.clear();
+void CooldownModifier::restoreBlockedCommands() {
   for (auto& cmd : commands) {
-    if (!cmd) {
+    if (!cmd || !cmd->getInput()) {
       continue;
     }
     auto signal = cmd->getInput();
-    if (!signal) {
-      continue;
-    }
-    blocked_command_values[cmd->getName()] = engine->getState(signal->getID(), signal->getButtonType());
-  }
-}
-
-void CooldownModifier::restoreBlockedCommands() {
-  if (blocked_command_values.empty()) {
-    return;
-  }
-  for (auto& cmd : commands) {
-    if (!cmd) {
-      continue;
-    }
+    short restore_value = engine->getState(signal->getID(), signal->getButtonType());
     auto it = blocked_command_values.find(cmd->getName());
-    if (it == blocked_command_values.end()) {
-      continue;
+    if (it != blocked_command_values.end()) {
+      restore_value = it->second;
     }
-    engine->setValue(cmd, it->second);
+    engine->setValue(cmd, restore_value);
   }
   blocked_command_values.clear();
 }
@@ -163,7 +163,7 @@ void CooldownModifier::update() {
       PLOG_DEBUG << "Cooldown for " << getName() << " started";
 	    cooldown_timer = time_off;
 	    state = CooldownState::BLOCK;
-      snapshotBlockedCommands();
+      blocked_command_values.clear();
       // Turn off all the commands we're blocking.
       // This was formerly done through fakePipelinedEvent(), but since remapping is now done
       // before we see this event, I don't think it needs to be pipelined.
@@ -194,7 +194,7 @@ bool CooldownModifier::tweak(DeviceEvent& event) {
       std::shared_ptr<ControllerInput> sig = cmd->getInput();
       PLOG_VERBOSE << "Checking " << cmd->getName() << ", maps to " << ((sig) ? sig->getName() : "NULL");
       if (sig && sig->matches(event)) {
-        blocked_command_values[cmd->getName()] = event.value;
+        blocked_command_values[cmd->getName()] = normalizeBlockedCommandValue(sig, event);
         PLOG_DEBUG << "Blocked " << cmd->getName();
         return false;
       }

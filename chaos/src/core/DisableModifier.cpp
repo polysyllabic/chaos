@@ -33,6 +33,21 @@ using namespace Chaos;
 
 const std::string DisableModifier::mod_type = "disable";
 
+namespace {
+short normalizeBlockedCommandValue(const std::shared_ptr<ControllerInput>& signal,
+                                   const DeviceEvent& event) {
+  if (!signal || signal->getType() != ControllerSignalType::HYBRID) {
+    return event.value;
+  }
+  // Hybrid commands are restored via setValue(), where any non-zero means "pressed".
+  // Normalize release-axis values to logical 0 so restore does not re-press the trigger.
+  if (event.type == TYPE_AXIS) {
+    return (event.value > JOYSTICK_MIN) ? 1 : 0;
+  }
+  return (event.value != 0) ? 1 : 0;
+}
+}  // namespace
+
 DisableModifier::DisableModifier(toml::table& config, EngineInterface* e) {
   PLOG_VERBOSE << "constructing disable modifier";
   assert(config.contains("name"));
@@ -105,6 +120,7 @@ void DisableModifier::clampAppliedCommands() {
                            static_cast<uint8_t>(signal->getButtonType()), signal->getID()};
     const short filtered = getFilteredVal(current);
     if (filtered != current.value) {
+      blocked_command_values[cmd->getName()] = normalizeBlockedCommandValue(signal, current);
       engine->setValue(cmd, filtered);
     }
   }
@@ -115,7 +131,7 @@ void DisableModifier::restoreBlockedCommands() {
     return;
   }
   for (auto& cmd : commands) {
-    if (!cmd) {
+    if (!cmd || !cmd->getInput()) {
       continue;
     }
     auto it = blocked_command_values.find(cmd->getName());
@@ -166,7 +182,8 @@ bool DisableModifier::tweak (DeviceEvent& event) {
   } else {
     for (auto& cmd : commands) {
       if (engine->eventMatches(event, cmd)) {
-        blocked_command_values[cmd->getName()] = event.value;
+        blocked_command_values[cmd->getName()] =
+            normalizeBlockedCommandValue(cmd->getInput(), event);
         new_val = getFilteredVal(event);
         cmd_name = cmd->getName();
         // Already matched, no need to keep looping

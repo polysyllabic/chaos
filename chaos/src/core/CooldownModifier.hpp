@@ -97,14 +97,13 @@ namespace Chaos {
     std::vector<std::shared_ptr<ControllerInput>> trigger;
 
     /**
-     * Last seen values for blocked commands while in BLOCK state.
+     * Last observed intended values for blocked commands while in BLOCK state.
      *
-     * This allows us to restore held controls when cooldown expires without requiring
-     * the user to release and re-press the control.
+     * At cooldown expiry we restore using current live controller state, but we prefer
+     * these values for commands that emitted blocked events during cooldown.
      */
     std::unordered_map<std::string, short> blocked_command_values;
 
-    void snapshotBlockedCommands();
     void restoreBlockedCommands();
 
   public:

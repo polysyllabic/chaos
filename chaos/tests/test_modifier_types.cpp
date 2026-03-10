@@ -572,7 +572,7 @@ time_off = 0.006
   return ok;
 }
 
-static bool testCooldownRestoresHeldCommandOnExpiry() {
+static bool testCooldownRestoresLatestBlockedCommandStateOnExpiry() {
   MockEngine engine;
   auto mod = makeMod<CooldownModifier>(
       R"(
@@ -614,11 +614,58 @@ time_off = 0.004
   ok &= check(engine.getState(dodge->getID(), dodge->getButtonType()) == 0,
               "DODGE should be forced off during cooldown block");
 
-  // No new sprint events arrive while user keeps holding the control.
+  // Simulate held sprint reports while blocked; these should be restored on expiry.
+  DeviceEvent held_dodge = commandEvent(engine, "DODGE", 1);
+  ok &= check(!mod->tweak(held_dodge),
+              "held DODGE reports should be blocked during cooldown");
+
   usleep(7000);
-  mod->_update(false); // BLOCK -> UNTRIGGERED; should restore held value
+  mod->_update(false); // BLOCK -> UNTRIGGERED; should restore latest blocked value
   ok &= check(engine.getState(dodge->getID(), dodge->getButtonType()) == 1,
-              "held DODGE should be restored when cooldown expires");
+              "DODGE should restore to the latest blocked held value on cooldown expiry");
+  return ok;
+}
+
+static bool testCooldownCancelableHybridReleaseDoesNotRePressOnExpiry() {
+  MockEngine engine;
+  auto mod = makeMod<CooldownModifier>(
+      R"(
+name = "Cooldown Cancelable Snapshot Regression"
+type = "cooldown"
+applies_to = [ "AIM" ]
+while = [ "aiming" ]
+start_type = "cancelable"
+time_on = 0.002
+time_off = 0.004
+)",
+      engine);
+  mod->_begin();
+
+  auto aim = commandInput(engine, "AIM");
+  bool ok = true;
+  ok &= check(aim != nullptr, "cancelable-hybrid restore test input should exist");
+  if (!aim) {
+    return false;
+  }
+
+  engine.applyEvent(commandEvent(engine, "AIM", 1));
+  mod->_update(false); // UNTRIGGERED -> ALLOW
+  usleep(6000);
+  mod->_update(false); // ALLOW -> BLOCK
+
+  ok &= check(sawName(engine.set_off_calls, "AIM"),
+              "cancelable-hybrid restore test should enter cooldown block");
+  ok &= check(engine.getState(aim->getID(), aim->getButtonType()) == 0,
+              "AIM should be forced off during cooldown block");
+
+  DeviceEvent aim_axis_release = commandHybridAxisEvent(engine, "AIM", JOYSTICK_MIN);
+  ok &= check(!mod->tweak(aim_axis_release),
+              "hybrid release axis report should be blocked during cooldown");
+
+  usleep(7000);
+  mod->_update(false); // BLOCK -> UNTRIGGERED; should remain released
+  ok &= check(engine.getState(aim->getID(), aim->getButtonType()) == 0,
+              "AIM should remain released after cooldown expiry");
   return ok;
 }
 
@@ -1118,6 +1165,53 @@ while = [ "not_aiming" ]
   return ok;
 }
 
+static bool testDisableWhileHybridReleaseDoesNotRePressOnConditionClear() {
+  MockEngine engine;
+  auto mod = makeMod<DisableModifier>(
+      R"(
+name = "Disable Hybrid Release Restore Regression"
+type = "disable"
+applies_to = [ "AIM" ]
+while = [ "movement" ]
+)",
+      engine);
+
+  auto aim = commandInput(engine, "AIM");
+  auto move_x = commandInput(engine, "MOVE_X");
+  bool ok = true;
+  ok &= check(aim != nullptr && move_x != nullptr,
+              "disable hybrid-release regression test inputs should exist");
+  if (!aim || !move_x) {
+    return false;
+  }
+
+  // Enter while-condition first so disable is active.
+  engine.applyEvent(commandEvent(engine, "MOVE_X", JOYSTICK_MAX));
+  mod->_begin();
+
+  DeviceEvent aim_press_axis = commandHybridAxisEvent(engine, "AIM", JOYSTICK_MAX);
+  ok &= check(mod->tweak(aim_press_axis),
+              "AIM press axis should pass through tweak while disabled");
+  engine.applyEvent(aim_press_axis);
+
+  // User releases aim while still blocked.
+  DeviceEvent aim_release_axis = commandHybridAxisEvent(engine, "AIM", JOYSTICK_MIN);
+  ok &= check(mod->tweak(aim_release_axis),
+              "AIM release axis should pass through tweak while disabled");
+  engine.applyEvent(aim_release_axis);
+
+  // Clearing while-condition should restore AIM to released state, not re-press it.
+  DeviceEvent stop_moving = commandEvent(engine, "MOVE_X", 0);
+  ok &= check(mod->tweak(stop_moving), "MOVE_X stop should pass through tweak");
+  engine.applyEvent(stop_moving);
+
+  ok &= check(engine.getState(aim->getID(), aim->getButtonType()) == 0,
+              "AIM button should remain released after disable condition clears");
+  ok &= check(engine.getState(aim->getHybridAxis(), TYPE_AXIS) == JOYSTICK_MIN,
+              "AIM axis should remain released after disable condition clears");
+  return ok;
+}
+
 static bool testOnlyAimMovementWorksWithControllerMirrorRemap() {
   MockEngine engine;
   auto mirror = makeMod<RemapModifier>(
@@ -1543,6 +1637,59 @@ while = [ "aiming" ]
   return ok;
 }
 
+static bool testFormulaModifierRestoresOnWhileConditionClear() {
+  MockEngine engine;
+  auto mod = makeMod<FormulaModifier>(
+      R"(
+name = "Formula Restore On While Clear"
+type = "formula"
+applies_to = [ "CAMERA_X" ]
+formula_type = "janky"
+amplitude = 0.6
+period_length = 1.0
+while = [ "aiming" ]
+)",
+      engine);
+
+  auto camera_x = commandInput(engine, "CAMERA_X");
+  auto aim = commandInput(engine, "AIM");
+  bool ok = true;
+  ok &= check(camera_x != nullptr && aim != nullptr,
+              "formula restore-on-clear test inputs should exist");
+  if (!camera_x || !aim) {
+    return false;
+  }
+
+  engine.applyEvent(commandEvent(engine, "CAMERA_X", 40));
+  mod->_begin();
+
+  engine.applyEvent(commandEvent(engine, "AIM", 1));
+  mod->_update(false);
+  ok &= check(!engine.pipelined_events.empty(),
+              "formula should emit while-condition output while active");
+  const std::size_t active_count = engine.pipelined_events.size();
+  if (active_count == 0) {
+    return false;
+  }
+
+  engine.applyEvent(commandEvent(engine, "AIM", 0));
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.size() == active_count + 1,
+              "formula should emit one restore event when while-condition clears");
+  if (engine.pipelined_events.size() != active_count + 1) {
+    return false;
+  }
+
+  const auto& restore = engine.pipelined_events.back();
+  ok &= check(restore.id == camera_x->getID() && restore.value == 40,
+              "formula restore event should return CAMERA_X to latest baseline value");
+
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.size() == active_count + 1,
+              "formula should not repeatedly emit restore while while-condition remains false");
+  return ok;
+}
+
 static bool testFormulaModifierSupportsEightCurveType() {
   MockEngine engine;
   auto mod = makeMod<FormulaModifier>(
@@ -1865,17 +2012,22 @@ while = [ "aiming" ]
 
   engine.applyEvent(commandEvent(engine, "AIM", 0));
   mod->_update(false);
-  ok &= check(engine.pipelined_events.size() == 1,
-              "random_offset should stop emitting when while-condition becomes false");
-
-  engine.applyEvent(commandEvent(engine, "AIM", 1));
-  mod->_update(false);
   ok &= check(engine.pipelined_events.size() == 2,
-              "random_offset should emit again when while-condition becomes true again");
+              "random_offset should emit one restore event when while-condition becomes false");
   if (engine.pipelined_events.size() < 2) {
     return false;
   }
-  ok &= check(engine.pipelined_events[1].value == first_val,
+  ok &= check(engine.pipelined_events[1].value == 0,
+              "random_offset restore event should return command to baseline value");
+
+  engine.applyEvent(commandEvent(engine, "AIM", 1));
+  mod->_update(false);
+  ok &= check(engine.pipelined_events.size() == 3,
+              "random_offset should emit again when while-condition becomes true again");
+  if (engine.pipelined_events.size() < 3) {
+    return false;
+  }
+  ok &= check(engine.pipelined_events[2].value == first_val,
               "random_offset should retain the same fixed offset across while-condition toggles");
   return ok;
 }
@@ -2936,7 +3088,8 @@ int main() {
   ok &= testCooldownModifierBlocksAfterTrigger();
   ok &= testCooldownModifierRequiresWhileConditionWhenCumulativeStartType();
   ok &= testCooldownModifierCancelableResetsIfConditionDrops();
-  ok &= testCooldownRestoresHeldCommandOnExpiry();
+  ok &= testCooldownRestoresLatestBlockedCommandStateOnExpiry();
+  ok &= testCooldownCancelableHybridReleaseDoesNotRePressOnExpiry();
   ok &= testDelayModifierQueuesAndReplays();
   ok &= testDelayModifierAppliesToAllCommands();
   ok &= testDelayModifierReplaysMultipleSequentialEvents();
@@ -2949,6 +3102,7 @@ int main() {
   ok &= testDisableRespectsWhileCondition();
   ok &= testDisableWhileTransitionClampsHeldAxes();
   ok &= testDisableWhileTransitionRestoresHeldAxesWhenConditionClears();
+  ok &= testDisableWhileHybridReleaseDoesNotRePressOnConditionClear();
   ok &= testOnlyAimMovementWorksWithControllerMirrorRemap();
   ok &= testDisableRespectsDistanceMovementCondition();
   ok &= testDisableRespectsPersistentCondition();
@@ -2959,6 +3113,7 @@ int main() {
   ok &= testDisableNoAimingStyleBlocksHybridButtonAndAxis();
   ok &= testFormulaModifierOffsetsAndRestores();
   ok &= testFormulaModifierJankyHonorsWhileCondition();
+  ok &= testFormulaModifierRestoresOnWhileConditionClear();
   ok &= testFormulaModifierSupportsEightCurveType();
   ok &= testFormulaCircleAssignsSinThenCosByAxisOrder();
   ok &= testFormulaEightCurveAlternatesAcrossAxisPairs();

@@ -68,6 +68,7 @@ namespace Chaos {
     double range_max;
     double direction_min;
     double direction_max;
+    bool condition_active_last{false};
 
     std::unordered_map<std::shared_ptr<GameCommand>, int> command_value;
     std::unordered_map<std::shared_ptr<GameCommand>, int> command_offset;

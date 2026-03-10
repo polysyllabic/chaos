@@ -146,6 +146,7 @@ void FormulaModifier::begin() {
   for (auto& cmd : commands) {
     command_offset[cmd] = 0;
   }
+  condition_active_last = inCondition();
 
   command_fixed_offset.clear();
   if (formula_type == FormulaTypes::RANDOM_OFFSET) {
@@ -174,45 +175,59 @@ void FormulaModifier::begin() {
 
 void FormulaModifier::update() {
   DeviceEvent event;
-  event.type = TYPE_AXIS;
+  const bool condition_active = inCondition();
 
+  if (!condition_active) {
+    if (condition_active_last) {
+      // Restore baseline values once when while-condition deactivates.
+      for (auto& cmd : commands) {
+        event.id = cmd->getInput()->getID();
+        event.type = cmd->getInput()->getButtonType();
+        event.value = command_value[cmd];
+        engine->fakePipelinedEvent(event, getptr());
+      }
+    }
+    for (auto& cmd : commands) {
+      command_offset[cmd] = 0;
+    }
+    condition_active_last = false;
+    return;
+  }
+
+  event.type = TYPE_AXIS;
   double t = timer.runningTime() * period_length;
   int i = 0;
 
   for (auto& cmd : commands) {
-    
-    if (inCondition()) {
-      if (formula_type == FormulaTypes::RANDOM_OFFSET) {
-        command_offset[cmd] = command_fixed_offset[cmd];
-      } else {
-        const bool first_in_pair = ((i % 2) == 0);
-        switch (formula_type) {
-          case FormulaTypes::CIRCLE:
-            // Apply paired components in-order so [A, B, A, B, ...] maps consistently.
-            command_offset[cmd] = first_in_pair
-                ? static_cast<int>(amplitude * std::sin(t))
-                : static_cast<int>(amplitude * std::cos(t));
-            break;
-          case FormulaTypes::EIGHT_CURVE:
-            command_offset[cmd] = static_cast<int>(amplitude * std::sin(4.0*(i+1)*(t+1.6)));
-            break;
-          case FormulaTypes::JANKY:
-            command_offset[cmd] = static_cast<int>(amplitude * (std::cos(t+4.0*i) + std::cos(2.0*t)/2.0) *
-                                         std::sin((t+4.0*i)/5.0)/2.0);
-            break;
-          case FormulaTypes::RANDOM_OFFSET:
-            break;
-        }
-      }
-      event.id = cmd->getInput()->getID();
-      event.value = fmin(fmax(command_value[cmd] + command_offset[cmd], JOYSTICK_MIN), JOYSTICK_MAX);
-      engine->fakePipelinedEvent(event, getptr());
-      PLOG_DEBUG << cmd->getName() << " orig value = " << command_value[cmd] << " + offset " << command_offset[cmd];
-      i++;
+    if (formula_type == FormulaTypes::RANDOM_OFFSET) {
+      command_offset[cmd] = command_fixed_offset[cmd];
     } else {
-      command_offset[cmd] = 0;
+      const bool first_in_pair = ((i % 2) == 0);
+      switch (formula_type) {
+        case FormulaTypes::CIRCLE:
+          // Apply paired components in-order so [A, B, A, B, ...] maps consistently.
+          command_offset[cmd] = first_in_pair
+              ? static_cast<int>(amplitude * std::sin(t))
+              : static_cast<int>(amplitude * std::cos(t));
+          break;
+        case FormulaTypes::EIGHT_CURVE:
+          command_offset[cmd] = static_cast<int>(amplitude * std::sin(4.0*(i+1)*(t+1.6)));
+          break;
+        case FormulaTypes::JANKY:
+          command_offset[cmd] = static_cast<int>(amplitude * (std::cos(t+4.0*i) + std::cos(2.0*t)/2.0) *
+                                       std::sin((t+4.0*i)/5.0)/2.0);
+          break;
+        case FormulaTypes::RANDOM_OFFSET:
+          break;
+      }
     }
+    event.id = cmd->getInput()->getID();
+    event.value = fmin(fmax(command_value[cmd] + command_offset[cmd], JOYSTICK_MIN), JOYSTICK_MAX);
+    engine->fakePipelinedEvent(event, getptr());
+    PLOG_DEBUG << cmd->getName() << " orig value = " << command_value[cmd] << " + offset " << command_offset[cmd];
+    i++;
   }
+  condition_active_last = true;
 }
 
 void FormulaModifier::finish() {
