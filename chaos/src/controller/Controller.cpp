@@ -61,10 +61,23 @@ void Controller::handleNewDeviceEvent(const DeviceEvent& event) {
 	
   // Is our event valid?  If so, send the chaos modified data:
   if (validEvent) {
-    applyEvent(updatedEvent);
+    if (!dispatchEvent(updatedEvent)) {
+      PLOG_VERBOSE << "Event with id " << event.id << " was suppressed by injector policy\n";
+    }
   } else {
     PLOG_VERBOSE << "Event with id " << event.id << " was NOT applied\n";
   }	
+}
+
+bool Controller::dispatchEvent(const DeviceEvent& event, bool allow_during_menu) {
+  if (controllerInjector != nullptr) {
+    return controllerInjector->dispatchControllerEvent(
+        event,
+        [this](const DeviceEvent& emitted) { applyEvent(emitted); },
+        allow_during_menu);
+  }
+  applyEvent(event);
+  return true;
 }
 
 void Controller::addInjector(ControllerInjector* injector) {
@@ -80,11 +93,11 @@ void Controller::setValue(std::shared_ptr<ControllerInput> signal, short value) 
   value = ControllerInput::joystickLimit(value);
   DeviceEvent event = {0, value, (uint8_t) signal->getButtonType(), signal->getID()};
   if (signal->getType() == ControllerSignalType::HYBRID) {
-    applyEvent(event);
+    dispatchEvent(event);
     event = {0, (short)((value) ? JOYSTICK_MAX : JOYSTICK_MIN), TYPE_AXIS, signal->getHybridAxis()};
   }
   PLOG_DEBUG << "Setting " << signal->getName() << " to " << value;
-  applyEvent(event);
+  dispatchEvent(event);
 }
 
 // Send a new event to turn off the command.
@@ -102,13 +115,13 @@ void Controller::setOn(std::shared_ptr<ControllerInput> signal) {
     break;
   case ControllerSignalType::HYBRID:
     event = {0, 1, TYPE_BUTTON, signal->getID()};
-    applyEvent(event);
+    dispatchEvent(event);
     event = {0, JOYSTICK_MAX, TYPE_AXIS, signal->getHybridAxis()};
     break;
   default:
     event = {0, JOYSTICK_MAX, TYPE_AXIS, signal->getID()};
   }
-  applyEvent(event);
+  dispatchEvent(event);
 }
 
 void Controller::applyEvent(const DeviceEvent& event) {

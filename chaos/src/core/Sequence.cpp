@@ -30,7 +30,8 @@ using namespace Chaos;
 unsigned int Sequence::press_time;
 unsigned int Sequence::release_time;
 
-Sequence::Sequence(Controller& c) : controller{c} {}
+Sequence::Sequence(Controller& c, bool allow_during_menu)
+    : controller{c}, allow_during_menu_events{allow_during_menu} {}
 
 void Sequence::addEvent(DeviceEvent event) {
   events.push_back(event);
@@ -99,7 +100,7 @@ void Sequence::send() {
   for (auto& event : events) {
     PLOG_DEBUG << "Sending event for input " << ControllerInputTable::canonicalEventName(event)
 	       << " value=" << (int) event.value << "; sleeping for " << (int) event.time << " microseconds";
-    controller.applyEvent(event);
+    controller.dispatchEvent(event, allow_during_menu_events);
     if (event.time > 0) {
       usleep(event.time);
     }
@@ -125,7 +126,7 @@ bool Sequence::sendParallel(double sequenceTime) {
       PLOG_DEBUG << "Parallel step " << current_step << ": signal = "
         << ControllerInputTable::canonicalEventName(e) << " value = " << e.value << " next delay = " << e.time <<
         "; elapsed usec=" << elapsed;
-      controller.applyEvent(e);
+      controller.dispatchEvent(e, allow_during_menu_events);
       wait_until += e.time;
       ++current_step;
     }

@@ -54,7 +54,7 @@ std::shared_ptr<MenuItem> GameMenu::getMenuItem(toml::table& config, const std::
 
 void GameMenu::setState(std::shared_ptr<MenuItem> item, unsigned int new_val, bool restore, Controller& controller) {
   PLOG_DEBUG << "Creating set menu sequence";
-  Sequence seq{controller};
+  Sequence seq{controller, true};
 
   // Keep visibility/offset corrections in sync with the latest guard states.
   syncGuardedVisibility();

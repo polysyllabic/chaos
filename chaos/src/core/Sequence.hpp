@@ -44,6 +44,7 @@ namespace Chaos {
   protected:
     std::vector<DeviceEvent> events;
     Controller& controller;
+    bool allow_during_menu_events;
 
     // to track current stage for sending the sequence in parallel
     short current_step = 0;
@@ -64,7 +65,7 @@ namespace Chaos {
      *
      * \param c Controller used to emit events.
      */
-    Sequence(Controller& c);
+    Sequence(Controller& c, bool allow_during_menu_events = false);
 
     /**
      * \brief Set default press duration for addPress operations.

@@ -18,9 +18,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <functional>
 #include "DeviceEvent.hpp"
 
 namespace Chaos {
+  class Controller;
 
   /**
    * \brief Interface for classes that need to intercept signals coming from the controller, modify
@@ -37,6 +39,18 @@ namespace Chaos {
      * \return true if output should be forwarded, false to drop it.
      */
     virtual bool sniffify(const DeviceEvent& input, DeviceEvent& output) = 0;
+
+    /**
+     * \brief Dispatch a synthetic or post-processed event to the controller under injector policy.
+     *
+     * \param event Event to emit to controller state/output.
+     * \param apply Callback that performs the underlying controller apply operation.
+     * \param allow_during_menu True if this event is part of active menu navigation.
+     * \return true if the event was emitted, false if it was suppressed.
+     */
+    virtual bool dispatchControllerEvent(const DeviceEvent& event,
+                                         const std::function<void(const DeviceEvent&)>& apply,
+                                         bool allow_during_menu = false) = 0;
 
     /**
      * Whether raw USB reports should bypass state reconstruction in ControllerRaw.

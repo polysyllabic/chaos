@@ -35,9 +35,14 @@ using namespace Chaos;
 
 namespace {
   struct ScopedMenuNavigation {
-    std::atomic<bool>& flag;
-    explicit ScopedMenuNavigation(std::atomic<bool>& f) : flag(f) { flag.store(true); }
-    ~ScopedMenuNavigation() { flag.store(false); }
+    std::function<void()> on_exit;
+
+    ScopedMenuNavigation(std::function<void()> on_enter, std::function<void()> on_leave)
+        : on_exit(std::move(on_leave)) {
+      on_enter();
+    }
+
+    ~ScopedMenuNavigation() { on_exit(); }
   };
 
   bool looksLikeAbsoluteUri(const std::string& value) {
@@ -81,6 +86,46 @@ namespace {
     }
     return base + leaf;
   }
+}
+
+bool ChaosEngine::dispatchControllerEvent(const DeviceEvent& event,
+                                          const std::function<void(const DeviceEvent&)>& apply,
+                                          bool allow_during_menu) {
+  if (allow_during_menu) {
+    apply(event);
+    return true;
+  }
+
+  if (menu_navigation_active.load(std::memory_order_acquire) ||
+      menu_navigation_transitioning.load(std::memory_order_acquire)) {
+    return false;
+  }
+
+  controller_dispatch_inflight.fetch_add(1, std::memory_order_acq_rel);
+  const bool blocked = menu_navigation_active.load(std::memory_order_acquire) ||
+                       menu_navigation_transitioning.load(std::memory_order_acquire);
+  if (blocked) {
+    controller_dispatch_inflight.fetch_sub(1, std::memory_order_acq_rel);
+    return false;
+  }
+
+  apply(event);
+  controller_dispatch_inflight.fetch_sub(1, std::memory_order_acq_rel);
+  return true;
+}
+
+void ChaosEngine::beginMenuNavigation() {
+  menu_navigation_transitioning.store(true, std::memory_order_release);
+  clearPendingInjectedEventsForMenu();
+  while (controller_dispatch_inflight.load(std::memory_order_acquire) != 0) {
+    usleep(50);
+  }
+  menu_navigation_active.store(true, std::memory_order_release);
+  menu_navigation_transitioning.store(false, std::memory_order_release);
+}
+
+void ChaosEngine::endMenuNavigation() {
+  menu_navigation_active.store(false, std::memory_order_release);
 }
 
 ChaosEngine::ChaosEngine(Controller& c, const std::string& listener_endpoint,
@@ -653,7 +698,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
   output = input;	
   bool valid = true;
 
-  if (menu_navigation_active.load()) {
+  if (menu_navigation_active.load() || menu_navigation_transitioning.load()) {
     return false;
   }
   
@@ -727,7 +772,7 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
     }
     unlock();
   }
-  if (menu_navigation_active.load()) {
+  if (menu_navigation_active.load() || menu_navigation_transitioning.load()) {
     return false;
   }
   return valid;
@@ -739,13 +784,13 @@ bool ChaosEngine::sniffify(const DeviceEvent& input, DeviceEvent& output) {
 void ChaosEngine::fakePipelinedEvent(DeviceEvent& event, std::shared_ptr<Modifier> sourceMod) {
   bool valid = true;
 
-  if (menu_navigation_active.load()) {
+  if (menu_navigation_active.load() || menu_navigation_transitioning.load()) {
     return;
   }
 		
   if (!pause.load()) {
     lock();
-    if (pause.load() || menu_navigation_active.load()) {
+    if (pause.load() || menu_navigation_active.load() || menu_navigation_transitioning.load()) {
       unlock();
       return;
     }
@@ -773,8 +818,8 @@ void ChaosEngine::fakePipelinedEvent(DeviceEvent& event, std::shared_ptr<Modifie
     unlock();
   }
   // unless canceled, send the event out
-  if (valid && !menu_navigation_active.load()) {
-    controller.applyEvent(event);
+  if (valid) {
+    controller.dispatchEvent(event);
   }
 }
 
@@ -800,14 +845,14 @@ void ChaosEngine::clearPendingInjectedEventsForMenu() {
 }
 
 void ChaosEngine::setMenuState(std::shared_ptr<MenuItem> item, unsigned int new_val) {
-  clearPendingInjectedEventsForMenu();
-  ScopedMenuNavigation navigation_guard(menu_navigation_active);
+  ScopedMenuNavigation navigation_guard(
+      [this]() { beginMenuNavigation(); }, [this]() { endMenuNavigation(); });
   game.getMenu().setState(item, new_val, false, controller);
 }
 
 void ChaosEngine::restoreMenuState(std::shared_ptr<MenuItem> item) {
-  clearPendingInjectedEventsForMenu();
-  ScopedMenuNavigation navigation_guard(menu_navigation_active);
+  ScopedMenuNavigation navigation_guard(
+      [this]() { beginMenuNavigation(); }, [this]() { endMenuNavigation(); });
   game.getMenu().restoreState(item, controller);
 }
 
@@ -817,7 +862,7 @@ bool ChaosEngine::eventMatches(const DeviceEvent& event, std::shared_ptr<GameCom
 }
 
 void ChaosEngine::setOff(std::shared_ptr<GameCommand> command) {
-  if (menu_navigation_active.load()) {
+  if (menu_navigation_active.load() || menu_navigation_transitioning.load()) {
     return;
   }
   std::shared_ptr<ControllerInput> signal = command->getInput();
@@ -825,7 +870,7 @@ void ChaosEngine::setOff(std::shared_ptr<GameCommand> command) {
 }
     
 void ChaosEngine::setOn(std::shared_ptr<GameCommand> command) {
-  if (menu_navigation_active.load()) {
+  if (menu_navigation_active.load() || menu_navigation_transitioning.load()) {
     return;
   }
   std::shared_ptr<ControllerInput> signal = command->getInput();
@@ -833,7 +878,7 @@ void ChaosEngine::setOn(std::shared_ptr<GameCommand> command) {
 }
 
 void ChaosEngine::setValue(std::shared_ptr<GameCommand> command, short value) {
-  if (menu_navigation_active.load()) {
+  if (menu_navigation_active.load() || menu_navigation_transitioning.load()) {
     return;
   }
   std::shared_ptr<ControllerInput> signal = command->getInput();
@@ -841,8 +886,5 @@ void ChaosEngine::setValue(std::shared_ptr<GameCommand> command, short value) {
 }
 
 void ChaosEngine::applyEvent(const DeviceEvent& event) {
-  if (menu_navigation_active.load()) {
-    return;
-  }
-  controller.applyEvent(event);
+  controller.dispatchEvent(event);
 }

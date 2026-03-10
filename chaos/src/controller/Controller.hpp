@@ -103,6 +103,15 @@ namespace Chaos {
      * \param event New event to go to the console
      */
     void applyEvent(const DeviceEvent& event);
+
+    /**
+     * \brief Emit an event through injector dispatch policy before applying controller state.
+     *
+     * \param event Event to emit.
+     * \param allow_during_menu True when this event is part of active menu navigation.
+     * \return true if the event was applied, false if it was suppressed.
+     */
+    bool dispatchEvent(const DeviceEvent& event, bool allow_during_menu = false);
     
     /**
      * \brief Test if event matches a specific input signal

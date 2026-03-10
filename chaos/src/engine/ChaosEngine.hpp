@@ -80,6 +80,8 @@ namespace Chaos {
     std::atomic<bool> paused_for_interface_timeout{false};
     std::atomic<bool> resume_after_interface_reconnect_requested{false};
     std::atomic<bool> menu_navigation_active{false};
+    std::atomic<bool> menu_navigation_transitioning{false};
+    std::atomic<unsigned int> controller_dispatch_inflight{0};
     bool pausePrimer = false;
     bool pausedPrior = false;
     int primary_mods = 0;
@@ -94,6 +96,9 @@ namespace Chaos {
     
     // overridden from ControllerInjector
     bool sniffify(const DeviceEvent& input, DeviceEvent& output);
+    bool dispatchControllerEvent(const DeviceEvent& event,
+                                 const std::function<void(const DeviceEvent&)>& apply,
+                                 bool allow_during_menu = false) override;
     bool prefersRawPassthrough() const override { return pause.load(); }
 
     // overridden from Thread
@@ -113,6 +118,8 @@ namespace Chaos {
     std::string resolveGameConfig(const std::string& selection);
     std::string resolveModListUri(const std::string& configured_uri) const;
     void clearPendingInjectedEventsForMenu();
+    void beginMenuNavigation();
+    void endMenuNavigation();
 
     void removeMod(std::shared_ptr<Modifier> mod);
 
@@ -188,9 +195,6 @@ namespace Chaos {
 
     /**
      * \brief Is the event an instance of the specified input command?
-     * 
-     * This tests both that the event matches the defined signal and that any defined condition
-     * is also in effect.
      */
     bool eventMatches(const DeviceEvent& event, std::shared_ptr<GameCommand> command);
 
