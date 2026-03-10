@@ -76,14 +76,37 @@ namespace Chaos {
     void processSequence(Sequence& seq);
     
   public:
+    /**
+     * \brief Construct a sequence modifier from TOML configuration.
+     *
+     * \param config Modifier configuration table.
+     * \param e Engine interface pointer.
+     */
     SequenceModifier(toml::table& config, EngineInterface* e);
 
     static const std::string mod_type;
+
+    /**
+     * \brief Return this modifier's registered factory type name.
+     */
     const std::string& getModType() { return mod_type; }
     
+    /**
+     * \brief Start configured begin/repeat sequence state.
+     */
     void begin();
+
+    /**
+     * \brief Advance repeat-sequence timing and trigger logic.
+     */
     void update();
+
+    /**
+     * \brief Process incoming events while sequence execution is active.
+     *
+     * \param event Event to process.
+     * \return true if event should continue through the pipeline.
+     */
     bool tweak(DeviceEvent& event);
   };
 };
-

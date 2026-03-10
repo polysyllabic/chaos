@@ -46,12 +46,49 @@ namespace Chaos {
     void doAction();
 
   public:
+    /**
+     * \brief Construct the communication interface.
+     */
     ChaosInterface();
+
+    /**
+     * \brief Tear down sockets and worker-thread state.
+     */
     ~ChaosInterface();
+
+    /**
+     * \brief Configure listener and talker endpoints.
+     *
+     * \param listener_endpoint Endpoint used for inbound interface commands.
+     * \param talker_endpoint Endpoint used for outbound interface messages.
+     */
     void setupInterface(const std::string& listener_endpoint, const std::string& talker_endpoint);
+
+    /**
+     * \brief Queue a message to send to the external interface.
+     *
+     * \param message Serialized message payload.
+     * \return true if the message was accepted for delivery.
+     */
     bool sendMessage(std::string message);
+
+    /**
+     * \brief Register the observer that receives incoming commands.
+     *
+     * \param observer Observer implementation to notify.
+     */
     void setObserver(CommandObserver* observer);
+
+    /**
+     * \brief Report whether the talker socket is currently healthy.
+     */
     bool isTalkerHealthy() const;
+
+    /**
+     * \brief Test helper to force a specific talker health state.
+     *
+     * \param healthy Forced health value.
+     */
     void setTalkerHealthyForTest(bool healthy);
   };
 

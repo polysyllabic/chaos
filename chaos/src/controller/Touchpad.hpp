@@ -117,6 +117,9 @@ namespace Chaos {
     static short skew;
 
   public:
+    /**
+     * \brief Construct touchpad conversion state.
+     */
     Touchpad();
 
     /**
@@ -126,8 +129,16 @@ namespace Chaos {
      */
     void firstTouch();
 
+    /**
+     * \brief Check whether velocity mode is used for axis conversion.
+     */
     bool useVelocity() { return use_velocity; }
 
+    /**
+     * \brief Enable or disable velocity mode for touchpad conversion.
+     *
+     * \param state True to use velocity; false to use displacement.
+     */
     static void setVelocity(bool state) { use_velocity = state; }
 
     /**
@@ -151,14 +162,37 @@ namespace Chaos {
      */
     short getAxisValue(ControllerSignal tp_axis, short value);
 
+    /**
+     * \brief Get the current X-axis scale factor.
+     */
     double getScaleX() { return scale_x; }
-    double getScaleY() { return scale_y; }    
+
+    /**
+     * \brief Get the current Y-axis scale factor.
+     */
+    double getScaleY() { return scale_y; }
+
+    /**
+     * \brief Set scale factors used for touchpad-to-axis conversion.
+     *
+     * \param new_x Scale factor for X.
+     * \param new_y Scale factor for Y.
+     */
     static void setScale(double new_x, double new_y) {
       scale_x = new_x;
       scale_y = new_y;
     }
 
+    /**
+     * \brief Get the currently configured dead-zone escape skew.
+     */
     short getSkew() { return skew; }
+
+    /**
+     * \brief Set the dead-zone escape skew value.
+     *
+     * \param new_skew Skew to apply to non-zero converted values.
+     */
     static void setSkew(short new_skew) { skew = new_skew; }
   };
   

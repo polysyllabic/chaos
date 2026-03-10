@@ -170,6 +170,13 @@ namespace Chaos {
      */
     std::shared_ptr<MenuItem> getMenuItem(toml::table& config, const std::string& key);
 
+    /**
+     * \brief Insert or replace a menu item in the internal menu map.
+     *
+     * \param name Key used to store the item.
+     * \param new_item Menu item instance to insert.
+     * \return true when insertion succeeds.
+     */
     bool insertMenuItem(std::string& name, std::shared_ptr<MenuItem> new_item);
 
     /**

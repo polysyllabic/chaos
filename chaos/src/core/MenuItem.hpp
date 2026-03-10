@@ -250,6 +250,11 @@ namespace Chaos {
      */
     short getDefault() { return default_state; }
     
+    /**
+     * \brief Apply an offset correction delta used for hidden-item adjustments.
+     *
+     * \param delta Signed correction to add.
+     */
     void adjustOffset(int delta) { offset_correction += delta; }
 
     /**
@@ -276,16 +281,43 @@ namespace Chaos {
     void setState(Sequence& seq, unsigned int new_state, bool restore);
 
     
+    /**
+     * \brief Check whether this item is a settable option entry.
+     */
     bool isOption() { return is_option; }
 
+    /**
+     * \brief Check whether this item can currently be selected.
+     */
     bool isSelectable() { return is_selectable; }
 
+    /**
+     * \brief Check whether this item represents a submenu entry.
+     */
     bool isMenu() { return is_menu; }
 
+    /**
+     * \brief Check whether selecting this item requires confirmation.
+     */
     bool requiresConfirm() const { return confirm; }
 
+    /**
+     * \brief Set persistent hidden state for this menu item.
+     *
+     * \param hide True to hide, false to reveal.
+     */
     void setHidden(bool hide);
+
+    /**
+     * \brief Set guard-driven hidden state for this menu item.
+     *
+     * \param hide True to hide because guard is inactive.
+     */
     void setGuardHidden(bool hide);
+
+    /**
+     * \brief Check whether this item is hidden for any reason.
+     */
     bool isHidden() { return (hidden || guard_hidden); }
 
     /**
@@ -334,8 +366,14 @@ namespace Chaos {
      */
     std::shared_ptr<MenuItem> getGuard() { return guard; }
 
+    /**
+     * \brief Check whether this item references a sibling counter item.
+     */
     bool hasSiblingCounter() const { return sibling_counter != nullptr; }
 
+    /**
+     * \brief Get the sibling item whose counter tracks this item's state.
+     */
     std::shared_ptr<MenuItem> getSiblingCounter() { return sibling_counter; }
 
   };

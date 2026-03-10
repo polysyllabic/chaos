@@ -28,18 +28,30 @@ namespace Chaos {
     uint8_t type;
     uint8_t id;
 
+    /**
+     * \brief Compute the packed lookup index for this event's type/id pair.
+     */
     int index() const {
       return ((int) type << 8) + (int) id;
     }
     
+    /**
+     * \brief Check whether this event represents a synthetic delay marker.
+     */
     bool isDelay() const {
       return (value == 0 && id == 255 && type == 255);
     }
 
+    /**
+     * \brief Compare two events by type/id identity.
+     */
     bool operator==(const DeviceEvent &other) const {
       return type == other.type && id == other.id;
     }
 
+    /**
+     * \brief Provide strict weak ordering by type, then id.
+     */
     bool operator<(const DeviceEvent &other) const {
       return type < other.type || (type == other.type && id < other.id);
     }

@@ -40,6 +40,13 @@ namespace Chaos {
     static std::shared_ptr<Base> create(const std::string& mod_type, T&&... args) {
       return factory().at(mod_type)(std::forward<T>(args)...);
     }
+
+    /**
+     * \brief Check whether a child type is registered in the factory.
+     *
+     * \param mod_type Type name to query.
+     * \return true when the type is registered.
+     */
     static bool hasType(std::string& mod_type) {
       return (factory().count(mod_type) == 1);
     }
@@ -49,6 +56,9 @@ namespace Chaos {
     template <class T> struct Registrar : Base {      
       friend T;
       
+      /**
+       * \brief Register the child type with the static factory map.
+       */
       static bool registerType() {
         const auto mod_type = T::mod_type;
         Factory::factory()[mod_type] = [](Args... args) -> std::shared_ptr<Base> {

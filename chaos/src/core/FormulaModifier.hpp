@@ -74,14 +74,42 @@ namespace Chaos {
     std::unordered_map<std::shared_ptr<GameCommand>, int> command_fixed_offset;
 
   public:
+    /**
+     * \brief Construct a formula modifier from TOML configuration.
+     *
+     * \param config Modifier configuration table.
+     * \param e Engine interface pointer.
+     */
     FormulaModifier(toml::table& config, EngineInterface* e);
 
     static const std::string mod_type;
+
+    /**
+     * \brief Return this modifier's registered factory type name.
+     */
     const std::string& getModType() { return mod_type; }
 
+    /**
+     * \brief Initialize formula-specific runtime state.
+     */
     void begin();
+
+    /**
+     * \brief Update formula output and cached offsets.
+     */
     void update();
+
+    /**
+     * \brief Restore any state changed by this modifier on shutdown.
+     */
     void finish();
+
+    /**
+     * \brief Apply the configured formula to matching events.
+     *
+     * \param event Incoming event to transform.
+     * \return true to forward the transformed event.
+     */
     bool tweak(DeviceEvent& event);
   };
 };

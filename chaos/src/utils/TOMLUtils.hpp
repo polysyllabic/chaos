@@ -84,6 +84,15 @@ namespace Chaos {
   }
 
   template<typename T>
+  /**
+   * \brief Resolve a named object reference from configuration.
+   *
+   * \tparam T Type exposing static `get(const std::string&)`.
+   * \param config TOML table to search.
+   * \param key Key containing the referenced object name.
+   * \param required Whether missing key should be logged as an error.
+   * \return Shared pointer to resolved object, or nullptr if missing/not found.
+   */
   static std::shared_ptr<T> getObject(const toml::table& config, const std::string& key, bool required) {
     std::optional<std::string> obj = config[key].value<std::string>();
     if (obj) {

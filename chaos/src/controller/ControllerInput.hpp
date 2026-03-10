@@ -90,6 +90,12 @@ namespace Chaos {
     Controller& controller;
 
   public:
+    /**
+     * \brief Construct a controller-input definition from parsed settings.
+     *
+     * \param c Controller owning this signal.
+     * \param settings Parsed signal metadata.
+     */
     ControllerInput(Controller& c, const SignalSettings& settings);
 
     /**
@@ -185,6 +191,11 @@ namespace Chaos {
      */
     int getIndex() { return button_index; }
 
+    /**
+     * \brief Get the axis index used for hybrid controls.
+     *
+     * \return Hybrid-axis index in the controller state table.
+     */
     int getHybridAxisIndex() { return hybrid_index; }
     
     /**

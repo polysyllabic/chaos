@@ -183,7 +183,14 @@ namespace Chaos {
      */
     bool isTransient() { return clear_on.empty(); }
 
+    /**
+     * \brief Get the number of commands in the while-condition list.
+     */
     int getNumWhile() { return while_conditions.size(); }
+
+    /**
+     * \brief Get the number of commands in the clear_on list.
+     */
     int getNumClearOn() { return clear_on.size(); }
     
     /**

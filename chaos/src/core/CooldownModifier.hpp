@@ -108,13 +108,37 @@ namespace Chaos {
     void restoreBlockedCommands();
 
   public:
+    /**
+     * \brief Construct a cooldown modifier from TOML configuration.
+     *
+     * \param config Modifier configuration table.
+     * \param e Engine interface pointer.
+     */
     CooldownModifier(toml::table& config, EngineInterface* e);
 
     static const std::string mod_type;
+
+    /**
+     * \brief Return this modifier's registered factory type name.
+     */
     const std::string& getModType() { return mod_type; }
 
+    /**
+     * \brief Initialize cooldown state when the modifier activates.
+     */
     void begin();
+
+    /**
+     * \brief Advance cooldown timers and transition states.
+     */
     void update();
+
+    /**
+     * \brief Filter incoming events according to the cooldown state machine.
+     *
+     * \param event Incoming event to inspect/mutate.
+     * \return true to keep the event, false to block it.
+     */
     bool tweak(DeviceEvent& event);
   };
 };

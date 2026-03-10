@@ -76,14 +76,42 @@ namespace Chaos {
 
     void buildRandomList();
   public:
+    /**
+     * \brief Construct a parent modifier from TOML configuration.
+     *
+     * \param config Modifier configuration table.
+     * \param e Engine interface pointer.
+     */
     ParentModifier(toml::table& config, EngineInterface* e);
 
     static const std::string mod_type;
+
+    /**
+     * \brief Return this modifier's registered factory type name.
+     */
     const std::string& getModType() { return mod_type; }
 
+    /**
+     * \brief Activate child modifiers selected by this parent.
+     */
     void begin();
+
+    /**
+     * \brief Update active child modifiers.
+     */
     void update();
+
+    /**
+     * \brief Finish and tear down active child modifiers.
+     */
     void finish();
+
+    /**
+     * \brief Route event processing through active children.
+     *
+     * \param event Event to process.
+     * \return true if the event should continue through the pipeline.
+     */
     bool tweak(DeviceEvent& event);
   };
 };

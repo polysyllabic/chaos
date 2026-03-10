@@ -35,6 +35,13 @@ namespace Chaos {
     std::unordered_map<std::string, std::shared_ptr<Sequence>> sequence_map;
 
   public:
+    /**
+     * \brief Insert a predefined sequence into the table.
+     *
+     * \param name Sequence name key.
+     * \param new_sequence Sequence to store.
+     * \return true on successful insert.
+     */
     bool addDefinedSequence(const std::string& name, std::shared_ptr<Sequence> new_sequence);
 
     /**

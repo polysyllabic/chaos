@@ -33,8 +33,20 @@ namespace Chaos {
   class MenuInterface {
   public:
     virtual ~MenuInterface() = default;
+
+    /**
+     * \brief Lookup a menu item by configured name.
+     */
     virtual std::shared_ptr<MenuItem> getMenuItem(const std::string& name) = 0;
+
+    /**
+     * \brief Recompute offset corrections after an item's visibility changes.
+     */
     virtual void correctOffset(std::shared_ptr<MenuItem> sender) = 0;
+
+    /**
+     * \brief Append a named predefined sequence to an existing sequence.
+     */
     virtual void addToSequence(Sequence& sequence, const std::string& name) = 0;
   };
 

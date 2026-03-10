@@ -32,9 +32,25 @@ namespace Chaos {
     Dualshock();
 	
   public:
+    /**
+     * \brief Apply modified signal state into an outgoing report buffer.
+     *
+     * \param buffer Raw report buffer to mutate.
+     * \param chaosState Engine-maintained signal state array.
+     */
     void applyHackedState(unsigned char* buffer, short* chaosState);
+
+    /**
+     * \brief Mask controls that must remain blocked while paused.
+     *
+     * \param buffer Raw report buffer to mutate.
+     * \param length Buffer size in bytes.
+     */
     void maskPausedControls(unsigned char* buffer, int length) override;
     
+    /**
+     * \brief Destroy DualShock-specific decoding resources.
+     */
     ~Dualshock();
 
   private:

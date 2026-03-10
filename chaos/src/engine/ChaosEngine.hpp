@@ -117,14 +117,36 @@ namespace Chaos {
     void removeMod(std::shared_ptr<Modifier> mod);
 
   public:
+    /**
+     * \brief Construct the chaos engine and bind interface endpoints.
+     *
+     * \param c Controller instance used for output.
+     * \param listener_endpoint Endpoint for inbound interface commands.
+     * \param talker_endpoint Endpoint for outbound interface messages.
+     * \param enable_interface Whether the external interface should be enabled.
+     * \param default_mod_list_uri_base Base URI for resolving relative mod-list links.
+     */
     ChaosEngine(Controller& c, const std::string& listener_endpoint,
                 const std::string& talker_endpoint, bool enable_interface = true,
                 const std::string& default_mod_list_uri_base = "");
     
+    /**
+     * \brief Send a serialized message to the external interface.
+     *
+     * \param msg Serialized payload.
+     */
     void sendInterfaceMessage(const std::string& msg);
 
+    /**
+     * \brief Set the list of available game configurations.
+     *
+     * \param games Pairs of {display_name, config_path}.
+     */
     void setAvailableGames(const std::vector<std::pair<std::string, std::string>>& games);
 
+    /**
+     * \brief Broadcast the currently available game list to the interface.
+     */
     void announceAvailableGames();
 
     /**
@@ -159,32 +181,56 @@ namespace Chaos {
      */
     void removeOldestMod();
 
+    /**
+     * \brief Read the current raw controller state by type/id.
+     */
     short getState(uint8_t id, uint8_t type) { return controller.getState(id, type); }
 
     /**
      * \brief Is the event an instance of the specified input command?
      * 
-     * This tests both that the event against the defined signal and that any defined condition
+     * This tests both that the event matches the defined signal and that any defined condition
      * is also in effect.
      */
     bool eventMatches(const DeviceEvent& event, std::shared_ptr<GameCommand> command);
 
+    /**
+     * \brief Force a command to its "off" state on the controller.
+     */
     void setOff(std::shared_ptr<GameCommand> command);
     
+    /**
+     * \brief Force a command to its "on" state on the controller.
+     */
     void setOn(std::shared_ptr<GameCommand> command);
 
+    /**
+     * \brief Set a command to an explicit value on the controller.
+     */
     void setValue(std::shared_ptr<GameCommand> command, short value);
 
+    /**
+     * \brief Apply a raw event directly to controller output.
+     */
     void applyEvent(const DeviceEvent& event) override;
 
+    /**
+     * \brief Lookup a modifier by name from the loaded game.
+     */
     std::shared_ptr<Modifier> getModifier(const std::string& name) {
       return game.getModifier(name);
     }
 
+    /**
+     * \brief Access the game's modifier map.
+     */
     std::unordered_map<std::string, std::shared_ptr<Modifier>>& getModifierMap() {
       return game.getModifierMap();
     }
 
+    /**
+     * \brief Lookup a menu item by name from the loaded game.
+     */
     std::shared_ptr<MenuItem> getMenuItem(const std::string& name) {
       return game.getMenu().getMenuItem(name);
     }
@@ -206,38 +252,63 @@ namespace Chaos {
      */
     void restoreMenuState(std::shared_ptr<MenuItem> item) override;
 
+    /**
+     * \brief Lookup a controller input definition by name.
+     */
     std::shared_ptr<ControllerInput> getInput(const std::string& name) {
       return game.getSignalTable().getInput(name);
     }
 
+    /**
+     * \brief Resolve a raw event to its controller input definition.
+     */
     std::shared_ptr<ControllerInput> getInput(const DeviceEvent& event) {
       return game.getSignalTable().getInput(event);
     }
 
+    /**
+     * \brief Resolve controller-input references from config into a vector.
+     */
     void addControllerInputs(const toml::table& config, const std::string& key,
                                  std::vector<std::shared_ptr<ControllerInput>>& vec) {
       game.getSignalTable().addToVector(config, key, vec);
     }
 
+    /**
+     * \brief Resolve game-command references from config into command objects.
+     */
     void addGameCommands(const toml::table& config, const std::string& key,
                          std::vector<std::shared_ptr<GameCommand>>& vec) {
       game.addGameCommands(config, key, vec);
     }
+
+    /**
+     * \brief Resolve game-command references from config into controller inputs.
+     */
     void addGameCommands(const toml::table& config, const std::string& key,
                          std::vector<std::shared_ptr<ControllerInput>>& vec) {
       game.addGameCommands(config, key, vec);
     }
 
+    /**
+     * \brief Resolve game-condition references from config into condition objects.
+     */
     void addGameConditions(const toml::table& config, const std::string& key,
                            std::vector<std::shared_ptr<GameCondition>>& vec) {
       game.addGameConditions(config, key, vec);
     }
 
+    /**
+     * \brief Build a sequence from configuration.
+     */
     std::shared_ptr<Sequence> createSequence(toml::table& config, const std::string& key,
                                              bool required) {
       return game.makeSequence(config, key, required);
     }
 
+    /**
+     * \brief Get canonical event name for a raw controller event.
+     */
     std::string getEventName(const DeviceEvent& event) {
       return game.getEventName(event);
     }

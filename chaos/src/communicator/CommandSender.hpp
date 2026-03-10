@@ -37,11 +37,29 @@ namespace Chaos {
     zmq::socket_t* createSocket();
 
   public:
+    /**
+     * \brief Construct a sender with default retry settings.
+     */
     CommandSender();
+
+    /**
+     * \brief Release sender socket resources.
+     */
     ~CommandSender();
 	
+    /**
+     * \brief Set the endpoint used for outbound requests.
+     *
+     * \param ep ZMQ endpoint string.
+     */
     void setEndpoint(const std::string& ep);
 
+    /**
+     * \brief Send a message and wait for acknowledgement.
+     *
+     * \param message Serialized message payload.
+     * \return true when acknowledgement is received.
+     */
     bool sendMessage(const std::string& message);
   };
 

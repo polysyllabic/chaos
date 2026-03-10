@@ -49,6 +49,9 @@ namespace Chaos {
     usec dtime;
     usec runningtime;
   public:
+    /**
+     * \brief Construct a timer and initialize internal state.
+     */
     Timer();
 
     /**

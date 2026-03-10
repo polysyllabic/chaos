@@ -150,6 +150,9 @@ namespace Chaos {
     Json::Value getModList() { return modifiers.getModList(); }
 
 
+    /**
+     * \brief Access the controller input lookup table for the current game.
+     */
     ControllerInputTable& getSignalTable() { return signal_table; }
     
     /**
@@ -182,7 +185,21 @@ namespace Chaos {
      */
     GameMenu& getMenu() { return menu; }
 
+    /**
+     * \brief Lookup a game command by its configured name.
+     *
+     * \param name Command name from configuration.
+     * \return Matching command pointer, or nullptr when missing.
+     */
     std::shared_ptr<GameCommand> getCommand(const std::string& name);
+
+    /**
+     * \brief Lookup a command name from config and resolve it to a command object.
+     *
+     * \param config TOML table containing the reference.
+     * \param key Key holding the command name.
+     * \param required Whether missing value is an error.
+     */
     std::shared_ptr<GameCommand> getCommand(const toml::table& config, const std::string& key,
                                             bool required);
 
@@ -200,12 +217,24 @@ namespace Chaos {
     void addGameCommands(const toml::table& config, const std::string& key,
                          std::vector<std::shared_ptr<ControllerInput>>& vec);
 
+    /**
+     * \brief Lookup a game condition by its configured name.
+     *
+     * \param name Condition name from configuration.
+     * \return Matching condition pointer, or nullptr when missing.
+     */
     std::shared_ptr<GameCondition> getCondition(const std::string& name);
 
     void addGameConditions(const toml::table& config, const std::string& key,
                            std::vector<std::shared_ptr<GameCondition>>& vec);
 
-    
+    /**
+     * \brief Convert a proportional threshold into an absolute signal threshold.
+     *
+     * \param command Command whose signal range is used.
+     * \param proportion Proportion in [0, 1].
+     * \return Absolute signal threshold value.
+     */
     short getSignalThreshold(std::shared_ptr<GameCommand> command, double proportion);
 
     /**

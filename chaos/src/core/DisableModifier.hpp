@@ -62,11 +62,22 @@ namespace Chaos {
     DisableModifier(toml::table& config, EngineInterface* e);
 
     static const std::string mod_type;
+
+    /**
+     * \brief Return this modifier's registered factory type name.
+     */
     const std::string& getModType() { return mod_type; }
 
     // virtual routines we need to override
     void begin() override;
     void update() override;
+
+    /**
+     * \brief Apply disable filtering to matching incoming events.
+     *
+     * \param event Incoming event to filter.
+     * \return true to forward the event, false to suppress it.
+     */
     bool tweak(DeviceEvent& event);
 
   };

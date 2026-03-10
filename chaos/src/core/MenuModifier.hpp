@@ -60,10 +60,27 @@ namespace Chaos {
 
     static const std::string mod_type;
 
+    /**
+     * \brief Return this modifier's registered factory type name.
+     */
     const std::string& getModType() { return mod_type; }
     
+    /**
+     * \brief Navigate to configured menu items and apply requested values.
+     */
     void begin();
+
+    /**
+     * \brief Restore menu items when configured to reset on finish.
+     */
     void finish();
+
+    /**
+     * \brief Pass-through event hook for interface consistency.
+     *
+     * \param event Incoming event.
+     * \return true to keep event processing unchanged.
+     */
     bool tweak(DeviceEvent& event);
 
     

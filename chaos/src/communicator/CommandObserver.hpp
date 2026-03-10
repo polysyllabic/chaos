@@ -22,6 +22,11 @@ namespace Chaos {
 
   class CommandObserver {
   public:
+    /**
+     * \brief Handle a newly received command payload.
+     *
+     * \param command Serialized command string.
+     */
     virtual void newCommand( const std::string& command ) = 0;
   };
 

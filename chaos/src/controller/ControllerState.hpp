@@ -68,6 +68,13 @@ namespace Chaos {
      */
     static ControllerState* factory(int vendor, int product);
 
+    /**
+     * \brief Decode raw report bytes into logical controller events.
+     *
+     * \param buffer Raw report buffer.
+     * \param length Buffer size in bytes.
+     * \param events Output vector receiving decoded events.
+     */
     virtual void getDeviceEvents(unsigned char* buffer, int length, std::vector<DeviceEvent>& events) = 0;
 	
     // This has to be virtual since we don't modify all values in a report structure:
@@ -76,10 +83,21 @@ namespace Chaos {
     // Mask controls that should never pass through while paused (currently Share).
     virtual void maskPausedControls(unsigned char* buffer, int length) = 0;
 	
+    /**
+     * \brief Destroy the controller-state implementation.
+     */
     virtual ~ControllerState() = 0;
 		
+    /**
+     * \brief Access the writable state buffer used for output mutation.
+     */
     void* getHackedState();
 
+    /**
+     * \brief Set the inactivity delay before synthetic touch-release emission.
+     *
+     * \param delay Delay in seconds.
+     */
     static void setTouchpadInactiveDelay(double delay);
     static double getTouchpadInactiveDelay() { return touchpad_inactive_delay; }
 

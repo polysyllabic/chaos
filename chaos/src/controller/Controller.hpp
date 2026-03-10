@@ -67,6 +67,9 @@ namespace Chaos {
     ControllerInjector* controllerInjector = nullptr;
 
   public:
+    /**
+     * \brief Construct the controller state container.
+     */
     Controller();
     
     /**
@@ -135,6 +138,11 @@ namespace Chaos {
      */
     void setOn(std::shared_ptr<ControllerInput> signal);
     
+    /**
+     * \brief Register the injector used for passthrough event rewriting.
+     *
+     * \param injector Injector implementation.
+     */
     void addInjector(ControllerInjector* injector);
 
     /**

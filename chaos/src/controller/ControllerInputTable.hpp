@@ -39,6 +39,11 @@ namespace Chaos {
   class ControllerInputTable {
 
   public:
+    /**
+     * \brief Construct the signal table for a controller instance.
+     *
+     * \param c Controller associated with this lookup table.
+     */
     ControllerInputTable(Controller& c);
 
     /**
@@ -84,6 +89,9 @@ namespace Chaos {
      */
     std::shared_ptr<ControllerInput> getInput(const toml::table& config, const std::string& key);
 
+    /**
+     * \brief Access the map of signals keyed by enumeration value.
+     */
     std::unordered_map<ControllerSignal, std::shared_ptr<ControllerInput>>& getInputMap() { return inputs; }
 
     /**
@@ -97,8 +105,21 @@ namespace Chaos {
      */
     bool matchesID(const DeviceEvent& event, ControllerSignal to);
 
+    /**
+     * \brief Build and index controller inputs from configuration.
+     *
+     * \param config TOML configuration that defines signals.
+     * \return Number of parsing/validation errors encountered.
+     */
     int initializeInputs(const toml::table& config);
 
+    /**
+     * \brief Resolve entries from a TOML array into controller-input pointers.
+     *
+     * \param config TOML configuration object.
+     * \param key Key containing the list of signal names.
+     * \param vec Output vector populated with resolved signals.
+     */
     void addToVector(const toml::table& config, const std::string& key,
                      std::vector<std::shared_ptr<ControllerInput>>& vec);
 

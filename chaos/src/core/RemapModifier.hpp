@@ -84,13 +84,32 @@ namespace Chaos {
     std::shared_ptr<ControllerInput> lookupInput(const toml::table& config, const std::string& key, bool required);
 
   public:
+    /**
+     * \brief Construct a remap modifier from TOML configuration.
+     *
+     * \param config Modifier configuration table.
+     * \param e Engine interface pointer.
+     */
     RemapModifier(toml::table& config, EngineInterface* e);
 
     static const std::string mod_type;
+
+    /**
+     * \brief Return this modifier's registered factory type name.
+     */
     const std::string& getModType() { return mod_type; }
 
+    /**
+     * \brief Build the remap table and activate touchpad conversion state.
+     */
     void begin();
+
+    /**
+     * \brief Remap an event according to this modifier's remap table.
+     *
+     * \param event Event to transform.
+     * \return true if the event should continue processing.
+     */
     bool remap(DeviceEvent& event);
   };
 };
-

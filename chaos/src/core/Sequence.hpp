@@ -59,9 +59,25 @@ namespace Chaos {
     static unsigned int release_time;
 
   public:
+    /**
+     * \brief Construct an empty sequence bound to a controller.
+     *
+     * \param c Controller used to emit events.
+     */
     Sequence(Controller& c);
 
+    /**
+     * \brief Set default press duration for addPress operations.
+     *
+     * \param time Duration in seconds.
+     */
     static void setPressTime(double time);
+
+    /**
+     * \brief Set default release duration for addPress operations.
+     *
+     * \param time Duration in seconds.
+     */
     static void setReleaseTime(double time);
 
     /**
@@ -111,6 +127,11 @@ namespace Chaos {
      */
     void addDelay(unsigned int delay);
 
+    /**
+     * \brief Append all events from another sequence.
+     *
+     * \param seq Sequence whose events should be appended.
+     */
     void addSequence(std::shared_ptr<Sequence> seq);
 
     /**
@@ -126,6 +147,9 @@ namespace Chaos {
      */
     void clear();
 
+    /**
+     * \brief Access the underlying event list for inspection.
+     */
     std::vector<DeviceEvent>& getEvents() { return events; }
 
     /**

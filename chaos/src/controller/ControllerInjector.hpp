@@ -30,7 +30,11 @@ namespace Chaos {
   class ControllerInjector  {
   public:
     /**
-     * Sniff the input and pass/modify it on way to the output.
+     * \brief Sniff an input event and optionally modify the forwarded output event.
+     *
+     * \param input Incoming event from controller processing.
+     * \param output Event to forward toward the console pipeline.
+     * \return true if output should be forwarded, false to drop it.
      */
     virtual bool sniffify(const DeviceEvent& input, DeviceEvent& output) = 0;
 

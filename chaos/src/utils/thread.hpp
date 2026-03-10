@@ -34,7 +34,14 @@ namespace Chaos {
 
 class Thread {
 public:
+	/**
+	 * \brief Construct thread synchronization state.
+	 */
 	Thread();
+
+	/**
+	 * \brief Destroy thread resources.
+	 */
 	virtual ~Thread() = 0;
 
 	/**

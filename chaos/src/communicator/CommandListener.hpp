@@ -42,9 +42,21 @@ namespace Chaos {
     void doAction();
 	
   public:
+    /**
+     * \brief Construct a listener with default configuration.
+     */
     CommandListener();
+
+    /**
+     * \brief Release listener socket resources.
+     */
     ~CommandListener();
 	
+    /**
+     * \brief Set the endpoint this listener binds to.
+     *
+     * \param ep ZMQ endpoint string.
+     */
     void setEndpoint(const std::string& ep);
 	
     /**

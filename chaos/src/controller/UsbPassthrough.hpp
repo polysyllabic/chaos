@@ -29,10 +29,24 @@ namespace Chaos {
     class Observer {
     public:
       virtual ~Observer() = default;
+
+      /**
+       * \brief Receive a passthrough input report from the active controller.
+       *
+       * \param buffer Raw report bytes.
+       * \param length Report length in bytes.
+       */
       virtual void notification(unsigned char* buffer, int length) = 0;
     };
 
+    /**
+     * \brief Construct USB passthrough transport state.
+     */
     UsbPassthrough();
+
+    /**
+     * \brief Tear down passthrough transport resources.
+     */
     ~UsbPassthrough();
 
     UsbPassthrough(const UsbPassthrough&) = delete;
@@ -40,16 +54,55 @@ namespace Chaos {
     UsbPassthrough(UsbPassthrough&&) = delete;
     UsbPassthrough& operator=(UsbPassthrough&&) = delete;
 
+    /**
+     * \brief Select the endpoint used for reading controller reports.
+     *
+     * \param endpoint Endpoint identifier.
+     */
     void setEndpoint(unsigned char endpoint);
+
+    /**
+     * \brief Register an observer for decoded input reports.
+     *
+     * \param observer Observer to notify.
+     */
     void addObserver(Observer* observer);
 
+    /**
+     * \brief Initialize passthrough transport resources.
+     *
+     * \return Zero on success, non-zero on failure.
+     */
     int initialize();
+
+    /**
+     * \brief Start passthrough processing.
+     */
     void start();
+
+    /**
+     * \brief Stop passthrough processing.
+     */
     void stop();
 
+    /**
+     * \brief Check whether vendor/product IDs are available.
+     */
     bool readyProductVendor() const;
+
+    /**
+     * \brief Get the detected USB vendor ID.
+     */
     int getVendor() const;
+
+    /**
+     * \brief Get the detected USB product ID.
+     */
     int getProduct() const;
+
+    /**
+     * \brief Get the transport reconnection generation counter.
+     */
     std::uint32_t getConnectionGeneration() const;
 
   private:

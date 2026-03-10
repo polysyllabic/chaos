@@ -8,6 +8,13 @@ private:
   bool applyHardware();
   void doAction();
 public:
+  /**
+   * \brief Construct keyboard-backed controller test double.
+   */
   KeyboardController();
+
+  /**
+   * \brief Initialize keyboard input handling for tests.
+   */
   void initialize();
 };

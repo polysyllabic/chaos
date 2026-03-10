@@ -303,6 +303,11 @@ namespace Chaos {
      */
     double lifespan() { return total_lifespan; }
 
+    /**
+     * \brief Set the lifetime duration after which this modifier expires.
+     *
+     * \param time Lifespan in seconds.
+     */
     void setLifespan(double time) { total_lifespan = time; }
 
     /**

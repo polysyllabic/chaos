@@ -42,11 +42,27 @@ namespace Chaos {
     
   public:
     
+    /**
+     * \brief Construct a scaling modifier from TOML configuration.
+     *
+     * \param config Modifier configuration table.
+     * \param e Engine interface pointer.
+     */
     ScalingModifier(toml::table& config, EngineInterface* e);
 
     static const std::string mod_type;
+
+    /**
+     * \brief Return this modifier's registered factory type name.
+     */
     const std::string& getModType() { return mod_type; }
 
+    /**
+     * \brief Apply linear scaling to matching event values.
+     *
+     * \param event Event to transform.
+     * \return true if event should continue through pipeline.
+     */
     bool tweak(DeviceEvent& event);
 
   };

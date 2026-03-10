@@ -56,11 +56,24 @@ namespace Chaos {
 	  UsbPassthrough mUsbPassthrough;
 
   public:
+    /**
+     * \brief Construct the raw USB controller bridge.
+     */
     ControllerRaw();
+
+    /**
+     * \brief Stop raw passthrough resources.
+     */
     ~ControllerRaw() override;
 
+    /**
+     * \brief Initialize passthrough and controller-state decoding.
+     */
 	  void initialize();
 
+    /**
+     * \brief Clear queued input events that have not yet been processed.
+     */
     void flushPendingInputEvents() override;
 		
   };

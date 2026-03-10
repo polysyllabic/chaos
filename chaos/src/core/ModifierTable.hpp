@@ -60,8 +60,14 @@ namespace Chaos {
      */
     std::shared_ptr<Modifier> getModifier(const std::string& name);
 
+    /**
+     * \brief Access the map of modifiers keyed by configured name.
+     */
     std::unordered_map<std::string, std::shared_ptr<Modifier>>& getModMap() { return mod_map; }
 
+    /**
+     * \brief Get the number of modifiers currently loaded.
+     */
     int getNumModifiers() { return mod_map.size(); }
 
     /**

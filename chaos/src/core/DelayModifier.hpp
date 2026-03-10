@@ -66,15 +66,49 @@ namespace Chaos {
     
   public:
     
+    /**
+     * \brief Construct a delay modifier from TOML configuration.
+     *
+     * \param config Modifier configuration table.
+     * \param e Engine interface pointer.
+     */
     DelayModifier(toml::table& config, EngineInterface* e);
 
     static const std::string mod_type;
+
+    /**
+     * \brief Return this modifier's registered factory type name.
+     */
     const std::string& getModType() { return mod_type; }
 
+    /**
+     * \brief Initialize delay-queue state when the modifier activates.
+     */
     void begin() override;
+
+    /**
+     * \brief Flush queued events when the modifier deactivates.
+     */
     void finish() override;
+
+    /**
+     * \brief Release queued events whose delay has expired.
+     */
     void update();
+
+    /**
+     * \brief Enqueue matching events for delayed replay.
+     *
+     * \param event Incoming event to delay.
+     * \return false when the original event is suppressed.
+     */
     bool tweak(DeviceEvent& event);
+
+    /**
+     * \brief Remove pending injected events owned by this modifier.
+     *
+     * \return Number of events cleared.
+     */
     std::size_t clearPendingInjectedEvents() override;
   };
 };

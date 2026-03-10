@@ -29,8 +29,19 @@ namespace Chaos {
 
   class Random {
   public:
+    /**
+     * \brief Construct the random-number generator wrapper.
+     */
     Random();
+
+    /**
+     * \brief Draw a uniform sample in [min, max].
+     */
     double uniform(double min, double max);
+
+    /**
+     * \brief Draw a normal sample with the given mean and variance.
+     */
     double normal(double mean, double variance);
   };
 

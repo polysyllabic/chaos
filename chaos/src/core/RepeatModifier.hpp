@@ -87,14 +87,37 @@ namespace Chaos {
     
   public:
 
+    /**
+     * \brief Construct a repeat modifier from TOML configuration.
+     *
+     * \param config Modifier configuration table.
+     * \param e Engine interface pointer.
+     */
     RepeatModifier(toml::table& config, EngineInterface* e);
 
     static const std::string mod_type;
+
+    /**
+     * \brief Return this modifier's registered factory type name.
+     */
     const std::string& getModType() { return mod_type; }
 
+    /**
+     * \brief Initialize repeat-cycle state.
+     */
     void begin();
+
+    /**
+     * \brief Advance repeat-cycle timing and toggled command state.
+     */
     void update();
+
+    /**
+     * \brief Apply repeat behavior to matching events.
+     *
+     * \param event Event to process.
+     * \return true if event should continue through pipeline.
+     */
     bool tweak(DeviceEvent& event);
   };
 };
-
