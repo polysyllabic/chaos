@@ -2010,7 +2010,7 @@ select_groups = [ "Buff" ]
 value = 1
 
 [[modifier]]
-name = "Real No HUD"
+name = "No HUD/Reticle"
 description = "Turn off anything that might show your status: HUD/reticle/damage indicators, etc."
 type = "parent"
 groups = [ "HUD" ]
