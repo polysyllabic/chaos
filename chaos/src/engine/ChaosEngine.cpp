@@ -388,6 +388,7 @@ void ChaosEngine::newCommand(const std::string& command) {
   if (root.isMember("select_game")) {
     std::string requested_game = root["select_game"].asString();
     std::string resolved_config = resolveGameConfig(requested_game);
+    bool force_reload = root.isMember("reload") && root["reload"].asBool();
     bool duplicate_selection = false;
     bool selection_ok = true;
     std::string selection_message = "game_selected";
@@ -396,12 +397,16 @@ void ChaosEngine::newCommand(const std::string& command) {
                            !current_game_config_path.empty() &&
                            resolved_config == current_game_config_path);
     unlock();
-    if (duplicate_selection) {
+    if (duplicate_selection && !force_reload) {
       selection_message = "duplicate_selection";
       PLOG_INFO << "Ignoring duplicate game selection for already loaded config '" << resolved_config << "'.";
     } else {
       selection_ok = setGame(resolved_config);
-      selection_message = selection_ok ? "game_selected" : "game_config_error";
+      if (selection_ok) {
+        selection_message = (duplicate_selection && force_reload) ? "game_reloaded" : "game_selected";
+      } else {
+        selection_message = "game_config_error";
+      }
       if (interface_enabled) {
         chaosInterface.sendMessage("{\"mods_reset\":1}");
       }

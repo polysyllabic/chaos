@@ -186,6 +186,7 @@ class ChaosRelay:
     self.force_mod_consume_credit = False
     self.remove_mod_request: str = ''
     self.game_selection_request: str = ''
+    self.game_selection_force_reload = False
     self.reset_mods = False
     self.engine_commands = queue.Queue()
     self.insert_cooldown = 0.0
@@ -631,6 +632,7 @@ class ChaosRelay:
     self.force_mod_consume_credit = False
     self.remove_mod_request = ''
     self.game_selection_request = ''
+    self.game_selection_force_reload = False
 
   def time_per_vote(self) -> float:
     active_modifiers = self._attr_float('active_modifiers', 1.0)
@@ -1255,12 +1257,13 @@ class ChaosRelay:
       self.end_vote_requested = False
     return requested
 
-  def request_game_selection(self, game_name: str):
+  def request_game_selection(self, game_name: str, *, force_reload: bool = False):
     selected = str(game_name).strip()
     if not selected:
       return
     with self._lock:
       self.game_selection_request = selected
+      self.game_selection_force_reload = bool(force_reload)
     self.record_selected_game(selected)
 
   def consume_game_selection_request(self) -> str:
@@ -1268,6 +1271,12 @@ class ChaosRelay:
       request = self.game_selection_request
       self.game_selection_request = ''
     return request
+
+  def consume_game_selection_force_reload(self) -> bool:
+    with self._lock:
+      force_reload = bool(self.game_selection_force_reload)
+      self.game_selection_force_reload = False
+    return force_reload
 
   def request_remove_mod(self, mod_key: str):
     with self._lock:

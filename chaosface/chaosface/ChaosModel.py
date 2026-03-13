@@ -46,6 +46,7 @@ class ChaosModel(EngineObserver):
     self._pending_game_startup_setup = False
     self._select_game_lock = threading.Lock()
     self._pending_selected_game = ''
+    self._pending_selected_reload = False
     self._pending_selected_inflight = False
     self._pending_selected_sent_at = 0.0
     self._pending_selected_retry_after = 0.0
@@ -324,22 +325,26 @@ class ChaosModel(EngineObserver):
   def request_engine_sync(self) -> None:
     self._manual_sync_requested.set()
 
-  def request_game_selection(self, game_name: str, *, force: bool = False):
+  def request_game_selection(self, game_name: str, *, force: bool = False, reload: bool = False):
     selected = str(game_name).strip()
     if not selected:
       return
+    reload_requested = bool(reload)
     with self._select_game_lock:
       if not force and selected == self._last_reported_game:
         return
       if not force and selected == self._last_failed_selected_game:
         return
       if selected == self._pending_selected_game:
+        if reload_requested and not self._pending_selected_reload:
+          self._pending_selected_reload = True
         return
       if self._pending_selected_inflight and not force:
         return
       if selected != self._last_failed_selected_game:
         self._last_failed_selected_game = ''
       self._pending_selected_game = selected
+      self._pending_selected_reload = reload_requested
       self._pending_selected_inflight = False
       self._pending_selected_sent_at = 0.0
       self._pending_selected_retry_after = 0.0
@@ -358,6 +363,7 @@ class ChaosModel(EngineObserver):
   def _clear_pending_game_selection(self) -> None:
     with self._select_game_lock:
       self._pending_selected_game = ''
+      self._pending_selected_reload = False
       self._pending_selected_inflight = False
       self._pending_selected_sent_at = 0.0
       self._pending_selected_retry_after = 0.0
@@ -366,6 +372,7 @@ class ChaosModel(EngineObserver):
     now = time.monotonic()
     with self._select_game_lock:
       selected = self._pending_selected_game
+      reload_selected = bool(self._pending_selected_reload)
       if not selected:
         return
       if self._pending_selected_inflight:
@@ -379,7 +386,10 @@ class ChaosModel(EngineObserver):
         return
 
     logging.info("Requesting game selection: %s", selected)
-    sent = self.send_engine_command({'select_game': selected})
+    payload = {'select_game': selected}
+    if reload_selected:
+      payload['reload'] = True
+    sent = self.send_engine_command(payload)
 
     with self._select_game_lock:
       # Pending command may have changed while send was in flight.
@@ -722,7 +732,8 @@ class ChaosModel(EngineObserver):
 
       game_selection = config.relay.consume_game_selection_request()
       if game_selection:
-        self.request_game_selection(game_selection, force=True)
+        force_reload = config.relay.consume_game_selection_force_reload()
+        self.request_game_selection(game_selection, force=True, reload=force_reload)
       self._drive_pending_game_selection()
 
       if self._pending_game_startup_setup and config.relay.valid_data:

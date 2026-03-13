@@ -22,6 +22,7 @@ def _blank_model_for_update_command() -> ChaosModel:
   model = _blank_model()
   model._select_game_lock = threading.Lock()  # type: ignore[attr-defined]
   model._pending_selected_game = ''  # type: ignore[attr-defined]
+  model._pending_selected_reload = False  # type: ignore[attr-defined]
   model._pending_selected_inflight = False  # type: ignore[attr-defined]
   model._pending_selected_sent_at = 0.0  # type: ignore[attr-defined]
   model._pending_selected_retry_after = 0.0  # type: ignore[attr-defined]
@@ -185,6 +186,18 @@ def test_missing_remembered_game_waits_for_manual_selection():
   selection = config.relay.consume_game_selection_request()
   model.request_game_selection(selection, force=True)
   assert model._pending_selected_game == 'Valid Game'
+
+
+def test_force_reload_game_selection_sends_reload_payload():
+  model = _blank_model_for_update_command()
+  sent_payloads = []
+  model.send_engine_command = lambda payload, report_status=True: (sent_payloads.append(payload) or True)  # type: ignore[assignment]
+
+  model.request_game_selection('Reload Test', force=True, reload=True)
+  model._drive_pending_game_selection()
+
+  assert sent_payloads == [{'select_game': 'Reload Test', 'reload': True}]
+  assert model._pending_selected_inflight is True
 
 
 def test_reenable_voting_from_disabled_starts_vote_and_candidates():

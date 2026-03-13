@@ -61,10 +61,16 @@ def build_game_settings_tab() -> Callable[[], None]:
           status_label.text = 'Select a game before confirming'
           return
         selector_state['pending_user_selection'] = False
-        config.relay.request_game_selection(selected)
-        status_label.text = f'Requested game load: {selected}'
+        current_selected = str(config.relay.selected_game or '').strip()
+        current_loaded = str(config.relay.game_name or '').strip()
+        force_reload = selected == current_selected or selected == current_loaded
+        config.relay.request_game_selection(selected, force_reload=force_reload)
+        if force_reload:
+          status_label.text = f'Requested explicit game reload: {selected}'
+        else:
+          status_label.text = f'Requested game load: {selected}'
 
-      ui.button('Confirm Game', on_click=confirm_game_selection)
+      ui.button('Load Game', on_click=confirm_game_selection)
 
     def refresh_game_selector():
       if game_selector.is_deleted:

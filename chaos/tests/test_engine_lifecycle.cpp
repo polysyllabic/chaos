@@ -512,6 +512,38 @@ static bool testInterfacePauseCommandPausesRunningEngine() {
   return ok;
 }
 
+static bool testSelectGameReloadForcesSameGameReload() {
+  bool ok = true;
+
+  TestController controller;
+  ChaosEngine engine(controller, "", "", false);
+  const std::string config_path = writeConfigFile();
+  ok &= check(engine.setGame(config_path), "test config should load");
+
+  engine.start();
+  unpauseEngine(controller);
+  ok &= check(waitFor([&]() { return !engine.isPaused(); }),
+              "engine should be running before select_game reload test");
+
+  engine.newCommand("{\"winner\":\"Inverted\"}");
+  ok &= check(waitFor([&]() { return activeCount(engine) == 1; }),
+              "Inverted should become active before reload");
+
+  engine.newCommand("{\"select_game\":\"" + config_path + "\"}");
+  usleep(20000);
+  ok &= check(activeCount(engine) == 1,
+              "duplicate select_game without reload should keep active modifiers");
+
+  engine.newCommand("{\"select_game\":\"" + config_path + "\",\"reload\":1}");
+  ok &= check(waitFor([&]() { return activeCount(engine) == 0; }),
+              "select_game reload should clear active modifiers for same game");
+
+  engine.stop();
+  engine.WaitForInternalThreadToExit();
+  std::remove(config_path.c_str());
+  return ok;
+}
+
 static bool testResetRemovesActiveModsWhilePaused() {
   bool ok = true;
 
@@ -634,6 +666,7 @@ int main() {
   ok &= testDuplicateActivationDoesNotStack();
   ok &= testRemoveDeferredUntilUpdateCompletes();
   ok &= testInterfacePauseCommandPausesRunningEngine();
+  ok &= testSelectGameReloadForcesSameGameReload();
   ok &= testResetRemovesActiveModsWhilePaused();
   ok &= testScalingInvertedAndMoonwalkAffectExpectedAxes();
   ok &= testSequenceBeginClipsOutOfRangeAxisValue();

@@ -60,6 +60,19 @@ def test_vote_request_flags_round_trip():
   assert relay.consume_end_vote_request() is False
 
 
+def test_game_selection_force_reload_flag_round_trip():
+  relay = ChaosRelay()
+
+  relay.request_game_selection('The Last of Us 2', force_reload=True)
+  assert relay.consume_game_selection_request() == 'The Last of Us 2'
+  assert relay.consume_game_selection_force_reload() is True
+  assert relay.consume_game_selection_force_reload() is False
+
+  relay.request_game_selection('The Last of Us 2', force_reload=False)
+  assert relay.consume_game_selection_request() == 'The Last of Us 2'
+  assert relay.consume_game_selection_force_reload() is False
+
+
 def test_tally_vote_rejects_stale_rounds_and_closed_votes():
   relay = ChaosRelay()
   relay.initialize_game({
