@@ -1242,6 +1242,8 @@ begin_sequence = [ { event = "release", command = "dodge/sprint" },
 finish_sequence = [{ event = "release", command = "dodge/sprint" },
                   { event = "release", command = "crouch/prone" }]
 
+# The timing on this is too fast for the rifle. If you want it to work for the rifle
+# as well, set the delay below to 2 seconds.
 [[modifier]]
 name = "Double Tap"
 description = "It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins."
@@ -1251,8 +1253,6 @@ block_while_busy = [ "aiming", "shoot" ]
 while = [ "aiming" ]
 trigger = [ "shoot" ]
 repeat_sequence = [
-  # 2 seconds is necessary to let the rifle reload if reload speed hasn't been upgraded
-  { event = "press", command = "shoot", delay = 1.5},
   { event = "press", command = "shoot"},
   { event = "release", command = "aiming"}
   ]
