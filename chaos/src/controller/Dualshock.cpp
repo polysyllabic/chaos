@@ -196,6 +196,9 @@ void Dualshock::getDeviceEvents(unsigned char* buffer, int length, std::vector<D
   // Touchpad events:
   inputReport* priorState = (inputReport*)trueState;
   int touch_count = std::min(3, std::max((int) currentState.TOUCH_COUNT, (int) priorState->TOUCH_COUNT));
+  bool current_touchpad_active = false;
+  bool prior_touchpad_active = false;
+
   for (int e = 0; e < touch_count; e++) {
     for (int f = 0; f < 2; f++) {
       bool current_valid = (e < currentState.TOUCH_COUNT);
@@ -207,25 +210,33 @@ void Dualshock::getDeviceEvents(unsigned char* buffer, int length, std::vector<D
       short current_y = current_valid ? currentState.TOUCH_EVENTS[e].finger[f].y : 0;
       short prior_y = prior_valid ? priorState->TOUCH_EVENTS[e].finger[f].y : 0;
 
-      if (current_active != prior_active) {
-        short active_event = !current_active;
-        events.push_back({0, active_event, TYPE_BUTTON, BUTTON_TOUCHPAD_ACTIVE});
-        noteTouchpadActiveEvent(active_event);
-      }
+      current_touchpad_active = current_touchpad_active || (current_active == 0);
+      prior_touchpad_active = prior_touchpad_active || (prior_active == 0);
 
+      const uint8_t axis_x = (f == 0) ? AXIS_TOUCHPAD_X : AXIS_TOUCHPAD_X_2;
+      const uint8_t axis_y = (f == 0) ? AXIS_TOUCHPAD_Y : AXIS_TOUCHPAD_Y_2;
       if (current_x != prior_x) {
-        events.push_back({0, current_x, TYPE_AXIS, AXIS_TOUCHPAD_X});
+        events.push_back({0, current_x, TYPE_AXIS, axis_x});
         noteTouchpadAxisEvent();
       }
 
       if (current_y != prior_y) {
-        events.push_back({0, current_y, TYPE_AXIS, AXIS_TOUCHPAD_Y});
+        events.push_back({0, current_y, TYPE_AXIS, axis_y});
         noteTouchpadAxisEvent();
       }
     }
   }
 
-  addTouchpadInactivityEvents(events);
+  if (current_touchpad_active != prior_touchpad_active) {
+    short active_event = current_touchpad_active ? 1 : 0;
+    events.push_back({0, active_event, TYPE_BUTTON, BUTTON_TOUCHPAD_ACTIVE});
+    noteTouchpadActiveEvent(active_event);
+  }
+
+  // Only synthesize inactive events when touch is not currently active.
+  if (!current_touchpad_active) {
+    addTouchpadInactivityEvents(events);
+  }
  
   // Need to compare for next time:
   *(inputReport*)trueState = currentState;
