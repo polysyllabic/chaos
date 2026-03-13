@@ -1024,7 +1024,12 @@ void* RawGadgetPassthrough::libusbEventHandler( void* rawgadgetobject ) {
   while (mRawGadgetPassthrough->keepRunning) {
     if (!mRawGadgetPassthrough->sessionRunning) {
       if (ep0ThreadStarted) {
-        if (!joinThreadWithTimeout(mRawGadgetPassthrough->threadEp0, "ep0")) {
+        if (!mRawGadgetPassthrough->keepRunning.load() && mRawGadgetPassthrough->fd >= 0) {
+          close(mRawGadgetPassthrough->fd);
+          mRawGadgetPassthrough->fd = -1;
+          mRawGadgetPassthrough->mEndpointZeroInfo.fd = -1;
+        }
+        if (!joinThreadWithTimeout(mRawGadgetPassthrough->threadEp0, "ep0", 5000)) {
           usleep(100000);
           continue;
         }
@@ -1089,7 +1094,12 @@ void* RawGadgetPassthrough::libusbEventHandler( void* rawgadgetobject ) {
 
   mRawGadgetPassthrough->requestReconnect();
   if (ep0ThreadStarted) {
-    joinThreadWithTimeout(mRawGadgetPassthrough->threadEp0, "ep0");
+    if (mRawGadgetPassthrough->fd >= 0) {
+      close(mRawGadgetPassthrough->fd);
+      mRawGadgetPassthrough->fd = -1;
+      mRawGadgetPassthrough->mEndpointZeroInfo.fd = -1;
+    }
+    joinThreadWithTimeout(mRawGadgetPassthrough->threadEp0, "ep0", 5000);
   }
   mRawGadgetPassthrough->cleanupDevice();
   return NULL;
@@ -1112,6 +1122,11 @@ void RawGadgetPassthrough::start() {
 
 void RawGadgetPassthrough::stop() {
   keepRunning = false;
+  if (fd >= 0) {
+    close(fd);
+    fd = -1;
+    mEndpointZeroInfo.fd = -1;
+  }
   requestReconnect();
   if (libusbEventThreadStarted) {
     pthread_join(libusbEventThread, NULL);
