@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <list>
+#include <cmath>
 #include <plog/Log.h>
 #include <random.hpp>
 
@@ -28,6 +29,14 @@
 using namespace Chaos;
 
 const std::string RemapModifier::mod_type = "remap";
+static std::atomic<int> g_debug_axis_fuzz_threshold{0};
+
+void RemapModifier::setDebugAxisFuzzThreshold(int threshold) {
+  if (threshold < 0) {
+    threshold = 0;
+  }
+  g_debug_axis_fuzz_threshold.store(threshold, std::memory_order_relaxed);
+}
 
 RemapModifier::RemapModifier(toml::table& config, EngineInterface* e) {
 
@@ -229,7 +238,17 @@ bool RemapModifier::remap(DeviceEvent& event) {
 
     // If we are remapping to NOTHING, we drop this signal.
     if (to_console->getSignal() == ControllerSignal::NOTHING) {
-      PLOG_DEBUG << getName() << " remapping " << from->getName() << " to NOTHING";
+      const int axis_fuzz = g_debug_axis_fuzz_threshold.load(std::memory_order_relaxed);
+      const bool is_axis_filter_target =
+          from->getSignal() == ControllerSignal::LX ||
+          from->getSignal() == ControllerSignal::LY ||
+          from->getSignal() == ControllerSignal::RX ||
+          from->getSignal() == ControllerSignal::RY;
+      const bool suppress_debug = axis_fuzz > 0 && is_axis_filter_target &&
+                                  std::abs(static_cast<int>(event.value)) < axis_fuzz;
+      if (!suppress_debug) {
+        PLOG_DEBUG << getName() << " remapping " << from->getName() << " to NOTHING";
+      }
       return false;
     }
 

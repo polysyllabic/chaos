@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <atomic>
 #include <unordered_map>
 #include <vector>
 #include <toml++/toml.h>
@@ -93,6 +94,14 @@ namespace Chaos {
     RemapModifier(toml::table& config, EngineInterface* e);
 
     static const std::string mod_type;
+
+    /**
+     * \brief Set debug-log suppression threshold for low-magnitude joystick remap messages.
+     *
+     * When greater than zero, "remapping <axis> to NOTHING" debug logs for LX/LY/RX/RY
+     * are suppressed while abs(value) is below the threshold.
+     */
+    static void setDebugAxisFuzzThreshold(int threshold);
 
     /**
      * \brief Return this modifier's registered factory type name.

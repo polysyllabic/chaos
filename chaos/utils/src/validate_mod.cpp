@@ -58,6 +58,7 @@
 #include "GameCondition.hpp"
 #include "MenuItem.hpp"
 #include "Modifier.hpp"
+#include "RemapModifier.hpp"
 #include "Sequence.hpp"
 #include "UsbPassthrough.hpp"
 
@@ -479,6 +480,9 @@ public:
   }
 
   void notification(unsigned char* buffer, int length) override {
+    if (shutting_down_.load(std::memory_order_relaxed) || !keep_running.load()) {
+      return;
+    }
     if (length == 0) {
       PLOG_VERBOSE << "Ignoring empty USB controller report during startup/reconnect.";
       return;
@@ -503,10 +507,16 @@ public:
     }
 
     for (const Chaos::DeviceEvent& input : events) {
+      if (shutting_down_.load(std::memory_order_relaxed) || !keep_running.load()) {
+        return;
+      }
       Chaos::DeviceEvent output = input;
       bool valid = true;
       {
-        std::lock_guard<std::mutex> lifecycle_guard(lifecycle_mutex_);
+        std::unique_lock<std::mutex> lifecycle_guard(lifecycle_mutex_, std::try_to_lock);
+        if (!lifecycle_guard.owns_lock()) {
+          return;
+        }
         for (auto& mod : active_mods_) {
           valid = mod->remap(output);
           if (!valid) {
@@ -546,10 +556,14 @@ public:
 
     {
       std::lock_guard<std::mutex> guard(lock_);
-      if (parser_ != nullptr) {
+      if (!shutting_down_.load(std::memory_order_relaxed) && parser_ != nullptr) {
         engine_.rewriteUsbReportFromState(*parser_, buffer);
       }
     }
+  }
+
+  void requestShutdown() {
+    shutting_down_.store(true, std::memory_order_relaxed);
   }
 
 private:
@@ -562,6 +576,7 @@ private:
   std::mutex lock_;
   int vendor_ = -1;
   int product_ = -1;
+  std::atomic<bool> shutting_down_{false};
   std::unique_ptr<Chaos::ControllerState> parser_;
 };
 
@@ -760,6 +775,15 @@ int main(int argc, char** argv) {
   }
 
   const double duration_sec = options.duration_override_sec.value_or(engine.defaultModifierDurationSeconds());
+  struct RemapDebugAxisFuzzGuard {
+    explicit RemapDebugAxisFuzzGuard(int threshold) {
+      Chaos::RemapModifier::setDebugAxisFuzzThreshold(threshold);
+    }
+    ~RemapDebugAxisFuzzGuard() {
+      Chaos::RemapModifier::setDebugAxisFuzzThreshold(0);
+    }
+  } remap_debug_axis_fuzz_guard(options.usb_mode ? options.joystick_fuzz : 0);
+
   std::mutex lifecycle_mutex;
   std::unique_ptr<Chaos::UsbPassthrough> usb_passthrough;
   std::unique_ptr<UsbEventCollector> usb_collector;
@@ -794,14 +818,19 @@ int main(int argc, char** argv) {
   }
 
   struct UsbStopGuard {
-    explicit UsbStopGuard(Chaos::UsbPassthrough* ptr) : passthrough(ptr) {}
+    UsbStopGuard(Chaos::UsbPassthrough* ptr, UsbEventCollector* observer)
+        : passthrough(ptr), collector(observer) {}
     ~UsbStopGuard() {
+      if (collector != nullptr) {
+        collector->requestShutdown();
+      }
       if (passthrough != nullptr) {
         passthrough->stop();
       }
     }
     Chaos::UsbPassthrough* passthrough;
-  } usb_stop_guard(usb_passthrough.get());
+    UsbEventCollector* collector;
+  } usb_stop_guard(usb_passthrough.get(), usb_collector.get());
 
   try {
     return runModifierLifecycle(engine, mod, duration_sec, options.loop_sleep_us,
