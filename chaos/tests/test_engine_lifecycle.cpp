@@ -512,6 +512,37 @@ static bool testInterfacePauseCommandPausesRunningEngine() {
   return ok;
 }
 
+static bool testResetRemovesActiveModsWhilePaused() {
+  bool ok = true;
+
+  TestController controller;
+  ChaosEngine engine(controller, "", "", false);
+  const std::string config_path = writeConfigFile();
+  ok &= check(engine.setGame(config_path), "test config should load");
+
+  engine.start();
+  unpauseEngine(controller);
+  ok &= check(waitFor([&]() { return !engine.isPaused(); }),
+              "engine should be running before reset-while-paused test");
+
+  engine.newCommand("{\"winner\":\"Inverted\"}");
+  ok &= check(waitFor([&]() { return activeCount(engine) == 1; }),
+              "Inverted should become active before reset");
+
+  engine.newCommand("{\"pause\":1}");
+  ok &= check(waitFor([&]() { return engine.isPaused(); }),
+              "engine should be paused before issuing reset command");
+
+  engine.newCommand("{\"reset\":1}");
+  ok &= check(waitFor([&]() { return activeCount(engine) == 0; }),
+              "reset command should clear active modifiers even while paused");
+
+  engine.stop();
+  engine.WaitForInternalThreadToExit();
+  std::remove(config_path.c_str());
+  return ok;
+}
+
 static bool testScalingInvertedAndMoonwalkAffectExpectedAxes() {
   bool ok = true;
 
@@ -603,6 +634,7 @@ int main() {
   ok &= testDuplicateActivationDoesNotStack();
   ok &= testRemoveDeferredUntilUpdateCompletes();
   ok &= testInterfacePauseCommandPausesRunningEngine();
+  ok &= testResetRemovesActiveModsWhilePaused();
   ok &= testScalingInvertedAndMoonwalkAffectExpectedAxes();
   ok &= testSequenceBeginClipsOutOfRangeAxisValue();
   if (!ok) {

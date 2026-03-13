@@ -1,5 +1,6 @@
 """Command-result gating tests for ChaosModel engine actions."""
 
+import asyncio
 import json
 import threading
 import time
@@ -480,3 +481,51 @@ def test_continuous_vote_end_has_closed_gap_before_new_round():
     loop_thread.join(timeout=2.0)
 
   assert not loop_thread.is_alive()
+
+
+def test_chat_resetmods_reaches_model_loop_when_disconnected():
+  import chaosface.config.globals as config
+  from chaosface.chatbot.ChaosBot import ChaosBot
+  from chaosface.chatbot.context import RelayBotContext
+  from chaosface.gui import ui_dispatch
+
+  model = _blank_model_for_loop()
+  reset_payloads = []
+
+  def fake_send_checked(payload, *, expected_kind, expected_target='', timeout=1.0):
+    del timeout
+    reset_payloads.append((payload, expected_kind, expected_target))
+    return True, 'modifiers_reset_requested'
+
+  model.send_engine_command_checked = fake_send_checked  # type: ignore[assignment]
+
+  config.relay.reset_all()
+  config.relay.set_channel_name('streamer')
+  config.relay.set_connected(False)
+  config.relay.valid_data = True
+  config.relay.keep_going = True
+  ui_dispatch._ui_loop = None
+
+  bot = ChaosBot(RelayBotContext(config.relay))
+
+  class _User:
+    name = 'streamer'
+
+  class _Message:
+    text = '!resetmods'
+    user = _User()
+
+  loop_thread = threading.Thread(target=model._loop, daemon=True)
+  loop_thread.start()
+  try:
+    asyncio.run(bot._on_chat_message(_Message()))
+    deadline = time.time() + 1.0
+    while time.time() < deadline and not reset_payloads:
+      time.sleep(0.01)
+  finally:
+    config.relay.keep_going = False
+    loop_thread.join(timeout=2.0)
+
+  assert not loop_thread.is_alive()
+  assert reset_payloads == [({'reset': True}, 'reset', '')]
+  assert config.relay.reset_mods is False

@@ -527,6 +527,30 @@ std::string ChaosEngine::currentEngineStatusLocked() {
 void ChaosEngine::doAction() {
   usleep(500);	// sleep .5 milliseconds
 
+  // Drain pending removals even while paused so reset/remove commands take effect
+  // immediately regardless of interface/login state.
+  std::vector<std::shared_ptr<Modifier>> mods_to_finish;
+  lock();
+  while (!modifiersThatNeedToStop.empty()) {
+    std::shared_ptr<Modifier> mod = modifiersThatNeedToStop.front();
+    modifiersThatNeedToStop.pop_front();
+    assert(mod);
+    modifiersThatNeedToStart.remove(mod);
+    auto it = std::find(modifiers.begin(), modifiers.end(), mod);
+    if (it != modifiers.end()) {
+      PLOG_INFO << "Removing '" << mod->getName() << "' from active mod list";
+      PLOG_DEBUG << "Lifetime = " << mod->lifetime() << " of lifespan = " << mod->lifespan();
+      modifiers.erase(it);
+      mods_to_finish.push_back(mod);
+    }
+  }
+  unlock();
+
+  for (auto& mod : mods_to_finish) {
+    assert(mod);
+    mod->_finish();
+  }
+
   bool should_announce_games = false;
   auto now = std::chrono::steady_clock::now();
   lock();
@@ -571,7 +595,6 @@ void ChaosEngine::doAction() {
   }
   // Initialize and update active mods. Run callbacks outside the engine lock so
   // callbacks can legally inject pipelined events.
-  std::vector<std::shared_ptr<Modifier>> mods_to_finish;
   std::vector<std::shared_ptr<Modifier>> mods_to_begin;
   std::vector<std::shared_ptr<Modifier>> mods_to_update;
   std::shared_ptr<Modifier> mod_to_remove;
@@ -581,20 +604,6 @@ void ChaosEngine::doAction() {
     pausedPrior = true;
     return;
   }
-  while (!modifiersThatNeedToStop.empty()) {
-    std::shared_ptr<Modifier> mod = modifiersThatNeedToStop.front();
-    modifiersThatNeedToStop.pop_front();
-    assert(mod);
-    modifiersThatNeedToStart.remove(mod);
-    auto it = std::find(modifiers.begin(), modifiers.end(), mod);
-    if (it != modifiers.end()) {
-      PLOG_INFO << "Removing '" << mod->getName() << "' from active mod list";
-      PLOG_DEBUG << "Lifetime = " << mod->lifetime() << " of lifespan = " << mod->lifespan();
-      modifiers.erase(it);
-      mods_to_finish.push_back(mod);
-    }
-  }
-
   while(!modifiersThatNeedToStart.empty()) {
     std::shared_ptr<Modifier> mod = modifiersThatNeedToStart.front();
     assert(mod);
@@ -609,10 +618,6 @@ void ChaosEngine::doAction() {
   mods_to_update.assign(modifiers.begin(), modifiers.end());
   unlock();
 
-  for (auto& mod : mods_to_finish) {
-    assert(mod);
-    mod->_finish();
-  }
   for (auto& mod : mods_to_begin) {
     assert(mod);
     mod->_begin();
