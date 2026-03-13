@@ -1085,17 +1085,27 @@ type = "formula"
 applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", "vertical camera"  ]
 groups = [ "Movement", "View" ]
 formula_type = "janky"
-amplitude = 0.3
+amplitude = 0.5
 period_length = 5.0
 
 [[modifier]]
-name = "Controller Drift"
-description = "All that money you spent on a fancy controller? Useless. Add drift to left joystick."
+name = "Left Joystick Drift"
+description = "All that money you spent on a fancy controller? Useless. Add random drift to left joystick."
 type = "formula"
 groups = [ "Movement" ]
 applies_to = [ "horizontal movement", "vertical movement" ]
 formula_type = "random_offset"
-range = [ 20, 50 ]
+range = [ 40, 75 ]
+direction = [ 0, 360 ]
+
+[[modifier]]
+name = "Right Joystick Drift"
+description = "All that money you spent on a fancy controller? Useless. Add random drift to right joystick."
+type = "formula"
+groups = [ "Movement" ]
+applies_to = [ "horizontal camera", "vertical camera" ]
+formula_type = "random_offset"
+range = [ 35, 70 ]
 direction = [ 0, 360 ]
 
 

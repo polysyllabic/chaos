@@ -1,0 +1,163 @@
+The following modifiers are available for The Last of Us Part I (PS5):
+
+1. 1960: Visual filter (mostly black and white + some reds)
+2. 4-Bit Audio: Audio mode. Incompatible with 8-bit
+3. 8-Bit: Visual filter (simplified color blocks)
+4. 8-Bit Audio: Audio mode. Incompatible with 4-bit
+5. Afterlife: Visual filter (bleak, muted colors)
+6. Aim Delay: Introduces a 1 second delay to aiming
+7. Aimbot: Aimbot... but like a detuned aimbot. Turns on lock-on aim
+8. Aimbot Throwables: Aimbot for throwables. Turns on lock-on throwables
+9. Anthony Caliber: Flashlight flickering
+10. Bad Stamina: Running is disabled after 2 seconds and takes 4 seconds to recharge.
+11. Beasts: Visual filter (it all looks purple)
+12. Blacklight: Visual filter (a heavy blue tint)
+13. Blood: Visual filter (a deep red tint)
+14. Blorange: Visual filter (the prettiest filter; fight me)
+15. Bullet Speed: Slow motion when aiming
+16. CTG Strat: Self immolation resulting in death, at least 7/11 times
+17. Camera Assist: Automatically reorients the camera in the direction of movement.
+18. Chaos: Applies 5 random modifiers
+19. Chuck Smoke Bomb: It was taking up space anyway.
+20. Controller Flip: Up is down. Joysticks and D-pad inverted vertially, L1 swapped with L2, Triangle swapped with X, etc.
+21. Controller Mirror: Left and right joysticks are swapped. R2 is now L2. Circle is D-pad left, etc.
+22. Cool: Visual filter (a light blueish tint)
+23. Criss-Cross Joysticks: Swap vertical and horizontal joystick axes. Up and down are now left and right.
+24. D-pad Rotate: Rotates the D-pad inputs clockwise
+25. Demons: Visual filter (a deep purple tint)
+26. Desert Fog: Visual filter (a heavy orange tint)
+27. Desk Pop: We honor the flag, and you crap on it when you don't shoot your gun https://www.youtube.com/watch?v=wWZTTtE5_zQ
+28. Disable Camera: Good luck with aiming and looking around!
+29. Disable D-pad: Inventory selection is disabled
+30. Dither Punk: Visual filter (pixelated like a black-and-white newspaper comic)
+31. Dodge Delay: Introduces a 0.5 second delay to sprint
+32. Double Tap: It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins.
+33. Drug Zone: Visual filter (a deep green tint)
+34. Dungeon: Visual filter (like Graphic but with more attitude)
+35. Enemies Do Not Flank: Very effective on infected Kappa
+36. Enhanced Listen Mode: Press some buttons while in listen mode to find loot
+37. Factions Pro: Keeping things toxic with teabagging
+38. Fire: Visual filter (a medium red tint)
+39. Force Aiming: The aim button is held
+40. Force Running: To move is to run (mostly).
+41. Graphic: Visual filter (visual novel style)
+42. Gridlocked: Visual filter (like a brighter version of Sepia)
+43. Headache: Visual filter (black and white and red all over)
+44. Helium Audio: Audio mode.  Incompatible with Xenon
+45. High Contrast Display: Visual filter (it's all greys and primary colors)
+46. Inferno: Visual filter (like fire but blurry in the distance)
+47. Infinite Ammo: The strimmer responds with <3
+48. Infinite Breath: Yup, very useful and is the most OP perk...
+49. Infinite Crafting: Molotovs for everyone!
+50. Infinite Hugging: Grabbed enemies do not escape
+51. Infinite Listen Range: There used to be a limit?
+52. Infinite Melee Durability: Finally, realistic durability.
+53. Input Delay: Introduces a 0.2 second delay to the controller
+54. Inverted: Inverts the vertical axis for aiming
+55. Invisible: Invisible unless you're aiming
+56. Joystick Delay: Introduces a 0.2 second delay to movement and aiming.
+57. Jump Delay: Introduces a 2.0 second delay to jump presses
+58. Keep Jumping: Repeated presses of jump
+59. Kleptomania: Picking up items at inconvenient times. Turns on auto pick-up
+60. Large HUD: HUD like in a game from the 1990s
+61. Large Subtitles: The ability to read subtitles even at 160p.
+62. Leeroy Jenkins: Alright let's do this! LEEEEROOOOOY NNNJEEEENNKIINNS!!! (Holds forward and sprint)
+63. Left Joystick Drift: All that money you spent on a fancy controller? Useless. Add random drift to left joystick.
+64. Max Sensitivity: Goodbye precision aiming. Joystick postions multiplied by 5.
+65. Mega Scope Sway: Good luck landing shots
+66. Melee Delay: Introduces a 0.5 second delay to melee presses
+67. Melee Only: No shooting and no throwables
+68. Min Sensitivity: It's like slomo, but not for the enemies. Joystick positions divided by 2.5.
+69. Mirror On Death: Mirror World on Death. Can result in permanent Mirror World.
+70. Mirror World: Wait, where do we go?
+71. Mono Audio: Where did that gunshot come from?
+72. Moonlight: Visual filter (like a day-for-night filter)
+73. Moonwalk: Be like Michael Jackson! Trying to walk forward will actually make you go backward.
+74. Moose: The moose is dead. The moose does not move. (Disables movement)
+75. Motion Control Aiming: No more aiming with the joystick. Tilt the controller to aim/look instead.
+76. Motion Control Movement: No more movement with the joystick. Tilt the controller to move instead.
+77. Musical Combat: Add some music to combat prompts with Combat Audio Cues
+78. Musical Traversal: Add some music to climbable objects with Traversal Audio Cues
+79. Mute Dialogue: Sorry Ashley :(
+80. Mute Music: The music is too intense, let's turn it off!
+81. Mute Sound Effects: Gunshots hurt our ears :(
+82. Mystery: Applies a random modifier
+83. Nascar: There is no going right in Nascar. Right movement/camera disabled
+84. Navigation Assistance: Keeps pointing camera in direction of story progression
+85. No Aim Movement: Movement is disabled while aiming
+86. No Aiming: At least reloading is still possible, along with throwables and melee
+87. No Arc Throw Paths: The trajectory of your throwable will now be based on feel.
+88. No Awareness Indicators: Stealth strats have no visual feedback
+89. No Backward Movement: Moving backwards is not allowed
+90. No Climbing/Jumping: No climbing or jumping
+91. No Consumables: Selecting a brick, bottle, med kit, molly, etc. is disabled.
+92. No Damage Indicators: Locating the source of damage will be harder.
+93. No Forward Movement: Moving forward is not allowed
+94. No Gun Selection: No picking a new gun
+95. No Health HUD: The health and weapon HUD is disabled.
+96. No Hit Markers: No feedback on connected shots
+97. No Horizontal Aim: The horizontal camera is disabled
+98. No Inventory HUD: Want to know what weapons or throwables you're selecting? Think again.
+99. No Long Guns: D-Pad Left Disabled
+100. No Melee: Disable melee attacks and stealth kills
+101. No Plus Signs: Speedrunners need this. Allies do not get grabbed.
+102. No Reloading: You can still shoot, but you can't reload.
+103. No Reticle: Headshots just got trickier.
+104. No Running: Better hope you're not being chased.
+105. No Scoping: No scopes! Aiming is still allowed
+106. No Short Guns: D-Pad Right Disabled
+107. No Shoulder Swap: While aiming, Square is disabled
+108. No Strafing: Side-to-side movement is disabled. Only forward/back motion is allowed.
+109. No Swiping: Swiper no swiping! No looting, stealth grabbing, opening doors. Say goodbye to the everything button.
+110. No crouch: And you thought you were going to sneak through this area
+111. Noir: Visual filter (like watching a black-and-white movie on degraded film stock)
+112. One Shot: Golden guns activated: one-shot kills.
+113. Only Aim Movement: Movement is disabled unless aiming
+114. Only Strafing: Forwards/back movement is disabled. Only side-to-side motion is allowed.
+115. Pacifist%: No shooting, throwing, or melee. Good luck, NPC friends!
+116. Pdub It: RIP bricks and bottles
+117. Periodic Listen Mode: Stop. Look. Listen to your heart. Hear what it's saying.
+118. Pop Poster: Visual filter (Andy Warhol does not like your stream. Trashes the encoder)
+119. Potato Enemies: Enemies shoot less accurately. Does not work on melee.
+120. Pusher: Visual filter (a yellow tint)
+121. Rachy Flail: The only way to melee is to follow the master techniques of RachyMonster
+122. Random Movement: Random joystick motion
+123. Random Remap: Randomly remaps buttons (square, circle, triangle, X, L1, R1, L2, R2, L3, R3)
+124. Receive Blessing: Give the streamer a random buff
+125. Red Light/Green Light: After moving for 5 seconds, wait for another 5 seconds.
+126. Reduced Enemy Perception: Finally, clickers are truly blind.
+127. Restart Checkpoint: Best served prior to the end of a long encounter.
+128. Right Joystick Drift: All that money you spent on a fancy controller? Useless. Add random drift to right joystick.
+129. Rubbernecking: Woah! What's behind you? Invokes a periodic, 180-degree quick turn.
+130. Run Glitch: Is this an Any% speedrun? Rapid D-pad circular presses.
+131. Select Delay: Introduces a 5 second delay to selecting weapons or consumables
+132. Sepia: Visual filter (we're living in a Matthew Brady photograph)
+133. Shape Shuffle: Randomly remaps the shape buttons (square, circle, triangle, X)
+134. Shooting Delay: Introduces a 0.5 second delay to shooting and throwing
+135. Show Pickups: Enables the HUD that shows notifications on ammo, crafting, and other pickups
+136. Sideways Moonwalk: Go left to go right and go right to go left
+137. Sir Robin: When danger reared its ugly head, he bravely turned his tail and fled! (Force run backwards)
+138. Slow Motion: The speed-run killer
+139. Snapshot: You can only aim for 1 second at a time, so take that shot quickly.
+140. Sniper Speed: Take your time between shots. No shooting or reloading for 5-seconds after each shot.
+141. Swap D-pad/Left Joystick: Retro-style motion and an odd analog inventory selector
+142. Swap Joysticks: You may want to cross your thumbs to work with your muscle memory
+143. Swap Shapes/Right Joystick: Analog actions and digital camera movement
+144. Terminated: Visual filter (a washed-out, blue-green tint)
+145. Throw Nail Bomb: Let's hope an enemy isn't too close.
+146. Toss A Molly: Time to riot. Chucks a molly.
+147. Touch Of Death: Golden fists activated: one-hit enemy deaths
+148. Touchpad Aiming: No more aiming with the joystick. Finally making use of the touchpad!
+149. Traversal Assistance: Climb when you really do not want to
+150. Trigger Remap: Randomly remaps trigger/bumper buttons (L1, R1, L2, R2)
+151. Trinity: Visual filter (a medium green tint)
+152. Tunnel Vision: No moving the camera while aiming
+153. Use Items: Shoots or throws 6 of whatever item is currently equipped. No effect for medkits.
+154. Vibrant: Visual filter (crank up that saturation)
+155. Vintage: Visual filter (a bit like an old color film)
+156. Void: Visual filter (now you can see that you're in the matrix)
+157. Warm: Visual filter (a light orange tint)
+158. Watercolor: Visual filter (bright pastels)
+159. Xenon Audio: Audio mode.  Incompatible with Helium
+160. You Good?: Other than being really old? Melee takes a lot out of you. 5-second delay between melee attacks.
+161. Zoolander: We are not an ambiturner, but at least we can look right. Left movement/camera disabled.
