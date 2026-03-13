@@ -263,6 +263,34 @@ def test_set_mod_enabled_updates_enabled_mod_list():
   assert 'mod a' in relay.enabled_mods
 
 
+def test_set_mod_enabled_persists_across_initialize_game_reload():
+  relay = ChaosRelay()
+  relay.old_mod_data = {
+    'mod a': {'name': 'Mod A', 'active': False},
+  }
+  relay.modifier_data = {
+    'mod a': {'name': 'Mod A', 'desc': 'A', 'groups': ['Test'], 'active': False},
+  }
+  relay.enabled_mods = []
+
+  relay.set_mod_enabled('mod a', True)
+  assert relay.old_mod_data['mod a']['active'] is True
+
+  relay.initialize_game({
+    'game': 'Reload Persist Test',
+    'errors': 0,
+    'nmods': 3,
+    'modtime': 180.0,
+    'mods': [
+      {'name': 'Mod A', 'desc': 'A', 'groups': ['Test']},
+      {'name': 'Mod B', 'desc': 'B', 'groups': ['Test']},
+    ],
+  })
+
+  assert relay.modifier_data['mod a']['active'] is True
+  assert 'mod a' in relay.enabled_mods
+
+
 def test_explain_voting_handles_authoritarian_and_disabled_cycle():
   relay = ChaosRelay()
   relay.set_voting_type('Authoritarian')

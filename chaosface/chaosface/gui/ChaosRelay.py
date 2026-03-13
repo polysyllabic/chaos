@@ -427,6 +427,9 @@ class ChaosRelay:
       json.dump(self.chaos_config, outfile, indent=2, sort_keys=True)
 
   def save_mod_info(self):
+    # Keep the in-memory restore snapshot in sync with persisted mod settings so
+    # enable/disable changes survive game reloads without restarting chaosface.
+    self.old_mod_data = deepcopy(self.modifier_data)
     with CHAOS_MOD_FILE.open('w') as modfile:
       json.dump(self.modifier_data, modfile, indent=2, sort_keys=True)
 
