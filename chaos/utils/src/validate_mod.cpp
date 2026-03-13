@@ -26,7 +26,6 @@
 #include <cmath>
 #include <cstring>
 #include <cstdlib>
-#include <deque>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
@@ -213,8 +212,20 @@ public:
     return game.makeSequence(config, key, required);
   }
 
+  void rewriteUsbReportFromState(Chaos::ControllerState& controller_state, unsigned char* buffer) {
+    controller.rewriteUsbReportFromState(controller_state, buffer);
+  }
+
 private:
-  Chaos::Controller controller;
+  class ValidationController final : public Chaos::Controller {
+  public:
+    void rewriteUsbReportFromState(Chaos::ControllerState& controller_state, unsigned char* buffer) {
+      std::lock_guard<std::mutex> guard(stateMutex);
+      controller_state.applyHackedState(buffer, controllerState);
+    }
+  };
+
+  ValidationController controller;
   Chaos::Game game;
   std::list<std::shared_ptr<Chaos::Modifier>> active_mods;
 };
@@ -387,73 +398,12 @@ std::string formatVidPid(int vendor, int product) {
   return out.str();
 }
 
-class UsbEventCollector final : public Chaos::UsbPassthrough::Observer {
-public:
-  void onControllerVidPid(int vendor, int product) {
-    std::lock_guard<std::mutex> guard(lock_);
-    if (vendor == vendor_ && product == product_) {
-      return;
-    }
-    vendor_ = vendor;
-    product_ = product;
-    parser_.reset(Chaos::ControllerState::factory(vendor, product));
-    pending_.clear();
-    if (parser_ == nullptr) {
-      PLOG_WARNING << "No USB controller parser available for "
-                   << formatVidPid(vendor, product)
-                   << ". Waiting for a supported controller.";
-    } else {
-      PLOG_INFO << "USB controller detected: " << formatVidPid(vendor, product);
-    }
-  }
-
-  void notification(unsigned char* buffer, int length) override {
-    if (length == 0) {
-      PLOG_VERBOSE << "Ignoring empty USB controller report during startup/reconnect.";
-      return;
-    }
-    if (length < static_cast<int>(kReportLength)) {
-      PLOG_WARNING << "Dropping short USB controller report: expected " << kReportLength
-                   << " bytes, got " << length;
-      return;
-    }
-
-    std::array<unsigned char, kReportLength> report{};
-    std::memcpy(report.data(), buffer, report.size());
-
-    std::vector<Chaos::DeviceEvent> events;
-    {
-      std::lock_guard<std::mutex> guard(lock_);
-      if (parser_ == nullptr) {
-        PLOG_VERBOSE << "Dropping USB report because controller parser is not initialized.";
-        return;
-      }
-      parser_->getDeviceEvents(report.data(), static_cast<int>(report.size()), events);
-      for (const Chaos::DeviceEvent& event : events) {
-        pending_.push_back(event);
-      }
-    }
-  }
-
-  bool popEvent(Chaos::DeviceEvent& event) {
-    std::lock_guard<std::mutex> guard(lock_);
-    if (pending_.empty()) {
-      return false;
-    }
-    event = pending_.front();
-    pending_.pop_front();
-    return true;
-  }
-
-private:
-  static constexpr std::size_t kReportLength = 64;
-
-  std::mutex lock_;
-  int vendor_ = -1;
-  int product_ = -1;
-  std::unique_ptr<Chaos::ControllerState> parser_;
-  std::deque<Chaos::DeviceEvent> pending_;
-};
+std::string describeEvent(ParseEngine& engine, const Chaos::DeviceEvent& event);
+bool shouldPrintSignal(Chaos::ControllerInput& input, short value,
+                       bool include_accel, int joystick_fuzz);
+bool shouldLogUsbMapping(ParseEngine& engine, const Chaos::DeviceEvent& input,
+                         const Chaos::DeviceEvent& output, bool include_accel,
+                         int joystick_fuzz);
 
 std::string describeEvent(ParseEngine& engine, const Chaos::DeviceEvent& event) {
   std::shared_ptr<Chaos::ControllerInput> input = engine.getInput(event);
@@ -501,55 +451,119 @@ bool shouldLogUsbMapping(ParseEngine& engine, const Chaos::DeviceEvent& input,
   return input_ok || output_ok;
 }
 
-void processUsbEvents(ParseEngine& engine, std::list<std::shared_ptr<Chaos::Modifier>>& active_mods,
-                      Chaos::UsbPassthrough& passthrough, UsbEventCollector& collector,
-                      const Options& options) {
-  if (passthrough.readyProductVendor()) {
-    collector.onControllerVidPid(passthrough.getVendor(), passthrough.getProduct());
+class UsbEventCollector final : public Chaos::UsbPassthrough::Observer {
+public:
+  UsbEventCollector(ParseEngine& engine, const Options& options,
+                    std::list<std::shared_ptr<Chaos::Modifier>>& active_mods,
+                    std::mutex& lifecycle_mutex)
+      : engine_(engine),
+        options_(options),
+        active_mods_(active_mods),
+        lifecycle_mutex_(lifecycle_mutex) {}
+
+  void onControllerVidPid(int vendor, int product) {
+    std::lock_guard<std::mutex> guard(lock_);
+    if (vendor == vendor_ && product == product_) {
+      return;
+    }
+    vendor_ = vendor;
+    product_ = product;
+    parser_.reset(Chaos::ControllerState::factory(vendor, product));
+    if (parser_ == nullptr) {
+      PLOG_WARNING << "No USB controller parser available for "
+                   << formatVidPid(vendor, product)
+                   << ". Waiting for a supported controller.";
+    } else {
+      PLOG_INFO << "USB controller detected: " << formatVidPid(vendor, product);
+    }
   }
 
-  Chaos::DeviceEvent input{};
-  while (collector.popEvent(input)) {
-    Chaos::DeviceEvent output = input;
-    bool valid = true;
-
-    for (auto& mod : active_mods) {
-      valid = mod->remap(output);
-      if (!valid) {
-        break;
-      }
+  void notification(unsigned char* buffer, int length) override {
+    if (length == 0) {
+      PLOG_VERBOSE << "Ignoring empty USB controller report during startup/reconnect.";
+      return;
     }
-    if (valid) {
-      for (auto& mod : active_mods) {
-        valid = mod->_tweak(output);
-        if (!valid) {
-          break;
+    if (length < static_cast<int>(kReportLength)) {
+      PLOG_WARNING << "Dropping short USB controller report: expected " << kReportLength
+                   << " bytes, got " << length;
+      return;
+    }
+
+    std::array<unsigned char, kReportLength> report{};
+    std::memcpy(report.data(), buffer, report.size());
+
+    std::vector<Chaos::DeviceEvent> events;
+    {
+      std::lock_guard<std::mutex> guard(lock_);
+      if (parser_ == nullptr) {
+        PLOG_VERBOSE << "Dropping USB report because controller parser is not initialized.";
+        return;
+      }
+      parser_->getDeviceEvents(report.data(), static_cast<int>(report.size()), events);
+    }
+
+    for (const Chaos::DeviceEvent& input : events) {
+      Chaos::DeviceEvent output = input;
+      bool valid = true;
+      {
+        std::lock_guard<std::mutex> lifecycle_guard(lifecycle_mutex_);
+        for (auto& mod : active_mods_) {
+          valid = mod->remap(output);
+          if (!valid) {
+            break;
+          }
+        }
+        if (valid) {
+          for (auto& mod : active_mods_) {
+            valid = mod->_tweak(output);
+            if (!valid) {
+              break;
+            }
+          }
+        }
+        if (valid) {
+          engine_.applyEvent(output);
         }
       }
+
+      if (!shouldLogUsbMapping(engine_, input, output, options_.include_accel, options_.joystick_fuzz)) {
+        continue;
+      }
+
+      const std::string input_desc = describeEvent(engine_, input);
+      if (!valid) {
+        PLOG_INFO << "USB " << input_desc << " -> DROPPED";
+        continue;
+      }
+
+      const std::string output_desc = describeEvent(engine_, output);
+      if (output.type == input.type && output.id == input.id && output.value == input.value) {
+        PLOG_INFO << "USB " << input_desc << " -> " << output_desc;
+      } else {
+        PLOG_INFO << "USB " << input_desc << " -> " << output_desc << " (modified)";
+      }
     }
 
-    if (valid) {
-      engine.applyEvent(output);
-    }
-
-    if (!shouldLogUsbMapping(engine, input, output, options.include_accel, options.joystick_fuzz)) {
-      continue;
-    }
-
-    const std::string input_desc = describeEvent(engine, input);
-    if (!valid) {
-      PLOG_INFO << "USB " << input_desc << " -> DROPPED";
-      continue;
-    }
-
-    const std::string output_desc = describeEvent(engine, output);
-    if (output.type == input.type && output.id == input.id && output.value == input.value) {
-      PLOG_INFO << "USB " << input_desc << " -> " << output_desc;
-    } else {
-      PLOG_INFO << "USB " << input_desc << " -> " << output_desc << " (modified)";
+    {
+      std::lock_guard<std::mutex> guard(lock_);
+      if (parser_ != nullptr) {
+        engine_.rewriteUsbReportFromState(*parser_, buffer);
+      }
     }
   }
-}
+
+private:
+  static constexpr std::size_t kReportLength = 64;
+
+  ParseEngine& engine_;
+  const Options& options_;
+  std::list<std::shared_ptr<Chaos::Modifier>>& active_mods_;
+  std::mutex& lifecycle_mutex_;
+  std::mutex lock_;
+  int vendor_ = -1;
+  int product_ = -1;
+  std::unique_ptr<Chaos::ControllerState> parser_;
+};
 
 std::shared_ptr<Chaos::Modifier> resolveModifier(ParseEngine& engine, const std::string& requested_name) {
   std::shared_ptr<Chaos::Modifier> mod = engine.getModifier(requested_name);
@@ -589,7 +603,8 @@ void listAvailableModifiers(ParseEngine& engine) {
 }
 
 int runModifierLifecycle(ParseEngine& engine, std::shared_ptr<Chaos::Modifier> mod,
-                         double duration_sec, useconds_t loop_sleep_us, const Options& options,
+                         double duration_sec, useconds_t loop_sleep_us,
+                         std::mutex& lifecycle_mutex,
                          Chaos::UsbPassthrough* usb_passthrough = nullptr,
                          UsbEventCollector* usb_collector = nullptr) {
   if (!mod) {
@@ -597,7 +612,10 @@ int runModifierLifecycle(ParseEngine& engine, std::shared_ptr<Chaos::Modifier> m
   }
 
   std::list<std::shared_ptr<Chaos::Modifier>>& active_mods = engine.getActiveMods();
-  active_mods.clear();
+  {
+    std::lock_guard<std::mutex> lifecycle_guard(lifecycle_mutex);
+    active_mods.clear();
+  }
   std::list<std::shared_ptr<Chaos::Modifier>> pending_start;
   std::list<std::shared_ptr<Chaos::Modifier>> pending_stop;
 
@@ -614,72 +632,77 @@ int runModifierLifecycle(ParseEngine& engine, std::shared_ptr<Chaos::Modifier> m
   while (keep_running.load()) {
     usleep(loop_sleep_us);
 
+    if (usb_passthrough != nullptr && usb_collector != nullptr && usb_passthrough->readyProductVendor()) {
+      usb_collector->onControllerVidPid(usb_passthrough->getVendor(), usb_passthrough->getProduct());
+    }
+
     std::vector<std::shared_ptr<Chaos::Modifier>> mods_to_finish;
     std::vector<std::shared_ptr<Chaos::Modifier>> mods_to_begin;
     std::vector<std::shared_ptr<Chaos::Modifier>> mods_to_update;
+    bool completed = false;
 
-    while (!pending_stop.empty()) {
-      std::shared_ptr<Chaos::Modifier> queued_stop = pending_stop.front();
-      pending_stop.pop_front();
-      auto it = std::find(active_mods.begin(), active_mods.end(), queued_stop);
-      if (it != active_mods.end()) {
-        active_mods.erase(it);
-        mods_to_finish.push_back(queued_stop);
+    {
+      std::lock_guard<std::mutex> lifecycle_guard(lifecycle_mutex);
+      while (!pending_stop.empty()) {
+        std::shared_ptr<Chaos::Modifier> queued_stop = pending_stop.front();
+        pending_stop.pop_front();
+        auto it = std::find(active_mods.begin(), active_mods.end(), queued_stop);
+        if (it != active_mods.end()) {
+          active_mods.erase(it);
+          mods_to_finish.push_back(queued_stop);
+        }
       }
-    }
 
-    while (!pending_start.empty()) {
-      std::shared_ptr<Chaos::Modifier> queued_start = pending_start.front();
-      pending_start.pop_front();
-      if (std::find(active_mods.begin(), active_mods.end(), queued_start) != active_mods.end()) {
-        continue;
+      while (!pending_start.empty()) {
+        std::shared_ptr<Chaos::Modifier> queued_start = pending_start.front();
+        pending_start.pop_front();
+        if (std::find(active_mods.begin(), active_mods.end(), queued_start) != active_mods.end()) {
+          continue;
+        }
+        active_mods.push_back(queued_start);
+        mods_to_begin.push_back(queued_start);
       }
-      active_mods.push_back(queued_start);
-      mods_to_begin.push_back(queued_start);
-    }
 
-    mods_to_update.assign(active_mods.begin(), active_mods.end());
+      mods_to_update.assign(active_mods.begin(), active_mods.end());
 
-    for (auto& m : mods_to_finish) {
-      m->_finish();
-      if (m == mod) {
-        saw_finish = true;
+      for (auto& m : mods_to_finish) {
+        m->_finish();
+        if (m == mod) {
+          saw_finish = true;
+        }
       }
-    }
 
-    for (auto& m : mods_to_begin) {
-      m->_begin();
-      if (m == mod) {
-        saw_start = true;
+      for (auto& m : mods_to_begin) {
+        m->_begin();
+        if (m == mod) {
+          saw_start = true;
+        }
       }
-    }
 
-    for (auto& m : mods_to_update) {
-      m->_update(paused_prior);
-    }
-    paused_prior = false;
-
-    std::shared_ptr<Chaos::Modifier> expired_mod;
-    for (auto& m : active_mods) {
-      if (m->lifetime() > m->lifespan()) {
-        expired_mod = m;
-        break;
+      for (auto& m : mods_to_update) {
+        m->_update(paused_prior);
       }
-    }
+      paused_prior = false;
 
-    if (expired_mod) {
-      bool already_queued = (std::find(pending_stop.begin(), pending_stop.end(), expired_mod)
-                             != pending_stop.end());
-      if (!already_queued) {
-        pending_stop.push_back(expired_mod);
+      std::shared_ptr<Chaos::Modifier> expired_mod;
+      for (auto& m : active_mods) {
+        if (m->lifetime() > m->lifespan()) {
+          expired_mod = m;
+          break;
+        }
       }
-    }
 
-    if (usb_passthrough != nullptr && usb_collector != nullptr) {
-      processUsbEvents(engine, active_mods, *usb_passthrough, *usb_collector, options);
-    }
+      if (expired_mod) {
+        bool already_queued = (std::find(pending_stop.begin(), pending_stop.end(), expired_mod)
+                               != pending_stop.end());
+        if (!already_queued) {
+          pending_stop.push_back(expired_mod);
+        }
+      }
 
-    if (saw_start && saw_finish && active_mods.empty() && pending_start.empty() && pending_stop.empty()) {
+      completed = saw_start && saw_finish && active_mods.empty() && pending_start.empty() && pending_stop.empty();
+    }
+    if (completed) {
       break;
     }
   }
@@ -737,6 +760,7 @@ int main(int argc, char** argv) {
   }
 
   const double duration_sec = options.duration_override_sec.value_or(engine.defaultModifierDurationSeconds());
+  std::mutex lifecycle_mutex;
   std::unique_ptr<Chaos::UsbPassthrough> usb_passthrough;
   std::unique_ptr<UsbEventCollector> usb_collector;
 
@@ -746,7 +770,9 @@ int main(int argc, char** argv) {
     std::signal(SIGTERM, stopHandler);
 
     usb_passthrough = std::make_unique<Chaos::UsbPassthrough>();
-    usb_collector = std::make_unique<UsbEventCollector>();
+    usb_collector = std::make_unique<UsbEventCollector>(engine, options,
+                                                        engine.getActiveMods(),
+                                                        lifecycle_mutex);
     usb_passthrough->setEndpoint(0x84);
     usb_passthrough->addObserver(usb_collector.get());
     if (usb_passthrough->initialize() != 0) {
@@ -778,7 +804,8 @@ int main(int argc, char** argv) {
   } usb_stop_guard(usb_passthrough.get());
 
   try {
-    return runModifierLifecycle(engine, mod, duration_sec, options.loop_sleep_us, options,
+    return runModifierLifecycle(engine, mod, duration_sec, options.loop_sleep_us,
+                                lifecycle_mutex,
                                 usb_passthrough.get(), usb_collector.get());
   } catch (const std::exception& err) {
     PLOG_ERROR << "Fatal validation exception: " << err.what();
