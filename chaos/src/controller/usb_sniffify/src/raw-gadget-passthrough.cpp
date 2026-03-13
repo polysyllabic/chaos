@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <limits>
 #include <time.h>
+#include <poll.h>
 
 // The logger will be initialized in the main app. It's safe not to use plog at all. The library
 // will still link correctly and there will simply be no logging.
@@ -38,6 +39,11 @@ bool joinThreadWithTimeout(pthread_t thread, const char* tag, int timeoutMs = 20
     return true;
   }
   if (joinResult == ETIMEDOUT) {
+    if (std::strcmp(tag, "ep0") == 0) {
+      PLOG_WARNING << "Timed out waiting for " << tag
+                   << " thread to exit; skipping forced cancellation.";
+      return false;
+    }
     PLOG_WARNING << "Timed out waiting for " << tag << " thread to exit; cancelling thread.";
     pthread_cancel(thread);
     struct timespec cancelDeadline;
@@ -895,6 +901,31 @@ bool RawGadgetPassthrough::ep0Loop( void* rawgadgetobject) {
   struct usb_raw_control_event event;
   event.inner.type = 0;
   event.inner.length = sizeof(event.ctrl);
+
+  if (info->fd < 0) {
+    return false;
+  }
+
+  // Poll ep0 with a short timeout so shutdown/reconnect can be observed promptly.
+  struct pollfd pfd;
+  pfd.fd = info->fd;
+  pfd.events = POLLIN;
+  pfd.revents = 0;
+  int pollResult = poll(&pfd, 1, 100);
+  if (pollResult == 0) {
+    return true;
+  }
+  if (pollResult < 0) {
+    if (errno == EINTR) {
+      return true;
+    }
+    mRawGadgetPassthrough->requestReconnect();
+    return false;
+  }
+  if ((pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
+    mRawGadgetPassthrough->requestReconnect();
+    return false;
+  }
   
   if (usb_raw_event_fetch(info->fd, (struct usb_raw_event *)&event) < 0) {
     mRawGadgetPassthrough->requestReconnect();
@@ -1000,10 +1031,6 @@ bool RawGadgetPassthrough::ep0Loop( void* rawgadgetobject) {
 
 void* RawGadgetPassthrough::ep0LoopThread( void* rawgadgetobject ) {
   RawGadgetPassthrough* mRawGadgetPassthrough = (RawGadgetPassthrough*) rawgadgetobject;
-
-  // Allow forced cancellation if ep0 blocks in a kernel call during hot-unplug.
-  pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-  pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
   while (mRawGadgetPassthrough->keepRunning && mRawGadgetPassthrough->sessionRunning) {
     ep0Loop(mRawGadgetPassthrough);
