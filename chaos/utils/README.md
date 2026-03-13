@@ -73,6 +73,7 @@ _Options:_
  -o, --output <path|->    Log output destination (default: stdout)
  -t, --time <seconds>     Override modifier lifespan
      --sleep-us <us>      Loop sleep interval in microseconds (default: 500)
+     --usb                Read live controller USB input and report input->output changes
  -h, --help               Show help message
 
 By default, the modifier lifespan is the same as set in the config file (probably 180
@@ -81,6 +82,9 @@ of their lifecycle, you probably want to override the time.
 
 This utility must be run from the Pi's command line. Because it tests interaction with the
 controller, the controller must be plugged in to the Pi.
+
+When using `--usb`, the script will stop the running chaos engine and run `validate_mod`
+with `sudo` so it can access USB passthrough.
 
 ## gamepad_test
 
