@@ -23,6 +23,7 @@
 #include <atomic>
 #include <cctype>
 #include <csignal>
+#include <cmath>
 #include <cstring>
 #include <cstdlib>
 #include <deque>
@@ -71,6 +72,8 @@ struct Options {
   std::optional<double> duration_override_sec;
   useconds_t loop_sleep_us = 500;
   bool usb_mode = false;
+  bool include_accel = false;
+  int joystick_fuzz = 10;
 };
 
 std::atomic<bool> keep_running{true};
@@ -227,6 +230,8 @@ void printUsage(const char* program) {
       << "  -t, --time <seconds>       Override modifier lifespan for this run\n"
       << "      --sleep-us <us>        Loop sleep interval in microseconds (default: 500)\n"
       << "      --usb                  Read live controller USB input and report input->output mapping\n"
+      << "      --accel                In USB mode, print ACCX/ACCY/ACCZ changes\n"
+      << "      --fuzz=<int>           In USB mode, suppress LX/LY/RX/RY when abs(value) < fuzz (default: 10)\n"
       << "  -h, --help                 Show this help\n";
 }
 
@@ -327,6 +332,24 @@ bool parseArgs(int argc, char** argv, Options& options) {
     }
     if (arg == "--usb") {
       options.usb_mode = true;
+      continue;
+    }
+    if (arg == "--accel") {
+      options.include_accel = true;
+      continue;
+    }
+    if (arg.rfind("--fuzz=", 0) == 0) {
+      try {
+        const int parsed = std::stoi(arg.substr(7));
+        if (parsed < 0) {
+          std::cerr << "Invalid value for --fuzz: " << parsed << "\n";
+          return false;
+        }
+        options.joystick_fuzz = parsed;
+      } catch (const std::exception&) {
+        std::cerr << "Invalid value for --fuzz: " << arg.substr(7) << "\n";
+        return false;
+      }
       continue;
     }
     std::cerr << "Unknown option: " << arg << "\n";
@@ -446,8 +469,41 @@ std::string describeEvent(ParseEngine& engine, const Chaos::DeviceEvent& event) 
   return out.str();
 }
 
+bool shouldPrintSignal(Chaos::ControllerInput& input, short value,
+                       bool include_accel, int joystick_fuzz) {
+  switch (input.getSignal()) {
+    case Chaos::ControllerSignal::ACCX:
+    case Chaos::ControllerSignal::ACCY:
+    case Chaos::ControllerSignal::ACCZ:
+      return include_accel;
+    case Chaos::ControllerSignal::LX:
+    case Chaos::ControllerSignal::LY:
+    case Chaos::ControllerSignal::RX:
+    case Chaos::ControllerSignal::RY:
+      return std::abs(static_cast<int>(value)) >= joystick_fuzz;
+    default:
+      return true;
+  }
+}
+
+bool shouldLogUsbMapping(ParseEngine& engine, const Chaos::DeviceEvent& input,
+                         const Chaos::DeviceEvent& output, bool include_accel,
+                         int joystick_fuzz) {
+  const std::shared_ptr<Chaos::ControllerInput> input_signal = engine.getInput(input);
+  const std::shared_ptr<Chaos::ControllerInput> output_signal = engine.getInput(output);
+
+  if (!input_signal || !output_signal) {
+    return true;
+  }
+
+  const bool input_ok = shouldPrintSignal(*input_signal, input.value, include_accel, joystick_fuzz);
+  const bool output_ok = shouldPrintSignal(*output_signal, output.value, include_accel, joystick_fuzz);
+  return input_ok || output_ok;
+}
+
 void processUsbEvents(ParseEngine& engine, std::list<std::shared_ptr<Chaos::Modifier>>& active_mods,
-                      Chaos::UsbPassthrough& passthrough, UsbEventCollector& collector) {
+                      Chaos::UsbPassthrough& passthrough, UsbEventCollector& collector,
+                      const Options& options) {
   if (passthrough.readyProductVendor()) {
     collector.onControllerVidPid(passthrough.getVendor(), passthrough.getProduct());
   }
@@ -474,6 +530,10 @@ void processUsbEvents(ParseEngine& engine, std::list<std::shared_ptr<Chaos::Modi
 
     if (valid) {
       engine.applyEvent(output);
+    }
+
+    if (!shouldLogUsbMapping(engine, input, output, options.include_accel, options.joystick_fuzz)) {
+      continue;
     }
 
     const std::string input_desc = describeEvent(engine, input);
@@ -529,7 +589,7 @@ void listAvailableModifiers(ParseEngine& engine) {
 }
 
 int runModifierLifecycle(ParseEngine& engine, std::shared_ptr<Chaos::Modifier> mod,
-                         double duration_sec, useconds_t loop_sleep_us,
+                         double duration_sec, useconds_t loop_sleep_us, const Options& options,
                          Chaos::UsbPassthrough* usb_passthrough = nullptr,
                          UsbEventCollector* usb_collector = nullptr) {
   if (!mod) {
@@ -616,7 +676,7 @@ int runModifierLifecycle(ParseEngine& engine, std::shared_ptr<Chaos::Modifier> m
     }
 
     if (usb_passthrough != nullptr && usb_collector != nullptr) {
-      processUsbEvents(engine, active_mods, *usb_passthrough, *usb_collector);
+      processUsbEvents(engine, active_mods, *usb_passthrough, *usb_collector, options);
     }
 
     if (saw_start && saw_finish && active_mods.empty() && pending_start.empty() && pending_stop.empty()) {
@@ -695,6 +755,16 @@ int main(int argc, char** argv) {
     }
     usb_passthrough->start();
     PLOG_INFO << "USB mode enabled: monitoring endpoint 0x84 for live controller input.";
+    PLOG_INFO << "USB mode filters: accel="
+              << (options.include_accel ? "on" : "off")
+              << ", joystick_fuzz=" << options.joystick_fuzz;
+  } else {
+    if (options.include_accel) {
+      PLOG_WARNING << "--accel only applies to --usb mode and is ignored.";
+    }
+    if (options.joystick_fuzz != 10) {
+      PLOG_WARNING << "--fuzz only applies to --usb mode and is ignored.";
+    }
   }
 
   struct UsbStopGuard {
@@ -708,7 +778,7 @@ int main(int argc, char** argv) {
   } usb_stop_guard(usb_passthrough.get());
 
   try {
-    return runModifierLifecycle(engine, mod, duration_sec, options.loop_sleep_us,
+    return runModifierLifecycle(engine, mod, duration_sec, options.loop_sleep_us, options,
                                 usb_passthrough.get(), usb_collector.get());
   } catch (const std::exception& err) {
     PLOG_ERROR << "Fatal validation exception: " << err.what();

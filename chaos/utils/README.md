@@ -74,6 +74,8 @@ _Options:_
  -t, --time <seconds>     Override modifier lifespan
      --sleep-us <us>      Loop sleep interval in microseconds (default: 500)
      --usb                Read live controller USB input and report input->output changes
+     --accel              In USB mode, print ACCX/ACCY/ACCZ changes
+     --fuzz=<int>         In USB mode, ignore LX/LY/RX/RY when abs(value) < fuzz (default: 10)
  -h, --help               Show help message
 
 By default, the modifier lifespan is the same as set in the config file (probably 180
