@@ -2917,6 +2917,57 @@ children = [ "child1", "child2" ]
   return ok;
 }
 
+static bool testParentModifierForwardsRemapIntoLaterChildTweaks() {
+  MockEngine engine;
+
+  auto remap_child = makeMod<RemapModifier>(
+      R"(
+name = "child_remap"
+type = "remap"
+remap = [ { from = "RX", to = "LX" } ]
+)",
+      engine);
+  auto scale_child = makeMod<ScalingModifier>(
+      R"(
+name = "child_scale"
+type = "scaling"
+applies_to = [ "MOVE_X" ]
+amplitude = 0.5
+)",
+      engine);
+
+  engine.modifier_map["child_remap"] = remap_child;
+  engine.modifier_map["child_scale"] = scale_child;
+
+  auto parent = makeMod<ParentModifier>(
+      R"(
+name = "parent"
+type = "parent"
+children = [ "child_remap", "child_scale" ]
+)",
+      engine);
+
+  bool ok = true;
+  parent->begin();
+
+  DeviceEvent event = commandEvent(engine, "CAMERA_X", 60);
+  ok &= check(parent->remap(event), "parent remap should accept remapped child event");
+  auto move_x = commandInput(engine, "MOVE_X");
+  ok &= check(move_x != nullptr, "parent remap forwarding test input should exist");
+  if (!move_x) {
+    return false;
+  }
+
+  ok &= check(event.id == move_x->getID() && event.type == move_x->getButtonType(),
+              "parent remap should forward event through child remap before tweaks");
+  ok &= check(parent->tweak(event), "parent tweak should accept remapped child event");
+  ok &= check(event.value == 30,
+              "later child tweak should see remapped signal and scale its value");
+
+  parent->finish();
+  return ok;
+}
+
 static bool testParentModifierRandomSelectionChoosesRequestedCount() {
   ProbeChildModifier::reset();
   MockEngine engine;
@@ -3204,6 +3255,7 @@ int main() {
   ok &= testMenuModifiersDoNotBlockLaterDisableModifier();
   ok &= testAllDifferingModifierPairOrdersStayStableWhenIdle();
   ok &= testParentModifierForwardsLifecycleAndTweak();
+  ok &= testParentModifierForwardsRemapIntoLaterChildTweaks();
   ok &= testParentModifierRandomSelectionChoosesRequestedCount();
   ok &= testParentModifierRandomSelectFromRestrictsPool();
   ok &= testParentModifierRandomSelectFromRejectsParentEntries();

@@ -265,6 +265,23 @@ void ParentModifier::finish() {
   random_children.clear();
 }
 
+bool ParentModifier::remap(DeviceEvent& event) {
+  bool rval;
+  for (auto& mod : fixed_children) {
+    rval = mod->remap(event);
+    if (!rval) {
+      return false;
+    }
+  }
+  for (auto& mod : random_children) {
+    rval = mod->remap(event);
+    if (!rval) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool ParentModifier::tweak(DeviceEvent& event) {
   bool rval;
   for (auto& mod : fixed_children) {

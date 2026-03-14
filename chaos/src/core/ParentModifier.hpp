@@ -112,6 +112,14 @@ namespace Chaos {
      * \param event Event to process.
      * \return true if the event should continue through the pipeline.
      */
+    bool remap(DeviceEvent& event);
+
+    /**
+     * \brief Route event processing through active children.
+     *
+     * \param event Event to process.
+     * \return true if the event should continue through the pipeline.
+     */
     bool tweak(DeviceEvent& event);
   };
 };
