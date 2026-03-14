@@ -17,6 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <algorithm>
 #include <memory>
 #include <stdexcept>
 #include <plog/Log.h>
@@ -45,6 +46,8 @@ short Touchpad::getAxisValue(ControllerSignal tp_axis, short value) {
   short axis_val;
   double scaling;
   DerivData* dd = nullptr;
+  timer.update();
+  const double timestamp = timer.runningTime();
   switch (tp_axis) {
   case ControllerSignal::TOUCHPAD_X:
 	  dd = &dX;
@@ -63,9 +66,9 @@ short Touchpad::getAxisValue(ControllerSignal tp_axis, short value) {
   }  
   
   if (useVelocity()) {
-    axis_val = (short) (derivative(dd, value, timer.runningTime()) * scaling);
+    axis_val = (short) (derivative(dd, value, timestamp) * scaling);
   } else {
-    axis_val = (short) (distance(dd, value, timer.runningTime()) * scaling);
+    axis_val = (short) (distance(dd, value, timestamp) * scaling);
   }
 
   if (axis_val > 0) {
@@ -74,7 +77,7 @@ short Touchpad::getAxisValue(ControllerSignal tp_axis, short value) {
   else if (axis_val < 0) {
     axis_val -= skew;
   }
-  return axis_val;
+  return static_cast<short>(std::clamp(static_cast<int>(axis_val), JOYSTICK_MIN, JOYSTICK_MAX));
 }
 
 double Touchpad::derivative(DerivData* d, short current, double timestamp) {

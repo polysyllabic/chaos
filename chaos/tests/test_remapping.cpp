@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <array>
 #include <cmath>
 #include <unistd.h>
 
@@ -15,6 +16,7 @@
 #include <ControllerInputTable.hpp>
 #include <EngineInterface.hpp>
 #include <RemapModifier.hpp>
+#include <Touchpad.hpp>
 #include <signals.hpp>
 
 using namespace Chaos;
@@ -512,6 +514,93 @@ remap = [
   return ok;
 }
 
+static bool testTouchpadVelocityConversionUsesElapsedTime() {
+  Touchpad::setVelocity(true);
+  Touchpad::setScale(0.01, 0.01);
+  Touchpad::setSkew(30);
+
+  Touchpad touchpad;
+  bool ok = true;
+
+  short first = touchpad.getAxisValue(ControllerSignal::TOUCHPAD_X, 1000);
+  usleep(5000);
+  short second = touchpad.getAxisValue(ControllerSignal::TOUCHPAD_X, 1010);
+
+  ok &= check(first == 0, "first velocity sample should prime touchpad history");
+  ok &= check(second > 0, "velocity mode should produce a positive output after movement");
+  ok &= check(second <= JOYSTICK_MAX, "velocity mode should clamp to joystick max");
+
+  Touchpad::setVelocity(false);
+  Touchpad::setScale(1.0, 1.0);
+  Touchpad::setSkew(0);
+  return ok;
+}
+
+static bool testTouchpadDistanceConversionClampsToJoystickLimits() {
+  Touchpad::setVelocity(false);
+  Touchpad::setScale(1.1, 1.1);
+  Touchpad::setSkew(30);
+
+  bool ok = true;
+
+  Touchpad positive;
+  ok &= check(positive.getAxisValue(ControllerSignal::TOUCHPAD_X, 0) == 0,
+              "first distance sample should establish the origin");
+  ok &= check(positive.getAxisValue(ControllerSignal::TOUCHPAD_X, 1000) == JOYSTICK_MAX,
+              "positive touchpad displacement should clamp to joystick max");
+
+  Touchpad negative;
+  ok &= check(negative.getAxisValue(ControllerSignal::TOUCHPAD_X, 1000) == 0,
+              "negative clamp test should also establish the origin");
+  ok &= check(negative.getAxisValue(ControllerSignal::TOUCHPAD_X, 0) == JOYSTICK_MIN,
+              "negative touchpad displacement should clamp to joystick min");
+
+  Touchpad::setScale(1.0, 1.0);
+  Touchpad::setSkew(0);
+  return ok;
+}
+
+static bool testDualshockTouchpadReleaseWhenTouchCountDropsToZero() {
+  std::unique_ptr<ControllerState> state(ControllerState::factory(0x054c, 0x09cc));
+  bool ok = true;
+  ok &= check(state != nullptr, "DualShock probe should be creatable");
+  if (!state) {
+    return false;
+  }
+
+  std::array<unsigned char, 64> active_report{};
+  std::array<unsigned char, 64> inactive_report{};
+  active_report[33] = 1;  // TOUCH_COUNT
+
+  std::vector<DeviceEvent> seed_events;
+  state->getDeviceEvents(inactive_report.data(), static_cast<int>(inactive_report.size()), seed_events);
+
+  std::vector<DeviceEvent> active_events;
+  state->getDeviceEvents(active_report.data(), static_cast<int>(active_report.size()), active_events);
+
+  bool saw_start = false;
+  for (const auto& event : active_events) {
+    if (event.type == TYPE_BUTTON && event.id == BUTTON_TOUCHPAD_ACTIVE && event.value == 1) {
+      saw_start = true;
+      break;
+    }
+  }
+  ok &= check(saw_start, "active touch report should emit TOUCHPAD_ACTIVE press");
+
+  std::vector<DeviceEvent> inactive_events;
+  state->getDeviceEvents(inactive_report.data(), static_cast<int>(inactive_report.size()), inactive_events);
+
+  bool saw_stop = false;
+  for (const auto& event : inactive_events) {
+    if (event.type == TYPE_BUTTON && event.id == BUTTON_TOUCHPAD_ACTIVE && event.value == 0) {
+      saw_stop = true;
+      break;
+    }
+  }
+  ok &= check(saw_stop, "touch count dropping to zero should emit TOUCHPAD_ACTIVE release");
+  return ok;
+}
+
 static bool testRandomRemapProducesPermutation() {
   MockEngine engine;
   auto mod = makeRemap(
@@ -646,6 +735,9 @@ int main() {
   ok &= testInvertUsesRemappedValue();
   ok &= testTouchpadStopClearsConfiguredAxes();
   ok &= testTouchpadStopClearsHybridAxisToJoystickMin();
+  ok &= testTouchpadVelocityConversionUsesElapsedTime();
+  ok &= testTouchpadDistanceConversionClampsToJoystickLimits();
+  ok &= testDualshockTouchpadReleaseWhenTouchCountDropsToZero();
   ok &= testRandomRemapProducesPermutation();
   ok &= testTouchpadInactiveDelayInjection();
   ok &= testTouchpadInactiveDelayParsing();

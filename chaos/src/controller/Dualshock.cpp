@@ -210,17 +210,21 @@ void Dualshock::getDeviceEvents(unsigned char* buffer, int length, std::vector<D
       short current_y = current_valid ? currentState.TOUCH_EVENTS[e].finger[f].y : 0;
       short prior_y = prior_valid ? priorState->TOUCH_EVENTS[e].finger[f].y : 0;
 
-      current_touchpad_active = current_touchpad_active || (current_active == 0);
-      prior_touchpad_active = prior_touchpad_active || (prior_active == 0);
+      if (current_valid) {
+        current_touchpad_active = current_touchpad_active || (current_active == 0);
+      }
+      if (prior_valid) {
+        prior_touchpad_active = prior_touchpad_active || (prior_active == 0);
+      }
 
       const uint8_t axis_x = (f == 0) ? AXIS_TOUCHPAD_X : AXIS_TOUCHPAD_X_2;
       const uint8_t axis_y = (f == 0) ? AXIS_TOUCHPAD_Y : AXIS_TOUCHPAD_Y_2;
-      if (current_x != prior_x) {
+      if (current_valid && (!prior_valid || current_x != prior_x)) {
         events.push_back({0, current_x, TYPE_AXIS, axis_x});
         noteTouchpadAxisEvent();
       }
 
-      if (current_y != prior_y) {
+      if (current_valid && (!prior_valid || current_y != prior_y)) {
         events.push_back({0, current_y, TYPE_AXIS, axis_y});
         noteTouchpadAxisEvent();
       }
