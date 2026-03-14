@@ -75,6 +75,7 @@ chaos_defaults = {
   'overlay_current_votes_bar_color': 'rgba(245, 245, 245, 0.8)',
   'overlay_current_votes_text_side': 'right',
   'overlay_current_votes_text_align': 'left',
+  'overlay_current_votes_show_total': True,
   'overlay_active_mods_text_color': '#ffffff',
   'overlay_active_mods_bar_color': 'rgba(245, 245, 245, 0.75)',
   'overlay_active_mods_text_side': 'right',
@@ -264,6 +265,7 @@ class ChaosRelay:
     self.overlay_current_votes_bar_color = 'rgba(245, 245, 245, 0.8)'
     self.overlay_current_votes_text_side = 'right'
     self.overlay_current_votes_text_align = 'left'
+    self.overlay_current_votes_show_total = True
     self.overlay_active_mods_text_color = '#ffffff'
     self.overlay_active_mods_bar_color = 'rgba(245, 245, 245, 0.75)'
     self.overlay_active_mods_text_side = 'right'
@@ -576,6 +578,7 @@ class ChaosRelay:
     self.set_overlay_current_votes_bar_color(self.get_attribute('overlay_current_votes_bar_color'))
     self.set_overlay_current_votes_text_side(self.get_attribute('overlay_current_votes_text_side'))
     self.set_overlay_current_votes_text_align(self.get_attribute('overlay_current_votes_text_align'))
+    self.set_overlay_current_votes_show_total(self.get_attribute('overlay_current_votes_show_total'))
     self.set_overlay_active_mods_text_color(self.get_attribute('overlay_active_mods_text_color'))
     self.set_overlay_active_mods_bar_color(self.get_attribute('overlay_active_mods_bar_color'))
     self.set_overlay_active_mods_text_side(self.get_attribute('overlay_active_mods_text_side'))
@@ -1043,6 +1046,9 @@ class ChaosRelay:
     if align not in ('left', 'center', 'right'):
       align = 'left'
     self._set_value('overlay_current_votes_text_align', align, 'overlay_current_votes_text_align')
+
+  def set_overlay_current_votes_show_total(self, value):
+    self._set_value('overlay_current_votes_show_total', bool(value), 'overlay_current_votes_show_total')
 
   def set_overlay_active_mods_text_color(self, value):
     color = self._normalize_overlay_color(value, '#ffffff')

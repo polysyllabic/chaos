@@ -38,9 +38,11 @@ def test_overlay_html_builders_return_html():
   assert '<html>' in current_votes_overlay_html().lower()
   assert '<html>' in vote_timer_overlay_html().lower()
   assert 'overlay_current_votes_text_align' in current_votes_overlay_html()
+  assert 'overlay_current_votes_show_total' in current_votes_overlay_html()
   assert 'overlay_active_mods_text_align' in active_mods_overlay_html()
   assert 'Voting Disabled' in current_votes_overlay_html()
   assert 'Waiting for Voting to Open' in current_votes_overlay_html()
+  assert 'Voting Open' in current_votes_overlay_html()
 
 
 def test_overlay_state_includes_text_side_settings():
@@ -142,6 +144,23 @@ def test_overlay_state_includes_text_alignment_settings():
   finally:
     config.relay.set_overlay_current_votes_text_align(prior_votes_align)
     config.relay.set_overlay_active_mods_text_align(prior_mods_align)
+
+
+def test_overlay_state_includes_current_votes_show_total_setting():
+  import chaosface.config.globals as config
+  from chaosface.gui.overlay_state import overlay_state_payload
+
+  prior_show_total = bool(getattr(config.relay, 'overlay_current_votes_show_total', True))
+  try:
+    config.relay.set_overlay_current_votes_show_total(False)
+    payload = overlay_state_payload()
+    assert payload['overlay_current_votes_show_total'] is False
+
+    config.relay.set_overlay_current_votes_show_total(True)
+    payload = overlay_state_payload()
+    assert payload['overlay_current_votes_show_total'] is True
+  finally:
+    config.relay.set_overlay_current_votes_show_total(prior_show_total)
 
 
 def test_overlay_text_alignment_setters_normalize_invalid_values():

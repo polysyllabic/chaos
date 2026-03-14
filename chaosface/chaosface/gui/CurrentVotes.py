@@ -85,6 +85,7 @@ def current_votes_overlay_html() -> str:
         const textSide = String(state.overlay_current_votes_text_side || 'right').toLowerCase() === 'left' ? 'left' : 'right';
         const textAlignRaw = String(state.overlay_current_votes_text_align || 'left').toLowerCase();
         const textAlign = (textAlignRaw === 'left' || textAlignRaw === 'center' || textAlignRaw === 'right') ? textAlignRaw : 'left';
+        const showVoteTotal = Boolean(state.overlay_current_votes_show_total);
         document.body.style.color = textColor;
         const names = state.candidate_mods || [];
         const votes = state.votes || [];
@@ -99,7 +100,8 @@ def current_votes_overlay_html() -> str:
         } else if (votingWaiting) {
           document.getElementById('voteTotal').textContent = 'Waiting for Voting to Open';
         } else {
-          document.getElementById('voteTotal').textContent = `Total Votes: ${totalVotes}`;
+          const header = showVoteTotal ? `Voting Open (Total Votes: ${totalVotes})` : 'Voting Open';
+          document.getElementById('voteTotal').textContent = header;
         }
         let html = '';
         for (let i = 0; i < count; i++) {

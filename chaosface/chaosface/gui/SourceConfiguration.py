@@ -218,6 +218,10 @@ def build_source_configuration_tab() -> None:
         value=str(getattr(config.relay, 'overlay_current_votes_text_align', 'left') or 'left'),
         label='Modifier name text alignment',
       ).classes('w-96').props('stack-label')
+      current_votes_show_total = ui.checkbox(
+        'Show vote total',
+        value=bool(getattr(config.relay, 'overlay_current_votes_show_total', True)),
+      )
 
     ui.separator()
     ui.label('Active Mods').classes('text-subtitle1')
@@ -344,6 +348,11 @@ def build_source_configuration_tab() -> None:
         config.relay.set_overlay_current_votes_text_align,
       )
       need_save |= _set_if_changed(
+        bool(getattr(config.relay, 'overlay_current_votes_show_total', True)),
+        bool(current_votes_show_total.value),
+        config.relay.set_overlay_current_votes_show_total,
+      )
+      need_save |= _set_if_changed(
         int(config.relay.overlay_active_mods_gap),
         safe_int(active_mods_gap.value, int(config.relay.overlay_active_mods_gap), 0, 120),
         config.relay.set_overlay_active_mods_gap,
@@ -386,6 +395,7 @@ def build_source_configuration_tab() -> None:
       current_votes_bar_color.value = str(config.relay.overlay_current_votes_bar_color or 'rgba(245, 245, 245, 0.8)')
       current_votes_text_side.value = str(getattr(config.relay, 'overlay_current_votes_text_side', 'right') or 'right')
       current_votes_text_align.value = str(getattr(config.relay, 'overlay_current_votes_text_align', 'left') or 'left')
+      current_votes_show_total.value = bool(getattr(config.relay, 'overlay_current_votes_show_total', True))
       active_mods_gap.value = int(config.relay.overlay_active_mods_gap)
       active_mods_text_color.value = str(config.relay.overlay_active_mods_text_color or '#ffffff')
       active_mods_bar_color.value = str(config.relay.overlay_active_mods_bar_color or 'rgba(245, 245, 245, 0.75)')
