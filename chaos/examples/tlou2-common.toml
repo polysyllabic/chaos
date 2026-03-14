@@ -812,7 +812,7 @@ type = "scaling"
 applies_to = [ "horizontal camera", "vertical camera" ]
 amplitude = 1.0
 while = [ "aiming" ]
-while_amplitude = 0.33
+while_amplitude = 0.5
 unlisted = true
 
 [[modifier]]
