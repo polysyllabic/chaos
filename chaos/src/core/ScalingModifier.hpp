@@ -38,6 +38,7 @@ namespace Chaos {
   class ScalingModifier : public Modifier::Registrar<ScalingModifier> {
   private:
     double amplitude;
+    double while_amplitude;
     double offset;
     
   public:

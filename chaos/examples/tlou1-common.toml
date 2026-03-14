@@ -731,6 +731,16 @@ applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", 
 amplitude = 5.0
 
 [[modifier]]
+name = "Aim Adjust"
+description = "Reduce look sensitivity while aiming."
+type = "scaling"
+applies_to = [ "horizontal camera", "vertical camera" ]
+amplitude = 1.0
+while = [ "aiming" ]
+while_amplitude = 0.33
+unlisted = true
+
+[[modifier]]
 name = "Min Sensitivity"
 description = "It's like slomo, but not for the enemies. Joystick positions divided by 2.5."
 type = "scaling"
@@ -999,9 +1009,10 @@ remap = [
 # being remapped should all be in the disable_signals list as well as the remap table.
 # Otherwise, they won't be properly set to 0 when the user stops aiming.
 [[modifier]]
-name = "Touchpad Aiming"
+name = "Touchpad to Camera"
 description = "No more aiming with the joystick. Finally making use of the touchpad!"
 type = "remap"
+unlisted = true
 disable_signals = [ "RX", "RY" ]
 remap = [
       {from = "TOUCHPAD_ACTIVE", to="NOTHING"},
@@ -1129,14 +1140,14 @@ name = "Double Tap"
 description = "It's Rule #2. Everytime a shot is fired, another occurs in quick succession. For Rule #1, see Leeroy Jenkins."
 type = "sequence"
 groups = [ "Combat" ]
-block_while_busy = [ "aiming", "shoot" ]
+block_while_busy = [ "aim", "shoot" ]
 while = [ "aiming" ]
 trigger = [ "shoot" ]
 repeat_sequence = [
   # 2 seconds is necessary to let the rifle reload if reload speed hasn't been upgraded
   { event = "press", command = "shoot", delay = 1.5},
   { event = "press", command = "shoot"},
-  { event = "release", command = "aiming"}
+  { event = "release", command = "aim"}
   ]
 
 [[modifier]]
@@ -1886,3 +1897,10 @@ groups = [ "Buff" ]
 random = true
 select_groups = [ "Buff" ]
 value = 1
+
+[[modifier]]
+name = "Touchpad Aiming"
+description = "No more aiming with the joystick. Finally making use of the touchpad!"
+type = "parent"
+groups = [ "View" ]
+children = [ "Touchpad to Camera", "Aim Adjust" ]

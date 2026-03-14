@@ -447,6 +447,16 @@ applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", 
 amplitude = 5.0
 
 [[modifier]]
+name = "Aim Adjust"
+description = "Reduce look sensitivity while aiming."
+type = "scaling"
+applies_to = [ "horizontal camera", "vertical camera" ]
+amplitude = 1.0
+while = [ "aiming" ]
+while_amplitude = 0.33
+unlisted = true
+
+[[modifier]]
 name = "Min Sensitivity"
 description = "It's like slomo, but not for the enemies. Joystick positions divided by 2.5."
 type = "scaling"
@@ -646,9 +656,10 @@ remap = [
       ]
 
 [[modifier]]
-name = "Touchpad Aiming"
+name = "Touchpad to Camera"
 description = "No more aiming with the joystick. Finally making use of the touchpad!"
 type = "remap"
+unlisted = true
 disable_signals = [ "RX", "RY" ]
 remap = [
       {from = "TOUCHPAD_ACTIVE", to="NOTHING"},
@@ -867,3 +878,9 @@ type = "parent"
 random = true
 value = 5
 
+[[modifier]]
+name = "Touchpad Aiming"
+description = "No more aiming with the joystick. Finally making use of the touchpad!"
+type = "parent"
+groups = [ "view" ]
+children = [ "Touchpad to Camera", "Aim Adjust" ]

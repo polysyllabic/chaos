@@ -45,7 +45,7 @@ double parseNumericValue(const toml::table& config, const std::string& key, doub
 ScalingModifier::ScalingModifier(toml::table& config, EngineInterface* e) {
   TOMLUtils::checkValid(config, std::vector<std::string>{
       "name", "description", "type", "groups", "applies_to", "begin_sequence", "finish_sequence",
-      "unlisted", "amplitude", "offset"});
+      "unlisted", "while", "while_operation", "amplitude", "while_amplitude", "offset"});
   initialize(config, e);
 
   if (commands.empty()) {
@@ -53,14 +53,19 @@ ScalingModifier::ScalingModifier(toml::table& config, EngineInterface* e) {
   }
 
   amplitude = parseNumericValue(config, "amplitude", 1.0);
+  while_amplitude = parseNumericValue(config, "while_amplitude", amplitude);
   offset = parseNumericValue(config, "offset", 0.0);
 }
 
 bool ScalingModifier::tweak(DeviceEvent& event) {
   // Traverse the list of affected commands
   for (auto& cmd : commands) {
-    if (engine->eventMatches(event, cmd)) {     
-      event.value = fmin(fmax((int)(amplitude * event.value + offset), JOYSTICK_MIN), JOYSTICK_MAX);
+    if (engine->eventMatches(event, cmd)) {
+      const double active_amplitude = (!conditions.empty() && inCondition(event))
+                                          ? while_amplitude
+                                          : amplitude;
+      event.value = fmin(fmax((int)(active_amplitude * event.value + offset), JOYSTICK_MIN),
+                         JOYSTICK_MAX);
       // event.value = fmin(fmax((int)(amplitude * (event.value+sign_tweak) + offset), JOYSTICK_MIN), JOYSTICK_MAX);
       break;
     }

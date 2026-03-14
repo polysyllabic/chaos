@@ -2226,6 +2226,69 @@ amplitude = -1
   return ok;
 }
 
+static bool testScalingModifierUsesWhileAmplitudeWhenConditionTrue() {
+  MockEngine engine;
+  auto mod = makeMod<ScalingModifier>(
+      R"(
+name = "Scoped Camera"
+type = "scaling"
+applies_to = [ "CAMERA_X" ]
+amplitude = 1.0
+while = [ "aiming" ]
+while_amplitude = 0.5
+)",
+      engine);
+
+  bool ok = true;
+  auto camera_x = commandInput(engine, "CAMERA_X");
+  auto aim = commandInput(engine, "AIM");
+  ok &= check(camera_x != nullptr && aim != nullptr,
+              "conditional scaling test inputs should exist");
+  if (!camera_x || !aim) {
+    return false;
+  }
+
+  DeviceEvent hip_fire = commandEvent(engine, "CAMERA_X", 60);
+  ok &= check(mod->tweak(hip_fire), "conditional scaling should accept default event");
+  ok &= check(hip_fire.value == 60,
+              "default amplitude should apply when while condition is false");
+
+  engine.applyEvent(commandEvent(engine, "AIM", 1));
+  DeviceEvent aimed = commandEvent(engine, "CAMERA_X", 60);
+  ok &= check(mod->tweak(aimed), "conditional scaling should accept aimed event");
+  ok &= check(aimed.value == 30,
+              "while_amplitude should apply when while condition is true");
+
+  return ok;
+}
+
+static bool testScalingModifierIgnoresWhileAmplitudeWithoutWhileCondition() {
+  MockEngine engine;
+  auto mod = makeMod<ScalingModifier>(
+      R"(
+name = "Unconditional Camera"
+type = "scaling"
+applies_to = [ "CAMERA_X" ]
+amplitude = 1.0
+while_amplitude = 0.5
+)",
+      engine);
+
+  bool ok = true;
+  auto camera_x = commandInput(engine, "CAMERA_X");
+  ok &= check(camera_x != nullptr, "unconditional scaling test input should exist");
+  if (!camera_x) {
+    return false;
+  }
+
+  DeviceEvent event = commandEvent(engine, "CAMERA_X", 60);
+  ok &= check(mod->tweak(event), "scaling without while should accept event");
+  ok &= check(event.value == 60,
+              "while_amplitude should not apply without a while condition");
+
+  return ok;
+}
+
 static bool testRepeatModifierForcesAndBlocksWhileOn() {
   MockEngine engine;
   auto mod = makeMod<RepeatModifier>(
@@ -3125,6 +3188,8 @@ int main() {
   ok &= testScalingModifierScalesAndClamps();
   ok &= testScalingModifierSupportsNegativeAmplitudeAndOffset();
   ok &= testScalingModifierInvertsVerticalCameraAxis();
+  ok &= testScalingModifierUsesWhileAmplitudeWhenConditionTrue();
+  ok &= testScalingModifierIgnoresWhileAmplitudeWithoutWhileCondition();
   ok &= testRepeatModifierForcesAndBlocksWhileOn();
   ok &= testRepeatModifierDefaultCycleAndRepeatReset();
   ok &= testRepeatModifierSupportsMultipleForceOnValues();
