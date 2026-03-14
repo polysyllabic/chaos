@@ -806,18 +806,27 @@ modifier type:
 - `block_while_busy`: List of commands to block while the sequence is on.
 
 ### Scaling Modifiers
-Scaling modifiers tranform the incoming signal through a linear formula. If the value of the
-incoming signal is `x`, the result will be mx + b, wheree m is an amplitude and b is an offset.
-The output is also clipped to the min/max values of the signal.
+Scaling modifiers transform the incoming signal through a linear formula. If the value of the
+incoming signal is `x`, the result will normally be `mx + b`, where `m` is an amplitude and `b`
+is an offset. The output is clipped to the min/max values of the signal.
 
-In addition to the keys defined for all modules, the following keys are available for this
+Scaling modifiers also support the general `while` and `while_operation` keys. If a `while`
+condition is defined and currently evaluates true, the modifier uses `while_amplitude` in place
+of `amplitude`. If the condition is false, or if no `while` condition is defined, the ordinary
+`amplitude` value is used. The `offset` is applied in either case.
+
+In addition to the keys defined for all modifiers, the following keys are available for this
 modifier type:
 
 - `applies_to`: A vector of commands affected by the mod. (_Required_)
 
-- `amplitude`: Amount to multiply the incoming signal by (_Optional, default = 1_)
+- `amplitude`: Amount to multiply the incoming signal by when no `while` condition is defined or
+  when the `while` condition evaluates false. (_Optional, default = 1_)
 
-- `offset`: Amount to add to the incoming signal (_Optional, default = 0_)
+- `while_amplitude`: Amount to multiply the incoming signal by when the `while` condition
+  evaluates true. If omitted, the ordinary `amplitude` value is used. (_Optional_)
+
+- `offset`: Amount to add to the incoming signal after scaling. (_Optional, default = 0_)
 
 _Examples:_
 
@@ -837,6 +846,16 @@ type = "scaling"
 groups = [ "movement", "view" ]
 applies_to = [ "horizontal movement", "vertical movement", "horizontal camera", "vertical camera"  ]
 amplitude = 5.0
+
+[[modifier]]
+name = "Aim Adjust"
+description = "Reduce look sensitivity while aiming."
+type = "scaling"
+applies_to = [ "horizontal camera", "vertical camera" ]
+amplitude = 1.0
+while = [ "aiming" ]
+while_amplitude = 0.33
+unlisted = true
 ```
 
 ### Sequence Modifiers
