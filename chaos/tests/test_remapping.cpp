@@ -591,13 +591,65 @@ static bool testDualshockTouchpadReleaseWhenTouchCountDropsToZero() {
   state->getDeviceEvents(inactive_report.data(), static_cast<int>(inactive_report.size()), inactive_events);
 
   bool saw_stop = false;
+  bool saw_x_reset = false;
+  bool saw_y_reset = false;
   for (const auto& event : inactive_events) {
     if (event.type == TYPE_BUTTON && event.id == BUTTON_TOUCHPAD_ACTIVE && event.value == 0) {
       saw_stop = true;
-      break;
+    } else if (event.type == TYPE_AXIS && event.id == AXIS_TOUCHPAD_X && event.value == 0) {
+      saw_x_reset = true;
+    } else if (event.type == TYPE_AXIS && event.id == AXIS_TOUCHPAD_Y && event.value == 0) {
+      saw_y_reset = true;
     }
   }
   ok &= check(saw_stop, "touch count dropping to zero should emit TOUCHPAD_ACTIVE release");
+  ok &= check(saw_x_reset, "touch count dropping to zero should reset TOUCHPAD_X");
+  ok &= check(saw_y_reset, "touch count dropping to zero should reset TOUCHPAD_Y");
+  return ok;
+}
+
+static bool testRemapBeginResetsTouchpadState() {
+  MockEngine engine;
+  auto mod = makeRemap(
+      R"(
+name = "Touchpad Reset Test"
+type = "remap"
+remap = [
+  { from = "TOUCHPAD_ACTIVE", to = "NOTHING" },
+  { from = "TOUCHPAD_X", to = "RX" }
+]
+)",
+      engine);
+
+  Touchpad::setVelocity(false);
+  Touchpad::setScale(1.0, 1.0);
+  Touchpad::setSkew(0);
+
+  auto touchpad_active = engine.getInput("TOUCHPAD_ACTIVE");
+  auto touchpad_x = engine.getInput("TOUCHPAD_X");
+
+  bool ok = true;
+  ok &= check(touchpad_active != nullptr, "TOUCHPAD_ACTIVE input should exist for reset test");
+  ok &= check(touchpad_x != nullptr, "TOUCHPAD_X input should exist for reset test");
+  if (!touchpad_active || !touchpad_x) {
+    return false;
+  }
+
+  mod->begin();
+  DeviceEvent start = {0, 1, touchpad_active->getButtonType(), touchpad_active->getID()};
+  ok &= check(mod->remap(start), "initial touchpad start should be accepted");
+
+  DeviceEvent first_axis = {0, 900, touchpad_x->getButtonType(), touchpad_x->getID()};
+  ok &= check(mod->remap(first_axis), "initial touchpad axis should be accepted");
+
+  mod->begin();
+  DeviceEvent restart = {0, 1, touchpad_active->getButtonType(), touchpad_active->getID()};
+  ok &= check(mod->remap(restart), "touchpad start after begin reset should be accepted");
+
+  DeviceEvent reset_axis = {0, 1000, touchpad_x->getButtonType(), touchpad_x->getID()};
+  ok &= check(mod->remap(reset_axis), "touchpad axis after begin reset should be accepted");
+  ok &= check(reset_axis.value == 0,
+              "begin should reset touchpad origin so the first post-begin sample is neutral");
   return ok;
 }
 
@@ -738,6 +790,7 @@ int main() {
   ok &= testTouchpadVelocityConversionUsesElapsedTime();
   ok &= testTouchpadDistanceConversionClampsToJoystickLimits();
   ok &= testDualshockTouchpadReleaseWhenTouchCountDropsToZero();
+  ok &= testRemapBeginResetsTouchpadState();
   ok &= testRandomRemapProducesPermutation();
   ok &= testTouchpadInactiveDelayInjection();
   ok &= testTouchpadInactiveDelayParsing();

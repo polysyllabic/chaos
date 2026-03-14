@@ -25,8 +25,8 @@ using namespace Chaos;
 
 Dualshock::Dualshock() {
   stateLength = sizeof(inputReport);
-  trueState = (void*) new inputReport;
-  hackedState = (void*) new inputReport;
+  trueState = (void*) new inputReport();
+  hackedState = (void*) new inputReport();
 
   touchCounterCurrent = 0;
   touchCounterSaved[0] = 0;
@@ -235,6 +235,10 @@ void Dualshock::getDeviceEvents(unsigned char* buffer, int length, std::vector<D
     short active_event = current_touchpad_active ? 1 : 0;
     events.push_back({0, active_event, TYPE_BUTTON, BUTTON_TOUCHPAD_ACTIVE});
     noteTouchpadActiveEvent(active_event);
+    if (!current_touchpad_active) {
+      events.push_back({0, 0, TYPE_AXIS, AXIS_TOUCHPAD_X});
+      events.push_back({0, 0, TYPE_AXIS, AXIS_TOUCHPAD_Y});
+    }
   }
 
   // Only synthesize inactive events when touch is not currently active.

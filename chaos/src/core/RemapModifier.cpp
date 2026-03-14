@@ -164,6 +164,8 @@ std::shared_ptr<ControllerInput> RemapModifier::lookupInput(const toml::table& c
 
 void RemapModifier::begin() {
   DeviceEvent event{};
+  touchpad.firstTouch();
+  touchpad.setActive(false);
   if (random) {
     // Generate a new remapping
     Random rng;
