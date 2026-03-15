@@ -36,5 +36,5 @@ target_include_directories(chaos_controller
 target_link_libraries(chaos_controller 
     chaos_utils
     chaos_usb_transport
-    ${LIBUSB_LIBRARIES}
+    ${LIBUSB1_LIBRARIES}
 )

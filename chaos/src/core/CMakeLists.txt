@@ -37,5 +37,5 @@ target_link_libraries(chaos_core
   PUBLIC
     chaos_utils
     chaos_controller
-    ${LIBUSB_LIBRARIES}
+    ${LIBUSB1_LIBRARIES}
 )

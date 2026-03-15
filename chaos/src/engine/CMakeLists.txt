@@ -22,5 +22,5 @@ target_link_libraries(chaos_engine
     chaos_communicator
     chaos_utils
     chaos_controller
-    ${LIBUSB_LIBRARIES}
+    ${LIBUSB1_LIBRARIES}
 )

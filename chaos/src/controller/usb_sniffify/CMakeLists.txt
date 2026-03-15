@@ -17,6 +17,6 @@ target_include_directories(chaos_usb_transport
 
 target_link_libraries(chaos_usb_transport
   PUBLIC
-    ${LIBUSB_LIBRARIES}
+    ${LIBUSB1_LIBRARIES}
     Threads::Threads
 )

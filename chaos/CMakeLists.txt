@@ -177,7 +177,7 @@ target_link_libraries(gamepad_test
   PUBLIC
     chaos_utils
     chaos_controller
-    ${LIBUSB_LIBRARIES}
+    ${LIBUSB1_LIBRARIES}
 )
 
 install(TARGETS chaos RUNTIME DESTINATION "${CHAOS_INSTALL_ROOT}")
