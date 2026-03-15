@@ -1,5 +1,5 @@
 # Installing and Updating Twitch Controls Chaos
-The TCC engine has only been confirmed to run on a Raspberry Pi 4 with 32-bit Raspberry Pi OS.
+The TCC engine requires a Raspberry Pi 4 or 5 running a 32-bit kernel.
 Other setups may work, but the device will need the appropriate hardware.
 
 ## Configuring the Pi
@@ -16,11 +16,11 @@ changed.
 
 - Connect your SD card to your computer using an SD card reader.
 - Choose the model of your Pi
-- Choose your OS version. TCC should now work with either 64- or 32-bit kernels, unlike the OG
-  TCC, which required a 32-bit kernel. Unless you also plan to use the Pi as a desktop, it is
-  recommended that you select a "Lite" OS, which skips installing the desktop environment. The
-  desktop adds overhead and installation time, and you won't use it for TCC operation. The Lite
-  versions are found under Raspberry Pi OS (other).
+- Choose your OS version. Select `Raspberry Pi OS (other) -> Raspberry Pi OS Lite (32-bit)`.
+  Unless you also plan to use the Pi as a desktop, the Lite image is recommended because it skips
+  the desktop environment, which you do not need for TCC operation. Recent 32-bit Raspberry Pi OS
+  images may still boot a 64-bit kernel by default on the first boot; if that happens, the
+  installer will switch back to a 32-bit kernel and ask you to reboot once before continuing.
 - Select your storage device. This should appear as something like "Mass Storage Device USB Device"
 - Choose a hostname, e.g., `raspberrypi`.
 - Set localization for your region.
@@ -100,9 +100,10 @@ value and change the setting in the chaosconfig.toml file later.
 You will also be asked if you want to develop TCC on this device. Answering yes will install
 additional packages to help developers (including doxygen), but unless you're planning to
 do development work, this just increases the time it takes to install everything.
-Depending on the version of the OS that you have, a reboot may be required halfway through
-the installation process. You will be prompted to re-run the install script after you have
-rebooted. The installation will resume where it left off.
+Recent Raspberry Pi OS images may require a reboot halfway through the installation process so the
+Pi can switch back to the 32-bit kernel that raw-gadget currently requires. You will be prompted
+to re-run the install script after you have rebooted. The installation will resume where it left
+off.
 
 At the end of the installation, you will have to reboot one more time. If you choose not to
 reboot when prompted, enter the following command when you are ready to reboot.

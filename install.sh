@@ -113,14 +113,35 @@ first_available_package() {
   return 1
 }
 
+running_kernel_is_64_bit() {
+  case "$(uname -m)" in
+    aarch64|arm64)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+boot_has_32bit_kernel_image() {
+  local config_path="$1"
+  local kernel_image
+
+  for kernel_image in kernel7l.img kernel7.img kernel.img; do
+    if [ -f "${config_path}/${kernel_image}" ]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 recommended_kernel_headers_package() {
   local kernel_release
 
   kernel_release="$(uname -r)"
   case "${kernel_release}" in
-    *2712*|*v8*)
-      first_available_package linux-headers-rpi-v8 || printf '%s\n' linux-headers-rpi-v8
-      ;;
     *v7l*)
       first_available_package linux-headers-rpi-v7l linux-headers-rpi-v7 || printf '%s\n' linux-headers-rpi-v7l
       ;;
@@ -132,9 +153,6 @@ recommended_kernel_headers_package() {
       ;;
     *)
       case "$(uname -m)" in
-        aarch64|arm64)
-          first_available_package linux-headers-rpi-v8 || printf '%s\n' linux-headers-rpi-v8
-          ;;
         armv7l)
           first_available_package linux-headers-rpi-v7l linux-headers-rpi-v7 || printf '%s\n' linux-headers-rpi-v7l
           ;;
@@ -219,6 +237,32 @@ configure_as_gadget() {
   fi
   config_file="${config_path}/config.txt"
 
+  # TCC currently requires a 32-bit kernel. Recent Raspberry Pi OS images may
+  # still boot a 64-bit kernel by default even when the user selected a
+  # "32-bit" image, so switch that first and resume after reboot.
+  if running_kernel_is_64_bit; then
+    if ! boot_has_32bit_kernel_image "${config_path}"; then
+      echo "ERROR: TCC currently requires a 32-bit kernel, but no 32-bit"
+      echo "kernel image was found in ${config_path}."
+      echo "This Raspberry Pi OS image is not currently supported."
+      echo "Please use a Raspberry Pi OS image that can boot a 32-bit kernel,"
+      echo "then rerun"
+      echo "'./install.sh'"
+      exit 1
+    fi
+
+    sudo sed -Ei \
+      -e 's|^[[:space:]]*arm_64bit[[:space:]]*=.*$|arm_64bit=0|' \
+      "${config_file}"
+    if ! sudo grep -Eq '^[[:space:]]*arm_64bit[[:space:]]*=[[:space:]]*0([[:space:]]*#.*)?$' "${config_file}"; then
+      echo 'arm_64bit=0' | sudo tee -a "${config_file}" >/dev/null
+    fi
+
+    echo "Before continuing, TCC must reboot into a 32-bit kernel."
+    echo "After rebooting, please rerun './install.sh'"
+    confirm_reboot
+  fi
+
   # Replace XHCI USB controller with DWC2 peripheral mode. Recent Raspberry Pi OS
   # images may ship CM4/CM5 defaults that explicitly force host mode.
   sudo sed -Ei \
@@ -229,16 +273,13 @@ configure_as_gadget() {
     echo "${gadget_overlay}" | sudo tee -a "${config_file}" >/dev/null
   fi
 
-  # Recent 64-bit Raspberry Pi OS images use linux-headers-rpi-v8 instead of the
-  # old raspberrypi-kernel-headers package. Try the matching headers package
-  # first; if that still does not provide /lib/modules/.../build, fall back to a
-  # 32-bit kernel that is known to work with the raw-gadget module build.
+  # raw-gadget currently requires a 32-bit Raspberry Pi kernel build tree.
   ensure_kernel_headers_available
   if [ ! -d "/lib/modules/$(uname -r)/build" ]; then
-    sudo -s eval "grep -qxF 'arm_64bit=0' '${config_file}' || echo 'arm_64bit=0' >> '${config_file}'"
-    echo "Before continuing, we must switch to a 32-bit kernel. This"
-    echo "requires a reboot. After rebooting, please rerun './install.sh'"
-    confirm_reboot
+    echo "ERROR: Kernel headers for $(uname -r) are still unavailable."
+    echo "Please install matching 32-bit Raspberry Pi kernel headers, then"
+    echo "rerun './install.sh'"
+    exit 1
   fi
 }
 

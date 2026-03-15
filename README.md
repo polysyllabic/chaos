@@ -16,7 +16,7 @@ was inspired by watching Twitch user [DarkViperAU](https://www.twitch.tv/DarkVip
 
 Unlike the ChaosModV version, this implementation directly intercepts controller inputs, so it does
 not rely on integration with game mods. It can therefore run with non-modded console games. It does,
-however, require hardware capable of acting as a USB host and device, such as a Raspberry Pi 4.
+however, require hardware capable of acting as a USB host and device, such as a Raspberry Pi 4 or 5.
 
 Blegas78's original version was hard-coded for *The Last Of Us Part 2*. That game is well suited
 for controller-based Chaos because of the many accessibility options, gameplay modifiers, and render
@@ -99,9 +99,9 @@ events that the chatbot cannot track, such as reaching some custom channel goal.
 
 ## Limitations
 
-TCC requires specific hardware to run, including a Raspberry Pi 4 or 5 and a DualShock controller
-(the controller for the PlayStation 4), which may constitute a significant expense. To play
-PS5-only games on the PlayStation, you will need even more hardware.
+TCC requires specific hardware to run, including a Raspberry Pi 4 or 5 running a 32-bit kernel and
+a DualShock controller (the controller for the PlayStation 4), which may constitute a significant
+expense. To play PS5-only games on the PlayStation, you will need even more hardware.
 
 Chaos only sees the incoming pattern of controller signals. It has no idea what is actually
 happening in the game. During cutscenes, death animations, or other places where the ordinary
@@ -408,13 +408,13 @@ some point, after the Pi version is stable, but it's not a priority for me.
 
 *Do I have to use a Raspberry Pi 4?*
 
-Currently the Raspberry Pi 4 is the only device tested. Some other Raspberry Pi models *may* work
-(see below), but a regular computer running Linux will not.
+The Raspberry Pi 4 and 5 should work. Other Raspberry Pi models *may* work (see below), but a
+regular computer running Linux will not.
 
 The communication to the PlayStation requires the Pi to act as a USB client instead of a USB host.
-That requires special hardware peripherals which the Pi 4 has on its USB-C power port. Many older
-Pi models--and most, if not all, ordinary PCs--lack this hardware and so cannot run the chaos
-engine.
+That requires special hardware peripherals which the Pi 4 and 5 have on their USB-C power port.
+Many older Pi models--and most, if not all, ordinary PCs--lack this hardware and so cannot run the
+chaos engine.
 
 There are other Pi variants that could work, but they are untested. The Raspberry Pi 0W has the
 right hardware and is much less expensive than the Pi 4, but this has only one USB device to act as
