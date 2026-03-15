@@ -16,8 +16,8 @@ changed.
 
 - Connect your SD card to your computer using an SD card reader.
 - Choose the model of your Pi
-- Choose your OS version. TCC should now work with either 64- or 32-bit kernels, unlike the OG
-  TCC, which required a 32-bit kernel. Unless you also plan to use the Pi as a desktop, it is
+- Choose your OS version. Currently, TCC is confirmed to work with 32-bit kernels only. Work
+  on 64-bit support is in progress. Unless you also plan to use the Pi as a desktop, it is
   recommended that you select a "Lite" OS, which skips installing the desktop environment. The
   desktop adds overhead and installation time, and you won't use it for TCC operation. The Lite
   versions are found under Raspberry Pi OS (other).
