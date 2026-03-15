@@ -57,3 +57,4 @@ chaos/doc/Doxyfile
 chaosface/venv/*
 chaosface/database.sqlite
 chaos/doc/Doxyfile.bak
+chaosconfig.toml
