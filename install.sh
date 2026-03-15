@@ -141,10 +141,27 @@ device_only_supports_64bit_kernel() {
   esac
 }
 
+expected_32bit_kernel_image_name() {
+  case "$(current_device_model)" in
+    *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
+      printf '%s\n' kernel7l.img
+      ;;
+    *Raspberry\ Pi\ 3*|*Raspberry\ Pi\ 2*|*Zero\ 2\ W*|*Compute\ Module\ 3*)
+      printf '%s\n' kernel7.img
+      ;;
+    *Raspberry\ Pi\ Zero*|*Raspberry\ Pi\ 1*|*Compute\ Module\ 1*)
+      printf '%s\n' kernel.img
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 recommended_32bit_kernel_image_package() {
   case "$(current_device_model)" in
     *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
-      first_available_package linux-image-rpi-v7 linux-image-rpi-v7l || printf '%s\n' linux-image-rpi-v7
+      first_available_package linux-image-rpi-v7l
       ;;
     *Raspberry\ Pi\ 3*|*Raspberry\ Pi\ 2*|*Zero\ 2\ W*|*Compute\ Module\ 3*)
       first_available_package linux-image-rpi-v7 linux-image-rpi-v7l || printf '%s\n' linux-image-rpi-v7
@@ -161,7 +178,7 @@ recommended_32bit_kernel_image_package() {
 recommended_32bit_kernel_headers_package() {
   case "$(current_device_model)" in
     *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
-      first_available_package linux-headers-rpi-v7 linux-headers-rpi-v7l || printf '%s\n' linux-headers-rpi-v7
+      first_available_package linux-headers-rpi-v7l
       ;;
     *Raspberry\ Pi\ 3*|*Raspberry\ Pi\ 2*|*Zero\ 2\ W*|*Compute\ Module\ 3*)
       first_available_package linux-headers-rpi-v7 linux-headers-rpi-v7l || printf '%s\n' linux-headers-rpi-v7
@@ -176,23 +193,54 @@ recommended_32bit_kernel_headers_package() {
 }
 
 ensure_32bit_kernel_available_for_reboot() {
+  local config_path="$1"
+  local expected_image
   local image_pkg
   local headers_pkg
 
-  if ! image_pkg="$(recommended_32bit_kernel_image_package)"; then
-    echo "ERROR: Could not determine which 32-bit Raspberry Pi kernel image"
-    echo "package is required for $(current_device_model)."
-    return 1
-  fi
-  if ! headers_pkg="$(recommended_32bit_kernel_headers_package)"; then
-    echo "ERROR: Could not determine which 32-bit Raspberry Pi kernel headers"
-    echo "package is required for $(current_device_model)."
+  if ! expected_image="$(expected_32bit_kernel_image_name)"; then
+    echo "ERROR: Could not determine which 32-bit kernel image is required"
+    echo "for $(current_device_model)."
     return 1
   fi
 
-  echo "Installing 32-bit kernel packages needed for reboot: ${image_pkg} ${headers_pkg}"
-  sudo apt-get update
-  sudo apt-get install -y "${image_pkg}" "${headers_pkg}"
+  if [ -f "${config_path}/${expected_image}" ]; then
+    return 0
+  fi
+
+  image_pkg=""
+  headers_pkg=""
+  if image_pkg="$(recommended_32bit_kernel_image_package)"; then
+    if headers_pkg="$(recommended_32bit_kernel_headers_package)"; then
+      echo "Installing 32-bit kernel packages needed for reboot: ${image_pkg} ${headers_pkg}"
+      sudo apt-get update
+      sudo apt-get install -y "${image_pkg}" "${headers_pkg}"
+    else
+      echo "Installing 32-bit kernel package needed for reboot: ${image_pkg}"
+      sudo apt-get update
+      sudo apt-get install -y "${image_pkg}"
+    fi
+  fi
+
+  if [ -f "${config_path}/${expected_image}" ]; then
+    return 0
+  fi
+
+  echo "ERROR: TCC requires the 32-bit kernel image ${expected_image}, but it"
+  echo "is not present in ${config_path}."
+  case "$(current_device_model)" in
+    *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
+      echo "Current Raspberry Pi OS Trixie images for Pi 4-class devices do not"
+      echo "ship the packaged 32-bit Pi 4 kernel (${expected_image})."
+      echo "Please use Raspberry Pi OS Bookworm 32-bit, or install a custom"
+      echo "${expected_image} before rerunning './install.sh'"
+      ;;
+    *)
+      echo "Please install a matching 32-bit Raspberry Pi kernel image before"
+      echo "rerunning './install.sh'"
+      ;;
+  esac
+  return 1
 }
 
 recommended_kernel_headers_package() {
@@ -319,7 +367,7 @@ configure_as_gadget() {
       exit 1
     fi
 
-    if ! ensure_32bit_kernel_available_for_reboot; then
+    if ! ensure_32bit_kernel_available_for_reboot "${config_path}"; then
       exit 1
     fi
 

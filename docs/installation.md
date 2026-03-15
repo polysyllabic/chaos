@@ -18,10 +18,11 @@ changed.
 - Choose the model of your Pi
 - Choose your OS version. Select `Raspberry Pi OS (other) -> Raspberry Pi OS Lite (32-bit)`.
   Unless you also plan to use the Pi as a desktop, the Lite image is recommended because it skips
-  the desktop environment, which you do not need for TCC operation. Recent 32-bit Raspberry Pi OS
-  images on the Pi 4 may still boot a 64-bit kernel by default on the first boot; if that
-  happens, the installer will install the matching 32-bit kernel packages, switch back to a
-  32-bit kernel, and ask you to reboot once before continuing.
+  the desktop environment, which you do not need for TCC operation. On a Raspberry Pi 4,
+  Raspberry Pi OS Bookworm 32-bit is currently the safest choice. Recent Trixie 32-bit images on
+  the Pi 4 still boot a 64-bit kernel by default, and the official packages no longer ship the
+  32-bit Pi 4 kernel image (`kernel7l.img`) that TCC needs. If you use Trixie, you will need to
+  provide a custom 32-bit Pi 4 kernel before the installer can continue.
 - Select your storage device. This should appear as something like "Mass Storage Device USB Device"
 - Choose a hostname, e.g., `raspberrypi`.
 - Set localization for your region.
@@ -101,10 +102,11 @@ value and change the setting in the chaosconfig.toml file later.
 You will also be asked if you want to develop TCC on this device. Answering yes will install
 additional packages to help developers (including doxygen), but unless you're planning to
 do development work, this just increases the time it takes to install everything.
-Recent Raspberry Pi OS images may require a reboot halfway through the installation process so the
-Pi can switch back to the 32-bit kernel that raw-gadget currently requires. You will be prompted
-to re-run the install script after you have rebooted. The installation will resume where it left
-off.
+On Bookworm-based Pi 4 installs, a reboot may be required halfway through the installation process
+so the Pi can switch back to the 32-bit kernel that raw-gadget currently requires. You will be
+prompted to re-run the install script after you have rebooted. The installation will resume where
+it left off. On current Trixie Pi 4 images, the installer will stop earlier and tell you to use a
+Bookworm image or supply a custom `kernel7l.img` instead.
 
 At the end of the installation, you will have to reboot one more time. If you choose not to
 reboot when prompted, enter the following command when you are ready to reboot.

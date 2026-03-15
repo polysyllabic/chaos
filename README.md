@@ -411,7 +411,9 @@ some point, after the Pi version is stable, but it's not a priority for me.
 Currently the Raspberry Pi 4 is the only device tested. Some other Raspberry Pi models *may* work
 (see below), but a regular computer running Linux will not. Raspberry Pi 5-class devices are not a
 good fit right now because Raspberry Pi OS keeps them on a 64-bit kernel, while raw-gadget
-currently requires a 32-bit kernel.
+currently requires a 32-bit kernel. On a Pi 4, Raspberry Pi OS Bookworm 32-bit is currently the
+safe packaged path; current Trixie images no longer ship the Pi 4 32-bit kernel image
+(`kernel7l.img`) that TCC needs.
 
 The communication to the PlayStation requires the Pi to act as a USB client instead of a USB host.
 That requires special hardware peripherals which the Pi 4 has on its USB-C power port. Many older
