@@ -96,39 +96,95 @@ install_questions() {
   sed -i 's/^interface_addr *= *\"[^\"]+\"/interface_addr = \"'"${interface_addr}"'\"/' "${staged_chaos_config}"
 }
 
+package_is_installed() {
+  dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q "ok installed"
+}
+
+first_available_package() {
+  local package
+
+  for package in "$@"; do
+    if package_is_installed "${package}" || apt-cache show "${package}" >/dev/null 2>&1; then
+      printf '%s\n' "${package}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+recommended_kernel_headers_package() {
+  local kernel_release
+
+  kernel_release="$(uname -r)"
+  case "${kernel_release}" in
+    *2712*|*v8*)
+      first_available_package linux-headers-rpi-v8 || printf '%s\n' linux-headers-rpi-v8
+      ;;
+    *v7l*)
+      first_available_package linux-headers-rpi-v7l linux-headers-rpi-v7 || printf '%s\n' linux-headers-rpi-v7l
+      ;;
+    *v7*)
+      first_available_package linux-headers-rpi-v7 linux-headers-rpi-v7l || printf '%s\n' linux-headers-rpi-v7
+      ;;
+    *v6*)
+      first_available_package linux-headers-rpi-v6 || printf '%s\n' linux-headers-rpi-v6
+      ;;
+    *)
+      case "$(uname -m)" in
+        aarch64|arm64)
+          first_available_package linux-headers-rpi-v8 || printf '%s\n' linux-headers-rpi-v8
+          ;;
+        armv7l)
+          first_available_package linux-headers-rpi-v7l linux-headers-rpi-v7 || printf '%s\n' linux-headers-rpi-v7l
+          ;;
+        armv6l)
+          first_available_package linux-headers-rpi-v6 || printf '%s\n' linux-headers-rpi-v6
+          ;;
+        *)
+          return 1
+          ;;
+      esac
+      ;;
+  esac
+}
+
+ensure_kernel_headers_available() {
+  local headers_pkg
+
+  if [ -d "/lib/modules/$(uname -r)/build" ]; then
+    return
+  fi
+
+  if ! headers_pkg="$(recommended_kernel_headers_package)"; then
+    echo "WARNING: Could not determine a Raspberry Pi kernel headers package for $(uname -r)"
+    return
+  fi
+
+  echo "Kernel headers for $(uname -r) are missing; trying ${headers_pkg}"
+  sudo apt-get update
+  if ! sudo apt-get install -y "${headers_pkg}"; then
+    echo "WARNING: Failed to install ${headers_pkg}; will fall back if headers remain unavailable."
+  fi
+}
+
 build_dependencies() {
   local -a dependencies=(
     build-essential
-    libncurses5-dev
-    libusb-1.0-0-dev
-    libjsoncpp-dev
     cmake
     git
+    libusb-1.0-0-dev
     libzmq3-dev
-    raspberrypi-kernel-headers
-    python3-dev
-    python3-pip
-    python3-venv
-    libatlas-base-dev
   )
   local -a to_install=()
   local dependency
-  local openblas_pkg=""
-  local -a openblas_candidates=(
-    libopenblas0-pthread
-    libopenblas0
-    libopenblas-base
-  )
-  local candidate
 
-  for candidate in "${openblas_candidates[@]}"; do
-    if apt-cache show "${candidate}" >/dev/null 2>&1; then
-      openblas_pkg="${candidate}"
-      break
-    fi
-  done
-  if [ -n "${openblas_pkg}" ]; then
-    dependencies+=("${openblas_pkg}")
+  if (( remote_ui == 0 || is_developer != 0 )); then
+    dependencies+=(
+      python3-dev
+      python3-pip
+      python3-venv
+    )
   fi
 
   if (( is_developer != 0 )); then
@@ -137,7 +193,7 @@ build_dependencies() {
 
   for dependency in "${dependencies[@]}"; do
     echo "Checking for ${dependency}"
-    if ! dpkg-query -W -f='${Status}' "${dependency}" 2>/dev/null | grep -q "ok installed"; then
+    if ! package_is_installed "${dependency}"; then
       echo "Not installed: ${dependency}"
       to_install+=("${dependency}")
     fi
@@ -152,6 +208,8 @@ build_dependencies() {
 
 configure_as_gadget() {
   local config_path
+  local config_file
+  local gadget_overlay='dtoverlay=dwc2,dr_mode=peripheral'
 
   # Starting with bookworm, the config.txt file is found in /boot/firmware/.
   if [ -f /boot/firmware/config.txt ]; then
@@ -159,14 +217,25 @@ configure_as_gadget() {
   else
     config_path='/boot'
   fi
+  config_file="${config_path}/config.txt"
 
-  # Replace XHCI USB controller with DWC2. This lets us run the Raspberry Pi as a gadget.
-  sudo sed -i 's/^otg_mode=1/#&/' "${config_path}/config.txt"
-  sudo -s eval "grep -qxF 'dtoverlay=dwc2' '${config_path}/config.txt' || echo 'dtoverlay=dwc2' >> '${config_path}/config.txt'"
+  # Replace XHCI USB controller with DWC2 peripheral mode. Recent Raspberry Pi OS
+  # images may ship CM4/CM5 defaults that explicitly force host mode.
+  sudo sed -Ei \
+    -e '/^[[:space:]]*otg_mode[[:space:]]*=[[:space:]]*1([[:space:]]*#.*)?$/ s/^/#/' \
+    -e "s|^([[:space:]]*)dtoverlay[[:space:]]*=[[:space:]]*dwc2(,dr_mode=[^[:space:]#]+)?([[:space:]]*(#.*)?)$|\\1${gadget_overlay}\\3|" \
+    "${config_file}"
+  if ! sudo grep -Eq '^[[:space:]]*dtoverlay[[:space:]]*=[[:space:]]*dwc2,dr_mode=peripheral([[:space:]]*#.*)?$' "${config_file}"; then
+    echo "${gadget_overlay}" | sudo tee -a "${config_file}" >/dev/null
+  fi
 
-  # The 64-bit kernel may not provide headers needed for raw-gadget module build on Pi.
+  # Recent 64-bit Raspberry Pi OS images use linux-headers-rpi-v8 instead of the
+  # old raspberrypi-kernel-headers package. Try the matching headers package
+  # first; if that still does not provide /lib/modules/.../build, fall back to a
+  # 32-bit kernel that is known to work with the raw-gadget module build.
+  ensure_kernel_headers_available
   if [ ! -d "/lib/modules/$(uname -r)/build" ]; then
-    sudo -s eval "grep -qxF 'arm_64bit=0' '${config_path}/config.txt' || echo 'arm_64bit=0' >> '${config_path}/config.txt'"
+    sudo -s eval "grep -qxF 'arm_64bit=0' '${config_file}' || echo 'arm_64bit=0' >> '${config_file}'"
     echo "Before continuing, we must switch to a 32-bit kernel. This"
     echo "requires a reboot. After rebooting, please rerun './install.sh'"
     confirm_reboot

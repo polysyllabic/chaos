@@ -8,35 +8,34 @@ the following steps.
 
 1. Install the OS onto your SD card.
 
-You do this by flash Raspbian OS Lite (32-Bit) to your SD card. 
-
 Download the [Raspberry Pi Imager](https://www.raspberrypi.org/software/) to your PC to help
-with this process.
+with this process. Note: over time, the imager software has undergone multiple changes to
+how it guides you through the setup process. The instructions here were current as of March
+2026, but if you're following this guide substantially after that, some details may have
+changed.
 
-- Connect your SD card to your computer using an SD card reader
-- Select the SD card in the Raspberry Pi Imager
-- Under "Choose OS" select Raspberry Pi OS (other) -> Raspberry Pi OS Lite (32-bit). This is the
-  version without a desktop environment (which you don't need).
-- In advanced options:
-
-    - Set image customization options to "to always use":
-    - Check "Set hostname" and accept raspberrypi.local. (If you need this to be something else,
-      it's OK to change this. Just substitute the hostname you choose for 'raspberrypi.local'
-      wherever that occurs in the instructions.)
-    - Check Set username and password. The original version of Chaos was hard-coded to assume the
-      username was pi. Chaos unbound removes this restriction, but these instructions use the
-      default username as an example.
-    - If you want to be able to access your Pi without plugging in a keyboard and monitor, check
-      "Enable SSH" and choose your method of authentication. If you don't know how to set up
-      public-key authentication, you can stick with a password, but for security you should
-      change the password from the default. If you need more help setting up SSH,
-      [follow the instructions here](https://www.raspberrypi.com/documentation/computers/remote-access.html#setting-up-an-ssh-server).
-      Note that the SSH shell is not required for ordinary operation of Chaos. Both the engine and
-      the chatbot start automaticlly when the power is applied.
-    - If you cannot plug your Pi into your network with an ethernet cable, enable WAN. Note:
-      this may have a performance impact. Ethernet cable is recommended whenever possible.
-
-- Click on the "Write" button.  If writing fails, simply try it again.
+- Connect your SD card to your computer using an SD card reader.
+- Choose the model of your Pi
+- Choose your OS version. TCC should now work with either 64- or 32-bit kernels, unlike the OG
+  TCC, which required a 32-bit kernel. Unless you also plan to use the Pi as a desktop, it is
+  recommended that you select a "Lite" OS, which skips installing the desktop environment. The
+  desktop adds overhead and installation time, and you won't use it for TCC operation. The Lite
+  versions are found under Raspberry Pi OS (other).
+- Select your storage device. This should appear as something like "Mass Storage Device USB Device"
+- Choose a hostname, e.g., `raspberrypi`.
+- Set localization for your region.
+- Choose a username and password. The default username is `pi` and password is `raspberry`, but
+  it's recommended that you change at least the password.
+- If you only plan to connect to the Pi with an ethernet cable, you can skip Wi-Fi setup.
+  Otherwise, enter your SSID (the network name your router broadcasts) and password here.
+- If you want to be able to access your Pi without plugging in a keyboard and monitor, check
+  "Enable SSH" and choose your method of authentication. If you don't know how to set up
+  public-key authentication, you can stick with a password, but make sure you've changed the
+  password from the default. Note that you don't need the SSH shell (or keyboard/monitor) for
+  ordinary operation of Chaos. It's only necessary if you need to perform an upgrade or do
+  your own development.
+- If you want to enable Rapberry Pi Connect, you can, but it's unnecessary.
+- Click on the "Write" button to copy the OS, with the settings you have chosen, to the SD.
 
 2. Insert the SD card into your Pi. The slot for this is on the bottom side of the board.
 
@@ -44,13 +43,13 @@ with this process.
 setup process, or later if you need to update anything and have not set up an SSH shell. After the
 setup is complete, you can run Chaos without either a keyboard or monitor connected to the Pi.
 
-4. (*Highly recommended*) Connect the Raspberry Pi to your router with an ethernet cable. If you
-cannot use wired ethernet, or prefer not to, you will need to set up WiFi below.
+4. (*Recommended*) Connect the Raspberry Pi to your router with an ethernet cable. If you
+cannot use wired ethernet, or prefer not to, Wi-Fi must be set up.
 
-5. Apply power over the Pi's USB-C connector by plugging the cable into the PlayStation and turning
-it on. (You can use an external USB-C power supply as well, but it should supply at least 3A.)
-Note that at this stage, you only need to power the Pi. Connecting the controller can wait until
-you're ready to play a game with TCC.
+5. Apply power over the Pi's USB-C connector by plugging the cable into the PlayStation and
+turning the console on. (You can also use an external USB-C power supply, but it should supply
+at least 3A.) Note that at this stage, you only need to power the Pi. Connecting the controller
+can wait until you're ready to play a game with TCC.
 
 6. When your Pi boots, log in using the credentials you specified above. If you stuck with the
 system defaults, they will be the following:
@@ -67,7 +66,7 @@ as you type it.
 
 7. Update your OS and system tools and install the version-control system *git*, which is used to
 manage all the files you will need to run TCC. After you have logged in to the Pi for the first
-time, run the following command:
+time, run the following commands:
 
 ```bash
 sudo apt update && sudo apt upgrade -y
@@ -101,10 +100,9 @@ value and change the setting in the chaosconfig.toml file later.
 You will also be asked if you want to develop TCC on this device. Answering yes will install
 additional packages to help developers (including doxygen), but unless you're planning to
 do development work, this just increases the time it takes to install everything.
-
-If you have installed a recent version of the OS (buster or later), a reboot will be required
-halfway through the installation process. You will be prompted to re-run the install script
-after you have rebooted. The installation will resume where it left off.
+Depending on the version of the OS that you have, a reboot may be required halfway through
+the installation process. You will be prompted to re-run the install script after you have
+rebooted. The installation will resume where it left off.
 
 At the end of the installation, you will have to reboot one more time. If you choose not to
 reboot when prompted, enter the following command when you are ready to reboot.

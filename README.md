@@ -99,9 +99,9 @@ events that the chatbot cannot track, such as reaching some custom channel goal.
 
 ## Limitations
 
-TCC requires specific hardware to run, including a Raspberry Pi 4 and a DualShock controller (the
-controller for the PlayStation 4), which may constitute a significant expense. To play PS5-only
-games on the PlayStation, you will need even more hardware.
+TCC requires specific hardware to run, including a Raspberry Pi 4 or 5 and a DualShock controller
+(the controller for the PlayStation 4), which may constitute a significant expense. To play
+PS5-only games on the PlayStation, you will need even more hardware.
 
 Chaos only sees the incoming pattern of controller signals. It has no idea what is actually
 happening in the game. During cutscenes, death animations, or other places where the ordinary
@@ -173,12 +173,12 @@ Apart from a PlayStation (or PC if you're playing a PC game), you will need the 
 hardware (for all setups):
 
 - A DualShock 4 model CUH-ZCT2U controller 
-- A Raspberry Pi 4
-- A 32GB microSD card (This is your storage device for the Pi)
+- A Raspberry Pi 4 or 5
+- A microSD card 32GB or larger (This is your storage device for the Pi)
 - A USB card reader for microSD cards
-- A micro USB A to micro USB B cable (the cable type that comes with the PS 4 DualShock)
-- A USB C to USB A cable (the cable type that comes with the PS 5 DualSense)
-- (recommended) A cat 5 ethernet cable
+- A micro USB-A to micro USB cable (the cable type that comes with the PS 4 DualShock)
+- A USB-C to USB-A cable (the cable type that comes with the PS 5 DualSense)
+- (recommended) An ethernet cable (cat 5 or higher)
 - (optional) A case for the Raspberry Pi.
 
 To play PS5 games such as TLOU1 Remake or TLOU2 Remaster, which do not let you play with
@@ -190,7 +190,7 @@ controller without having the console reject your commands.
 - Besavior controller: This is a regular PS5 controller that has been customized with a backpack
   device that lets you chain another controller into it. This is an excellent controller in its
   own right, but you won't be using it as a controller in this configuraiton. It will just sit
-  on your desk between the Pi and the PS5.
+  on your desk between the Pi and the PS5. It is also expensive.
 
 - Besavior P5Mate Pro 1000Hz: This is essentially just an authenticator/translation device. It's
   plugged in the same way that the Besavior controller is, sitting between the Pi and the console.
@@ -243,9 +243,10 @@ will boot up. After the boot sequence and the Chaos engine is running, the syste
 or PC) should recognize the controller. If you've turned off bluetooth on the console, note that
 you will need to press the power button on the console itself.
 
-3. Open your Chaosface in browser. By default, this will be either `http://raspberrypi.local/`
-if TLS is not enabled, or `https://raspberrypi.local/` if TLS is enabled. If you've set a
-password, log in. You will then be directed to the streamer-interface page.
+3. Open your Chaosface in browser. Use the host name you chose when setting up the Pi. For example,
+if you used `raspberrypi`, then you should go to `http://raspberrypi/` if TLS is not enabled, or
+`https://raspberrypi/` if TLS is enabled. If you've set a password, log in. You will then be
+directed to the streamer-interface page.
 
 This interface provides you, the streamer, with information on the vote timer, the currently
 active modifiers, and also an indicator of the state of the TCC engine. It deliberately does not
