@@ -124,17 +124,78 @@ running_kernel_is_64_bit() {
   esac
 }
 
-boot_has_32bit_kernel_image() {
-  local config_path="$1"
-  local kernel_image
+current_device_model() {
+  if [ -r /proc/device-tree/model ]; then
+    tr -d '\0' </proc/device-tree/model
+  fi
+}
 
-  for kernel_image in kernel7l.img kernel7.img kernel.img; do
-    if [ -f "${config_path}/${kernel_image}" ]; then
+device_only_supports_64bit_kernel() {
+  case "$(current_device_model)" in
+    *Raspberry\ Pi\ 5*|*Raspberry\ Pi\ 500*|*Compute\ Module\ 5*)
       return 0
-    fi
-  done
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
 
-  return 1
+recommended_32bit_kernel_flavor() {
+  case "$(current_device_model)" in
+    *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
+      printf '%s\n' v7l
+      ;;
+    *Raspberry\ Pi\ 3*|*Raspberry\ Pi\ 2*|*Zero\ 2\ W*|*Compute\ Module\ 3*)
+      printf '%s\n' v7
+      ;;
+    *Raspberry\ Pi\ Zero*|*Raspberry\ Pi\ 1*|*Compute\ Module\ 1*)
+      printf '%s\n' v6
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+recommended_32bit_kernel_image_package() {
+  local flavor
+
+  if ! flavor="$(recommended_32bit_kernel_flavor)"; then
+    return 1
+  fi
+
+  first_available_package "linux-image-rpi-${flavor}" || printf 'linux-image-rpi-%s\n' "${flavor}"
+}
+
+recommended_32bit_kernel_headers_package() {
+  local flavor
+
+  if ! flavor="$(recommended_32bit_kernel_flavor)"; then
+    return 1
+  fi
+
+  first_available_package "linux-headers-rpi-${flavor}" || printf 'linux-headers-rpi-%s\n' "${flavor}"
+}
+
+ensure_32bit_kernel_available_for_reboot() {
+  local image_pkg
+  local headers_pkg
+
+  if ! image_pkg="$(recommended_32bit_kernel_image_package)"; then
+    echo "ERROR: Could not determine which 32-bit Raspberry Pi kernel image"
+    echo "package is required for $(current_device_model)."
+    return 1
+  fi
+  if ! headers_pkg="$(recommended_32bit_kernel_headers_package)"; then
+    echo "ERROR: Could not determine which 32-bit Raspberry Pi kernel headers"
+    echo "package is required for $(current_device_model)."
+    return 1
+  fi
+
+  echo "Installing 32-bit kernel packages needed for reboot: ${image_pkg} ${headers_pkg}"
+  sudo apt-get update
+  sudo apt-get install -y "${image_pkg}" "${headers_pkg}"
 }
 
 recommended_kernel_headers_package() {
@@ -241,13 +302,16 @@ configure_as_gadget() {
   # still boot a 64-bit kernel by default even when the user selected a
   # "32-bit" image, so switch that first and resume after reboot.
   if running_kernel_is_64_bit; then
-    if ! boot_has_32bit_kernel_image "${config_path}"; then
-      echo "ERROR: TCC currently requires a 32-bit kernel, but no 32-bit"
-      echo "kernel image was found in ${config_path}."
-      echo "This Raspberry Pi OS image is not currently supported."
-      echo "Please use a Raspberry Pi OS image that can boot a 32-bit kernel,"
-      echo "then rerun"
+    if device_only_supports_64bit_kernel; then
+      echo "ERROR: $(current_device_model) only supports a 64-bit kernel."
+      echo "raw-gadget currently requires a 32-bit kernel, so this device"
+      echo "is not supported yet."
+      echo "Please use a Raspberry Pi 4-class device for now, then rerun"
       echo "'./install.sh'"
+      exit 1
+    fi
+
+    if ! ensure_32bit_kernel_available_for_reboot; then
       exit 1
     fi
 

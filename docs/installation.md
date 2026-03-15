@@ -1,5 +1,5 @@
 # Installing and Updating Twitch Controls Chaos
-The TCC engine requires a Raspberry Pi 4 or 5 running a 32-bit kernel.
+The TCC engine has been confirmed on a Raspberry Pi 4 running a 32-bit kernel.
 Other setups may work, but the device will need the appropriate hardware.
 
 ## Configuring the Pi
@@ -19,8 +19,9 @@ changed.
 - Choose your OS version. Select `Raspberry Pi OS (other) -> Raspberry Pi OS Lite (32-bit)`.
   Unless you also plan to use the Pi as a desktop, the Lite image is recommended because it skips
   the desktop environment, which you do not need for TCC operation. Recent 32-bit Raspberry Pi OS
-  images may still boot a 64-bit kernel by default on the first boot; if that happens, the
-  installer will switch back to a 32-bit kernel and ask you to reboot once before continuing.
+  images on the Pi 4 may still boot a 64-bit kernel by default on the first boot; if that
+  happens, the installer will install the matching 32-bit kernel packages, switch back to a
+  32-bit kernel, and ask you to reboot once before continuing.
 - Select your storage device. This should appear as something like "Mass Storage Device USB Device"
 - Choose a hostname, e.g., `raspberrypi`.
 - Set localization for your region.
