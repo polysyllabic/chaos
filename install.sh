@@ -141,41 +141,38 @@ device_only_supports_64bit_kernel() {
   esac
 }
 
-recommended_32bit_kernel_flavor() {
+recommended_32bit_kernel_image_package() {
   case "$(current_device_model)" in
     *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
-      printf '%s\n' v7l
+      first_available_package linux-image-rpi-v7 linux-image-rpi-v7l || printf '%s\n' linux-image-rpi-v7
       ;;
     *Raspberry\ Pi\ 3*|*Raspberry\ Pi\ 2*|*Zero\ 2\ W*|*Compute\ Module\ 3*)
-      printf '%s\n' v7
+      first_available_package linux-image-rpi-v7 linux-image-rpi-v7l || printf '%s\n' linux-image-rpi-v7
       ;;
     *Raspberry\ Pi\ Zero*|*Raspberry\ Pi\ 1*|*Compute\ Module\ 1*)
-      printf '%s\n' v6
+      first_available_package linux-image-rpi-v6 || printf '%s\n' linux-image-rpi-v6
       ;;
     *)
-      return 1
+      first_available_package linux-image-rpi-v7 linux-image-rpi-v7l linux-image-rpi-v6
       ;;
   esac
 }
 
-recommended_32bit_kernel_image_package() {
-  local flavor
-
-  if ! flavor="$(recommended_32bit_kernel_flavor)"; then
-    return 1
-  fi
-
-  first_available_package "linux-image-rpi-${flavor}" || printf 'linux-image-rpi-%s\n' "${flavor}"
-}
-
 recommended_32bit_kernel_headers_package() {
-  local flavor
-
-  if ! flavor="$(recommended_32bit_kernel_flavor)"; then
-    return 1
-  fi
-
-  first_available_package "linux-headers-rpi-${flavor}" || printf 'linux-headers-rpi-%s\n' "${flavor}"
+  case "$(current_device_model)" in
+    *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
+      first_available_package linux-headers-rpi-v7 linux-headers-rpi-v7l || printf '%s\n' linux-headers-rpi-v7
+      ;;
+    *Raspberry\ Pi\ 3*|*Raspberry\ Pi\ 2*|*Zero\ 2\ W*|*Compute\ Module\ 3*)
+      first_available_package linux-headers-rpi-v7 linux-headers-rpi-v7l || printf '%s\n' linux-headers-rpi-v7
+      ;;
+    *Raspberry\ Pi\ Zero*|*Raspberry\ Pi\ 1*|*Compute\ Module\ 1*)
+      first_available_package linux-headers-rpi-v6 || printf '%s\n' linux-headers-rpi-v6
+      ;;
+    *)
+      first_available_package linux-headers-rpi-v7 linux-headers-rpi-v7l linux-headers-rpi-v6
+      ;;
+  esac
 }
 
 ensure_32bit_kernel_available_for_reboot() {
@@ -244,6 +241,17 @@ ensure_kernel_headers_available() {
   sudo apt-get update
   if ! sudo apt-get install -y "${headers_pkg}"; then
     echo "WARNING: Failed to install ${headers_pkg}; will fall back if headers remain unavailable."
+  fi
+}
+
+require_running_kernel_build_tree() {
+  ensure_kernel_headers_available
+  if [ ! -d "/lib/modules/$(uname -r)/build" ]; then
+    echo "ERROR: raw-gadget must be built against the headers for the running"
+    echo "kernel ($(uname -r)), but /lib/modules/$(uname -r)/build is missing."
+    echo "Please boot the intended 32-bit kernel, install its matching headers,"
+    echo "then rerun './install.sh'"
+    exit 1
   fi
 }
 
@@ -338,17 +346,12 @@ configure_as_gadget() {
   fi
 
   # raw-gadget currently requires a 32-bit Raspberry Pi kernel build tree.
-  ensure_kernel_headers_available
-  if [ ! -d "/lib/modules/$(uname -r)/build" ]; then
-    echo "ERROR: Kernel headers for $(uname -r) are still unavailable."
-    echo "Please install matching 32-bit Raspberry Pi kernel headers, then"
-    echo "rerun './install.sh'"
-    exit 1
-  fi
+  require_running_kernel_build_tree
 }
 
 build_raw_gadget() {
   # Build customized raw-gadget kernel module.
+  require_running_kernel_build_tree
   if [ ! -d "${HOME}/raw-gadget" ]; then
     git clone https://github.com/polysyllabic/raw-gadget.git "${HOME}/raw-gadget"
   fi
