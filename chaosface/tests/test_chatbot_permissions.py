@@ -184,6 +184,35 @@ def test_mods_active_reports_no_active_modifiers():
   assert messages == ['No active modifiers']
 
 
+def test_mod_command_resolves_current_candidate_number_with_real_relay():
+  relay = ChaosRelay()
+  relay.initialize_game({
+    'game': 'Candidate Description Test',
+    'errors': 0,
+    'nmods': 3,
+    'modtime': 180.0,
+    'mods': [
+      {'name': 'Mod A', 'desc': 'A', 'groups': ['Test']},
+      {'name': 'Sir Robin', 'desc': 'Runs backwards.', 'groups': ['Movement']},
+      {'name': 'Mod C', 'desc': 'C', 'groups': ['Test']},
+    ],
+  })
+  relay.candidate_keys = ['mod a', 'sir robin', 'mod c']
+  relay.set_candidate_mods(['Mod A', 'Sir Robin', 'Mod C'])
+
+  ctx = RelayBotContext(relay)
+  bot = ChaosBot(ctx)
+  messages = []
+
+  async def capture(msg: str):
+    messages.append(msg)
+
+  bot.send_message = capture  # type: ignore[assignment]
+  asyncio.run(bot._handle_command('viewer', '!mod 2'))
+
+  assert messages == ['Runs backwards.']
+
+
 def test_chaoscmd_reports_configured_link():
   ctx = _StubContext()
   ctx.attributes['chaoscmd_link'] = 'https://example.com/commands'

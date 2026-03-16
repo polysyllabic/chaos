@@ -1197,7 +1197,9 @@ class ChaosRelay:
 
   def get_mod_description(self, mod: str):
     """Get a description of the modifier."""
-    key = mod.lower()
+    key = self._candidate_key_for_vote(mod)
+    if not key:
+      key = self._mod_key_for_name(mod)
     try:
       return self.modifier_data[key]['desc']
     except Exception:
@@ -1494,6 +1496,24 @@ class ChaosRelay:
       label = str(data.get('name', '')).strip().lower()
       if label == normalized:
         return key
+    return ''
+
+  def _candidate_key_for_vote(self, vote: str) -> str:
+    token = str(vote or '').strip()
+    if not token.isdigit():
+      return ''
+    index = int(token) - 1
+    if index < 0:
+      return ''
+
+    if 0 <= index < len(self.candidate_keys):
+      key = str(self.candidate_keys[index] or '').strip().lower()
+      if key in self.modifier_data:
+        return key
+
+    if 0 <= index < len(self.candidate_mods):
+      return self._mod_key_for_name(self.candidate_mods[index])
+
     return ''
 
   def _set_sorted_active_mod_state(self, names=None, progress=None):

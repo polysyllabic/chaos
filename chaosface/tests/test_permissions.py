@@ -276,6 +276,25 @@ def test_set_mod_enabled_updates_enabled_mod_list():
   assert 'mod a' in relay.enabled_mods
 
 
+def test_get_mod_description_resolves_current_candidate_number():
+  relay = ChaosRelay()
+  relay.initialize_game({
+    'game': 'Candidate Description Test',
+    'errors': 0,
+    'nmods': 3,
+    'modtime': 180.0,
+    'mods': [
+      {'name': 'Mod A', 'desc': 'A', 'groups': ['Test']},
+      {'name': 'Sir Robin', 'desc': 'Runs backwards.', 'groups': ['Movement']},
+      {'name': 'Mod C', 'desc': 'C', 'groups': ['Test']},
+    ],
+  })
+  relay.candidate_keys = ['mod a', 'sir robin', 'mod c']
+  relay.set_candidate_mods(['Mod A', 'Sir Robin', 'Mod C'])
+
+  assert relay.get_mod_description('2') == 'Runs backwards.'
+
+
 def test_set_mod_enabled_persists_across_initialize_game_reload():
   relay = ChaosRelay()
   relay.old_mod_data = {
