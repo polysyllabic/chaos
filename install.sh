@@ -19,6 +19,7 @@ install_stage=0
 remote_ui=0
 interface_addr="localhost"
 is_developer=0
+selected_build_branch=""
 staged_chaos_config="${REPO_ROOT}/chaosconfig.toml"
 
 save_state() {
@@ -31,7 +32,145 @@ if [ -f "${statefile}" ]; then
 fi
 
 # Save state automatically on exit.
-trap 'save_state install_stage remote_ui interface_addr is_developer' EXIT
+trap 'save_state install_stage remote_ui interface_addr is_developer selected_build_branch' EXIT
+
+git_repo_ready_for_branch_selection() {
+  command -v git >/dev/null 2>&1 || return 1
+  git -C "${REPO_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
+}
+
+current_git_branch() {
+  if ! git_repo_ready_for_branch_selection; then
+    return 1
+  fi
+  git -C "${REPO_ROOT}" rev-parse --abbrev-ref HEAD 2>/dev/null || return 1
+}
+
+switch_to_build_branch() {
+  local target_branch="$1"
+
+  if ! git_repo_ready_for_branch_selection; then
+    echo "ERROR: Git repository metadata is unavailable; cannot switch branches."
+    exit 1
+  fi
+
+  if ! git -C "${REPO_ROOT}" checkout --quiet "${target_branch}"; then
+    echo "ERROR: Could not switch to branch '${target_branch}'."
+    echo "Resolve any local checkout issues, then rerun './install.sh'"
+    exit 1
+  fi
+}
+
+select_experimental_build_branch() {
+  local current_branch
+  local selected_branch
+  local -a experimental_branches=("$@")
+
+  if [ "${#experimental_branches[@]}" -eq 0 ]; then
+    echo "ERROR: No non-main branches are available to build."
+    exit 1
+  fi
+
+  echo "Available experimental branches:"
+  PS3="Select the branch to build: "
+  select selected_branch in "${experimental_branches[@]}"; do
+    if [ -z "${selected_branch}" ]; then
+      echo "Please choose one of the listed branches."
+      continue
+    fi
+    selected_build_branch="${selected_branch}"
+    current_branch="$(current_git_branch || true)"
+    if [ "${current_branch}" != "${selected_branch}" ]; then
+      echo "Switching checked-out branch from '${current_branch:-HEAD}' to '${selected_branch}' for this build."
+      switch_to_build_branch "${selected_branch}"
+    fi
+    break
+  done
+  unset PS3
+}
+
+select_build_branch() {
+  local branch
+  local current_branch
+  local branch_count
+  local has_main=0
+  local selection
+  local -a local_branches=()
+  local -a experimental_branches=()
+
+  if ! git_repo_ready_for_branch_selection; then
+    return
+  fi
+
+  mapfile -t local_branches < <(git -C "${REPO_ROOT}" for-each-ref --format='%(refname:short)' --sort=refname refs/heads)
+  branch_count="${#local_branches[@]}"
+  if (( branch_count <= 1 )); then
+    return
+  fi
+
+  current_branch="$(current_git_branch || true)"
+  for branch in "${local_branches[@]}"; do
+    if [ "${branch}" = "main" ]; then
+      has_main=1
+    else
+      experimental_branches+=("${branch}")
+    fi
+  done
+
+  echo "Multiple local branches were found in this repository."
+  echo "Current branch: ${current_branch:-HEAD}"
+  if (( has_main == 0 )); then
+    echo "Local branch 'main' is not available in this checkout."
+    select_experimental_build_branch "${experimental_branches[@]}"
+    return
+  fi
+  echo "Do you want the stable release build from 'main'?"
+
+  PS3="Select build type: "
+  select selection in "Stable release (main)" "Experimental branch"; do
+    case "${REPLY}" in
+      1)
+        selected_build_branch="main"
+        if [ "${current_branch}" = "main" ]; then
+          echo "Stable release selected; building from 'main'."
+        else
+          echo "Stable release selected."
+          echo "The checked-out branch will be switched from '${current_branch:-HEAD}' to 'main'."
+          switch_to_build_branch "main"
+        fi
+        break
+        ;;
+      2)
+        select_experimental_build_branch "${experimental_branches[@]}"
+        break
+        ;;
+      *)
+        echo "Please choose 1 or 2."
+        ;;
+    esac
+  done
+  unset PS3
+}
+
+ensure_selected_build_branch() {
+  local current_branch
+
+  if [ -z "${selected_build_branch}" ]; then
+    return
+  fi
+  if ! git_repo_ready_for_branch_selection; then
+    return
+  fi
+
+  current_branch="$(current_git_branch || true)"
+  if [ "${current_branch}" = "${selected_build_branch}" ]; then
+    return
+  fi
+
+  echo "Continuing installation on previously selected branch '${selected_build_branch}'."
+  echo "Switching checked-out branch from '${current_branch:-HEAD}' to '${selected_build_branch}'."
+  switch_to_build_branch "${selected_build_branch}"
+}
 
 confirm_reboot() {
   echo "Reboot now?"
@@ -453,6 +592,7 @@ if (( install_stage >= 6 )); then
     case "${yn}" in
       Yes)
         install_stage=0
+        selected_build_branch=""
         ;;
       No)
         exit
@@ -461,8 +601,17 @@ if (( install_stage >= 6 )); then
   done
 fi
 
+if (( install_stage > 0 && install_stage < 6 )); then
+  ensure_selected_build_branch
+fi
+
 # Skip earlier stages if we're resuming an installation.
 if (( install_stage < 1 )); then
+  if [ -z "${selected_build_branch}" ]; then
+    select_build_branch
+  else
+    ensure_selected_build_branch
+  fi
   install_questions
   install_stage=1
 fi
