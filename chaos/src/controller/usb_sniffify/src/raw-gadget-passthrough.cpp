@@ -1,15 +1,20 @@
+#include "config.hpp"
 #include "raw-gadget.hpp"
 
 #include <cstdio>
 #include <cstdlib>
+#include <cctype>
 #include <cmath>
 #include <unistd.h>
 #include <cstring>
 #include <errno.h>
+#include <filesystem>
+#include <fstream>
 #include <new>
 #include <algorithm>
 #include <iomanip>
 #include <limits>
+#include <sstream>
 #include <time.h>
 #include <poll.h>
 
@@ -17,10 +22,6 @@
 // will still link correctly and there will simply be no logging.
 #include <plog/Log.h>
 #include <plog/Helpers/HexDump.h>
-
-// The initialization below has been hard-coded for a raspberry pi 4. Run the following to discover
-// what the settings are on other systems:
-//     ls /sys/class/udc/
 
 namespace {
 bool joinThreadWithTimeout(pthread_t thread, const char* tag, int timeoutMs = 2000) {
@@ -127,6 +128,147 @@ bool isSupportedController(uint16_t vendor, uint16_t product) {
                       [vendor, product](const SupportedControllerId& id) {
                         return id.vendor == vendor && id.product == product;
                       }) != kSupportedControllers.end();
+}
+
+struct RawGadgetBinding {
+  std::string device;
+  std::string driver;
+  std::string source;
+  std::string platform;
+  std::vector<std::string> candidates;
+};
+
+std::string trimWhitespace(std::string value) {
+  auto first = std::find_if_not(value.begin(), value.end(), [](unsigned char c) {
+    return std::isspace(c) != 0;
+  });
+  auto last = std::find_if_not(value.rbegin(), value.rend(), [](unsigned char c) {
+    return std::isspace(c) != 0;
+  }).base();
+
+  if (first >= last) {
+    return "";
+  }
+  return std::string(first, last);
+}
+
+std::string environmentValue(const char* name) {
+  const char* value = std::getenv(name);
+  if (value == nullptr) {
+    return "";
+  }
+  return trimWhitespace(value);
+}
+
+std::string runtimePlatform() {
+  std::ifstream modelFile("/proc/device-tree/model", std::ios::binary);
+  std::string model((std::istreambuf_iterator<char>(modelFile)), std::istreambuf_iterator<char>());
+  model.erase(std::remove(model.begin(), model.end(), '\0'), model.end());
+
+  if (model.find("Raspberry Pi 5") != std::string::npos ||
+      model.find("Raspberry Pi 500") != std::string::npos ||
+      model.find("Compute Module 5") != std::string::npos) {
+    return "pi5";
+  }
+  if (model.find("Raspberry Pi 4") != std::string::npos ||
+      model.find("Raspberry Pi 400") != std::string::npos ||
+      model.find("Compute Module 4") != std::string::npos) {
+    return "pi4";
+  }
+  if (model.find("Raspberry Pi") != std::string::npos) {
+    return "raspberry-pi";
+  }
+  return trimWhitespace(CHAOS_TARGET_PLATFORM);
+}
+
+std::string preferredUdcForPlatform(const std::string& platform) {
+  if (platform == "pi5") {
+    return "1000480000.usb";
+  }
+  if (platform == "pi4") {
+    return "fe980000.usb";
+  }
+  return "";
+}
+
+std::vector<std::string> udcCandidates() {
+  std::vector<std::string> entries;
+  std::error_code error;
+  const std::filesystem::path udcRoot("/sys/class/udc");
+  if (!std::filesystem::exists(udcRoot, error) || error) {
+    return entries;
+  }
+
+  for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(udcRoot, error)) {
+    if (error) {
+      entries.clear();
+      break;
+    }
+    entries.push_back(entry.path().filename().string());
+  }
+  std::sort(entries.begin(), entries.end());
+  return entries;
+}
+
+bool containsCandidate(const std::vector<std::string>& candidates, const std::string& candidate) {
+  return std::find(candidates.begin(), candidates.end(), candidate) != candidates.end();
+}
+
+std::string joinCandidates(const std::vector<std::string>& candidates) {
+  std::ostringstream stream;
+  for (size_t i = 0; i < candidates.size(); ++i) {
+    if (i != 0) {
+      stream << ", ";
+    }
+    stream << candidates[i];
+  }
+  return stream.str();
+}
+
+RawGadgetBinding resolveRawGadgetBinding() {
+  RawGadgetBinding binding;
+  binding.platform = runtimePlatform();
+
+  const std::string envDevice = environmentValue("CHAOS_RAW_GADGET_UDC_DEVICE");
+  const std::string envDriver = environmentValue("CHAOS_RAW_GADGET_UDC_DRIVER");
+  if (!envDevice.empty() || !envDriver.empty()) {
+    binding.device = !envDevice.empty() ? envDevice : envDriver;
+    binding.driver = !envDriver.empty() ? envDriver : binding.device;
+    binding.source = "environment";
+    return binding;
+  }
+
+  const std::string compiledDevice = trimWhitespace(CHAOS_DEFAULT_UDC_DEVICE);
+  const std::string compiledDriver = trimWhitespace(CHAOS_DEFAULT_UDC_DRIVER);
+  const std::string preferredDevice = preferredUdcForPlatform(binding.platform);
+
+  binding.candidates = udcCandidates();
+  if (!binding.candidates.empty()) {
+    if (!preferredDevice.empty() && containsCandidate(binding.candidates, preferredDevice)) {
+      binding.device = preferredDevice;
+    } else if (!compiledDevice.empty() && containsCandidate(binding.candidates, compiledDevice)) {
+      binding.device = compiledDevice;
+    } else {
+      binding.device = binding.candidates.front();
+    }
+    binding.driver = binding.device;
+    binding.source = "sysfs";
+    return binding;
+  }
+
+  if (!compiledDevice.empty()) {
+    binding.device = compiledDevice;
+    binding.driver = !compiledDriver.empty() ? compiledDriver : compiledDevice;
+    binding.source = "cmake";
+    return binding;
+  }
+
+  if (!preferredDevice.empty()) {
+    binding.device = preferredDevice;
+    binding.driver = preferredDevice;
+    binding.source = "platform";
+  }
+  return binding;
 }
 }
 
@@ -1074,16 +1216,34 @@ void* RawGadgetPassthrough::ep0LoopThread( void* rawgadgetobject ) {
 
 void* RawGadgetPassthrough::libusbEventHandler( void* rawgadgetobject ) {
   RawGadgetPassthrough* mRawGadgetPassthrough = (RawGadgetPassthrough*) rawgadgetobject;
-  
-  // The below has been hard-coded for a raspberry pi 4, run the following to find out on other systems:
-  // ls /sys/class/udc/
-  //
-  const char *device = "fe980000.usb";//dummy_udc.0";
-  const char *driver = "fe980000.usb";//dummy_udc";
-  
+
   bool ep0ThreadStarted = false;
+  std::string activeDevice;
+  std::string activeDriver;
   while (mRawGadgetPassthrough->keepRunning) {
     if (!mRawGadgetPassthrough->sessionRunning) {
+      RawGadgetBinding binding = resolveRawGadgetBinding();
+      if (binding.device.empty() || binding.driver.empty()) {
+        PLOG_ERROR << "No usable Raw Gadget UDC detected. Build platform=" << CHAOS_TARGET_PLATFORM
+                   << ", runtime platform=" << binding.platform
+                   << ", build default UDC=" << CHAOS_DEFAULT_UDC_DEVICE;
+        usleep(250000);
+        continue;
+      }
+
+      if (binding.device != activeDevice || binding.driver != activeDriver) {
+        PLOG_INFO << "Using Raw Gadget UDC '" << binding.device
+                  << "' (driver '" << binding.driver
+                  << "', source=" << binding.source
+                  << ", platform=" << binding.platform
+                  << ", os=" << CHAOS_TARGET_OS_CODENAME << ")";
+        if (!binding.candidates.empty()) {
+          PLOG_VERBOSE << "Available UDCs: " << joinCandidates(binding.candidates);
+        }
+        activeDevice = binding.device;
+        activeDriver = binding.driver;
+      }
+
       if (ep0ThreadStarted) {
         if (!mRawGadgetPassthrough->keepRunning.load() && mRawGadgetPassthrough->fd >= 0) {
           close(mRawGadgetPassthrough->fd);
@@ -1112,7 +1272,8 @@ void* RawGadgetPassthrough::libusbEventHandler( void* rawgadgetobject ) {
 
       // raw-gadget fun
       PLOG_VERBOSE << "Starting raw-gadget";
-      int initResult = usb_raw_init(mRawGadgetPassthrough->fd, USB_SPEED_HIGH, driver, device);
+      int initResult = usb_raw_init(mRawGadgetPassthrough->fd, USB_SPEED_HIGH,
+                                    activeDriver.c_str(), activeDevice.c_str());
       int runResult = 0;
       if (initResult >= 0) {
         runResult = usb_raw_run(mRawGadgetPassthrough->fd);

@@ -5,6 +5,13 @@ echo "--------------------------------------------------------"
 echo "Starting Twitch Controls Chaos engine"
 cd /usr/local/chaos
 
+if [ -f /usr/local/chaos/chaos.env ]; then
+  # shellcheck disable=SC1091
+  set -a
+  . /usr/local/chaos/chaos.env
+  set +a
+fi
+
 # raw_gadget should only be inserted once per boot. On service restarts it may already
 # be loaded, and attempting to insmod again causes a hard failure ("File exists").
 if [ -d /sys/module/raw_gadget ]; then

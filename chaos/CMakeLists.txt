@@ -17,6 +17,14 @@ set(USE_DUALSENSE FALSE)
 # This is intentionally an absolute path so the systemd unit can rely on it.
 set(CHAOS_INSTALL_ROOT "/usr/local/chaos"
     CACHE PATH "Absolute install directory for Chaos (used by chaos.service)")
+set(CHAOS_TARGET_PLATFORM ""
+    CACHE STRING "Detected or selected Raspberry Pi target platform (pi4, pi5, raspberry-pi, unknown)")
+set(CHAOS_TARGET_OS_CODENAME ""
+    CACHE STRING "Detected or selected target OS codename")
+set(CHAOS_DEFAULT_UDC_DEVICE ""
+    CACHE STRING "Default Raw Gadget UDC device name")
+set(CHAOS_DEFAULT_UDC_DRIVER ""
+    CACHE STRING "Default Raw Gadget UDC driver name")
 
 # Optional local test bundle (outside systemd install path)
 option(install_test "Stage a test copy of chaos under ~/test for local runs" OFF)
@@ -55,6 +63,111 @@ if(${ver} MATCHES "PRERELEASE[ \t]+([^\n]+)")
     endif()
 endif()
 message(NOTICE "Configuring Chaos engine ${CHAOS_VERSION}")
+
+function(chaos_detect_target_platform out_var)
+  set(_platform "unknown")
+  if(EXISTS "/proc/device-tree/model")
+    execute_process(
+      COMMAND /bin/bash -lc "tr -d '\\0' </proc/device-tree/model"
+      OUTPUT_VARIABLE _model
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(_model MATCHES "Raspberry Pi 5|Raspberry Pi 500|Compute Module 5")
+      set(_platform "pi5")
+    elseif(_model MATCHES "Raspberry Pi 4|Raspberry Pi 400|Compute Module 4")
+      set(_platform "pi4")
+    elseif(_model MATCHES "Raspberry Pi")
+      set(_platform "raspberry-pi")
+    endif()
+  endif()
+  set(${out_var} "${_platform}" PARENT_SCOPE)
+endfunction()
+
+function(chaos_detect_os_codename out_var)
+  set(_codename "unknown")
+  if(EXISTS "/etc/os-release")
+    file(STRINGS "/etc/os-release" _os_release_lines REGEX "^(VERSION_CODENAME|DEBIAN_CODENAME)=")
+    foreach(_line IN LISTS _os_release_lines)
+      if(_line MATCHES "^VERSION_CODENAME=(.+)$")
+        set(_codename "${CMAKE_MATCH_1}")
+        break()
+      elseif(_line MATCHES "^DEBIAN_CODENAME=(.+)$")
+        set(_codename "${CMAKE_MATCH_1}")
+      endif()
+    endforeach()
+    string(REPLACE "\"" "" _codename "${_codename}")
+  endif()
+  set(${out_var} "${_codename}" PARENT_SCOPE)
+endfunction()
+
+function(chaos_detect_default_udc out_var)
+  set(_udc "")
+  file(GLOB _udc_paths LIST_DIRECTORIES true "/sys/class/udc/*")
+  set(_udc_names "")
+  foreach(_udc_path IN LISTS _udc_paths)
+    if(EXISTS "${_udc_path}")
+      get_filename_component(_udc_name "${_udc_path}" NAME)
+      list(APPEND _udc_names "${_udc_name}")
+    endif()
+  endforeach()
+  list(SORT _udc_names)
+
+  if(CHAOS_TARGET_PLATFORM STREQUAL "pi5")
+    list(FIND _udc_names "1000480000.usb" _preferred_index)
+    if(NOT _preferred_index EQUAL -1)
+      set(_udc "1000480000.usb")
+    endif()
+  elseif(CHAOS_TARGET_PLATFORM STREQUAL "pi4")
+    list(FIND _udc_names "fe980000.usb" _preferred_index)
+    if(NOT _preferred_index EQUAL -1)
+      set(_udc "fe980000.usb")
+    endif()
+  endif()
+
+  if(_udc STREQUAL "" AND _udc_names)
+    list(GET _udc_names 0 _udc)
+  endif()
+
+  if(_udc STREQUAL "")
+    if(CHAOS_TARGET_PLATFORM STREQUAL "pi5")
+      set(_udc "1000480000.usb")
+    elseif(CHAOS_TARGET_PLATFORM STREQUAL "pi4")
+      set(_udc "fe980000.usb")
+    endif()
+  endif()
+
+  set(${out_var} "${_udc}" PARENT_SCOPE)
+endfunction()
+
+chaos_detect_target_platform(_chaos_detected_target_platform)
+chaos_detect_os_codename(_chaos_detected_os_codename)
+
+if(CHAOS_TARGET_PLATFORM STREQUAL "")
+  set(CHAOS_TARGET_PLATFORM "${_chaos_detected_target_platform}"
+      CACHE STRING "Detected or selected Raspberry Pi target platform (pi4, pi5, raspberry-pi, unknown)" FORCE)
+endif()
+
+if(CHAOS_TARGET_OS_CODENAME STREQUAL "")
+  set(CHAOS_TARGET_OS_CODENAME "${_chaos_detected_os_codename}"
+      CACHE STRING "Detected or selected target OS codename" FORCE)
+endif()
+
+chaos_detect_default_udc(_chaos_detected_default_udc)
+
+if(CHAOS_DEFAULT_UDC_DEVICE STREQUAL "")
+  set(CHAOS_DEFAULT_UDC_DEVICE "${_chaos_detected_default_udc}"
+      CACHE STRING "Default Raw Gadget UDC device name" FORCE)
+endif()
+
+if(CHAOS_DEFAULT_UDC_DRIVER STREQUAL "")
+  set(CHAOS_DEFAULT_UDC_DRIVER "${CHAOS_DEFAULT_UDC_DEVICE}"
+      CACHE STRING "Default Raw Gadget UDC driver name" FORCE)
+endif()
+
+message(STATUS "Chaos target platform: ${CHAOS_TARGET_PLATFORM}")
+message(STATUS "Chaos target OS codename: ${CHAOS_TARGET_OS_CODENAME}")
+message(STATUS "Chaos default Raw Gadget UDC: device='${CHAOS_DEFAULT_UDC_DEVICE}' driver='${CHAOS_DEFAULT_UDC_DRIVER}'")
 
 # GCC 8 requires an explicit link of libstdc++fs, the library for std::filesystem.
 # This is unnecessary on GCC 9 or later.
