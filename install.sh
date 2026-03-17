@@ -196,6 +196,10 @@ confirm_reboot() {
 }
 
 install_questions() {
+  remote_ui=0
+  interface_addr="localhost"
+  is_developer=0
+
   echo "Install chatbot and user interface on a separate computer?"
   select yn in "Yes" "No"; do
     case "${yn}" in
@@ -592,6 +596,7 @@ if (( install_stage >= 6 )); then
       Yes)
         install_stage=0
         selected_build_branch=""
+        break
         ;;
       No)
         exit
