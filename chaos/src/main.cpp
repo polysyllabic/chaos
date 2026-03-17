@@ -19,7 +19,9 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <csignal>
 #include <string>
+#include <unistd.h>
 
 #include <toml++/toml.h>
 
@@ -31,6 +33,22 @@
 #include "ChaosEngine.hpp"
 
 using namespace Chaos;
+
+namespace {
+volatile std::sig_atomic_t gShutdownSignal = 0;
+
+void handleShutdownSignal(int signal_number) {
+  gShutdownSignal = signal_number;
+}
+
+void installShutdownSignalHandlers() {
+  struct sigaction action {};
+  action.sa_handler = handleShutdownSignal;
+  sigemptyset(&action.sa_mask);
+  sigaction(SIGINT, &action, nullptr);
+  sigaction(SIGTERM, &action, nullptr);
+}
+}
 
 int main(int argc, char** argv) {
 
@@ -52,6 +70,7 @@ int main(int argc, char** argv) {
     engine = std::make_unique<ChaosEngine>(*controller, chaos_config.getListenerAddress(),
                                            chaos_config.getInterfaceAddress(), true,
                                            chaos_config.getDefaultModListPath());
+    installShutdownSignalHandlers();
 
     engine->setAvailableGames(chaos_config.getAvailableGames());
     if (!configfile.empty()) {
@@ -71,8 +90,11 @@ int main(int argc, char** argv) {
 
   try {
     while(engine->keepGoing()) {
+      if (gShutdownSignal != 0) {
+        engine->requestShutdown();
+      }
       // loop until we get an exit signal
-      usleep(1000000);
+      usleep(100000);
     }
   } catch (const std::exception& e) {
     std::cerr << "Fatal runtime error: " << e.what() << std::endl;

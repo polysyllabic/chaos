@@ -1245,7 +1245,9 @@ void* RawGadgetPassthrough::libusbEventHandler( void* rawgadgetobject ) {
       }
 
       if (ep0ThreadStarted) {
-        if (!mRawGadgetPassthrough->keepRunning.load() && mRawGadgetPassthrough->fd >= 0) {
+        // Close the active raw-gadget fd before waiting on ep0 so the kernel can
+        // fully release the prior gadget session during reconnects as well as stop().
+        if (mRawGadgetPassthrough->fd >= 0) {
           close(mRawGadgetPassthrough->fd);
           mRawGadgetPassthrough->fd = -1;
           mRawGadgetPassthrough->mEndpointZeroInfo.fd = -1;

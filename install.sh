@@ -297,6 +297,26 @@ current_pi_platform() {
   esac
 }
 
+boot_config_model_filter() {
+  case "$(current_device_model)" in
+    *Compute\ Module\ 5*)
+      printf '%s\n' cm5
+      ;;
+    *Raspberry\ Pi\ 5*|*Raspberry\ Pi\ 500*)
+      printf '%s\n' pi5
+      ;;
+    *Compute\ Module\ 4*)
+      printf '%s\n' cm4
+      ;;
+    *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*)
+      printf '%s\n' pi4
+      ;;
+    *)
+      printf '%s\n' all
+      ;;
+  esac
+}
+
 default_udc_for_platform() {
   case "$1" in
     pi5)
@@ -494,7 +514,9 @@ build_dependencies() {
 configure_as_gadget() {
   local config_path
   local config_file
+  local config_filter
   local gadget_overlay='dtoverlay=dwc2,dr_mode=peripheral'
+  local managed_block_tmp
 
   # On newer Raspberry Pi OS releases, including Bookworm and Trixie,
   # config.txt lives in /boot/firmware/.
@@ -505,17 +527,27 @@ configure_as_gadget() {
   fi
   config_file="${config_path}/config.txt"
   detect_chaos_runtime_target
+  config_filter="$(boot_config_model_filter)"
   echo "Using running kernel $(uname -r) on $(current_device_model)"
+  echo "Applying USB gadget overlay under config.txt filter [${config_filter}]"
 
   # Replace XHCI USB controller with DWC2 peripheral mode. Recent Raspberry Pi OS
   # images may ship CM4/CM5 defaults that explicitly force host mode.
   sudo sed -Ei \
     -e '/^[[:space:]]*otg_mode[[:space:]]*=[[:space:]]*1([[:space:]]*#.*)?$/ s/^/#/' \
-    -e "s|^([[:space:]]*)dtoverlay[[:space:]]*=[[:space:]]*dwc2(,dr_mode=[^[:space:]#]+)?([[:space:]]*(#.*)?)$|\\1${gadget_overlay}\\3|" \
+    -e '/^[[:space:]]*dtoverlay[[:space:]]*=[[:space:]]*dwc2(,dr_mode=[^[:space:]#]+)?([[:space:]]*#.*)?$/ s/^/#/' \
+    -e '/^[[:space:]]*# BEGIN CHAOS USB GADGET$/,/^[[:space:]]*# END CHAOS USB GADGET$/d' \
     "${config_file}"
-  if ! sudo grep -Eq '^[[:space:]]*dtoverlay[[:space:]]*=[[:space:]]*dwc2,dr_mode=peripheral([[:space:]]*#.*)?$' "${config_file}"; then
-    echo "${gadget_overlay}" | sudo tee -a "${config_file}" >/dev/null
-  fi
+
+  managed_block_tmp="$(mktemp)"
+  cat >"${managed_block_tmp}" <<EOF
+# BEGIN CHAOS USB GADGET
+[${config_filter}]
+${gadget_overlay}
+# END CHAOS USB GADGET
+EOF
+  sudo tee -a "${config_file}" <"${managed_block_tmp}" >/dev/null
+  rm -f "${managed_block_tmp}"
 
   require_running_kernel_build_tree
 }

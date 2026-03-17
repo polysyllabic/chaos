@@ -240,6 +240,11 @@ namespace Chaos {
     }
 
     /**
+     * \brief Request a clean engine shutdown from the main loop.
+     */
+    void requestShutdown() { keep_going.store(false); }
+
+    /**
      * \brief Sets a menu item to the specified value
      * \param item The menu item to change
      * \param new_val The new value of the item
