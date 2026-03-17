@@ -19,6 +19,7 @@ General Information Commands:
 Modifier Commands:
 * `!apply <mod name>` -- Apply a modifier (requires modifier credit and subject to cooldown).
 * `!remove <mod name>` -- Manually remove a modifier immediately (requires admin permission).
+* `!mod <num>` -- Describe the function of a modifier being voted on (1, 2, 3)
 * `!mod <mod name>` -- Describe the function of a specific modifier. Not case sensitive.
 * `!mods` -- Link to list of all available modifiers.
 * `!mods active` -- List currently active modifiers.
