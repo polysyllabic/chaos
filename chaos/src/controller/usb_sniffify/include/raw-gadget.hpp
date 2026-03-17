@@ -20,6 +20,12 @@
 //void* ep0_loop_thread( void* data );
 
 //static void cb_transfer_out(struct libusb_transfer *xfr);
+void initializeRawGadgetThreadSignals();
+bool rawGadgetIoInterrupted(int error);
+void interruptEndpointThread(EndpointInfo* epInfo);
+void clearPendingWrites(EndpointInfo* epInfo);
+bool queuePendingWrite(EndpointInfo* epInfo, const unsigned char* data, int length);
+bool flushPendingWrite(EndpointInfo* epInfo);
 void ep_out_work_interrupt( EndpointInfo* epInfo );
 
 //static void cb_transfer_in(struct libusb_transfer *xfr);

@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <atomic>
 #include <vector>
+#include <deque>
 
 //#include <linux/hid.h>
 #include <linux/usb/ch9.h>
@@ -96,6 +97,10 @@ enum usb_raw_event_type {
   USB_RAW_EVENT_INVALID,
   USB_RAW_EVENT_CONNECT,
   USB_RAW_EVENT_CONTROL,
+  USB_RAW_EVENT_SUSPEND,
+  USB_RAW_EVENT_RESUME,
+  USB_RAW_EVENT_RESET,
+  USB_RAW_EVENT_DISCONNECT,
 };
 
 struct usb_raw_event {
@@ -200,6 +205,9 @@ typedef struct EndpointInfo {
   bool transferMutexInitialized;
   pthread_mutex_t transferMutex;
   std::vector<struct libusb_transfer*> activeTransfers;
+  bool writeQueueInitialized;
+  pthread_mutex_t writeQueueMutex;
+  std::deque<std::vector<unsigned char>> pendingWrites;
   
   pthread_t thread;  // for runnign data transfers
   

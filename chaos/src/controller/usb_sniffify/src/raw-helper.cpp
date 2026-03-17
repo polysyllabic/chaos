@@ -180,7 +180,7 @@ int usb_raw_ep_disable(int fd, uint32_t something) {
 int usb_raw_ep_read(int fd, struct usb_raw_ep_io *io) {
   int rv = ioctl(fd, USB_RAW_IOCTL_EP_READ, io);
   if (rv < 0) {
-    if(errno == ETIMEDOUT ) {
+    if(errno == ETIMEDOUT || errno == EINTR ) {
       return rv;
     }
     PLOG_ERROR << "ioctl(USB_RAW_IOCTL_EP_READ): " << strerror(errno);
@@ -192,7 +192,7 @@ int usb_raw_ep_read(int fd, struct usb_raw_ep_io *io) {
 int usb_raw_ep_write(int fd, struct usb_raw_ep_io *io) {
   int rv = ioctl(fd, USB_RAW_IOCTL_EP_WRITE, io);
   if (rv < 0) {
-    if(errno == ETIMEDOUT ) {
+    if(errno == ETIMEDOUT || errno == EINTR ) {
       return rv;
     }
     PLOG_ERROR << "ioctl(USB_RAW_IOCTL_EP_WRITE): " << strerror(errno);
@@ -405,6 +405,18 @@ void log_event(struct usb_raw_event *event) {
   case USB_RAW_EVENT_CONTROL:
     PLOG_VERBOSE << "event: control, length: " << event->length;
     log_control_request((struct usb_ctrlrequest *)&event->data[0]);
+    break;
+  case USB_RAW_EVENT_SUSPEND:
+    PLOG_VERBOSE << "event: suspend, length: " << event->length;
+    break;
+  case USB_RAW_EVENT_RESUME:
+    PLOG_VERBOSE << "event: resume, length: " << event->length;
+    break;
+  case USB_RAW_EVENT_RESET:
+    PLOG_VERBOSE << "event: reset, length: " << event->length;
+    break;
+  case USB_RAW_EVENT_DISCONNECT:
+    PLOG_VERBOSE << "event: disconnect, length: " << event->length;
     break;
   default:
     PLOG_VERBOSE << "event: unknown, length: " << event->length;
