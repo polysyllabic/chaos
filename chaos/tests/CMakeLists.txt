@@ -46,6 +46,21 @@ target_include_directories(test_modifier_types PRIVATE
 )
 target_link_libraries(test_modifier_types PRIVATE chaos_core)
 
+add_executable(test_tlou2_modifier_coverage)
+target_sources(test_tlou2_modifier_coverage PRIVATE
+  test_tlou2_modifier_coverage.cpp
+)
+target_include_directories(test_tlou2_modifier_coverage PRIVATE
+  ../include
+  ../src/core
+  ../src/engine
+  ../src/controller
+  ../src/utils
+  ${tomlplusplus_SOURCE_DIR}/include
+  ${plog_SOURCE_DIR}/include
+)
+target_link_libraries(test_tlou2_modifier_coverage PRIVATE chaos_core)
+
 add_executable(test_engine_lifecycle)
 target_sources(test_engine_lifecycle PRIVATE
   test_engine_lifecycle.cpp

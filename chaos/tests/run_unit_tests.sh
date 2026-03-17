@@ -6,6 +6,7 @@ BUILD_DIR="${1:-build}"
 UNIT_TARGETS=(
   test_remapping
   test_modifier_types
+  test_tlou2_modifier_coverage
   test_engine_lifecycle
 )
 
