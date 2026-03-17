@@ -322,9 +322,9 @@ separately.
 If you use the Streamlabs Chat Box to show the chat as an overlay on screen, check
 "Hide commands starting with '!'" and then add your bot name to the "MutedChatters" box.
 
-In "Custom Bad Words" add the following expression: `regex:^[1-3]`
+In "Custom Bad Words" add the following expression: `regex:^[1-3]$`
 
-This will filter any messages that start with the number 1, 2, or 3 but will let messages
+This will filter any messages that consist solely of the number 1, 2, or 3 but will let messages
 like "You have died 3 times!" through.
 
 If you don't implement BTTV or FrankerFaceZ fitering and want to read filtered chat, note that you
@@ -368,9 +368,9 @@ appearing will be reduced by this percent over the previous chances.
 
 In a practical sense, this means
 
-- At 33 (default), each use cuts a mod’s future candidate-list chance to about one third of what it was before.
-- At 66, each use cuts it to about two thirds.
-- At 100, weighting is disabled and all mods will have an equal chance of selection regardless of their past use
+- At 33 (default), each use cuts a mod's future candidate-list chance to about 1/3 of what it was before.
+- At 66, each use cuts it to about 2/3.
+- At 100, weighting is disabled and all mods will have an equal chance of selection regardless of past use.
 
 For example, with about 150 inactive modifiers and 3 voting choices, an unused modifier will appear
 in the candidate list about 2% of the time. At the default setting of 33, each time a modifier is
@@ -517,54 +517,56 @@ will receive a modifier credit.
 # Commands
 
 General Information Commands:
-* !chaos -- Get a general description of Twitch Controls Chaos
-* !chaos apply -- Get an explanation of how to apply modifier credits
-* !chaos credits -- Get an explanation of how to earn modifier credits
-* !chaos voting -- Get an explanation of the voting method
-* !chaoscmd -- Get a list of available commands for Twitch Controls Chaos
+* `!chaos` -- Get a general description of Twitch Controls Chaos
+* `!chaos apply` -- Get an explanation of how to apply modifier credits
+* `!chaos credits` -- Get an explanation of how to earn modifier credits
+* `!chaos voting` -- Get an explanation of the voting method
+* `!chaoscmd` -- Get a list of available commands for Twitch Controls Chaos
 
 Modifier Commands:
-* !apply <mod name> -- Apply a modifier (requires modifier credit and subject to cooldown)
-* !remove <mod name> -- Manually remove a modifier immediately (requires admin permission)
-* !mod <mod name> -- Describe the function of a specific modifier. Not case sensitive.
-* !mods -- Link to list of all available modifiers
-* !mods active -- List currently active modifiers
-* !mods voting -- List modifiers currently up for a vote
+* `!apply <mod name>` -- Apply a modifier (requires modifier credit and subject to cooldown)
+* `!remove <mod name>` -- Manually remove a modifier immediately (requires admin permission)
+* `!mod <num>` -- Describe the function of the modifier with that number in the candidate-mod list
+* `!mod <mod name>` -- Describe the function of a specific modifier. Not case sensitive.
+* `!mods` -- Link to list of all available modifiers
+* `!mods active` -- List currently active modifiers
+* `!mods voting` -- List modifiers currently up for a vote
 
 Modifier Management Commands (require manage_modifiers permission):
-* !enable <mod name> -- Enable a modifier for voting/selection
-* !disable <mod name> -- Disable a modifier for voting/selection
-* !resetmods -- Request an immediate reset of active modifiers
-* !applycooldown <time> -- Set the apply command cooldown, in seconds (does not affect admin use)
+* `!enable <mod name>` -- Enable a modifier for voting/selection
+* `!disable <mod name>` -- Disable a modifier for voting/selection
+* `!resetmods` -- Clear all active modifiers
+* `!applycooldown <time>` -- Set the apply command cooldown, in seconds (does not affect admin use)
 
-Voting Commands (these commands all require manage_voting permission):
-* !startvote (time) -- Manually open a new vote. If time omitted, default vote time is used
-* !newvote (time) -- Alias for !startvote
-* !endvote -- End an open vote immediately and choose a winner
-* !votemethod <method> -- Set winner selection method. Legal methods are proportional, majority, authoritarian (resets any open vote)
-* !votetime <time> -- Set default vote length, in seconds (resets any open vote)
-* !votedelay <time> -- Set delay between votes, in seconds (resets any open vote)
-* !votecycle <type> -- Set voting cycle type. Legal types are continuous, interval, random, triggered, disabled (resets any open vote unless voting is disabled)
+Voting Commands (these commands all require manage_voting permission; all time in seconds):
+* `!startvote (time)` -- Manually open a new vote. If time omitted, default vote time is used
+* `!newvote (time)` -- Alias for !startvote
+* `!endvote` -- End an open vote immediately and choose a winner
+* `!votemethod <method>` -- Set winner selection method. Legal methods are proportional, majority, authoritarian (resets any open vote)
+* `!votetime <time>` -- Set default vote length, in seconds (resets any open vote)
+* `!votedelay <time>` -- Set delay between votes, in seconds (resets any open vote)
+* `!votecycle <type>` -- Set voting cycle type. Legal types are continuous, interval, random, triggered, disabled (resets any open vote unless voting is disabled)
 
 Modifier Credit Commands:
-* !credits (user) -- Reports the number of modifier credits that the user (message author if user name omitted) currently has
-* !addcredits <user> (amount) -- Add credits to user's balance. If amount omitted, add 1. Requires 'manage_credits' permission.
-* !setcredits <user> <amount> -- Sets user's balance to the specified amount. Requires 'manage_credits' permission.
-* !givecredits <user> (amount) -- Give some of your modifier credits to the specified user. If amount omitted, transfers 1 credit.
+* `!credits (user)` -- Reports the number of modifier credits that the user (message author if user name omitted) currently has
+* `!addcredits <user> (amount)` -- Add credits to user's balance. If amount omitted, add 1. Requires 'manage_credits' permission.
+* `!setcredits <user> <amount>` -- Sets user's balance to the specified amount. Requires 'manage_credits' permission.
+* `!givecredits <user> (amount)` -- Give some of your modifier credits to the specified user. If amount omitted, transfers 1 credit.
 
 Raffle Commands:
-* !join -- Enters the user into an open raffle
-* !joinchaos -- An alias for !join
-* !raffle (time) -- Start a raffle for a modifier credit (if time is omitted, default raffle time is used) Requires 'manage_raffles' permission
-* !chaosraffle -- An alias for !raffle
-* !raffletime <time> -- Set default raffle duration, in seconds. Requires 'manage_raffles' permission
+* `!join` -- Enters the user into an open raffle
+* `!joinchaos` -- An alias for !join
+* `!raffle (time)` -- Start a raffle for a modifier credit (if time is omitted, default raffle time is used) Requires 'manage_raffles' permission
+* `!chaosraffle` -- An alias for !raffle
+* `!raffletime <time>` -- Set default raffle duration, in seconds. Requires 'manage_raffles' permission
 
 ## Command Aliases
-Command aliases allow you to rename commands to your liking. Some default aliases are listed above. You can manage these command
-names from the `Chatbot Commands` tab of the user interface. If you set an alias, it will be available as an alternate command.
-If you also set the checkbox `Use alias only` then the default command name will be disabled and only the alias will be accepted.
-You can use this feature if you already have a different bot that responds to these command names (e.g., !raffle) and want to keep
-that other bot running as before.
+Command aliases allow you to rename commands to your liking. Some default aliases are provided
+above. You can manage these command names from the `Chatbot Commands` tab of the user interface. If
+you set an alias, it will be available as an alternate command. If you also set the checkbox
+`Use alias only` then the default command name will be disabled and only the alias will be accepted.
+You can use this feature if you already have a different bot that responds to these command names
+(e.g., !raffle) and want to keep that other bot running as before.
 
 ## Permissions
 Some commands require additional permissions beyond the ability to type messages in chat. The
@@ -583,8 +585,8 @@ To give these extra permissions, you must first create a permission group, and t
 permissions and individual users to that group. The following commands are available. All
 require the 'manage_permissions' permission to execute:
 
-* To add a permission group: !addgroup <group>
-* To add a member to a group: !addmember <group> <user>
-* To add a permission to a group: !addperm <group> <permission>
-* To remove a member from a group: !delmember <group> <user>
-* To remove a permission from a group: !delperm <group> <permission>
+* To add a permission group: `!addgroup <group>`
+* To add a member to a group: `!addmember <group> <user>`
+* To add a permission to a group: `!addperm <group> <permission>`
+* To remove a member from a group: `!delmember <group> <user>`
+* To remove a permission from a group: `!delperm <group> <permission>`
