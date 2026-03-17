@@ -522,6 +522,7 @@ configure_as_gadget() {
 
 build_raw_gadget() {
   local current_origin
+  local raw_gadget_loader_tmp
 
   # Build upstream raw-gadget kernel module against the running kernel.
   require_running_kernel_build_tree
@@ -537,7 +538,28 @@ build_raw_gadget() {
   fi
   cd "${RAW_GADGET_CHECKOUT}/raw_gadget"
   make
-  sudo make install
+
+  # Preserve the existing service startup flow, which expects a loader script
+  # and module payload in /usr/local/modules.
+  sudo install -d -m 0755 /usr/local/modules
+  sudo install -m 0644 raw_gadget.ko /usr/local/modules/raw_gadget.ko
+
+  raw_gadget_loader_tmp="$(mktemp)"
+  cat >"${raw_gadget_loader_tmp}" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -d /sys/module/raw_gadget ]; then
+  exit 0
+fi
+
+modprobe udc_core
+exec insmod "${SCRIPT_DIR}/raw_gadget.ko"
+EOF
+  sudo install -m 0755 "${raw_gadget_loader_tmp}" /usr/local/modules/insmod.sh
+  rm -f "${raw_gadget_loader_tmp}"
 }
 
 install_engine() {
