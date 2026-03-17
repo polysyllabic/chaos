@@ -19,7 +19,9 @@ RAW_GADGET_CHECKOUT="${HOME}/raw-gadget"
 statefile="${HOME}/.chaosinstall"
 install_stage=0
 remote_ui=0
-interface_addr="localhost"
+interface_addr="127.0.0.1"
+listener_port=5555
+interface_port=5556
 is_developer=0
 selected_build_branch=""
 staged_chaos_config="${REPO_ROOT}/chaosconfig.toml"
@@ -39,7 +41,7 @@ if [ -f "${statefile}" ]; then
 fi
 
 # Save state automatically on exit.
-trap 'save_state install_stage remote_ui interface_addr is_developer selected_build_branch' EXIT
+trap 'save_state install_stage remote_ui interface_addr listener_port interface_port is_developer selected_build_branch' EXIT
 
 git_repo_ready_for_branch_selection() {
   command -v git >/dev/null 2>&1 || return 1
@@ -197,7 +199,9 @@ confirm_reboot() {
 
 install_questions() {
   remote_ui=0
-  interface_addr="localhost"
+  interface_addr="127.0.0.1"
+  listener_port=5555
+  interface_port=5556
   is_developer=0
 
   echo "Install chatbot and user interface on a separate computer?"
@@ -241,9 +245,99 @@ install_questions() {
     esac
   done
 
+  if (( is_developer != 0 )); then
+    echo "Do you want to use alternate ZMQ talk/listen ports on this device?"
+    select yn in "Yes" "No"; do
+      case "${yn}" in
+        Yes)
+          listener_port=5655
+          interface_port=5656
+          echo "The listener port receives incoming interface commands."
+          echo "The interface port sends outgoing messages to chaosface."
+          while true; do
+            read -r -p "Listener port (default ${listener_port}): " temp_listener_port
+            if [ -z "${temp_listener_port}" ]; then
+              break
+            fi
+            if [[ "${temp_listener_port}" =~ ^[0-9]+$ ]] && (( temp_listener_port >= 1024 && temp_listener_port <= 65535 )); then
+              listener_port="${temp_listener_port}"
+              break
+            fi
+            echo "Please enter a numeric TCP port between 1024 and 65535."
+          done
+          while true; do
+            read -r -p "Talker/interface port (default ${interface_port}): " temp_interface_port
+            if [ -z "${temp_interface_port}" ]; then
+              :
+            elif [[ "${temp_interface_port}" =~ ^[0-9]+$ ]] && (( temp_interface_port >= 1024 && temp_interface_port <= 65535 )); then
+              interface_port="${temp_interface_port}"
+            else
+              echo "Please enter a numeric TCP port between 1024 and 65535."
+              continue
+            fi
+
+            if [ "${interface_port}" = "${listener_port}" ]; then
+              echo "The talker/interface port must be different from the listener port."
+              continue
+            fi
+            break
+          done
+          break
+          ;;
+        No)
+          break
+          ;;
+      esac
+    done
+  fi
+
   # Stage a modified chaosconfig.toml that will be installed into /usr/local/chaos.
   cp "${CHAOS_SRC_DIR}/chaosconfig.toml" "${staged_chaos_config}"
   sed -i 's/^interface_addr *= *\"[^\"]+\"/interface_addr = \"'"${interface_addr}"'\"/' "${staged_chaos_config}"
+  sed -i 's/^interface_port *= *.*/interface_port = '"${interface_port}"'/' "${staged_chaos_config}"
+  sed -i 's/^listener_port *= *.*/listener_port = '"${listener_port}"'/' "${staged_chaos_config}"
+}
+
+sync_local_chaosface_config() {
+  local config_file="${CHAOS_INSTALL_ROOT}/configs/chaos_config.json"
+  local temp_config
+  local local_pi_host="127.0.0.1"
+
+  temp_config="$(mktemp)"
+  if [ -f "${config_file}" ]; then
+    cp "${config_file}" "${temp_config}"
+  else
+    printf '{}\n' >"${temp_config}"
+  fi
+
+  python3 - "${temp_config}" "${local_pi_host}" "${interface_port}" "${listener_port}" <<'PY'
+import json
+import pathlib
+import sys
+
+config_path = pathlib.Path(sys.argv[1])
+pi_host = sys.argv[2]
+listen_port = int(sys.argv[3])
+talk_port = int(sys.argv[4])
+
+try:
+    data = json.loads(config_path.read_text())
+except Exception:
+    data = {}
+
+if not isinstance(data, dict):
+    data = {}
+
+data["pi_host"] = pi_host
+data["listen_port"] = listen_port
+data["talk_port"] = talk_port
+
+config_path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+PY
+
+  sudo install -d -m 0755 "${CHAOS_INSTALL_ROOT}/configs"
+  sudo install -m 0644 "${temp_config}" "${config_file}"
+  rm -f "${temp_config}"
 }
 
 package_is_installed() {
@@ -635,6 +729,7 @@ install_chaosface() {
   fi
 
   if (( remote_ui == 0 )); then
+    sync_local_chaosface_config
     sudo install -m 0644 "${SCRIPTS_DIR}/chaosface.service" /etc/systemd/system/chaosface.service
     sudo systemctl daemon-reload
     sudo systemctl enable chaosface
