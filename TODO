@@ -2,12 +2,15 @@ These are the to-do items for version 2.1:
 
 - Code clean-up
 - Add mouse-and-keyboard support (passthrough for PC games and emulation for console)
-- Add support for XBox and DualSense controllers (passthrough or emulation)
+- Add support for XBox controller (passthrough or emulation)
+- Add support for DualSense controller
+- Add controller rumble
 - Allow mod choice to be restricted by group for voting candidates
+- Upload config files through UI
 - Edit config files in the UI
-- Write counter/disgnostic output suitable for an OBS source
 - Manage command permissions through interface
 - Commands to configure game settings without UI
 - Assign permissions to moderators as a group
 - Internationalization
 - ~~`!mod 1` etc. explain mod being voted on~~
+- Support Raspberry Pi 5 and 64-bit OS

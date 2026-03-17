@@ -261,7 +261,7 @@ the OBS scene that your viewers see to monitor TCC.
 
 4. If you have never selected a game to play, or if you want to switch games, go to the
 `Game Settings` tab of the interface and select the game you want to play from the
-available-games list. Click `confirm game` to have TCC load the new game. Note that there
+available-games list. Click `load game` to have TCC load the new game. Note that there
 can be multiple configuration files for a single game to support variations that only exist
 on certain platforms. For example, the original version of _The Last of Us: Part II_ has
 a slightly different menu layout than the remastered version, and the PC version of the game
@@ -271,6 +271,10 @@ the original version of TLOU2 on a PS5. Make sure you pick the right version.
 
 If you've loaded a game previously, TCC will try to load the same game automatically, so
 you only need to select a new game if you want to switch.
+
+_Note:_ If you manually restart the Chaos engine without also restarting the interface, the
+interface may display the message "waiting for game selection." In this case, you will need
+to reload the game manually.
 
 5. If OBS was already running, refresh your browser sources. The overlays should be active.
 
@@ -317,11 +321,11 @@ that combines [raw-gadget](https://github.com/xairy/raw-gadget) and [libusb](htt
 
 The Chatbot is written primarily in Python, with some HTML and JavaScript for the sources.
 
-Chaos uses [softmax](https://en.wikipedia.org/wiki/Softmax_function) to select modifiers for the
-voting pool. The effect is that the more times a particular modifier has previously won a vote,
-the less likely it is to appear in the voting list. If savvy viewers vote only for buffs or visual
-modifiers during a game's slow segments, this makes it more likely that the more painful modifiers
-will wind up in the voting list during combat sections.
+Chaos uses an algorithm to select modifiers for the voting pool. The effect is that the more times
+a particular modifier has previously won a vote, the less likely it is to appear in the voting
+list. If savvy viewers vote only for buffs or visual modifiers during a game's slow segments, this
+makes it more likely that the more painful modifiers will wind up in the voting list during combat
+sections.
 
 The Chaos engine listens to the Python voting system using ZMQ with [zmqpp](https://github.com/zeromq/zmqpp).
 When a winning modifier comes in, the engine adds the modifier to list of active modifiers. After
@@ -409,26 +413,28 @@ some point, after the Pi version is stable, but it's not a priority for me.
 *Do I have to use a Raspberry Pi 4?*
 
 Currently the Raspberry Pi 4 is the only device tested. Some other Raspberry Pi models *may* work
-(see below), but a regular computer running Linux will not. Raspberry Pi 5-class devices are not a
-good fit right now because Raspberry Pi OS keeps them on a 64-bit kernel, while raw-gadget
-currently requires a 32-bit kernel. On a Pi 4, Raspberry Pi OS Bookworm 32-bit is currently the
-safe packaged path; current Trixie images no longer ship the Pi 4 32-bit kernel image
-(`kernel7l.img`) that TCC needs.
+(see below), but a regular computer running Linux will not.
 
 The communication to the PlayStation requires the Pi to act as a USB client instead of a USB host.
 That requires special hardware peripherals which the Pi 4 has on its USB-C power port. Many older
 Pi models--and most, if not all, ordinary PCs--lack this hardware and so cannot run the chaos
 engine.
 
-There are other Pi variants that could work, but they are untested. The Raspberry Pi 0W has the
-right hardware and is much less expensive than the Pi 4, but this has only one USB device to act as
-a client and lacks an ethernet plug, meaning that WiFi is the only method to connect to the network.
+The Raspberry Pi 5 also has the right hardware but won't work with TCC 2.0 because Raspberry Pi
+OS keeps them on a 64-bit kernel, while the custom raw-gadget module we are using currently
+requires a 32-bit kernel. On a Pi 4, Raspberry Pi OS Bookworm 32-bit is currently the safe
+packaged path. Current Trixie images no longer ship the Pi 4 32-bit kernel image
+(`kernel7l.img`) that TCC needs.
+
+Support for the Pi 5 and 64-bit kernels generally is in progress and planned for version 2.1.
+
+Another variant that has the right hardware is the Raspberry Pi 0W, which has the added virtue of
+being much less expensive than the Pi 4 or 5, but this has only one USB device to act as a client
+and lacks an ethernet plug, meaning that WiFi is the only method to connect to the network.
 This means that the controller has to connect over Bluetooth, using the same device that's also used
 for its network connection. There may be performance issues going that route, including controller
 lag and disconnections, as well as chat/OBS overlay issues. Some of these performance issues may
 be reduced by running the chatbot on a different computer to lighten the Pi's workload.
-
-If you do get TCC running on a different model, please drop me a line and let me know.
 
 ## Troubleshooting
 *The console isn't responding to the controller*
