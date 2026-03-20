@@ -54,7 +54,9 @@ chaos/doc/html/*
 chaos/doc/Doxyfile
 
 # virtual environments
-chaosface/venv/*
+chaosface/venv/
+chaosface/.venv/
+chaosface/chaosface.egg-info/
 chaosface/database.sqlite
 chaos/doc/Doxyfile.bak
 chaosconfig.toml

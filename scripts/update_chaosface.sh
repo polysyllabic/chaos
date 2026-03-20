@@ -1,5 +1,6 @@
 #!/bin/bash
-# Package chaosface source and deploy it into /usr/local/chaos with a dedicated venv.
+# Package chaosface source and deploy it into /usr/local/chaos with a runtime venv.
+# Developer installs also provision a source-tree venv for local tooling and tests.
 
 set -euo pipefail
 
@@ -9,11 +10,57 @@ CHAOSFACE_SRC_ROOT="${REPO_ROOT}/chaosface"
 
 CHAOS_INSTALL_ROOT="${CHAOS_INSTALL_ROOT:-/usr/local/chaos}"
 CHAOSFACE_STAGE_DIR="${CHAOS_INSTALL_ROOT}/chaosface-src"
-CHAOSFACE_VENV_DIR="${CHAOS_INSTALL_ROOT}/venv"
+CHAOSFACE_RUNTIME_VENV_DIR="${CHAOS_INSTALL_ROOT}/venv"
+CHAOSFACE_DEV_VENV_DIR="${CHAOSFACE_SRC_ROOT}/.venv"
 
 install_deps=1
 restart_service=0
 developer_install=0
+
+ensure_venv() {
+  local venv_dir="$1"
+  local use_sudo="${2:-0}"
+
+  if [ -x "${venv_dir}/bin/python3" ]; then
+    return
+  fi
+
+  echo "Creating virtualenv at ${venv_dir}"
+  if (( use_sudo )); then
+    sudo python3 -m venv "${venv_dir}"
+  else
+    python3 -m venv "${venv_dir}"
+  fi
+}
+
+upgrade_build_tooling() {
+  local python_bin="$1"
+  local use_sudo="${2:-0}"
+
+  if (( use_sudo )); then
+    sudo "${python_bin}" -m pip install --upgrade pip setuptools wheel
+  else
+    "${python_bin}" -m pip install --upgrade pip setuptools wheel
+  fi
+}
+
+install_shared_python_dependencies() {
+  local python_bin="$1"
+  local requirements_path="$2"
+  local use_sudo="${3:-0}"
+
+  if (( use_sudo )); then
+    sudo "${python_bin}" -m pip install --upgrade \
+      -r "${requirements_path}" \
+      pyzmq \
+      pygame
+  else
+    "${python_bin}" -m pip install --upgrade \
+      -r "${requirements_path}" \
+      pyzmq \
+      pygame
+  fi
+}
 
 ensure_openblas_runtime() {
   local -a openblas_candidates=(
@@ -66,6 +113,7 @@ trap 'rm -f "${bundle_path}"' EXIT
 echo "--------------------------------------------------------"
 echo "Packaging chaosface source"
 tar \
+  --exclude='venv' \
   --exclude='.venv' \
   --exclude='__pycache__' \
   --exclude='*.pyc' \
@@ -94,31 +142,35 @@ fi
 echo "Preparing runtime directories"
 sudo mkdir -p "${CHAOS_INSTALL_ROOT}/configs"
 
-if [ ! -x "${CHAOSFACE_VENV_DIR}/bin/python3" ]; then
-  echo "Creating virtualenv at ${CHAOSFACE_VENV_DIR}"
-  sudo python3 -m venv "${CHAOSFACE_VENV_DIR}"
-fi
+ensure_venv "${CHAOSFACE_RUNTIME_VENV_DIR}" 1
 
 ensure_openblas_runtime
 
-echo "Upgrading build tooling in venv"
-sudo "${CHAOSFACE_VENV_DIR}/bin/python3" -m pip install --upgrade pip setuptools wheel
+echo "Upgrading build tooling in runtime venv"
+upgrade_build_tooling "${CHAOSFACE_RUNTIME_VENV_DIR}/bin/python3" 1
 
 if (( install_deps )); then
   echo "Installing runtime dependencies"
-  sudo "${CHAOSFACE_VENV_DIR}/bin/pip" install --upgrade \
-    -r "${CHAOSFACE_STAGE_DIR}/requirements.txt" \
-    pyzmq \
-    pygame
+  install_shared_python_dependencies "${CHAOSFACE_RUNTIME_VENV_DIR}/bin/python3" "${CHAOSFACE_STAGE_DIR}/requirements.txt" 1
 fi
 
 if (( developer_install )); then
-  echo "Installing developer Python tools"
-  sudo "${CHAOSFACE_VENV_DIR}/bin/pip" install --upgrade pytest
+  ensure_venv "${CHAOSFACE_DEV_VENV_DIR}"
+  echo "Upgrading build tooling in developer venv"
+  upgrade_build_tooling "${CHAOSFACE_DEV_VENV_DIR}/bin/python3"
+
+  if (( install_deps )); then
+    echo "Installing developer dependencies"
+    install_shared_python_dependencies "${CHAOSFACE_DEV_VENV_DIR}/bin/python3" "${CHAOSFACE_SRC_ROOT}/requirements.txt"
+    "${CHAOSFACE_DEV_VENV_DIR}/bin/python3" -m pip install --upgrade pytest
+  fi
+
+  echo "Installing chaosface package into developer venv"
+  "${CHAOSFACE_DEV_VENV_DIR}/bin/python3" -m pip install --upgrade --editable "${CHAOSFACE_SRC_ROOT}"
 fi
 
-echo "Installing chaosface package into venv"
-sudo "${CHAOSFACE_VENV_DIR}/bin/pip" install --upgrade "${CHAOSFACE_STAGE_DIR}"
+echo "Installing chaosface package into runtime venv"
+sudo "${CHAOSFACE_RUNTIME_VENV_DIR}/bin/python3" -m pip install --upgrade "${CHAOSFACE_STAGE_DIR}"
 
 if (( restart_service )); then
   echo "Restarting chaosface service"
@@ -127,4 +179,7 @@ if (( restart_service )); then
 fi
 
 echo "Chaosface deploy complete."
-echo "Runtime Python: ${CHAOSFACE_VENV_DIR}/bin/python3"
+echo "Runtime Python: ${CHAOSFACE_RUNTIME_VENV_DIR}/bin/python3"
+if (( developer_install )); then
+  echo "Developer Python: ${CHAOSFACE_DEV_VENV_DIR}/bin/python3"
+fi
