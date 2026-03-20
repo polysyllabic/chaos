@@ -920,7 +920,11 @@ install_engine() {
 install_chaosface() {
   # Install chaosface into /usr/local/chaos via venv + staged source package.
   if (( is_developer > 0 || remote_ui == 0 )); then
-    "${SCRIPTS_DIR}/update_chaosface.sh"
+    local -a chaosface_args=()
+    if (( is_developer > 0 )); then
+      chaosface_args+=(--developer)
+    fi
+    "${SCRIPTS_DIR}/update_chaosface.sh" "${chaosface_args[@]}"
   fi
 
   if (( remote_ui == 0 )); then

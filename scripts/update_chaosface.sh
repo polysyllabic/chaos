@@ -13,6 +13,7 @@ CHAOSFACE_VENV_DIR="${CHAOS_INSTALL_ROOT}/venv"
 
 install_deps=1
 restart_service=0
+developer_install=0
 
 ensure_openblas_runtime() {
   local -a openblas_candidates=(
@@ -48,9 +49,12 @@ for arg in "$@"; do
     --restart)
       restart_service=1
       ;;
+    --developer)
+      developer_install=1
+      ;;
     *)
       echo "Unknown option: ${arg}"
-      echo "Usage: $0 [--skip-deps] [--restart]"
+      echo "Usage: $0 [--skip-deps] [--restart] [--developer]"
       exit 2
       ;;
   esac
@@ -106,6 +110,11 @@ if (( install_deps )); then
     -r "${CHAOSFACE_STAGE_DIR}/requirements.txt" \
     pyzmq \
     pygame
+fi
+
+if (( developer_install )); then
+  echo "Installing developer Python tools"
+  sudo "${CHAOSFACE_VENV_DIR}/bin/pip" install --upgrade pytest
 fi
 
 echo "Installing chaosface package into venv"
