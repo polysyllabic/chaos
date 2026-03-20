@@ -6,7 +6,7 @@ These are the to-do items for version 2.1:
 - Add support for DualSense controller
 - Add controller rumble
 - Allow mod choice to be restricted by group for voting candidates
-- Upload config files through UI
+- ~~Upload config files through UI~~
 - Edit config files in the UI
 - Manage command permissions through interface
 - Commands to configure game settings without UI

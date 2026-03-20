@@ -69,7 +69,8 @@ int main(int argc, char** argv) {
     controller = std::make_unique<ControllerRaw>();
     engine = std::make_unique<ChaosEngine>(*controller, chaos_config.getListenerAddress(),
                                            chaos_config.getInterfaceAddress(), true,
-                                           chaos_config.getDefaultModListPath());
+                                           chaos_config.getDefaultModListPath(),
+                                           chaos_config.getGameDirectoryPath().string());
     installShutdownSignalHandlers();
 
     engine->setAvailableGames(chaos_config.getAvailableGames());

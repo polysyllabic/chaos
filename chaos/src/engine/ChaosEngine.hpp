@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <filesystem>
 #include <thread.hpp>
 #include <atomic>
 #include <memory>
@@ -87,6 +88,7 @@ namespace Chaos {
     int primary_mods = 0;
     bool interface_enabled{true};
     std::string default_mod_list_path;
+    std::filesystem::path game_config_directory;
     std::string current_game_config_path;
     std::string current_game_mod_list_uri;
     std::unordered_map<std::string, std::string> available_game_configs;
@@ -117,6 +119,7 @@ namespace Chaos {
     std::string currentEngineStatusLocked();
     std::string resolveGameConfig(const std::string& selection);
     std::string resolveModListUri(const std::string& configured_uri) const;
+    bool handleUploadedGameConfigs(const Json::Value& payload, std::string& message);
     void clearPendingInjectedEventsForMenu();
     void beginMenuNavigation();
     void endMenuNavigation();
@@ -132,10 +135,12 @@ namespace Chaos {
      * \param talker_endpoint Endpoint for outbound interface messages.
      * \param enable_interface Whether the external interface should be enabled.
      * \param default_mod_list_uri_base Base URI for resolving relative mod-list links.
+     * \param runtime_game_directory Directory used for discoverable game config files.
      */
     ChaosEngine(Controller& c, const std::string& listener_endpoint,
                 const std::string& talker_endpoint, bool enable_interface = true,
-                const std::string& default_mod_list_uri_base = "");
+                const std::string& default_mod_list_uri_base = "",
+                const std::string& runtime_game_directory = "");
     
     /**
      * \brief Send a serialized message to the external interface.

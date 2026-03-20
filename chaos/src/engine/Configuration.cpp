@@ -155,14 +155,17 @@ Configuration::Configuration(const std::string& fname) {
 }
 
 void Configuration::discoverAvailableGames() {
-  available_games.clear();
+  available_games = discoverAvailableGamesInDirectory(game_directory);
+}
 
+std::vector<std::pair<std::string, std::string>>
+Configuration::discoverAvailableGamesInDirectory(const std::filesystem::path& directory) {
   std::error_code dir_err;
-  std::filesystem::directory_iterator dir_iter(game_directory, dir_err);
+  std::filesystem::directory_iterator dir_iter(directory, dir_err);
   if (dir_err) {
-    PLOG_ERROR << "Unable to scan game directory '" << game_directory.string()
+    PLOG_ERROR << "Unable to scan game directory '" << directory.string()
                << "': " << dir_err.message();
-    return;
+    return {};
   }
 
   std::vector<DiscoveredGameConfig> discovered_configs;
@@ -224,6 +227,6 @@ void Configuration::discoverAvailableGames() {
               return game_a < game_b;
             });
 
-  available_games = std::move(discovered);
-  PLOG_INFO << "Discovered " << available_games.size() << " playable game configuration files.";
+  PLOG_INFO << "Discovered " << discovered.size() << " playable game configuration files.";
+  return discovered;
 }

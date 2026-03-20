@@ -59,6 +59,9 @@ namespace Chaos {
     void discoverAvailableGames();
 
   public:
+    static std::vector<std::pair<std::string, std::string>>
+    discoverAvailableGamesInDirectory(const std::filesystem::path& directory);
+
     /**
      * \brief The constructor for the reader.
      *
@@ -77,6 +80,11 @@ namespace Chaos {
      * This is the file we try to load if none is specified on the command line
      */
     std::string getGameFile() { return game_config.string(); }
+
+    /**
+     * \brief Get the configured game directory path.
+     */
+    const std::filesystem::path& getGameDirectoryPath() const { return game_directory; }
 
     /**
      * \brief Get the discovered playable game configurations.

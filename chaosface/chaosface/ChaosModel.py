@@ -14,6 +14,9 @@ import threading
 import time
 import asyncio
 import uuid
+import base64
+import re
+from pathlib import PurePath
 from typing import Any, Optional
 
 import numpy as np
@@ -29,6 +32,7 @@ class ChaosModel(EngineObserver):
   SELECT_GAME_RETRY_SECONDS = 5.0
   SELECT_GAME_RESPONSE_TIMEOUT_SECONDS = 10.0
   COMMAND_RESULT_TIMEOUT_SECONDS = 5.0
+  UPLOAD_GAME_CONFIG_TIMEOUT_SECONDS = 15.0
   ENGINE_STATUS_UNKNOWN = 'unknown'
   ENGINE_STATUS_NOT_CONNECTED = 'not_connected'
   ENGINE_STATUS_TIMEOUT = 'timeout'
@@ -36,6 +40,9 @@ class ChaosModel(EngineObserver):
   ENGINE_STATUS_BAD_CONFIG_FILE = 'bad_config_file'
   ENGINE_STATUS_PAUSED = 'paused'
   ENGINE_STATUS_RUNNING = 'running'
+  UPLOAD_ROLE_PATTERN = re.compile(
+    r'(?mi)^[ \t]*chaos_toml[ \t]*=[ \t]*["\'](main|template)["\'](?:[ \t]*#.*)?$'
+  )
 
   def __init__(self):
     self.thread = None
@@ -109,6 +116,30 @@ class ChaosModel(EngineObserver):
   @staticmethod
   def _status_for_pause(paused: bool) -> str:
     return ChaosModel.ENGINE_STATUS_PAUSED if paused else ChaosModel.ENGINE_STATUS_RUNNING
+
+  @staticmethod
+  def prepare_uploaded_game_config(filename: str, content: bytes) -> tuple[dict[str, str], str]:
+    raw_name = str(filename or '').strip()
+    if not raw_name:
+      raise ValueError('Missing file name')
+
+    clean_name = PurePath(raw_name).name
+    if clean_name != raw_name or clean_name in {'', '.', '..'}:
+      raise ValueError(f'Invalid file name: {raw_name}')
+    if not clean_name.lower().endswith('.toml'):
+      raise ValueError(f'Unsupported file type: {clean_name}')
+
+    try:
+      text = bytes(content).decode('utf-8')
+    except UnicodeDecodeError as err:
+      raise ValueError(f'{clean_name} is not valid UTF-8 text') from err
+
+    role_match = ChaosModel.UPLOAD_ROLE_PATTERN.search(text)
+    if role_match is None:
+      raise ValueError(f'{clean_name} is not a TCC main/template TOML file')
+
+    encoded = base64.b64encode(bytes(content)).decode('ascii')
+    return {'name': clean_name, 'content_b64': encoded}, role_match.group(1).lower()
 
   @staticmethod
   def _payload_status(payload: dict[str, Any]) -> str:
@@ -312,7 +343,6 @@ class ChaosModel(EngineObserver):
     return ok, message
 
   # Ask the engine to tell us about the game we're playing
-  # TODO: Send a config file from the computer running this bot
   def request_game_info(self):
     logging.debug("Asking engine about the game")
     to_send = {'game': True}
@@ -321,6 +351,37 @@ class ChaosModel(EngineObserver):
   def request_available_games(self):
     logging.debug("Asking engine for available games")
     self.send_engine_command({'available_games': True})
+
+  def upload_game_configs(self, files: list[dict[str, str]]) -> bool:
+    upload_files = []
+    for item in files:
+      if not isinstance(item, dict):
+        continue
+      name = str(item.get('name') or '').strip()
+      content_b64 = str(item.get('content_b64') or '').strip()
+      if name and content_b64:
+        upload_files.append({'name': name, 'content_b64': content_b64})
+    if not upload_files:
+      return False
+
+    ok, reason = self.send_engine_command_checked(
+      {'upload_games': upload_files},
+      expected_kind='upload_games',
+      timeout=self.UPLOAD_GAME_CONFIG_TIMEOUT_SECONDS,
+    )
+    if ok:
+      noun = 'file' if len(upload_files) == 1 else 'files'
+      ui_dispatch.call_soon(
+        config.relay.add_bot_status,
+        f'Uploaded {len(upload_files)} game config {noun} to the engine',
+      )
+    else:
+      logging.warning("Engine rejected uploaded game configs: %s", reason)
+      ui_dispatch.call_soon(
+        config.relay.add_bot_status,
+        f'Game config upload failed: {reason}',
+      )
+    return ok
 
   def request_engine_sync(self) -> None:
     self._manual_sync_requested.set()
@@ -735,6 +796,10 @@ class ChaosModel(EngineObserver):
         force_reload = config.relay.consume_game_selection_force_reload()
         self.request_game_selection(game_selection, force=True, reload=force_reload)
       self._drive_pending_game_selection()
+
+      upload_request = config.relay.consume_game_config_upload_request()
+      if upload_request:
+        self.upload_game_configs(upload_request)
 
       if self._pending_game_startup_setup and config.relay.valid_data:
         if config.relay.engine_status == self.ENGINE_STATUS_PAUSED:

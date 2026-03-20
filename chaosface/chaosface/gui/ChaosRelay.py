@@ -188,6 +188,7 @@ class ChaosRelay:
     self.remove_mod_request: str = ''
     self.game_selection_request: str = ''
     self.game_selection_force_reload = False
+    self.game_config_upload_requests: List[List[Dict[str, str]]] = []
     self.reset_mods = False
     self.engine_commands = queue.Queue()
     self.insert_cooldown = 0.0
@@ -636,6 +637,7 @@ class ChaosRelay:
     self.remove_mod_request = ''
     self.game_selection_request = ''
     self.game_selection_force_reload = False
+    self.game_config_upload_requests = []
 
   def time_per_vote(self) -> float:
     active_modifiers = self._attr_float('active_modifiers', 1.0)
@@ -1285,6 +1287,27 @@ class ChaosRelay:
       force_reload = bool(self.game_selection_force_reload)
       self.game_selection_force_reload = False
     return force_reload
+
+  def request_game_config_upload(self, files: List[Dict[str, str]]):
+    clean_files: List[Dict[str, str]] = []
+    if isinstance(files, list):
+      for item in files:
+        if not isinstance(item, dict):
+          continue
+        name = str(item.get('name') or '').strip()
+        content_b64 = str(item.get('content_b64') or '').strip()
+        if name and content_b64:
+          clean_files.append({'name': name, 'content_b64': content_b64})
+    if not clean_files:
+      return
+    with self._lock:
+      self.game_config_upload_requests.append(clean_files)
+
+  def consume_game_config_upload_request(self) -> List[Dict[str, str]]:
+    with self._lock:
+      if not self.game_config_upload_requests:
+        return []
+      return self.game_config_upload_requests.pop(0)
 
   def request_remove_mod(self, mod_key: str):
     with self._lock:

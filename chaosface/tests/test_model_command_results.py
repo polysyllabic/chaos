@@ -1,5 +1,6 @@
 """Command-result gating tests for ChaosModel engine actions."""
 
+import base64
 import asyncio
 import json
 import threading
@@ -198,6 +199,73 @@ def test_force_reload_game_selection_sends_reload_payload():
 
   assert sent_payloads == [{'select_game': 'Reload Test', 'reload': True}]
   assert model._pending_selected_inflight is True
+
+
+def test_prepare_uploaded_game_config_accepts_main_and_template_roles():
+  payload, role = ChaosModel.prepare_uploaded_game_config(
+    'valid.toml',
+    b'config_file_ver = "1.0"\nchaos_toml = "main"\ngame = "Valid"\n',
+  )
+  assert payload['name'] == 'valid.toml'
+  assert base64.b64decode(payload['content_b64']) == (
+    b'config_file_ver = "1.0"\nchaos_toml = "main"\ngame = "Valid"\n'
+  )
+  assert role == 'main'
+
+  _, template_role = ChaosModel.prepare_uploaded_game_config(
+    'template.toml',
+    b'chaos_toml = "template"\n',
+  )
+  assert template_role == 'template'
+
+
+def test_prepare_uploaded_game_config_rejects_invalid_files():
+  try:
+    ChaosModel.prepare_uploaded_game_config('not-tcc.toml', b'game = "No Role"\n')
+    assert False, 'expected invalid TCC TOML rejection'
+  except ValueError as err:
+    assert 'not a TCC main/template TOML file' in str(err)
+
+  try:
+    ChaosModel.prepare_uploaded_game_config('../escape.toml', b'chaos_toml = "main"\n')
+    assert False, 'expected invalid file name rejection'
+  except ValueError as err:
+    assert 'Invalid file name' in str(err)
+
+
+def test_upload_game_configs_sends_checked_command_and_reports_status():
+  import chaosface.config.globals as config
+
+  model = _blank_model()
+  config.relay.reset_all()
+  config.relay.clear_bot_status()
+
+  sent = {}
+
+  def fake_send_checked(payload, *, expected_kind, expected_target='', timeout=0.0):
+    sent['payload'] = payload
+    sent['expected_kind'] = expected_kind
+    sent['expected_target'] = expected_target
+    sent['timeout'] = timeout
+    return True, 'uploaded_game_configs'
+
+  model.send_engine_command_checked = fake_send_checked  # type: ignore[assignment]
+  ok = model.upload_game_configs([
+    {'name': 'alpha.toml', 'content_b64': 'YWJj'},
+    {'name': 'beta.toml', 'content_b64': 'ZGVm'},
+  ])
+
+  assert ok is True
+  assert sent['payload'] == {
+    'upload_games': [
+      {'name': 'alpha.toml', 'content_b64': 'YWJj'},
+      {'name': 'beta.toml', 'content_b64': 'ZGVm'},
+    ],
+  }
+  assert sent['expected_kind'] == 'upload_games'
+  assert sent['expected_target'] == ''
+  assert sent['timeout'] == ChaosModel.UPLOAD_GAME_CONFIG_TIMEOUT_SECONDS
+  assert any('Uploaded 2 game config files to the engine' in entry for entry in config.relay.get_bot_status())
 
 
 def test_reenable_voting_from_disabled_starts_vote_and_candidates():

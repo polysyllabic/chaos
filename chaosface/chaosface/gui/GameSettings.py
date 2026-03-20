@@ -4,11 +4,13 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Callable
 
-from nicegui import ui
+from nicegui import events, ui
 
 import chaosface.config.globals as config
+from chaosface.ChaosModel import ChaosModel
 
 from .ui_helpers import relay_config_float, safe_float, safe_int, sync_enabled_mods
 
@@ -44,6 +46,10 @@ def build_game_settings_tab() -> Callable[[], None]:
 
     with ui.row().classes('w-full items-end gap-3'):
       selector_state = {'pending_user_selection': False}
+      upload_batch_state = {
+        'files': [],
+        'sequence': 0,
+      }
 
       def _on_game_selector_change(_event):
         selector_state['pending_user_selection'] = True
@@ -71,6 +77,50 @@ def build_game_settings_tab() -> Callable[[], None]:
           status_label.text = f'Requested game load: {selected}'
 
       ui.button('Load Game', on_click=confirm_game_selection)
+
+      async def flush_upload_batch(expected_sequence: int):
+        await asyncio.sleep(0.25)
+        if upload_batch_state['sequence'] != expected_sequence:
+          return
+        files = list(upload_batch_state['files'])
+        upload_batch_state['files'].clear()
+        if not files:
+          return
+        config.relay.request_game_config_upload(files)
+        noun = 'file' if len(files) == 1 else 'files'
+        status_label.text = f'Queued upload of {len(files)} game config {noun}'
+
+      def queue_validated_upload(payload: dict[str, str]):
+        pending = [item for item in upload_batch_state['files'] if item.get('name') != payload.get('name')]
+        pending.append(payload)
+        upload_batch_state['files'] = pending
+        upload_batch_state['sequence'] += 1
+        asyncio.create_task(flush_upload_batch(upload_batch_state['sequence']))
+
+      def handle_game_file_upload(event: events.UploadEventArguments):
+        raw_contents = event.content.read()
+        if isinstance(raw_contents, str):
+          content_bytes = raw_contents.encode('utf-8')
+        else:
+          content_bytes = bytes(raw_contents)
+
+        try:
+          payload, role = ChaosModel.prepare_uploaded_game_config(event.name, content_bytes)
+        except ValueError as err:
+          message = str(err)
+          status_label.text = message
+          ui.notify(message, color='negative')
+          return
+
+        queue_validated_upload(payload)
+        status_label.text = f'Validated {payload["name"]} ({role}); preparing upload'
+
+      ui.upload(
+        label='Upload File',
+        multiple=True,
+        auto_upload=True,
+        on_upload=handle_game_file_upload,
+      ).props('accept=.toml').classes('shrink-0')
 
     def refresh_game_selector():
       if game_selector.is_deleted:

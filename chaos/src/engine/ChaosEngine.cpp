@@ -18,16 +18,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <iostream>
+#include <fstream>
 #include <memory>
 #include <unistd.h>
 #include <cmath>
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
+#include <iterator>
+#include <unordered_map>
 #include <vector>
 #include <plog/Log.h>
 #include <toml++/toml.h>
 
 #include "ChaosEngine.hpp"
+#include "Configuration.hpp"
 #include <ControllerInput.hpp>
 #include "Sequence.hpp"
 
@@ -86,6 +91,94 @@ namespace {
     }
     return base + leaf;
   }
+
+  std::string toLower(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return value;
+  }
+
+  bool hasTomlExtension(const std::string& file_name) {
+    return toLower(std::filesystem::path(file_name).extension().string()) == ".toml";
+  }
+
+  bool isSafeUploadFileName(const std::string& file_name) {
+    if (file_name.empty() || file_name == "." || file_name == "..") {
+      return false;
+    }
+    const std::filesystem::path path(file_name);
+    if (path.has_parent_path() || path.is_absolute()) {
+      return false;
+    }
+    return path.filename() == path;
+  }
+
+  bool decodeBase64(std::string_view encoded, std::string& decoded) {
+    static const std::string kAlphabet =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    static const std::unordered_map<char, unsigned char> kLookup = []() {
+      std::unordered_map<char, unsigned char> lookup;
+      for (unsigned char i = 0; i < kAlphabet.size(); ++i) {
+        lookup[kAlphabet[i]] = i;
+      }
+      return lookup;
+    }();
+
+    decoded.clear();
+    int val = 0;
+    int bits = -8;
+    bool padding_seen = false;
+    for (char ch : encoded) {
+      if (std::isspace(static_cast<unsigned char>(ch))) {
+        continue;
+      }
+      if (ch == '=') {
+        padding_seen = true;
+        continue;
+      }
+      auto iter = kLookup.find(ch);
+      if (iter == kLookup.end() || padding_seen) {
+        return false;
+      }
+      val = (val << 6) + iter->second;
+      bits += 6;
+      if (bits >= 0) {
+        decoded.push_back(static_cast<char>((val >> bits) & 0xFF));
+        bits -= 8;
+      }
+    }
+    return true;
+  }
+
+  bool validateUploadedGameConfigToml(const std::string& file_name, const std::string& contents,
+                                      std::string& message) {
+    if (!isSafeUploadFileName(file_name)) {
+      message = "invalid_upload_file_name";
+      return false;
+    }
+    if (!hasTomlExtension(file_name)) {
+      message = "invalid_upload_file_extension";
+      return false;
+    }
+
+    toml::table config;
+    try {
+      config = toml::parse(contents);
+    } catch (const toml::parse_error& err) {
+      PLOG_WARNING << "Rejecting uploaded game config '" << file_name << "': " << err;
+      message = "invalid_upload_toml";
+      return false;
+    }
+
+    std::optional<std::string_view> role = config["chaos_toml"].value<std::string_view>();
+    if (!role || (*role != "main" && *role != "template")) {
+      message = "invalid_upload_role";
+      return false;
+    }
+
+    message.clear();
+    return true;
+  }
 }
 
 bool ChaosEngine::dispatchControllerEvent(const DeviceEvent& event,
@@ -130,7 +223,8 @@ void ChaosEngine::endMenuNavigation() {
 
 ChaosEngine::ChaosEngine(Controller& c, const std::string& listener_endpoint,
                          const std::string& talker_endpoint, bool enable_interface,
-                         const std::string& default_mod_list_uri_base) :
+                         const std::string& default_mod_list_uri_base,
+                         const std::string& runtime_game_directory) :
   controller{c}, game{c}, pause{true}
 {
   time.initialize();
@@ -138,6 +232,7 @@ ChaosEngine::ChaosEngine(Controller& c, const std::string& listener_endpoint,
   controller.addInjector(this);
   interface_enabled = enable_interface;
   default_mod_list_path = default_mod_list_uri_base;
+  game_config_directory = runtime_game_directory;
   if (default_mod_list_path.empty()) {
     default_mod_list_path = "https://github.com/polysyllabic/chaos/tree/main/chaos/examples/modlists/";
   }
@@ -193,6 +288,79 @@ std::string ChaosEngine::resolveModListUri(const std::string& configured_uri) co
     return configured_uri;
   }
   return joinUriPath(default_mod_list_path, configured_uri);
+}
+
+bool ChaosEngine::handleUploadedGameConfigs(const Json::Value& payload, std::string& message) {
+  if (!payload.isArray() || payload.size() == 0) {
+    message = "no_upload_files";
+    return false;
+  }
+  if (game_config_directory.empty()) {
+    PLOG_ERROR << "Upload rejected: runtime game directory is not configured.";
+    message = "game_directory_not_configured";
+    return false;
+  }
+
+  struct PendingUpload {
+    std::string name;
+    std::string contents;
+  };
+
+  std::vector<PendingUpload> uploads;
+  uploads.reserve(payload.size());
+  for (const Json::Value& item : payload) {
+    if (!item.isObject()) {
+      message = "invalid_upload_payload";
+      return false;
+    }
+    const std::string file_name = item.isMember("name") ? item["name"].asString() : "";
+    const std::string encoded_contents = item.isMember("content_b64") ? item["content_b64"].asString() : "";
+    std::string decoded_contents;
+    if (file_name.empty() || encoded_contents.empty()) {
+      message = "invalid_upload_payload";
+      return false;
+    }
+    if (!decodeBase64(encoded_contents, decoded_contents)) {
+      PLOG_WARNING << "Rejecting uploaded game config '" << file_name << "': invalid base64 payload.";
+      message = "invalid_upload_encoding";
+      return false;
+    }
+    if (!validateUploadedGameConfigToml(file_name, decoded_contents, message)) {
+      PLOG_WARNING << "Rejecting uploaded game config '" << file_name << "': " << message;
+      return false;
+    }
+    uploads.push_back({file_name, std::move(decoded_contents)});
+  }
+
+  std::error_code dir_err;
+  std::filesystem::create_directories(game_config_directory, dir_err);
+  if (dir_err) {
+    PLOG_ERROR << "Failed to create game directory '" << game_config_directory.string()
+               << "': " << dir_err.message();
+    message = "upload_directory_error";
+    return false;
+  }
+
+  for (const PendingUpload& upload : uploads) {
+    const std::filesystem::path output_path = game_config_directory / upload.name;
+    std::ofstream output(output_path, std::ios::binary | std::ios::trunc);
+    if (!output) {
+      PLOG_ERROR << "Failed to open uploaded game config destination '" << output_path.string() << "'.";
+      message = "upload_write_failed";
+      return false;
+    }
+    output.write(upload.contents.data(), static_cast<std::streamsize>(upload.contents.size()));
+    if (!output.good()) {
+      PLOG_ERROR << "Failed to write uploaded game config '" << output_path.string() << "'.";
+      message = "upload_write_failed";
+      return false;
+    }
+    PLOG_INFO << "Uploaded game config saved to '" << output_path.string() << "'.";
+  }
+
+  setAvailableGames(Configuration::discoverAvailableGamesInDirectory(game_config_directory));
+  message = "uploaded_game_configs";
+  return true;
 }
 
 bool ChaosEngine::setGame(const std::string& name) {
@@ -413,6 +581,15 @@ void ChaosEngine::newCommand(const std::string& command) {
     }
     reportGameStatus();
     reportCommandResult("select_game", selection_ok, selection_message, command_id, requested_game);
+  }
+
+  if (root.isMember("upload_games")) {
+    std::string upload_message;
+    const bool upload_ok = handleUploadedGameConfigs(root["upload_games"], upload_message);
+    if (upload_ok) {
+      reportAvailableGames();
+    }
+    reportCommandResult("upload_games", upload_ok, upload_message, command_id);
   }
 
   if (root.isMember("newgame")) {
