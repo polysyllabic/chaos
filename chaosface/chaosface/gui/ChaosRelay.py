@@ -65,7 +65,7 @@ chaos_defaults = {
   'announce_candidates': False,
   'announce_winner': False,
   'announce_active': False,
-  'pi_host': '192.168.1.232',
+  'pi_host': '127.0.0.1',
   'listen_port': 5556,
   'talk_port': 5555,
   'obs_overlays': True,

@@ -84,3 +84,23 @@ target_link_libraries(test_engine_lifecycle PRIVATE
 # Hardware probe helper: prints VID/PID for the controller detected on any available USB port.
 add_executable(probe_controller_vidpid probe_controller_vidpid.cpp)
 target_link_libraries(probe_controller_vidpid PRIVATE chaos_usb_transport)
+
+set(USB_SNIFFIFY_HARDWARE_TEST_SUPPORT
+  UsbSniffifyHardwareTestUtils.cpp
+)
+
+function(add_usb_sniffify_hardware_test target_name source_name)
+  add_executable(${target_name}
+    ${source_name}
+    ${USB_SNIFFIFY_HARDWARE_TEST_SUPPORT}
+  )
+  target_compile_features(${target_name} PRIVATE cxx_std_17)
+  target_link_libraries(${target_name} PRIVATE chaos_usb_transport)
+endfunction()
+
+# Pi-only hardware smoke tests for usb_sniffify. These are intentionally separate
+# from the generic unit-test script because they require Raspberry Pi USB hardware
+# and, for live raw-gadget access, root privileges.
+add_usb_sniffify_hardware_test(test_usb_sniffify_environment test_usb_sniffify_environment.cpp)
+add_usb_sniffify_hardware_test(test_usb_sniffify_raw_gadget_session test_usb_sniffify_raw_gadget_session.cpp)
+add_usb_sniffify_hardware_test(test_usb_sniffify_passthrough_smoke test_usb_sniffify_passthrough_smoke.cpp)

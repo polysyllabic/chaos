@@ -3,6 +3,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <errno.h>
+#include <signal.h>
 #include <unistd.h>
 #include <algorithm>
 
@@ -11,6 +12,21 @@
 namespace {
 RawGadgetPassthrough* parentFromEndpoint(EndpointInfo* epInfo) {
   return epInfo->parent->parent->parent->parent->parent;
+}
+
+constexpr int kEndpointWakeSignal = SIGUSR1;
+pthread_once_t gEndpointWakeSignalOnce = PTHREAD_ONCE_INIT;
+
+void endpointWakeSignalHandler(int) {}
+
+void installEndpointWakeSignalHandler() {
+  struct sigaction action;
+  std::memset(&action, 0, sizeof(action));
+  action.sa_handler = endpointWakeSignalHandler;
+  sigemptyset(&action.sa_mask);
+  if (sigaction(kEndpointWakeSignal, &action, nullptr) != 0) {
+    PLOG_ERROR << "Failed to install Raw Gadget wake signal handler";
+  }
 }
 
 void trackTransfer(EndpointInfo* endpointInfo, libusb_transfer* transfer) {
@@ -33,6 +49,105 @@ void untrackTransfer(EndpointInfo* endpointInfo, libusb_transfer* transfer) {
   }
   pthread_mutex_unlock(&endpointInfo->transferMutex);
 }
+
+void requeueInterruptedWrite(EndpointInfo* endpointInfo, std::vector<unsigned char>&& packet) {
+  if (!endpointInfo->writeQueueInitialized) {
+    return;
+  }
+
+  pthread_mutex_lock(&endpointInfo->writeQueueMutex);
+  endpointInfo->pendingWrites.emplace_front(std::move(packet));
+  pthread_mutex_unlock(&endpointInfo->writeQueueMutex);
+}
+}
+
+void initializeRawGadgetThreadSignals() {
+  pthread_once(&gEndpointWakeSignalOnce, installEndpointWakeSignalHandler);
+}
+
+bool rawGadgetIoInterrupted(int error) {
+  return error == EINTR || error == ETIMEDOUT;
+}
+
+void interruptEndpointThread(EndpointInfo* epInfo) {
+  if (epInfo == nullptr || !epInfo->threadStarted) {
+    return;
+  }
+
+  int result = pthread_kill(epInfo->thread, kEndpointWakeSignal);
+  if (result != 0 && result != ESRCH) {
+    PLOG_WARNING << "Failed to interrupt endpoint thread. errno=" << result;
+  }
+}
+
+void clearPendingWrites(EndpointInfo* epInfo) {
+  if (epInfo == nullptr || !epInfo->writeQueueInitialized) {
+    return;
+  }
+
+  pthread_mutex_lock(&epInfo->writeQueueMutex);
+  epInfo->pendingWrites.clear();
+  pthread_mutex_unlock(&epInfo->writeQueueMutex);
+}
+
+bool queuePendingWrite(EndpointInfo* epInfo, const unsigned char* data, int length) {
+  if (epInfo == nullptr || !epInfo->writeQueueInitialized || length < 0 || length > EP_MAX_PACKET_INT ||
+      (length > 0 && data == nullptr)) {
+    return false;
+  }
+
+  std::vector<unsigned char> packet(static_cast<size_t>(length));
+  if (length > 0) {
+    std::memcpy(packet.data(), data, static_cast<size_t>(length));
+  }
+
+  pthread_mutex_lock(&epInfo->writeQueueMutex);
+  epInfo->pendingWrites.emplace_back(std::move(packet));
+  pthread_mutex_unlock(&epInfo->writeQueueMutex);
+  return true;
+}
+
+bool flushPendingWrite(EndpointInfo* epInfo) {
+  if (epInfo == nullptr || !epInfo->writeQueueInitialized) {
+    return false;
+  }
+
+  std::vector<unsigned char> packet;
+  bool hadPacket = false;
+  pthread_mutex_lock(&epInfo->writeQueueMutex);
+  if (!epInfo->pendingWrites.empty()) {
+    packet = std::move(epInfo->pendingWrites.front());
+    epInfo->pendingWrites.pop_front();
+    hadPacket = true;
+  }
+  pthread_mutex_unlock(&epInfo->writeQueueMutex);
+
+  if (!hadPacket) {
+    return false;
+  }
+
+  struct usb_raw_int_io io{};
+  io.inner.ep = epInfo->ep_int;
+  io.inner.flags = 0;
+  io.inner.length = static_cast<__u32>(packet.size());
+  if (!packet.empty()) {
+    std::memcpy(&io.inner.data[0], packet.data(), packet.size());
+  }
+
+  int rv = usb_raw_ep_write(epInfo->fd, (struct usb_raw_ep_io*)&io);
+  if (rv < 0) {
+    if (rawGadgetIoInterrupted(errno)) {
+      if (epInfo->keepRunning && !epInfo->stop) {
+        requeueInterruptedWrite(epInfo, std::move(packet));
+      }
+      return true;
+    }
+    PLOG_ERROR << "write to host usb_raw_ep_write() returned " << rv;
+    parentFromEndpoint(epInfo)->requestReconnect();
+  } else if (rv != static_cast<int>(io.inner.length)) {
+    PLOG_WARNING << "Only sent " << rv << " bytes instead of " << io.inner.length;
+  }
+  return true;
 }
 
 static void cb_transfer_out(struct libusb_transfer* xfr) {
@@ -64,6 +179,12 @@ static void cb_transfer_in(struct libusb_transfer* xfr) {
     return;
   }
 
+  if (!epInfo->keepRunning || epInfo->stop) {
+    epInfo->busyPackets.fetch_sub(1);
+    libusb_free_transfer(xfr);
+    return;
+  }
+
   struct usb_raw_int_io io;
   io.inner.ep = epInfo->ep_int;
   io.inner.flags = 0;
@@ -81,26 +202,21 @@ static void cb_transfer_in(struct libusb_transfer* xfr) {
       unsigned char* packetBuffer = libusb_get_iso_packet_buffer_simple(xfr, i);
       memcpy(&io.inner.data[0], packetBuffer, io.inner.length);
 
-      int rv = usb_raw_ep_write(epInfo->fd, (struct usb_raw_ep_io*)&io);
-      if (rv < 0) {
-        if (errno != ETIMEDOUT) {
-          PLOG_ERROR << "iso write to host usb_raw_ep_write() returned " << rv;
-          passthrough->requestReconnect();
-        }
-      } else if (rv != io.inner.length) {
-        PLOG_WARNING << "Only sent " << rv << " bytes instead of " << io.inner.length;
+      if (!queuePendingWrite(epInfo, reinterpret_cast<unsigned char*>(&io.inner.data[0]),
+                             static_cast<int>(io.inner.length))) {
+        PLOG_ERROR << "Failed to queue isochronous packet for Raw Gadget write";
+        passthrough->requestReconnect();
+        break;
       }
     }
   } else {
     io.inner.length = xfr->actual_length > EP_MAX_PACKET_INT ? EP_MAX_PACKET_INT : xfr->actual_length;
     memcpy(&io.inner.data[0], xfr->buffer, io.inner.length);
 
-    int rv = usb_raw_ep_write(epInfo->fd, (struct usb_raw_ep_io*)&io);
-    if (rv < 0) {
-      PLOG_ERROR << "bulk/interrupt write to host usb_raw_ep_write() returned " << rv;
+    if (!queuePendingWrite(epInfo, reinterpret_cast<unsigned char*>(&io.inner.data[0]),
+                           static_cast<int>(io.inner.length))) {
+      PLOG_ERROR << "Failed to queue bulk/interrupt packet for Raw Gadget write";
       passthrough->requestReconnect();
-    } else if (rv != io.inner.length) {
-      PLOG_WARNING << "Only sent " << rv << " bytes instead of " << io.inner.length;
     }
   }
 
@@ -124,7 +240,7 @@ void ep_out_work_interrupt(EndpointInfo* epInfo) {
 
   int transferred = usb_raw_ep_read(epInfo->fd, (struct usb_raw_ep_io*)&io);
   if (transferred <= 0) {
-    if (transferred < 0 && errno != ETIMEDOUT) {
+    if (transferred < 0 && !rawGadgetIoInterrupted(errno)) {
       parentFromEndpoint(epInfo)->requestReconnect();
     }
     usleep(epInfo->bIntervalInMicroseconds);
@@ -219,7 +335,7 @@ void ep_out_work_isochronous(EndpointInfo* epInfo) {
 
   int transferred = usb_raw_ep_read(epInfo->fd, (struct usb_raw_ep_io*)&io);
   if (transferred <= 0) {
-    if (transferred < 0 && errno != ETIMEDOUT) {
+    if (transferred < 0 && !rawGadgetIoInterrupted(errno)) {
       parentFromEndpoint(epInfo)->requestReconnect();
     }
     usleep(epInfo->bIntervalInMicroseconds);

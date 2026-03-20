@@ -12,15 +12,24 @@ REPO_ROOT="${SCRIPT_DIR}"
 CHAOS_SRC_DIR="${REPO_ROOT}/chaos"
 SCRIPTS_DIR="${REPO_ROOT}/scripts"
 CHAOS_INSTALL_ROOT="/usr/local/chaos"
+RAW_GADGET_REPO_URL="${RAW_GADGET_REPO_URL:-https://github.com/xairy/raw-gadget.git}"
+RAW_GADGET_CHECKOUT="${HOME}/raw-gadget"
 
 # We keep a state file to remember variables between runs.
 statefile="${HOME}/.chaosinstall"
 install_stage=0
 remote_ui=0
-interface_addr="localhost"
+interface_addr="127.0.0.1"
+listener_port=5555
+interface_port=5556
 is_developer=0
 selected_build_branch=""
 staged_chaos_config="${REPO_ROOT}/chaosconfig.toml"
+staged_chaos_env="${REPO_ROOT}/chaos.env"
+detected_target_platform=""
+detected_os_codename=""
+detected_udc_device=""
+detected_udc_driver=""
 
 save_state() {
   typeset -p "$@" >"${statefile}"
@@ -32,7 +41,7 @@ if [ -f "${statefile}" ]; then
 fi
 
 # Save state automatically on exit.
-trap 'save_state install_stage remote_ui interface_addr is_developer selected_build_branch' EXIT
+trap 'save_state install_stage remote_ui interface_addr listener_port interface_port is_developer selected_build_branch' EXIT
 
 git_repo_ready_for_branch_selection() {
   command -v git >/dev/null 2>&1 || return 1
@@ -190,7 +199,9 @@ confirm_reboot() {
 
 install_questions() {
   remote_ui=0
-  interface_addr="localhost"
+  interface_addr="127.0.0.1"
+  listener_port=5555
+  interface_port=5556
   is_developer=0
 
   echo "Install chatbot and user interface on a separate computer?"
@@ -234,9 +245,99 @@ install_questions() {
     esac
   done
 
+  if (( is_developer != 0 )); then
+    echo "Do you want to use alternate ZMQ talk/listen ports on this device?"
+    select yn in "Yes" "No"; do
+      case "${yn}" in
+        Yes)
+          listener_port=5655
+          interface_port=5656
+          echo "The listener port receives incoming interface commands."
+          echo "The interface port sends outgoing messages to chaosface."
+          while true; do
+            read -r -p "Listener port (default ${listener_port}): " temp_listener_port
+            if [ -z "${temp_listener_port}" ]; then
+              break
+            fi
+            if [[ "${temp_listener_port}" =~ ^[0-9]+$ ]] && (( temp_listener_port >= 1024 && temp_listener_port <= 65535 )); then
+              listener_port="${temp_listener_port}"
+              break
+            fi
+            echo "Please enter a numeric TCP port between 1024 and 65535."
+          done
+          while true; do
+            read -r -p "Talker/interface port (default ${interface_port}): " temp_interface_port
+            if [ -z "${temp_interface_port}" ]; then
+              :
+            elif [[ "${temp_interface_port}" =~ ^[0-9]+$ ]] && (( temp_interface_port >= 1024 && temp_interface_port <= 65535 )); then
+              interface_port="${temp_interface_port}"
+            else
+              echo "Please enter a numeric TCP port between 1024 and 65535."
+              continue
+            fi
+
+            if [ "${interface_port}" = "${listener_port}" ]; then
+              echo "The talker/interface port must be different from the listener port."
+              continue
+            fi
+            break
+          done
+          break
+          ;;
+        No)
+          break
+          ;;
+      esac
+    done
+  fi
+
   # Stage a modified chaosconfig.toml that will be installed into /usr/local/chaos.
   cp "${CHAOS_SRC_DIR}/chaosconfig.toml" "${staged_chaos_config}"
   sed -i 's/^interface_addr *= *\"[^\"]+\"/interface_addr = \"'"${interface_addr}"'\"/' "${staged_chaos_config}"
+  sed -i 's/^interface_port *= *.*/interface_port = '"${interface_port}"'/' "${staged_chaos_config}"
+  sed -i 's/^listener_port *= *.*/listener_port = '"${listener_port}"'/' "${staged_chaos_config}"
+}
+
+sync_local_chaosface_config() {
+  local config_file="${CHAOS_INSTALL_ROOT}/configs/chaos_config.json"
+  local temp_config
+  local local_pi_host="127.0.0.1"
+
+  temp_config="$(mktemp)"
+  if [ -f "${config_file}" ]; then
+    cp "${config_file}" "${temp_config}"
+  else
+    printf '{}\n' >"${temp_config}"
+  fi
+
+  python3 - "${temp_config}" "${local_pi_host}" "${interface_port}" "${listener_port}" <<'PY'
+import json
+import pathlib
+import sys
+
+config_path = pathlib.Path(sys.argv[1])
+pi_host = sys.argv[2]
+listen_port = int(sys.argv[3])
+talk_port = int(sys.argv[4])
+
+try:
+    data = json.loads(config_path.read_text())
+except Exception:
+    data = {}
+
+if not isinstance(data, dict):
+    data = {}
+
+data["pi_host"] = pi_host
+data["listen_port"] = listen_port
+data["talk_port"] = talk_port
+
+config_path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+PY
+
+  sudo install -d -m 0755 "${CHAOS_INSTALL_ROOT}/configs"
+  sudo install -m 0644 "${temp_config}" "${config_file}"
+  rm -f "${temp_config}"
 }
 
 package_is_installed() {
@@ -256,27 +357,67 @@ first_available_package() {
   return 1
 }
 
-running_kernel_is_64_bit() {
-  case "$(uname -m)" in
-    aarch64|arm64)
-      return 0
-      ;;
-    *)
-      return 1
-      ;;
-  esac
-}
-
 current_device_model() {
   if [ -r /proc/device-tree/model ]; then
     tr -d '\0' </proc/device-tree/model
   fi
 }
 
-device_only_supports_64bit_kernel() {
+current_os_codename() {
+  if [ -r /etc/os-release ]; then
+    (
+      . /etc/os-release
+      printf '%s\n' "${VERSION_CODENAME:-${DEBIAN_CODENAME:-unknown}}"
+    )
+  else
+    printf '%s\n' unknown
+  fi
+}
+
+current_pi_platform() {
   case "$(current_device_model)" in
     *Raspberry\ Pi\ 5*|*Raspberry\ Pi\ 500*|*Compute\ Module\ 5*)
-      return 0
+      printf '%s\n' pi5
+      ;;
+    *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
+      printf '%s\n' pi4
+      ;;
+    *Raspberry\ Pi*)
+      printf '%s\n' raspberry-pi
+      ;;
+    *)
+      printf '%s\n' unknown
+      ;;
+  esac
+}
+
+boot_config_model_filter() {
+  case "$(current_device_model)" in
+    *Compute\ Module\ 5*)
+      printf '%s\n' cm5
+      ;;
+    *Raspberry\ Pi\ 5*|*Raspberry\ Pi\ 500*)
+      printf '%s\n' pi5
+      ;;
+    *Compute\ Module\ 4*)
+      printf '%s\n' cm4
+      ;;
+    *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*)
+      printf '%s\n' pi4
+      ;;
+    *)
+      printf '%s\n' all
+      ;;
+  esac
+}
+
+default_udc_for_platform() {
+  case "$1" in
+    pi5)
+      printf '%s\n' 1000480000.usb
+      ;;
+    pi4)
+      printf '%s\n' fe980000.usb
       ;;
     *)
       return 1
@@ -284,106 +425,62 @@ device_only_supports_64bit_kernel() {
   esac
 }
 
-expected_32bit_kernel_image_name() {
-  case "$(current_device_model)" in
-    *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
-      printf '%s\n' kernel7l.img
-      ;;
-    *Raspberry\ Pi\ 3*|*Raspberry\ Pi\ 2*|*Zero\ 2\ W*|*Compute\ Module\ 3*)
-      printf '%s\n' kernel7.img
-      ;;
-    *Raspberry\ Pi\ Zero*|*Raspberry\ Pi\ 1*|*Compute\ Module\ 1*)
-      printf '%s\n' kernel.img
-      ;;
-    *)
-      return 1
-      ;;
-  esac
-}
+detect_udc_name() {
+  local platform preferred udc_path udc_name
+  local -a udc_entries=()
 
-recommended_32bit_kernel_image_package() {
-  case "$(current_device_model)" in
-    *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
-      first_available_package linux-image-rpi-v7l
-      ;;
-    *Raspberry\ Pi\ 3*|*Raspberry\ Pi\ 2*|*Zero\ 2\ W*|*Compute\ Module\ 3*)
-      first_available_package linux-image-rpi-v7 linux-image-rpi-v7l || printf '%s\n' linux-image-rpi-v7
-      ;;
-    *Raspberry\ Pi\ Zero*|*Raspberry\ Pi\ 1*|*Compute\ Module\ 1*)
-      first_available_package linux-image-rpi-v6 || printf '%s\n' linux-image-rpi-v6
-      ;;
-    *)
-      first_available_package linux-image-rpi-v7 linux-image-rpi-v7l linux-image-rpi-v6
-      ;;
-  esac
-}
+  platform="$(current_pi_platform)"
+  preferred="$(default_udc_for_platform "${platform}" 2>/dev/null || true)"
 
-recommended_32bit_kernel_headers_package() {
-  case "$(current_device_model)" in
-    *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
-      first_available_package linux-headers-rpi-v7l
-      ;;
-    *Raspberry\ Pi\ 3*|*Raspberry\ Pi\ 2*|*Zero\ 2\ W*|*Compute\ Module\ 3*)
-      first_available_package linux-headers-rpi-v7 linux-headers-rpi-v7l || printf '%s\n' linux-headers-rpi-v7
-      ;;
-    *Raspberry\ Pi\ Zero*|*Raspberry\ Pi\ 1*|*Compute\ Module\ 1*)
-      first_available_package linux-headers-rpi-v6 || printf '%s\n' linux-headers-rpi-v6
-      ;;
-    *)
-      first_available_package linux-headers-rpi-v7 linux-headers-rpi-v7l linux-headers-rpi-v6
-      ;;
-  esac
-}
-
-ensure_32bit_kernel_available_for_reboot() {
-  local config_path="$1"
-  local expected_image
-  local image_pkg
-  local headers_pkg
-
-  if ! expected_image="$(expected_32bit_kernel_image_name)"; then
-    echo "ERROR: Could not determine which 32-bit kernel image is required"
-    echo "for $(current_device_model)."
-    return 1
-  fi
-
-  if [ -f "${config_path}/${expected_image}" ]; then
-    return 0
-  fi
-
-  image_pkg=""
-  headers_pkg=""
-  if image_pkg="$(recommended_32bit_kernel_image_package)"; then
-    if headers_pkg="$(recommended_32bit_kernel_headers_package)"; then
-      echo "Installing 32-bit kernel packages needed for reboot: ${image_pkg} ${headers_pkg}"
-      sudo apt-get update
-      sudo apt-get install -y "${image_pkg}" "${headers_pkg}"
-    else
-      echo "Installing 32-bit kernel package needed for reboot: ${image_pkg}"
-      sudo apt-get update
-      sudo apt-get install -y "${image_pkg}"
+  for udc_path in /sys/class/udc/*; do
+    if [ ! -e "${udc_path}" ]; then
+      continue
     fi
-  fi
+    udc_entries+=("$(basename "${udc_path}")")
+  done
 
-  if [ -f "${config_path}/${expected_image}" ]; then
+  if [ "${#udc_entries[@]}" -eq 0 ]; then
+    printf '%s\n' "${preferred}"
     return 0
   fi
 
-  echo "ERROR: TCC requires the 32-bit kernel image ${expected_image}, but it"
-  echo "is not present in ${config_path}."
-  case "$(current_device_model)" in
-    *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
-      echo "Current Raspberry Pi OS Trixie images for Pi 4-class devices do not"
-      echo "ship the packaged 32-bit Pi 4 kernel (${expected_image})."
-      echo "Please use Raspberry Pi OS Bookworm 32-bit, or install a custom"
-      echo "${expected_image} before rerunning './install.sh'"
-      ;;
-    *)
-      echo "Please install a matching 32-bit Raspberry Pi kernel image before"
-      echo "rerunning './install.sh'"
-      ;;
-  esac
-  return 1
+  if [ -n "${preferred}" ]; then
+    for udc_name in "${udc_entries[@]}"; do
+      if [ "${udc_name}" = "${preferred}" ]; then
+        printf '%s\n' "${udc_name}"
+        return 0
+      fi
+    done
+  fi
+
+  printf '%s\n' "${udc_entries[0]}"
+}
+
+detect_chaos_runtime_target() {
+  detected_target_platform="$(current_pi_platform)"
+  detected_os_codename="$(current_os_codename)"
+  detected_udc_device="$(detect_udc_name)"
+  detected_udc_driver="${detected_udc_device}"
+
+  echo "Detected platform: ${detected_target_platform}"
+  echo "Detected OS codename: ${detected_os_codename}"
+  if [ -n "${detected_udc_device}" ]; then
+    echo "Detected USB Device Controller: ${detected_udc_device}"
+  else
+    echo "WARNING: No USB Device Controller is currently visible under /sys/class/udc"
+  fi
+}
+
+write_staged_chaos_env() {
+  detect_chaos_runtime_target
+
+  {
+    echo "# Generated by install.sh"
+    printf 'CHAOS_TARGET_PLATFORM=%q\n' "${detected_target_platform}"
+    printf 'CHAOS_TARGET_OS_CODENAME=%q\n' "${detected_os_codename}"
+    printf 'CHAOS_RAW_GADGET_UDC_DEVICE=%q\n' "${detected_udc_device}"
+    printf 'CHAOS_RAW_GADGET_UDC_DRIVER=%q\n' "${detected_udc_driver}"
+  } >"${staged_chaos_env}"
 }
 
 recommended_kernel_headers_package() {
@@ -391,6 +488,18 @@ recommended_kernel_headers_package() {
 
   kernel_release="$(uname -r)"
   case "${kernel_release}" in
+    *2712*|*v8*|*16k*)
+      case "$(current_pi_platform)" in
+        pi5)
+          first_available_package "linux-headers-${kernel_release}" linux-headers-rpi-2712 linux-headers-rpi-v8 ||
+            printf '%s\n' linux-headers-rpi-2712
+          ;;
+        *)
+          first_available_package "linux-headers-${kernel_release}" linux-headers-rpi-v8 linux-headers-rpi-2712 ||
+            printf '%s\n' linux-headers-rpi-v8
+          ;;
+      esac
+      ;;
     *v7l*)
       first_available_package linux-headers-rpi-v7l linux-headers-rpi-v7 || printf '%s\n' linux-headers-rpi-v7l
       ;;
@@ -402,6 +511,18 @@ recommended_kernel_headers_package() {
       ;;
     *)
       case "$(uname -m)" in
+        aarch64|arm64)
+          case "$(current_pi_platform)" in
+            pi5)
+              first_available_package "linux-headers-${kernel_release}" linux-headers-rpi-2712 linux-headers-rpi-v8 ||
+                printf '%s\n' linux-headers-rpi-2712
+              ;;
+            *)
+              first_available_package "linux-headers-${kernel_release}" linux-headers-rpi-v8 linux-headers-rpi-2712 ||
+                printf '%s\n' linux-headers-rpi-v8
+              ;;
+          esac
+          ;;
         armv7l)
           first_available_package linux-headers-rpi-v7l linux-headers-rpi-v7 || printf '%s\n' linux-headers-rpi-v7l
           ;;
@@ -440,7 +561,7 @@ require_running_kernel_build_tree() {
   if [ ! -d "/lib/modules/$(uname -r)/build" ]; then
     echo "ERROR: raw-gadget must be built against the headers for the running"
     echo "kernel ($(uname -r)), but /lib/modules/$(uname -r)/build is missing."
-    echo "Please boot the intended 32-bit kernel, install its matching headers,"
+    echo "Please install the matching kernel headers for the running kernel,"
     echo "then rerun './install.sh'"
     exit 1
   fi
@@ -487,76 +608,99 @@ build_dependencies() {
 configure_as_gadget() {
   local config_path
   local config_file
+  local config_filter
   local gadget_overlay='dtoverlay=dwc2,dr_mode=peripheral'
+  local managed_block_tmp
 
-  # Starting with bookworm, the config.txt file is found in /boot/firmware/.
+  # On newer Raspberry Pi OS releases, including Bookworm and Trixie,
+  # config.txt lives in /boot/firmware/.
   if [ -f /boot/firmware/config.txt ]; then
     config_path='/boot/firmware'
   else
     config_path='/boot'
   fi
   config_file="${config_path}/config.txt"
-
-  # TCC currently requires a 32-bit kernel. Recent Raspberry Pi OS images may
-  # still boot a 64-bit kernel by default even when the user selected a
-  # "32-bit" image, so switch that first and resume after reboot.
-  if running_kernel_is_64_bit; then
-    if device_only_supports_64bit_kernel; then
-      echo "ERROR: $(current_device_model) only supports a 64-bit kernel."
-      echo "raw-gadget currently requires a 32-bit kernel, so this device"
-      echo "is not supported yet."
-      echo "Please use a Raspberry Pi 4-class device for now, then rerun"
-      echo "'./install.sh'"
-      exit 1
-    fi
-
-    if ! ensure_32bit_kernel_available_for_reboot "${config_path}"; then
-      exit 1
-    fi
-
-    sudo sed -Ei \
-      -e 's|^[[:space:]]*arm_64bit[[:space:]]*=.*$|arm_64bit=0|' \
-      "${config_file}"
-    if ! sudo grep -Eq '^[[:space:]]*arm_64bit[[:space:]]*=[[:space:]]*0([[:space:]]*#.*)?$' "${config_file}"; then
-      echo 'arm_64bit=0' | sudo tee -a "${config_file}" >/dev/null
-    fi
-
-    echo "Before continuing, TCC must reboot into a 32-bit kernel."
-    echo "After rebooting, please rerun './install.sh'"
-    confirm_reboot
-  fi
+  detect_chaos_runtime_target
+  config_filter="$(boot_config_model_filter)"
+  echo "Using running kernel $(uname -r) on $(current_device_model)"
+  echo "Applying USB gadget overlay under config.txt filter [${config_filter}]"
 
   # Replace XHCI USB controller with DWC2 peripheral mode. Recent Raspberry Pi OS
   # images may ship CM4/CM5 defaults that explicitly force host mode.
   sudo sed -Ei \
     -e '/^[[:space:]]*otg_mode[[:space:]]*=[[:space:]]*1([[:space:]]*#.*)?$/ s/^/#/' \
-    -e "s|^([[:space:]]*)dtoverlay[[:space:]]*=[[:space:]]*dwc2(,dr_mode=[^[:space:]#]+)?([[:space:]]*(#.*)?)$|\\1${gadget_overlay}\\3|" \
+    -e '/^[[:space:]]*dtoverlay[[:space:]]*=[[:space:]]*dwc2(,dr_mode=[^[:space:]#]+)?([[:space:]]*#.*)?$/ s/^/#/' \
+    -e '/^[[:space:]]*# BEGIN CHAOS USB GADGET$/,/^[[:space:]]*# END CHAOS USB GADGET$/d' \
     "${config_file}"
-  if ! sudo grep -Eq '^[[:space:]]*dtoverlay[[:space:]]*=[[:space:]]*dwc2,dr_mode=peripheral([[:space:]]*#.*)?$' "${config_file}"; then
-    echo "${gadget_overlay}" | sudo tee -a "${config_file}" >/dev/null
-  fi
 
-  # raw-gadget currently requires a 32-bit Raspberry Pi kernel build tree.
+  managed_block_tmp="$(mktemp)"
+  cat >"${managed_block_tmp}" <<EOF
+# BEGIN CHAOS USB GADGET
+[${config_filter}]
+${gadget_overlay}
+# END CHAOS USB GADGET
+EOF
+  sudo tee -a "${config_file}" <"${managed_block_tmp}" >/dev/null
+  rm -f "${managed_block_tmp}"
+
   require_running_kernel_build_tree
 }
 
 build_raw_gadget() {
-  # Build customized raw-gadget kernel module.
+  local current_origin
+  local raw_gadget_loader_tmp
+
+  # Build upstream raw-gadget kernel module against the running kernel.
   require_running_kernel_build_tree
-  if [ ! -d "${HOME}/raw-gadget" ]; then
-    git clone https://github.com/polysyllabic/raw-gadget.git "${HOME}/raw-gadget"
+  if [ ! -d "${RAW_GADGET_CHECKOUT}" ]; then
+    git clone "${RAW_GADGET_REPO_URL}" "${RAW_GADGET_CHECKOUT}"
+  elif [ -d "${RAW_GADGET_CHECKOUT}/.git" ]; then
+    current_origin="$(git -C "${RAW_GADGET_CHECKOUT}" remote get-url origin 2>/dev/null || true)"
+    if [ -n "${current_origin}" ] && [ "${current_origin}" != "${RAW_GADGET_REPO_URL}" ]; then
+      echo "WARNING: Existing raw-gadget checkout uses ${current_origin}"
+      echo "Expected upstream stock raw-gadget at ${RAW_GADGET_REPO_URL}"
+      echo "Using the existing checkout as-is."
+    fi
   fi
-  cd "${HOME}/raw-gadget/raw_gadget"
+  cd "${RAW_GADGET_CHECKOUT}/raw_gadget"
   make
-  sudo make install
+
+  # Preserve the existing service startup flow, which expects a loader script
+  # and module payload in /usr/local/modules.
+  sudo install -d -m 0755 /usr/local/modules
+  sudo install -m 0644 raw_gadget.ko /usr/local/modules/raw_gadget.ko
+
+  raw_gadget_loader_tmp="$(mktemp)"
+  cat >"${raw_gadget_loader_tmp}" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -d /sys/module/raw_gadget ]; then
+  exit 0
+fi
+
+modprobe udc_core
+exec insmod "${SCRIPT_DIR}/raw_gadget.ko"
+EOF
+  sudo install -m 0755 "${raw_gadget_loader_tmp}" /usr/local/modules/insmod.sh
+  rm -f "${raw_gadget_loader_tmp}"
 }
 
 install_engine() {
+  write_staged_chaos_env
+
   # Compile and install the chaos engine.
   cd "${CHAOS_SRC_DIR}"
   mkdir -p build
   cd build
-  cmake ..
+  cmake \
+    -DCHAOS_TARGET_PLATFORM="${detected_target_platform}" \
+    -DCHAOS_TARGET_OS_CODENAME="${detected_os_codename}" \
+    -DCHAOS_DEFAULT_UDC_DEVICE="${detected_udc_device}" \
+    -DCHAOS_DEFAULT_UDC_DRIVER="${detected_udc_driver}" \
+    ..
   make -j"$(nproc)"
   sudo make install
   sudo install -m 0644 "${REPO_ROOT}/VERSION" "${CHAOS_INSTALL_ROOT}/VERSION"
@@ -568,6 +712,9 @@ install_engine() {
   # Install the staged runtime config that may contain a user-selected interface address.
   if [ -f "${staged_chaos_config}" ]; then
     sudo install -m 0644 "${staged_chaos_config}" "${CHAOS_INSTALL_ROOT}/chaosconfig.toml"
+  fi
+  if [ -f "${staged_chaos_env}" ]; then
+    sudo install -m 0644 "${staged_chaos_env}" "${CHAOS_INSTALL_ROOT}/chaos.env"
   fi
 
   sudo systemctl daemon-reload
@@ -582,6 +729,7 @@ install_chaosface() {
   fi
 
   if (( remote_ui == 0 )); then
+    sync_local_chaosface_config
     sudo install -m 0644 "${SCRIPTS_DIR}/chaosface.service" /etc/systemd/system/chaosface.service
     sudo systemctl daemon-reload
     sudo systemctl enable chaosface
