@@ -363,6 +363,17 @@ current_device_model() {
   fi
 }
 
+device_only_supports_64bit_kernel() {
+  case "$(current_device_model)" in
+    *Raspberry\ Pi\ 5*|*Raspberry\ Pi\ 500*|*Compute\ Module\ 5*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 current_os_codename() {
   if [ -r /etc/os-release ]; then
     (
@@ -372,6 +383,50 @@ current_os_codename() {
   else
     printf '%s\n' unknown
   fi
+}
+
+current_dpkg_architecture() {
+  if command -v dpkg >/dev/null 2>&1; then
+    dpkg --print-architecture 2>/dev/null || true
+  fi
+}
+
+userspace_is_32_bit() {
+  case "$(current_dpkg_architecture)" in
+    armhf|armel)
+      return 0
+      ;;
+  esac
+
+  [ "$(getconf LONG_BIT 2>/dev/null || printf '%s\n' 64)" = "32" ]
+}
+
+running_kernel_is_64_bit() {
+  case "$(uname -r)" in
+    *2712*|*v8*|*16k*)
+      return 0
+      ;;
+  esac
+
+  case "$(uname -m)" in
+    aarch64|arm64)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+os_codename_is_bookworm_or_earlier() {
+  case "$(current_os_codename)" in
+    bookworm|bullseye|buster|stretch|jessie|wheezy)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 current_pi_platform() {
@@ -454,6 +509,118 @@ detect_udc_name() {
   fi
 
   printf '%s\n' "${udc_entries[0]}"
+}
+
+expected_32bit_kernel_image_name() {
+  case "$(current_device_model)" in
+    *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
+      printf '%s\n' kernel7l.img
+      ;;
+    *Raspberry\ Pi\ 3*|*Raspberry\ Pi\ 2*|*Zero\ 2\ W*|*Compute\ Module\ 3*)
+      printf '%s\n' kernel7.img
+      ;;
+    *Raspberry\ Pi\ Zero*|*Raspberry\ Pi\ 1*|*Compute\ Module\ 1*)
+      printf '%s\n' kernel.img
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+recommended_32bit_kernel_image_package() {
+  case "$(current_device_model)" in
+    *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
+      first_available_package linux-image-rpi-v7l
+      ;;
+    *Raspberry\ Pi\ 3*|*Raspberry\ Pi\ 2*|*Zero\ 2\ W*|*Compute\ Module\ 3*)
+      first_available_package linux-image-rpi-v7 linux-image-rpi-v7l || printf '%s\n' linux-image-rpi-v7
+      ;;
+    *Raspberry\ Pi\ Zero*|*Raspberry\ Pi\ 1*|*Compute\ Module\ 1*)
+      first_available_package linux-image-rpi-v6 || printf '%s\n' linux-image-rpi-v6
+      ;;
+    *)
+      first_available_package linux-image-rpi-v7 linux-image-rpi-v7l linux-image-rpi-v6
+      ;;
+  esac
+}
+
+recommended_32bit_kernel_headers_package() {
+  case "$(current_device_model)" in
+    *Raspberry\ Pi\ 4*|*Raspberry\ Pi\ 400*|*Compute\ Module\ 4*)
+      first_available_package linux-headers-rpi-v7l
+      ;;
+    *Raspberry\ Pi\ 3*|*Raspberry\ Pi\ 2*|*Zero\ 2\ W*|*Compute\ Module\ 3*)
+      first_available_package linux-headers-rpi-v7 linux-headers-rpi-v7l || printf '%s\n' linux-headers-rpi-v7
+      ;;
+    *Raspberry\ Pi\ Zero*|*Raspberry\ Pi\ 1*|*Compute\ Module\ 1*)
+      first_available_package linux-headers-rpi-v6 || printf '%s\n' linux-headers-rpi-v6
+      ;;
+    *)
+      first_available_package linux-headers-rpi-v7 linux-headers-rpi-v7l linux-headers-rpi-v6
+      ;;
+  esac
+}
+
+ensure_32bit_kernel_available_for_reboot() {
+  local config_path="$1"
+  local expected_image
+  local image_pkg
+  local headers_pkg
+
+  if ! expected_image="$(expected_32bit_kernel_image_name)"; then
+    echo "ERROR: Could not determine which 32-bit kernel image is required"
+    echo "for $(current_device_model)."
+    return 1
+  fi
+
+  if [ -f "${config_path}/${expected_image}" ]; then
+    return 0
+  fi
+
+  image_pkg=""
+  headers_pkg=""
+  if image_pkg="$(recommended_32bit_kernel_image_package)"; then
+    if headers_pkg="$(recommended_32bit_kernel_headers_package)"; then
+      echo "Installing 32-bit kernel packages needed for reboot: ${image_pkg} ${headers_pkg}"
+      sudo apt-get update
+      sudo apt-get install -y "${image_pkg}" "${headers_pkg}"
+    else
+      echo "Installing 32-bit kernel package needed for reboot: ${image_pkg}"
+      sudo apt-get update
+      sudo apt-get install -y "${image_pkg}"
+    fi
+  fi
+
+  if [ -f "${config_path}/${expected_image}" ]; then
+    return 0
+  fi
+
+  echo "ERROR: TCC needs the 32-bit kernel image ${expected_image} for the"
+  echo "legacy fallback path, but it is not present in ${config_path}."
+  echo "Please install a matching 32-bit Raspberry Pi kernel image before"
+  echo "rerunning './install.sh'"
+  return 1
+}
+
+legacy_32bit_kernel_fallback_needed() {
+  if [ -d "/lib/modules/$(uname -r)/build" ]; then
+    return 1
+  fi
+  if device_only_supports_64bit_kernel; then
+    return 1
+  fi
+  if ! running_kernel_is_64_bit; then
+    return 1
+  fi
+  if ! userspace_is_32_bit; then
+    return 1
+  fi
+  if ! os_codename_is_bookworm_or_earlier; then
+    return 1
+  fi
+
+  return 0
 }
 
 detect_chaos_runtime_target() {
@@ -610,6 +777,8 @@ configure_as_gadget() {
   local config_file
   local config_filter
   local gadget_overlay='dtoverlay=dwc2,dr_mode=peripheral'
+  local arm_64bit_line=""
+  local using_legacy_32bit_fallback=0
   local managed_block_tmp
 
   # On newer Raspberry Pi OS releases, including Bookworm and Trixie,
@@ -622,8 +791,27 @@ configure_as_gadget() {
   config_file="${config_path}/config.txt"
   detect_chaos_runtime_target
   config_filter="$(boot_config_model_filter)"
+  ensure_kernel_headers_available
+  if legacy_32bit_kernel_fallback_needed; then
+    if ! ensure_32bit_kernel_available_for_reboot "${config_path}"; then
+      exit 1
+    fi
+    arm_64bit_line='arm_64bit=0'
+    using_legacy_32bit_fallback=1
+  elif running_kernel_is_64_bit; then
+    case "${detected_target_platform}" in
+      pi4|pi5)
+        arm_64bit_line='arm_64bit=1'
+        ;;
+    esac
+  fi
+
   echo "Using running kernel $(uname -r) on $(current_device_model)"
   echo "Applying USB gadget overlay under config.txt filter [${config_filter}]"
+  if (( using_legacy_32bit_fallback != 0 )); then
+    echo "Older 32-bit ${detected_os_codename} install detected without a usable"
+    echo "64-bit kernel build tree; scheduling a 32-bit kernel reboot fallback."
+  fi
 
   # Replace XHCI USB controller with DWC2 peripheral mode. Recent Raspberry Pi OS
   # images may ship CM4/CM5 defaults that explicitly force host mode.
@@ -637,11 +825,18 @@ configure_as_gadget() {
   cat >"${managed_block_tmp}" <<EOF
 # BEGIN CHAOS USB GADGET
 [${config_filter}]
+${arm_64bit_line}
 ${gadget_overlay}
 # END CHAOS USB GADGET
 EOF
   sudo tee -a "${config_file}" <"${managed_block_tmp}" >/dev/null
   rm -f "${managed_block_tmp}"
+
+  if (( using_legacy_32bit_fallback != 0 )); then
+    echo "Before continuing, TCC must reboot into a 32-bit kernel."
+    echo "After rebooting, please rerun './install.sh'"
+    confirm_reboot
+  fi
 
   require_running_kernel_build_tree
 }

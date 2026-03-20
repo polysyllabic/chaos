@@ -99,9 +99,9 @@ events that the chatbot cannot track, such as reaching some custom channel goal.
 
 ## Limitations
 
-TCC requires specific hardware to run, including a Raspberry Pi 4 running a 32-bit kernel and a
-DualShock controller (the controller for the PlayStation 4), which may constitute a significant
-expense. To play PS5-only games on the PlayStation, you will need even more hardware.
+TCC requires specific hardware to run, including a Raspberry Pi 4 or 5 and a DualShock controller
+(the controller for the PlayStation 4), which may constitute a significant expense. To play
+PS5-only games on the PlayStation, you will need even more hardware.
 
 Chaos only sees the incoming pattern of controller signals. It has no idea what is actually
 happening in the game. During cutscenes, death animations, or other places where the ordinary
@@ -420,13 +420,8 @@ That requires special hardware peripherals which the Pi 4 has on its USB-C power
 Pi models--and most, if not all, ordinary PCs--lack this hardware and so cannot run the chaos
 engine.
 
-The Raspberry Pi 5 also has the right hardware but won't work with TCC 2.0 because Raspberry Pi
-OS keeps them on a 64-bit kernel, while the custom raw-gadget module we are using currently
-requires a 32-bit kernel. On a Pi 4, Raspberry Pi OS Bookworm 32-bit is currently the safe
-packaged path. Current Trixie images no longer ship the Pi 4 32-bit kernel image
-(`kernel7l.img`) that TCC needs.
-
-Support for the Pi 5 and 64-bit kernels generally is in progress and planned for version 2.1.
+From version 2.1, TCC also supports the Raspberry Pi 5 and a 64-bit OS. Version 2.0 was limited
+to Raspberry Pi 4 and a 32-bit OS, such as Raspberry Pi OS Bookworm 32-bit.
 
 Another variant that has the right hardware is the Raspberry Pi 0W, which has the added virtue of
 being much less expensive than the Pi 4 or 5, but this has only one USB device to act as a client
