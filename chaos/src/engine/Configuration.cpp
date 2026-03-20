@@ -22,7 +22,7 @@
 #include <cctype>
 #include <stdexcept>
 #include <iostream>
-#include <unordered_set>
+#include <unordered_map>
 #include <vector>
 #include <plog/Log.h>
 #include <plog/Initializers/RollingFileInitializer.h>
@@ -37,6 +37,12 @@
 using namespace Chaos;
 
 namespace {
+  struct DiscoveredGameConfig {
+    std::string game_name;
+    std::string config_path;
+    std::string file_name;
+  };
+
   std::string toLower(std::string value) {
     std::transform(value.begin(), value.end(), value.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
@@ -159,8 +165,8 @@ void Configuration::discoverAvailableGames() {
     return;
   }
 
-  std::vector<std::pair<std::string, std::string>> discovered;
-  std::unordered_set<std::string> seen_game_names;
+  std::vector<DiscoveredGameConfig> discovered_configs;
+  std::unordered_map<std::string, std::size_t> game_name_counts;
 
   for (const std::filesystem::directory_entry& entry : dir_iter) {
     if (!entry.is_regular_file()) {
@@ -191,14 +197,20 @@ void Configuration::discoverAvailableGames() {
       continue;
     }
 
-    if (seen_game_names.find(*game_name) != seen_game_names.end()) {
-      PLOG_ERROR << "Duplicate game name '" << *game_name << "' found in '"
-                 << entry.path().string() << "'. Ignoring duplicate.";
-      continue;
-    }
-    seen_game_names.insert(*game_name);
+    const std::string normalized_path = entry.path().lexically_normal().string();
+    discovered_configs.push_back(
+        {*game_name, normalized_path, entry.path().filename().string()});
+    ++game_name_counts[*game_name];
+  }
 
-    discovered.emplace_back(*game_name, entry.path().lexically_normal().string());
+  std::vector<std::pair<std::string, std::string>> discovered;
+  discovered.reserve(discovered_configs.size());
+  for (const DiscoveredGameConfig& config : discovered_configs) {
+    std::string display_name = config.game_name;
+    if (game_name_counts[config.game_name] > 1) {
+      display_name += " [" + config.file_name + "]";
+    }
+    discovered.emplace_back(std::move(display_name), config.config_path);
   }
 
   std::sort(discovered.begin(), discovered.end(),
@@ -215,4 +227,3 @@ void Configuration::discoverAvailableGames() {
   available_games = std::move(discovered);
   PLOG_INFO << "Discovered " << available_games.size() << " playable game configuration files.";
 }
-

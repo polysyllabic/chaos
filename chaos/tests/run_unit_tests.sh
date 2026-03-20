@@ -8,6 +8,7 @@ UNIT_TARGETS=(
   test_modifier_types
   test_tlou2_modifier_coverage
   test_engine_lifecycle
+  test_game_config_discovery
 )
 
 echo "Building unit test targets in '${BUILD_DIR}'..."

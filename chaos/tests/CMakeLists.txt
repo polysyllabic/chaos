@@ -81,6 +81,26 @@ target_link_libraries(test_engine_lifecycle PRIVATE
   chaos_core
 )
 
+add_executable(test_game_config_discovery)
+target_sources(test_game_config_discovery PRIVATE
+  test_game_config_discovery.cpp
+)
+target_include_directories(test_game_config_discovery PRIVATE
+  ../include
+  ../src/core
+  ../src/engine
+  ../src/controller
+  ../src/communicator
+  ../src/utils
+  ${tomlplusplus_SOURCE_DIR}/include
+  ${plog_SOURCE_DIR}/include
+  ${cppzmq_SOURCE_DIR}
+)
+target_link_libraries(test_game_config_discovery PRIVATE
+  chaos_engine
+  chaos_core
+)
+
 # Hardware probe helper: prints VID/PID for the controller detected on any available USB port.
 add_executable(probe_controller_vidpid probe_controller_vidpid.cpp)
 target_link_libraries(probe_controller_vidpid PRIVATE chaos_usb_transport)
