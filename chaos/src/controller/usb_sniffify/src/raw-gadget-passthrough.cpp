@@ -907,10 +907,18 @@ void RawGadgetPassthrough::setInterface( ConfigurationInfo* info, int interface,
   this->setAlternate(interfaceInfo, alternate);
   info->activeInterface = interfaceIndex;
   if (alternate >= 0) {
-    int altResult = libusb_set_interface_alt_setting(mEndpointZeroInfo.dev_handle, interfaceNumber, alternate);
-    if (altResult != LIBUSB_SUCCESS) {
-      PLOG_ERROR << "Could not set libusb interface alt setting: " << libusb_error_name(altResult);
-      requestReconnect();
+    // Many HID controllers expose only altsetting 0. In that case the interface is already in the
+    // correct state after claim/configure, and some third-party controllers fail if we redundantly
+    // issue SET_INTERFACE(0) through libusb.
+    if (!(interfaceInfo->bNumAlternates <= 1 && alternate == 0)) {
+      int altResult = libusb_set_interface_alt_setting(mEndpointZeroInfo.dev_handle, interfaceNumber, alternate);
+      if (altResult != LIBUSB_SUCCESS) {
+        PLOG_ERROR << "Could not set libusb interface alt setting: " << libusb_error_name(altResult);
+        requestReconnect();
+      }
+    } else {
+      PLOG_VERBOSE << "Skipping redundant libusb_set_interface_alt_setting() for interface "
+                   << interfaceNumber << " alt 0";
     }
   }
 }
